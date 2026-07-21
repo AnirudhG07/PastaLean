@@ -58,6 +58,17 @@ def pySetDifference {α : Type} [BEq α] (a b : List α) : List α :=
 def pySetSymmetricDifference {α : Type} [BEq α] (a b : List α) : List α :=
   (a.filter (fun x => !b.contains x)) ++ (b.filter (fun x => !a.contains x))
 
+/-- Python set equality `a == b`: same elements, order-independent (unlike list `==`). -/
+def pySetEq {α : Type} [BEq α] (a b : List α) : Bool :=
+  a.all (fun x => b.contains x) && b.all (fun x => a.contains x)
+
+/-- Python subset `a <= b`: every element of `a` is in `b`. -/
+def pySetSubset {α : Type} [BEq α] (a b : List α) : Bool := a.all (fun x => b.contains x)
+
+/-- Python proper subset `a < b`. -/
+def pySetProperSubset {α : Type} [BEq α] (a b : List α) : Bool :=
+  pySetSubset a b && !pySetEq a b
+
 /-! The binary set operators reuse the same surface names as the integer bitwise operators
 (`&`, `|`, `^`) and Python subtraction (`-`), so a set expression `a & b` lowers identically to
 codegen and the list-backed instance is selected by type. -/

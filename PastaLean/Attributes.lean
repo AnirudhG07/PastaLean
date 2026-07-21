@@ -20,6 +20,7 @@ def pythonMethodMap? (attr : String) : Option Lean.Name :=
   | "join"       => some ``pyStringJoin
   | "replace"    => some ``pyStringReplace
   | "strip"      => some ``pyStringStrip
+  | "zfill"      => some ``pyStringZfill
   | "startswith" => some ``pyStringStartswith
   | "endswith"   => some ``pyStringEndswith
   | "lower"      => some ``pyStringLower

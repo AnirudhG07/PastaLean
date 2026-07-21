@@ -526,6 +526,12 @@ class WarmLeanEval:
 
     READY, BEGIN, END = "===PACEVAL-READY===", "===PACEVAL-BEGIN===", "===PACEVAL-END==="
 
+    # Proactively reboot after this many evals: a long-lived backend accumulates heartbeat budget
+    # and memory, and past ~1950 translations it hits an all-fail cliff (heartbeat poisoning). A
+    # scheduled reboot (~10 s Mathlib load) keeps it fresh and is far cheaper than a run of spurious
+    # timeouts. 0 disables.
+    REBOOT_EVERY = 400
+
     def __init__(self, timeout=15, boot_timeout=300, verbose=True):
         self.timeout = timeout
         self.boot_timeout = boot_timeout
@@ -533,6 +539,7 @@ class WarmLeanEval:
         self.proc = None
         self._q = None       # lines from the backend's stdout, fed by a reader thread
         self._boots = 0
+        self._evals = 0      # evals since the current boot; triggers a proactive reboot
 
     def _log(self, msg):
         if self.verbose:
@@ -581,6 +588,11 @@ class WarmLeanEval:
         self.proc, self._q = None, None
 
     def eval(self, path):
+        # Proactive reboot before the poisoning cliff — cheaper than a run of spurious timeouts.
+        if self.REBOOT_EVERY and self._evals and self._evals % self.REBOOT_EVERY == 0:
+            self._log(f"proactive reboot after {self._evals} evals (avoid heartbeat poisoning)")
+            self._kill()
+        self._evals += 1
         # (Re)boot if the backend is down; a boot failure returns an error rather than crashing the run.
         if self.proc is None or self.proc.poll() is not None:
             try:
@@ -679,6 +691,23 @@ class CPastaEval:
         d = self.dataset / ".tmp"
         d.mkdir(parents=True, exist_ok=True)
         return d
+
+    def _prepare_tmp(self):
+        """Clear leftover `.tmp` scratch and warn on low disk — the overnight run died of a full disk
+        (harness files never cleaned), which also causes spurious I/O timeouts."""
+        import shutil
+        d = self.dataset / ".tmp"
+        if d.is_dir():
+            n = sum(1 for _ in d.iterdir())
+            if n:
+                shutil.rmtree(d, ignore_errors=True)
+                print(f"[*] Cleared {n} stale files from {d}", flush=True)
+        d.mkdir(parents=True, exist_ok=True)
+        free_gb = shutil.disk_usage(self.dataset).free / 2**30
+        if free_gb < 10:
+            print(f"[!] WARNING: only {free_gb:.1f} GB free on the eval disk — a full corpus run may "
+                  f"exhaust it (that crashed the last overnight run). Free space before proceeding.",
+                  flush=True)
 
     # -- selection ---------------------------------------------------------------------
 
@@ -857,7 +886,9 @@ class CPastaEval:
 
     def compile_check(self, lean_path):
         """Elaborate a generated Lean file; return (ok, error_text)."""
-        proc = subprocess.run(["lake", "env", "lean", str(lean_path)],
+        # Resolve to absolute: the command runs with cwd=REPO_ROOT but `lean_path` is relative to the
+        # dataset, so a relative `--dataset` yields a spurious "no such file" compile_fail otherwise.
+        proc = subprocess.run(["lake", "env", "lean", str(Path(lean_path).resolve())],
                               cwd=REPO_ROOT, capture_output=True, text=True)
         return (True, "") if proc.returncode == 0 else (False, proc.stderr or proc.stdout)
 
@@ -904,6 +935,7 @@ class CPastaEval:
 
     def convert(self):
         """Translate + compile-check every selected problem. Writes `convert_summary.json`."""
+        self._prepare_tmp()
         problems, totals, histogram = {}, {"ok": 0, "convert_fail": 0, "compile_fail": 0}, {}
         for prob_dir in self.problems():
             sols_dir = prob_dir / "solutions"
@@ -1019,7 +1051,12 @@ class CPastaEval:
         Returns `(counts, failures, error)` where `counts` is `(passed, total)` or None, and
         `failures` maps a failing case index to what Lean computed."""
         tmp_path.write_text(harness_src)
-        out, err = self.warm.eval(tmp_path)
+        try:
+            out, err = self.warm.eval(tmp_path)
+        finally:
+            # Delete the harness immediately — over a full corpus these accumulate in `.tmp` and were
+            # what filled the disk (the `failures` dict below holds the debug info instead).
+            tmp_path.unlink(missing_ok=True)
         if err is not None:
             return None, {}, err
         failures = {int(i): got.strip() for i, got in _FAIL_RE.findall(out)}
@@ -1208,6 +1245,7 @@ class CPastaEval:
 
     def evaluate(self):
         """Run Lean (and CPython) on the test cases. Writes `eval_report.json` + divergences."""
+        self._prepare_tmp()
         report = {}
         agg = {"lean_pass": 0, "lean_total": 0, "py_pass": 0, "py_total": 0, "solutions": 0}
         divergences = []

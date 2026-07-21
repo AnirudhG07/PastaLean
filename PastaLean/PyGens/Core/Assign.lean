@@ -308,7 +308,9 @@ def assignSyntax : (kind : SyntaxNodeKind) → Json →
                 let bindTarget ← bindOrAssignLocal (← getCode target `ident) valueTerm
                 return ⟨mkNullNode #[bindTarget.raw, update.raw]⟩
             let rhs ←
-              if jsonUsesIOEffect value then
+              -- `x = a or b` binds the deciding *value*, not a `Bool` (`x = s or '0'` → the string).
+              if jsonNodeType? value == some "BoolOp" then boolOpValueTerm value
+              else if jsonUsesIOEffect value then
                 inlineIOTerm value
               else
                 let valueStx ← getCode value `term
@@ -347,7 +349,11 @@ def assignSyntax : (kind : SyntaxNodeKind) → Json →
                 pure setStx
             | none =>
                 let nameIdent ← getCode target `ident
-                bindOrAssignLocal nameIdent rhs (← stampedTypeSyntax? target)
+                let bound ← bindOrAssignLocal nameIdent rhs (← stampedTypeSyntax? target)
+                -- Track whether this name now holds a set, so later `==`/`<=` on it use set semantics
+                -- (order-independent) rather than the list-backed ones.
+                setSetVar nameIdent.getId (← jsonIsSetExpr value)
+                pure bound
     | _, _ => throwError s!"Unsupported syntax category for Assign node"
 
 /--
@@ -393,9 +399,11 @@ def returnSyntax : (kind : SyntaxNodeKind) → Json →
             `(doElem| return default)
         | _ =>
             let valueStx ←
+              -- `return a or b` returns the deciding *value* (`x or '0'` → the string), not a `Bool`.
+              if jsonNodeType? value == some "BoolOp" then boolOpValueTerm value
               -- A call that both yields a value and mutates its receiver (`return heappop(h)`):
               -- the mutation is unobservable after a `return`, so return the value component.
-              if let some (valueTerm, _) ← mutatingCallRhsLowering? value then
+              else if let some (valueTerm, _) ← mutatingCallRhsLowering? value then
                 pure valueTerm
               else if jsonUsesIOEffect value then
                 inlineIOTerm value

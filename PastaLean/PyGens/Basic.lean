@@ -410,6 +410,22 @@ membership lowering: a string literal on the left of `in`/`not in` means substri
 pins the element from the container. -/
 def compareApplyTerm (op : String) (leftJson : Json) (leftCode rightCode : TSyntax `term)
     (rightJson : Option Json := none) : PygenM (TSyntax `term) := do
+  -- Set comparisons are order-independent (subset / set-equality), unlike the list-backed `==`/`≤`
+  -- the same `List` value would otherwise select. Fires when either operand is statically a set.
+  if (← jsonIsSetExpr leftJson) || (← (rightJson.mapM jsonIsSetExpr).map (·.getD false)) then
+    let prop ← getPropCondition
+    let call (fn : Name) (a b : TSyntax `term) : PygenM (TSyntax `term) := do
+      let t ← `($(mkIdent fn) $a $b)
+      if prop then `($t = true) else pure t
+    match op with
+    | "eq" => return ← call ``PastaLean.pySetEq leftCode rightCode
+    | "ne" => let t ← `($(mkIdent ``PastaLean.pySetEq) $leftCode $rightCode)
+              return ← (if prop then `($t = false) else `(! $t))
+    | "le" => return ← call ``PastaLean.pySetSubset leftCode rightCode
+    | "lt" => return ← call ``PastaLean.pySetProperSubset leftCode rightCode
+    | "ge" => return ← call ``PastaLean.pySetSubset rightCode leftCode
+    | "gt" => return ← call ``PastaLean.pySetProperSubset rightCode leftCode
+    | _ => pure ()   -- `in`/`is`/`notin` fall through to the normal membership handling
   -- `x is None` / `x is not None`: lower to `Option.isNone`/`Option.isSome` rather than
   -- `== none`/`!= none`. Works with unresolved `Option` element types (e.g., `[None] * n`).
   if (op == "is" || op == "isnot") && (rightJson.any isNoneConstantJson) then
@@ -484,6 +500,22 @@ def unaryOpSyntax : (kind : SyntaxNodeKind) → Json →
       if propNot then `(¬ $b) else `(! $b)
     else unaryOpApplyTerm op operandCode
   | _, _ => throwError s!"Unsupported syntax category for UnaryOp node"
+
+/-- Python `and`/`or` as a VALUE (not a truthiness test): they return the deciding *operand*, not a
+`Bool` — `x or '0'` yields the string. `a or b … = <first truthy, else last>`, `a and b … = <first
+falsy, else last>`, lowered to nested `if pyTruthy … then … else …`. Only valid when the operands
+share a Lean type (the common `<expr> or <default>` idiom); used by `return`/assignment where the
+result is consumed as a value, not by condition positions (which keep the `Bool` form). -/
+def boolOpValueTerm (json : Json) : PygenM (TSyntax `term) := do
+  let .ok op := json.getObjValAs? String "op" | throwError s!"BoolOp is missing 'op': {json}"
+  let .ok valuesJson := json.getObjValAs? (Array Json) "values" | throwError
+    s!"BoolOp is missing 'values': {json}"
+  let codes ← valuesJson.mapM (getCode · `term)
+  let some last := codes.back? | throwError s!"BoolOp has no operands: {json}"
+  -- Fold the operands before the last from right to left.
+  (codes.pop.reverse).foldlM (init := last) fun acc c =>
+    let t := mkIdent ``PastaLean.pyTruthy
+    if op == "and" then `(if $t $c then $acc else $c) else `(if $t $c then $c else $acc)
 
 @[pygen "BoolOp"]
 def boolOpSyntax : (kind : SyntaxNodeKind) → Json →

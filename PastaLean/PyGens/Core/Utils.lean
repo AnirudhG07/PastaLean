@@ -12,7 +12,11 @@ def withFreshVariables {α : Type} (x : PygenM α) : PygenM α :=
   withPygenStateField
     (·.varNames)
     (fun st varNames => { st with varNames := varNames })
-    (HashSet.emptyWithCapacity 100)
+    (HashSet.emptyWithCapacity 100) <|
+  withPygenStateField
+    (·.setVars)
+    (fun st setVars => { st with setVars := setVars })
+    (HashSet.emptyWithCapacity 16)
     x
 
 /--

@@ -145,11 +145,17 @@ coerce losslessly. `inf`/`nan` have no `ℚ` value, so the string parser degrade
 *literal* `float('inf')` lowers to `pyRatNonFinite` instead, leaving this path reachable only for a
 runtime-computed string. -/
 
-/-- Exact-mode stand-in for a non-finite float literal (`float('inf')`, `float('nan')`), which `ℚ`
-cannot represent. Returns the sentinel `-1`, and keeps `literal` in the emitted code so the
-placeholder is greppable. `--mode run` lowers these to `Float`, which represents them exactly, so
-the runnable `'rn` twin is unaffected. -/
-def pyRatNonFinite (_literal : String) : Rat := -1
+/-- Exact-mode stand-in for a non-finite float literal, which `ℚ` cannot represent. `inf` becomes a
+sentinel far outside any competitive value range (so the `ans = -inf; ans = max(ans, …)` /
+`best = inf; best = min(best, …)` initializer idiom behaves), `nan` becomes `0`. A top-level
+`inf = float('inf')` is a single shared `ℚ` def used by both twins, so this must be a usable value,
+not `-1`. It is NOT a true infinity — returning it verbatim (e.g. from empty input) still mismatches. -/
+def pyRatNonFinite (literal : String) : Rat :=
+  let s := literal.toLower
+  if s.endsWith "nan" then 0
+  else
+    let big : Rat := (10 : Rat) ^ (30 : Nat)
+    if s.startsWith "-" then -big else big
 
 /-- Typeclass for exact-mode `float(...)` coercions producing `ℚ`. -/
 class PyRatCast (α : Type) where

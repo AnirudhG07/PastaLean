@@ -48,11 +48,46 @@ def PyExcept.captureIOErrors {α : Type} (body : PyExcept α) : PyExcept α :=
 /-- Python-style `range` supporting positive and negative steps. -/
 def pyRange (stop : Int) (start : Int := 0) (step : Int := 1) : List Int := do
   if step > 0 then
-    List.map (fun i => start + i) (List.range' 0 ((stop - start) / step + (stop - start) % step).toNat step.toNat)
+    -- Element count is ⌈(stop-start)/step⌉ (0 when stop ≤ start). `(d + step - 1)/step` is that ceil.
+    List.map (fun i => start + i) (List.range' 0 ((stop - start + step - 1) / step).toNat step.toNat)
   else if step < 0 then
-    List.map (fun i => start - i) (List.range' 0 ((start - stop) / (-step) + (start - stop) % (-step)).toNat (-step).toNat)
+    List.map (fun i => start - i) (List.range' 0 ((start - stop + (-step) - 1) / (-step)).toNat (-step).toNat)
   else
     []
+
+/-- Pad `s` to `width` with `fill`, honouring alignment (`<` left, `>` right, `^` centre). -/
+def pyFmtPad (s : String) (width : Nat) (fill : Char) (align : Char) : String :=
+  let n := s.length
+  if n ≥ width then s
+  else
+    let total := width - n
+    match align with
+    | '<' => s ++ String.ofList (List.replicate total fill)
+    | '^' => let l := total / 2
+             String.ofList (List.replicate l fill) ++ s ++ String.ofList (List.replicate (total - l) fill)
+    | _   => String.ofList (List.replicate total fill) ++ s   -- '>' (default for a numeric field)
+
+/-- Apply one Python format spec (the part after `:`) to an already-stringified argument. Handles
+the common `[fill][align][0]width` forms — `{:02d}`, `{:>5}`, `{:<10}`, `{:5d}`. The type char
+(`d`/`s`/…) and any `.precision` are ignored: the argument is already rendered. -/
+def pyFmtApply (spec : String) (arg : String) : String :=
+  let cs := spec.toList
+  -- optional `[fill]align`: an explicit align, possibly preceded by a fill char.
+  let (fill, align, cs) :=
+    match cs with
+    | f :: a :: rest =>
+        if a == '<' || a == '>' || a == '^' then (f, a, rest)
+        else if f == '<' || f == '>' || f == '^' then (' ', f, a :: rest)
+        else (' ', ' ', cs)
+    | [a] => if a == '<' || a == '>' || a == '^' then (' ', a, []) else (' ', ' ', cs)
+    | [] => (' ', ' ', cs)
+  -- `0` before the width zero-fills and right-aligns.
+  let (fill, align, cs) :=
+    match cs with
+    | '0' :: rest => ('0', (if align == ' ' then '>' else align), rest)
+    | _ => (fill, align, cs)
+  let width := (String.ofList (cs.takeWhile Char.isDigit)).toNat?.getD 0
+  pyFmtPad arg width fill align
 
 /-- Python-style list indexing with negative indices and runtime failure on out-of-bounds access. -/
 def pyListGetItem {α : Type} [Inhabited α] (xs : List α) (idx : Int) : α :=

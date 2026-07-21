@@ -1,4 +1,5 @@
 import Mathlib
+import PastaLean.PyAPI.Core
 import PastaLean.PyAPI.CommonProtocols.Iterable
 
 namespace PastaLean
@@ -87,21 +88,43 @@ def pyJoin {α β : Type} [PyIterable α β] [PyStringJoin β] (sep : String) (x
 def pyStringReplace : String → (old : String) → (new : String) → String
   | s, old, new => s.replace old new
 
-/-- Python `str.format` for the common positional `{}` placeholders: each `{}` is replaced,
-left to right, by the next (already-stringified) argument. Splitting on `"{}"` yields the
-literal segments between placeholders, which we interleave with the arguments. Surplus
-arguments are ignored and surplus placeholders are left as the surrounding literals, which is
-close enough for the `"{} {}".format(a, b)` idiom (named/spec placeholders aren't handled). -/
+/-- Pad `s` to `width` with `fill`, honouring alignment (`<` left, `>` right, `^` centre). -/
+private partial def pyStrFormatGo (argv : Array String) : List Char → Nat → String → String
+  | [], _, acc => acc
+  | '{' :: '{' :: rest, next, acc => pyStrFormatGo argv rest next (acc ++ "{")
+  | '}' :: '}' :: rest, next, acc => pyStrFormatGo argv rest next (acc ++ "}")
+  | '{' :: rest, next, acc =>
+      let field := rest.takeWhile (· != '}')
+      let rest := (rest.dropWhile (· != '}')).drop 1
+      let (idxStr, spec) :=
+        match (String.ofList field).splitOn ":" with
+        | [i] => (i, "")
+        | i :: s => (i, String.intercalate ":" s)
+        | [] => ("", "")
+      let (i, next) := match idxStr.toNat? with
+        | some k => (k, next)
+        | none => (next, next + 1)
+      pyStrFormatGo argv rest next (acc ++ pyFmtApply spec (argv[i]?.getD ""))
+  | c :: rest, next, acc => pyStrFormatGo argv rest next (acc.push c)
+
+/-- Python `str.format`. Replaces each `{...}` placeholder with an (already-stringified) argument:
+`{}` / `{:spec}` consume positionally, `{n}` / `{n:spec}` index explicitly. `{{`/`}}` are literal
+braces. `spec` supports fill/align/zero-pad/width (`"{:02d}".format(7) = "07"`); the type char and
+precision are ignored since the argument is pre-rendered. -/
 def pyStrFormat (fmt : String) (args : List String) : String :=
-  match fmt.splitOn "{}" with
-  | [] => ""
-  | first :: rest =>
-      let rec weave (segments : List String) (args : List String) (acc : String) : String :=
-        match segments, args with
-        | [], _ => acc
-        | seg :: segs, a :: as' => weave segs as' (acc ++ a ++ seg)
-        | seg :: segs, [] => weave segs [] (acc ++ seg)
-      weave rest args first
+  pyStrFormatGo args.toArray fmt.toList 0 ""
+
+/-- Python `str.zfill(width)`: left-pad with `'0'` to `width`, keeping any leading sign first
+(`"42".zfill(5) = "00042"`, `"-42".zfill(5) = "-0042"`). -/
+def pyStringZfill (s : String) (width : Int) : String :=
+  let w := width.toNat
+  if s.length ≥ w then s
+  else
+    let zeros := String.ofList (List.replicate (w - s.length) '0')
+    match s.toList with
+    | '-' :: rest => "-" ++ zeros ++ String.ofList rest
+    | '+' :: rest => "+" ++ zeros ++ String.ofList rest
+    | _ => zeros ++ s
 
 /--
 Concrete string implementation for Python `strip`.
@@ -156,7 +179,10 @@ def pyStringUpper : String → String
   | s => s.toList.map Char.toUpper |> String.ofList
 
 def pyStringCapitalize : String → String
-  | s => s.capitalize
+  | s => match s.toList with
+    | [] => ""
+    -- Python lowercases the tail, unlike Lean's `String.capitalize` which leaves it unchanged.
+    | c :: rest => String.ofList (c.toUpper :: rest.map Char.toLower)
 
 /--
 Concrete string implementation for Python `split`.

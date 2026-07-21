@@ -148,12 +148,30 @@ def augAssignSyntax : (kind : SyntaxNodeKind) → Json →
         | none => pure baseStx
     | _, _ => throwError s!"Unsupported syntax category for AugAssign node"
 
-/-- Lower a for-loop target into a binder and optional destructuring prelude. -/
-def forTargetBinder (targetJson : Json) :
+/-- Does any statement in `json` reassign the bare name `target` (`Assign`/`AugAssign`/`AnnAssign`
+to `Name target`), searching nested `if`/`for`/`while`/`try` bodies but not nested `def`s? -/
+partial def bodyReassignsName (target : String) (json : Json) : Bool :=
+  match jsonNodeType? json with
+  | some "FunctionDef" => false
+  | some "Assign" | some "AugAssign" | some "AnnAssign" =>
+      (match json.getObjVal? "target" with
+       | .ok t => jsonNodeType? t == some "Name" && t.getObjValAs? String "id" == .ok target
+       | _ => false)
+      || (json.getObjVal? "value" |>.toOption |>.any (bodyReassignsName target))
+  | _ => match json with
+    | .arr elems => elems.any (bodyReassignsName target)
+    | .obj fields => fields.toList.any (fun (_, v) => bodyReassignsName target v)
+    | _ => false
+
+/-- Lower a for-loop target into a binder and optional destructuring prelude. A target name the
+`bodyElems` reassign gets a mutable shadow (`let mut`) instead of an immutable binder, so the
+reassignment sticks and the `if` lowering doesn't pre-declare a `let mut … := default` shadowing it. -/
+def forTargetBinder (targetJson : Json) (bodyElems : Array Json := #[]) :
     PygenM (TSyntax `ident × Array (TSyntax `doElem)) := do
   match jsonNodeType? targetJson with
   | some "Name" =>
       let targetIdent ← getCode targetJson `ident
+      let mutated := bodyElems.any (bodyReassignsName targetIdent.getId.toString)
       -- Lean forbids a `for` binder from shadowing an enclosing `let mut`. When Python reuses
       -- a name that is already a mutable variable in scope (`p = 2; ...; for p in ...:`), bind
       -- a fresh loop variable and assign it into the existing mutable, matching Python's rebind.
@@ -161,6 +179,12 @@ def forTargetBinder (targetJson : Json) :
         let loopIdent := mkIdent (← freshName `__py_loop)
         let assign ← `(doElem| $targetIdent:ident := $loopIdent)
         pure (loopIdent, #[assign])
+      else if mutated then
+        -- The body reassigns the loop var (`for w in …: if …: w = …`): mutable shadow of the value.
+        let loopIdent := mkIdent (← freshName `__py_loop)
+        let decl ← `(doElem| let mut $targetIdent:ident := $loopIdent)
+        addVar targetIdent.getId
+        pure (loopIdent, #[decl])
       else
         pure (targetIdent, #[])
   | some "Tuple" =>
@@ -185,7 +209,12 @@ def forTargetBinder (targetJson : Json) :
             let iStx ← intToStx (i : Int)
             `($(mkIdent ``PastaLean.pyListGetItem) $pairIdent $iStx)
           else tupleAccessTerm pairIdent i n
-        prelude := prelude.push (← `(doElem| let $(idents[i]!) := $acc))
+        -- An unpacked element the body reassigns (`for i, word in …: word = …`) must be `let mut`.
+        if bodyElems.any (bodyReassignsName idents[i]!.getId.toString) then
+          prelude := prelude.push (← `(doElem| let mut $(idents[i]!) := $acc))
+          addVar idents[i]!.getId
+        else
+          prelude := prelude.push (← `(doElem| let $(idents[i]!) := $acc))
       pure (pairIdent, prelude)
   | _ =>
       throwError s!"Unsupported for-loop target: {targetJson}"
@@ -455,7 +484,7 @@ def forSyntax : (kind : SyntaxNodeKind) → Json →
         -- `x = ...` after the loop is emitted as a fresh `let mut` rather than a reassignment
         -- of a variable whose `let mut` was confined to the loop body (Python rebinds anyway).
         let (targetIdent, bodyStxArray) ← withFixedVariables do withBreakFlag breakFlag? do
-          let (targetIdent, preludeElems) ← forTargetBinder targetJson
+          let (targetIdent, preludeElems) ← forTargetBinder targetJson bodyElems
           let mut bodyStxArray := preludeElems
           for elem in bodyElems do
             let elemStx ← getCode elem `doElem

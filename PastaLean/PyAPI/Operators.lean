@@ -39,14 +39,12 @@ instance : PyHAdd String String String where
 instance : PyHAdd String Char String where
   hAdd := fun s c => s ++ c.toString
 
-/-- Concatenating single-character results of string indexing (`word[i] + word[j]`, which are
-`Char`s here) and prepending a char (`word[i] + rest`). Python yields a string in both cases. -/
+-- String indexing yields a `Char` here, so `word[i] + word[j]` / `word[i] + rest` concat as strings.
 instance : PyHAdd Char Char String where hAdd := fun a b => a.toString ++ b.toString
 instance : PyHAdd Char String String where hAdd := fun c s => c.toString ++ s
 
-/-- Python list `+` CONCATENATES (`[1,2] + [3,4] = [1,2,3,4]`). Without this the generic
-`[HAdd α β γ]` instance resolves to Mathlib's *pointwise* `Add (List α)` (`= [4,6]`) — silently
-wrong. High priority so it wins over that generic instance. -/
+/-- Python list `+` CONCATENATES. Without this, the generic `[HAdd α β γ]` instance resolves to
+Mathlib's *pointwise* `Add (List α)` (`[1,2]+[3,4] = [4,6]`) — silently wrong; hence high priority. -/
 instance (priority := high) {α : Type} : PyHAdd (List α) (List α) (List α) where
   hAdd := (· ++ ·)
 
@@ -242,13 +240,9 @@ instance (priority := high) : PyHPow Int Float Float where
 instance (priority := high) : PyHPow Float Float Float where
   hPow := fun a b => Float.pow a b
 
-/-- Float base with an integer exponent — the everyday `x ** 2` idiom (the literal exponent stays
-`Int`/`Nat`, not `Float`). -/
+-- Float base with an integer exponent (`x ** 2`); `Nat ** Int` takes the exponent non-negative.
 instance (priority := high) : PyHPow Float Int Float where hPow a b := Float.pow a (Float.ofInt b)
 instance (priority := high) : PyHPow Float Nat Float where hPow a b := Float.pow a (Float.ofNat b)
-
-/-- `Nat` base with an `Int` exponent (`2 ** n`); the exponent is taken non-negative, as with
-`Int ** Int`. -/
 instance (priority := high) : PyHPow Nat Int Nat where hPow a b := a ^ b.toNat
 
 @[default_instance]
@@ -264,9 +258,8 @@ infixl:70 " /ₚ " => PyHDiv.hDiv
 instance {α β γ} [HDiv α β γ] : PyHDiv α β γ where
   hDiv := HDiv.hDiv
 
--- `@[default_instance 10001]` (as with `PyHAdd Int Int Int`) pins otherwise-unconstrained division
--- operands — e.g. `def divide(a, b): return a / b` with untyped params — to `Int /ₚ Int : Rat`,
--- matching Python's `/` always yielding a float (exact ℚ in prove mode).
+-- `@[default_instance 10001]` (as with `PyHAdd Int Int Int`) pins untyped division operands
+-- (`def divide(a, b): return a / b`) to `Int /ₚ Int : Rat` — Python `/` always yields a float.
 @[default_instance 10001]
 instance (priority := high) : PyHDiv Int Int Rat where
   hDiv := fun a b => (a : Rat) / (b : Rat)
@@ -415,12 +408,22 @@ def pyFloorDiv (a b : Int) : Int :=
     Int.fdiv a b
 
 /-!
-Python-style integer bitwise operators.
-
-These assume non-negative operands, which covers competitive-programming use. Python's
-infinite two's-complement semantics for negative integers is intentionally out of scope:
-operands are taken through `Int.toNat`, so a negative operand is treated as `0`.
+Python-style integer bitwise operators, modelling Python's infinite two's-complement (`-1 & 15 = 15`,
+`x & 1` for a negative `x`) at a fixed 64-bit width — ample for competitive-programming values (which
+fit in 63 bits). A negative operand becomes its unsigned 64-bit representative, the `Nat` bitwise op
+runs, and the result is re-signed (negative iff the top bit is set).
 -/
+
+/-- Fixed width for the two's-complement model of Python integer bitwise ops. -/
+private def pyBitWidth : Nat := 64
+/-- Unsigned 64-bit two's-complement representative of `a` (`-1 ↦ 2^64-1`). -/
+private def pyToUnsigned (a : Int) : Nat := (a % ((2 : Int) ^ pyBitWidth)).toNat
+/-- Re-sign a 64-bit result: negative iff the top bit is set. -/
+private def pyFromUnsigned (r : Nat) : Int :=
+  if r ≥ 2 ^ (pyBitWidth - 1) then (r : Int) - (2 : Int) ^ pyBitWidth else (r : Int)
+/-- Apply a `Nat` bitwise op in the two's-complement model, so negatives behave like Python. -/
+private def pyTwosComp (f : Nat → Nat → Nat) (a b : Int) : Int :=
+  pyFromUnsigned (f (pyToUnsigned a) (pyToUnsigned b))
 
 /-- Python `a & b`. -/
 -- `&`, `|`, `^` are bitwise on integers *and* the binary set operations (intersection, union,
@@ -438,9 +441,9 @@ def pyBitOr {α β γ : Type} [PyBitOr α β γ] (a : α) (b : β) : γ := PyBit
 /-- Python `a ^ b` (integer bitwise-xor, or set symmetric difference). -/
 def pyBitXor {α β γ : Type} [PyBitXor α β γ] (a : α) (b : β) : γ := PyBitXor.bitXor a b
 
-instance : PyBitAnd Int Int Int where bitAnd a b := Int.ofNat (Nat.land a.toNat b.toNat)
-instance : PyBitOr Int Int Int where bitOr a b := Int.ofNat (Nat.lor a.toNat b.toNat)
-instance : PyBitXor Int Int Int where bitXor a b := Int.ofNat (Nat.xor a.toNat b.toNat)
+instance : PyBitAnd Int Int Int where bitAnd := pyTwosComp Nat.land
+instance : PyBitOr Int Int Int where bitOr := pyTwosComp Nat.lor
+instance : PyBitXor Int Int Int where bitXor := pyTwosComp Nat.xor
 
 /-- Python `a << b`. -/
 def pyShiftLeft (a b : Int) : Int := a * (2 ^ b.toNat)

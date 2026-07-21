@@ -627,7 +627,7 @@ self-recursive case in `funcDefSyntax`). -/
 def mutualMemberDef (json : Json) : PygenM (TSyntax `command) := do
   let .ok name := json.getObjValAs? String "name" | throwError
     s!"FuncDef node does not have a 'name' field: {json}"
-  let nameIdent := mkIdent name.toName
+  let nameIdent := mkIdent (← withRunSuffix name).toName
   let argInfos ← functionArgInfos json
   let bodyElems ← functionBodyElems json
   let valueStx ← functionValueSyntax argInfos bodyElems
@@ -642,6 +642,13 @@ def mutualMemberDef (json : Json) : PygenM (TSyntax `command) := do
 cluster (≥ 2 members that reference each other) as one `mutual … end` block of `partial def`s. -/
 def emitHelperGroup (group : Array Json) : PygenM (TSyntax `command) := do
   if group.size ≥ 2 then
+    -- A `mutual` block needs an explicit signature on each member; untyped params give none, and
+    -- the block then fails to elaborate. Throw so best-effort degrades the function instead.
+    for j in group do
+      let some retTy ← functionReturnTypeSyntax? j
+        | throwError "mutually-recursive nested functions need type annotations for a `mutual` block"
+      let some _ ← functionArrowTypeSyntax? (← functionArgInfos j) retTy
+        | throwError "mutually-recursive nested functions need type annotations for a `mutual` block"
     let defs ← group.mapM fun j => withFreshVariables do mutualMemberDef j
     `(command| mutual $defs:command* end)
   else if let some j := group[0]? then
@@ -969,6 +976,9 @@ def returnHeadSyntax : (kind : SyntaxNodeKind) → Json →
     | `term, json => do
         let .ok value := json.getObjVal? "value" | throwError
           s!"Return node does not have a 'value' field or it is not a JSON value: {json}"
+        -- `return a or b` returns the deciding *value* (`x or '0'` → the string), not a `Bool`.
+        if jsonNodeType? value == some "BoolOp" then
+          return ← withoutCheck do boolOpValueTerm value
         let valueStx ← withoutCheck do
           getCode value `term
         return valueStx

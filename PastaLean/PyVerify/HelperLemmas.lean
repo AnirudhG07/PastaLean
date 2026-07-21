@@ -28,7 +28,7 @@ theorem coe_list_eq (l : List Nat) : (↑l : List Int) = l.map Int.ofNat := by
 theorem pyRange_eq_ofNat (n : Int) : pyRange n = (List.range n.toNat).map Int.ofNat := by
   unfold pyRange
   simp only [gt_iff_lt, List.range_eq_range', show (Int.toNat 1) = 1 from rfl, Int.ediv_one,
-    Int.emod_one, Int.add_zero, Int.sub_zero, if_pos (show (0 : Int) < 1 by norm_num)]
+    add_sub_cancel_right, Int.add_zero, Int.sub_zero, if_pos (show (0 : Int) < 1 by norm_num)]
   rw [← coe_list_eq]; simp
 
 /-- **The reduction spec.** A `pyRange n` loop equals the native `List.range n.toNat` loop with the
@@ -44,7 +44,7 @@ theorem pyRange_eq_start (stop start : Int) :
     pyRange stop start = (List.range (stop - start).toNat).map (fun k => start + Int.ofNat k) := by
   unfold pyRange
   simp only [gt_iff_lt, List.range_eq_range', show (Int.toNat 1) = 1 from rfl, Int.ediv_one,
-    Int.emod_one, Int.add_zero, if_pos (show (0 : Int) < 1 by norm_num)]
+    add_sub_cancel_right, Int.add_zero, if_pos (show (0 : Int) < 1 by norm_num)]
   rw [coe_list_eq, List.map_map]; rfl
 
 /-- Start-aware reduction: a `for i in range(start, stop)` loop becomes the native `List.range` loop

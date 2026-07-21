@@ -53,8 +53,9 @@ def comprehensionFilterOver (compJson : Json) (baseIter : TSyntax `term) : Pygen
   let iterCode ←
     if isRangeIter iterJson then pure baseIter
     else `($(mkIdent ``pyIter) $baseIter)
+  -- Each `if` clause is a truthiness context, so a bare non-bool (`if cnt[x+1]`) needs `pyTruthy`.
   let ifTerms ← match ifsJson with
-    | .arr arr => arr.mapM (fun ifJson => getCode ifJson `term)
+    | .arr arr => arr.mapM (fun ifJson => do truthyConditionTerm ifJson (← getCode ifJson `term))
     | _ => throwError s!"comprehension node 'ifs' field is not an array: {ifsJson}"
   if ifTerms.isEmpty then
     pure iterCode

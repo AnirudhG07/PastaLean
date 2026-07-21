@@ -287,23 +287,26 @@ def mutatingMethodDoElem (recvJson : Json)
   let recvTerm ← getCode recvJson `term
   assignBackToReceiver recvJson (← mkNewValue recvTerm)
 
-/-- Set methods that mutate the receiver in place, and the runtime function each lowers to. -/
-def setMutatorName? (attr : String) : Option Lean.Name :=
+/-- An in-place mutating method used AS A STATEMENT: the runtime function that rebuilds the receiver
+(`recv := fn recv args…`) and the accepted positional-arg counts. Pure mutators (`append`, `clear`,
+…) and value+rest mutators (`pop`, `popleft`) are handled uniformly — in statement position both
+drop any return value and just rebuild the receiver. The arity guard keeps a user method of the same
+name (`tree.update(i, v)`) from being hijacked. `sort` (kwargs) and dict `get` stay separate. -/
+def statementMutatorRebuild? (attr : String) : Option (Lean.Name × List Nat) :=
   match attr with
-  | "add"     => some ``pySetAdd
-  | "discard" => some ``pySetDiscard
-  | "remove"  => some ``pySetRemove
-  | _         => none
-
-/-- Python methods that mutate the receiver in place and return `None`, with their arity. Their
-runtime functions return a new container, so a statement call must store the result back. `append`
-and the `setMutatorName?` methods have their own branches. -/
-def inPlaceMutatorArity? (attr : String) : Option Nat :=
-  match attr with
-  | "clear" | "reverse"      => some 0
-  | "extend" | "update"      => some 1
-  | "appendleft"             => some 1
-  | _                        => none
+  | "append"     => some (``pyAppend,      [1])
+  | "appendleft" => some (``pyAppendLeft,  [1])
+  | "extend"     => some (``pyExtend,      [1])
+  | "update"     => some (``pyUpdate,      [1])
+  | "clear"      => some (``pyClear,       [0])
+  | "reverse"    => some (``pyReverse,     [0])
+  | "insert"     => some (``pyInsert,      [2])
+  | "add"        => some (``pySetAdd,      [1])
+  | "discard"    => some (``pySetDiscard,  [1])
+  | "remove"     => some (``pySetRemove,   [1])
+  | "pop"        => some (``pyPopRest,     [0, 1])
+  | "popleft"    => some (``pyPopLeftRest, [0])
+  | _            => none
 
 /-- The class to construct for a call `f(...)` whose callee is the `Name` `funcName`: a registered
 class (`C(..)`), or `cls(..)` inside a class body (classmethod sugar). `none` for ordinary calls. -/
@@ -732,41 +735,16 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
             else
               return ← `(doElem| let _ := $t)
 
-        if attr == "append" then
-          unless keyWordsMap.isEmpty do
-            throwError "append() calls do not support keyword arguments."
-          let some argJson := argsArray[0]? | throwError "append() expects exactly one positional argument."
-          unless argsArray.size == 1 do
-            throwError "append() expects exactly one positional argument."
-          let argCode ← getCode argJson `term
-          let pyAppendIdent := mkIdent ``pyAppend
-          return ← mutatingMethodDoElem valueJson fun recv => `($pyAppendIdent $recv $argCode)
-
-        -- Set mutators rebuild the set and reassign the variable, like `append`.
-        if let some mutName := setMutatorName? attr then
-          unless keyWordsMap.isEmpty do
-            throwError s!"{attr}() calls do not support keyword arguments."
-          let some argJson := argsArray[0]? | throwError s!"{attr}() expects exactly one positional argument."
-          unless argsArray.size == 1 do
-            throwError s!"{attr}() expects exactly one positional argument."
-          let argCode ← getCode argJson `term
-          let mutIdent := mkIdent mutName
-          return ← mutatingMethodDoElem valueJson fun recv => `($mutIdent $recv $argCode)
-
-        -- `d.popleft()` as a statement drops the value but must still shorten the deque.
-        if attr == "popleft" && argsArray.isEmpty && keyWordsMap.isEmpty then
-          return ← mutatingMethodDoElem valueJson fun recv =>
-            `($(mkIdent ``pyPopLeftRest) $recv)
-
-        -- Claim the call only when the shape matches the container mutator; a user method sharing
-        -- the name (`tree.update(i, v)`) has a different arity and belongs on the normal path.
-        if let some arity := inPlaceMutatorArity? attr then
-          if keyWordsMap.isEmpty && argsArray.size == arity then
-            let some methodName := pythonMethodMap? attr
-              | throwError s!"No runtime function is registered for '{attr}'."
-            let methodIdent := mkIdent methodName
-            let mutArgCodes ← argsArray.mapM (fun argJson => getCode argJson `term)
-            return ← mutatingMethodDoElem valueJson fun recv => `($methodIdent $recv $mutArgCodes*)
+        -- Any in-place mutating method as a bare statement (`stk.pop()`, `xs.append(v)`, `s.add(x)`,
+        -- `xs.insert(i, v)`, …): rebuild the receiver and drop the return value. One path for all;
+        -- a value+rest method's `restFn` is the rebuild. Also handles a subscript receiver
+        -- (`g[i].append(v)`) via `mutatingMethodDoElem`. The arity guard avoids claiming a like-named
+        -- user method.
+        if let some (rebuildFn, arities) := statementMutatorRebuild? attr then
+          if keyWordsMap.isEmpty && arities.contains argsArray.size then
+            let argCodes ← argsArray.mapM (fun argJson => getCode argJson `term)
+            let fnIdent := mkIdent rebuildFn
+            return ← mutatingMethodDoElem valueJson fun recv => `($fnIdent $recv $argCodes*)
 
         if attr == "get" then
           unless keyWordsMap.isEmpty do
