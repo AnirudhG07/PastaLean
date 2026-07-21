@@ -201,6 +201,11 @@ def nameSyntax : (kind : SyntaxNodeKind) → Json →
         return mkIdent (← suffixIfUserName id).toName
   | _, _ => throwError s!"Unsupported syntax category for Name node"
 
+/-- Under `--heap` a fresh container literal is a heap cell: wrap it in `(← alloc …)` so it yields a
+`Ref …`. In value mode the literal is returned unchanged. -/
+def allocIfHeap (t : TSyntax `term) : PygenM (TSyntax `term) := do
+  if ← getHeapMode then `((← PastaLean.allocM $t)) else pure t
+
 @[pygen "List"]
 def listSyntax : (kind : SyntaxNodeKind) → Json →
     PygenM (TSyntax kind)
@@ -210,7 +215,8 @@ def listSyntax : (kind : SyntaxNodeKind) → Json →
     let eltCodes ← match eltsJson with
       | .arr arr => arr.mapM (fun eltJson => getCode eltJson `term)
       | _ => throwError s!"List node 'elts' field is not an array: {eltsJson}"
-    `([$eltCodes,*])
+    let listTerm ← `([$eltCodes,*])
+    allocIfHeap listTerm
   | _, _ => throwError s!"Unsupported syntax category for List node"
 
 /-- `{a, b, c}` set literals lower to a deduplicated list via `pySetFromList`; sets are
@@ -225,7 +231,8 @@ def setSyntax : (kind : SyntaxNodeKind) → Json →
       | .arr arr => arr.mapM (fun eltJson => getCode eltJson `term)
       | _ => throwError s!"Set node 'elts' field is not an array: {eltsJson}"
     let fromListIdent := mkIdent ``PastaLean.pySetFromList
-    `($fromListIdent [$eltCodes,*])
+    let setTerm ← `($fromListIdent [$eltCodes,*])
+    allocIfHeap setTerm
   | _, _ => throwError s!"Unsupported syntax category for Set node"
 
 @[pygen "Tuple"]
@@ -276,7 +283,8 @@ def dictSyntax : (kind : SyntaxNodeKind) → Json →
           `(($keyCode, $valueCode))
       | _ => throwError s!"Dict node 'entries' field is not an array: {entriesJson}"
     let ofListIdent := mkIdent ``Std.HashMap.ofList
-    `($ofListIdent [$entryCodes,*])
+    let dictTerm ← `($ofListIdent [$entryCodes,*])
+    allocIfHeap dictTerm
   | _, _ => throwError s!"Unsupported syntax category for Dict node"
 
 

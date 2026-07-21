@@ -1,5 +1,6 @@
 import PastaLean.PyAPI.Core
 import PastaLean.PyGens.Basic
+import PastaLean.PyGens.Core.Utils
 
 namespace PastaLean
 
@@ -161,7 +162,11 @@ def subscriptSyntax : (kind : SyntaxNodeKind) → Json →
       s!"Subscript node does not have a 'value' field or it is not a JSON value: {json}"
     let .ok sliceJson := json.getObjValAs? Json "slice" | throwError
       s!"Subscript node does not have a 'slice' field or it is not a JSON value: {json}"
-    let valueCode ← getCode valueJson `term
+    -- Under `--heap`, a container held by reference is dereferenced before indexing (`a[i]` →
+    -- `pyGetItem (← readRef a) i`).
+    let valueCode ← match ← heapContainerDeref? valueJson with
+      | some deref => pure deref
+      | none => getCode valueJson `term
     subscriptTermFromValue valueJson sliceJson valueCode
   | _, _ => throwError s!"Unsupported syntax category for Subscript node"
 

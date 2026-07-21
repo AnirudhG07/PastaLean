@@ -47,6 +47,9 @@ def runTranslateTask (jsonTask : Json) (ctx : Core.Context) (env : Environment) 
   -- `userNames` lists the user's functions/classes whose references should also be suffixed.
   PastaLean.runSuffixRef.set (jsonTask.getObjValAs? String "runSuffix" |>.toOption.getD "")
   PastaLean.userNamesRef.set ((jsonTask.getObjValAs? (Array String) "userNames" |>.toOption.getD #[]).toList)
+  -- Opt-in reference semantics (`--heap`): generators read this to emit heap ops instead of value
+  -- rebuilds. Off by default keeps the value-semantics path byte-identical.
+  PastaLean.heapModeRef.set (jsonTask.getObjValAs? Bool "heap" |>.toOption.getD false)
   -- `getObjVal?`, not `getObjValAs? Json`: the latter reads a missing key as `null` and defers the
   -- failure to codegen, which then reports a confusing "no 'node_type' field" instead.
   let .ok json := jsonTask.getObjVal? "ast"

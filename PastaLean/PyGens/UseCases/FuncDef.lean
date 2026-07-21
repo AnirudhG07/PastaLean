@@ -282,6 +282,20 @@ def functionValueSyntax (argInfos : Array (TSyntax `ident × Option (TSyntax `te
   -- infer. Without this an effectful boxed function would keep `_`, and Lean would fix the monad's
   -- type from the first `return` — forcing e.g. `Float`, so a later `return 0` (`ℤ`) fails to match.
   let effCodomain : TSyntax `term ← if boxReturn then `(PastaLean.PyAny) else `(_)
+  -- Heap tier (`--heap`): a body that touches the heap runs in `HeapM Val` (or, with IO, the
+  -- `PyHeapIO`/`PyHeapProofM` stack). Takes precedence — `HeapM`'s error dimension is `PyException`,
+  -- so it already subsumes exceptions. Codomain is ascribed to the body so a `_` return can infer.
+  if ← needsHeapMonad bodyElems then
+    let bodyStxArray ← monadicFunctionBodySyntax bodyElems
+    let heapVal := mkIdent `Val
+    let monad ← if usesRealIO then
+        if useProofMonad then `($(mkIdent ``PastaLean.PyHeapProofM) $heapVal)
+        else `($(mkIdent ``PastaLean.PyHeapIO) $heapVal)
+      else `($(mkIdent ``PastaLean.HeapM) $heapVal)
+    let heapBody ← `(((do
+          $[$paramPrelude:doElem]*
+          $[$bodyStxArray:doElem]*) : $monad $effCodomain))
+    if argInfos.isEmpty then return heapBody else return ← mkLambda heapBody
   if usesProofExceptions || usesProofIO then
     -- Proof mode: use PyProofM (state monad with Python exceptions)
     let bodyStxArray ← monadicFunctionBodySyntax bodyElems
@@ -410,6 +424,9 @@ def functionCommandWithEffectSignature? (nameIdent : TSyntax `ident)
     (noncomp : Bool := false) :
     PygenM (Option (TSyntax `command)) := do
   let bodyElems ← functionBodyElems json
+  -- Heap functions run in `HeapM Val` with the codomain ascribed to the body (a `_` return type in
+  -- an explicit `def` header can't be inferred); let `functionValueSyntax`'s heap tier build them.
+  if ← needsHeapMonad bodyElems then return none
   let returnTy? ← functionReturnTypeSyntax? json
   -- Params with Python defaults go on the signature as `optParam` binders; otherwise the whole
   -- effect type is an arrow (`A → B → M R`) and the body is lambda-wrapped as before.

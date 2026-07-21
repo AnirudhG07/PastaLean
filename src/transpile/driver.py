@@ -52,6 +52,11 @@ _NUMERIC_MODE = "exact"
 _RUN_SUFFIX = ""
 _USER_NAMES = []
 
+# Opt-in reference semantics (`--heap`): when True, class instances and mutable containers become
+# heap-allocated refs (real Python aliasing) via the heap monad, instead of value semantics. Set per
+# `translate_to_lean` call and sent to the backend on every request.
+_HEAP_MODE = False
+
 # Statements the most recent `translate_to_json` degraded to `pyUnsupported(...)` under best-effort.
 _LAST_UNSUPPORTED = []
 
@@ -449,6 +454,81 @@ def annotate_io_effects(module_json):
 
         _annotate_direct_io_calls(body)
         _annotate_calls_with_mode(body, io_effectful_names, "io")
+
+    if isinstance(module_json, dict) and module_json.get("node_type") == "Module":
+        annotate_scope(module_json.get("body", []))
+
+
+def _node_has_direct_heap_syntax(node):
+    """Whether `node` directly uses the heap (`--heap`): a class instantiation (`_class_ctor`), an
+    instance-method call (`_receiver_class`), or a container literal. Does not descend into nested
+    function bodies (they own their own effects)."""
+    if isinstance(node, dict):
+        if node.get("_class_ctor") is not None or node.get("_receiver_class") is not None:
+            return True
+        if node.get("node_type") in ("List", "Dict", "Set"):
+            return True
+        nt = node.get("node_type")
+        for key, value in node.items():
+            if nt == "FunctionDef" and key == "body":
+                continue
+            if _node_has_direct_heap_syntax(value):
+                return True
+    elif isinstance(node, list):
+        return any(_node_has_direct_heap_syntax(item) for item in node)
+    return False
+
+
+def _annotate_heap_calls(node, heap_names):
+    """Stamp `_heap_call` on every call to a heap-effectful user function, so codegen awaits it."""
+    if isinstance(node, dict):
+        if node.get("node_type") == "Call":
+            func = node.get("func")
+            if isinstance(func, dict) and func.get("node_type") == "Name" and func.get("id") in heap_names:
+                node["_heap_call"] = True
+        nt = node.get("node_type")
+        for key, value in node.items():
+            if nt == "FunctionDef" and key == "body":
+                continue
+            _annotate_heap_calls(value, heap_names)
+    elif isinstance(node, list):
+        for item in node:
+            _annotate_heap_calls(item, heap_names)
+
+
+def annotate_heap_effects(module_json):
+    """Under `--heap`, mark calls to heap-effectful user functions with `_heap_call` (interprocedural
+    fixpoint, mirroring `annotate_io_effects`): a function is heap-effectful if its body directly uses
+    the heap or (transitively) calls a heap-effectful function. Codegen then runs such functions in
+    `HeapM` and awaits their calls."""
+    def annotate_scope(body):
+        local_functions = {
+            fn["name"]: fn
+            for fn in _collect_scope_function_defs(body)
+            if isinstance(fn.get("name"), str)
+        }
+        for fn in local_functions.values():
+            annotate_scope(fn.get("body", []))
+
+        heap_effectful = {
+            name: _node_has_direct_heap_syntax(fn.get("body", []))
+            for name, fn in local_functions.items()
+        }
+        changed = True
+        while changed:
+            changed = False
+            for name, fn in local_functions.items():
+                if heap_effectful.get(name, False):
+                    continue
+                called = _body_calls_known_functions(fn.get("body", []), local_functions.keys())
+                if any(heap_effectful.get(callee, False) for callee in called):
+                    heap_effectful[name] = True
+                    changed = True
+
+        heap_names = {name for name, is_effectful in heap_effectful.items() if is_effectful}
+        for fn in local_functions.values():
+            _annotate_heap_calls(fn.get("body", []), heap_names)
+        _annotate_heap_calls(body, heap_names)
 
     if isinstance(module_json, dict) and module_json.get("node_type") == "Module":
         annotate_scope(module_json.get("body", []))
@@ -1068,6 +1148,7 @@ def invoke_lean_backend(ast_json, target, check=True, client=None):
             numeric_mode=_NUMERIC_MODE,
             run_suffix=_RUN_SUFFIX,
             user_names=_USER_NAMES,
+            heap=_HEAP_MODE,
         )
     except Exception as err:
         return {"result": False, "error": str(err)}
@@ -1437,7 +1518,46 @@ def _collect_user_names(body):
     return sorted(names)
 
 
-def translate_to_lean(source_code, target="term", filepath = None, imports_add = True, best_effort=False, mode="both", prove_asserts=True, client=None):
+# Annotation heads (a `Subscript` value id) that denote a mutable container, for `--heap` universe
+# collection. `tuple` is intentionally excluded — Python tuples are immutable value types.
+_CONTAINER_ANN_HEADS = {
+    "list", "List", "Sequence", "MutableSequence",
+    "dict", "Dict", "Mapping", "MutableMapping",
+    "set", "Set", "frozenset", "FrozenSet",
+}
+
+
+def _is_container_annotation(ann):
+    """True when `ann` is a `list[...]`/`dict[...]`/`set[...]` annotation node."""
+    if not isinstance(ann, dict) or ann.get("node_type") != "Subscript":
+        return False
+    val = ann.get("value")
+    return isinstance(val, dict) and val.get("node_type") == "Name" and val.get("id") in _CONTAINER_ANN_HEADS
+
+
+def _collect_container_annotations(node, acc=None, seen=None):
+    """Every distinct mutable-container annotation node reachable in the (type-stamped) AST — from
+    inferred `_ty` binder stamps, explicit `annotation`s, and inferred `_ret_ty`. Used by `--heap` to
+    build a `Val` constructor per container type, including for local variables (not just fields)."""
+    if acc is None:
+        acc, seen = [], set()
+    if isinstance(node, dict):
+        for key in ("_ty", "annotation", "_ret_ty"):
+            ann = node.get(key)
+            if _is_container_annotation(ann):
+                marker = json.dumps(ann, sort_keys=True)
+                if marker not in seen:
+                    seen.add(marker)
+                    acc.append(ann)
+        for value in node.values():
+            _collect_container_annotations(value, acc, seen)
+    elif isinstance(node, list):
+        for item in node:
+            _collect_container_annotations(item, acc, seen)
+    return acc
+
+
+def translate_to_lean(source_code, target="term", filepath = None, imports_add = True, best_effort=False, mode="both", prove_asserts=True, heap=False, client=None):
     """Translate Python source to Lean via JSON IR and the Lean backend executable.
 
     `mode` selects the numeric semantics: "prove" (exact ℚ/ℝ, provable), "run" (Float, runnable), or
@@ -1446,12 +1566,17 @@ def translate_to_lean(source_code, target="term", filepath = None, imports_add =
 
     `client` is the `LeanBackendClient` to translate through; defaults to the process-wide one. Pass
     an explicit client to reuse a single warm Lean process across many files."""
-    global _NUMERIC_MODE, _RUN_SUFFIX, _USER_NAMES
+    global _NUMERIC_MODE, _RUN_SUFFIX, _USER_NAMES, _HEAP_MODE
     _NUMERIC_MODE = "approx" if mode == "run" else "exact"
     _RUN_SUFFIX, _USER_NAMES = "", []
+    _HEAP_MODE = heap
     json_ir = translate_to_json(source_code, filepath, best_effort=best_effort)
     ast_json = json.loads(json_ir)
     _stamp_class_dispatch(ast_json)
+    # Heap-effect propagation must run AFTER class dispatch (it keys off `_class_ctor`/`_receiver_class`),
+    # so calls to heap-effectful user functions are stamped `_heap_call` and later awaited.
+    if heap:
+        annotate_heap_effects(ast_json)
     client = client or _LEAN_BACKEND
 
     # Whole-module type inference (best-effort): stamp `_ty` using interprocedural flow before the
@@ -1462,6 +1587,23 @@ def translate_to_lean(source_code, target="term", filepath = None, imports_add =
 
     if ast_json.get("node_type") == "Module":
         body = ast_json.get("body", [])
+        # Under --heap, prepend a HeapPrelude node carrying the module's classes. It emits every
+        # class `structure`, the per-program `Val` universe, and the `Storable`/`derive_storable%`
+        # instances — all of which must precede the class members and functions that reference them.
+        if heap and target == "command":
+            classes = [s for s in body if isinstance(s, dict) and s.get("node_type") == "ClassDef"]
+            # Collect every mutable-container type used anywhere (from inferred `_ty` stamps and
+            # annotations), so local list/dict/set variables — not just class fields — get a `Val`
+            # constructor. Inject the prelude when the program has classes OR uses any container.
+            container_types = _collect_container_annotations(ast_json)
+            if classes or container_types:
+                # In `both` mode the prelude renders the exact AND the runnable `'rn` twin of every
+                # struct / `Val` constructor / `Storable` into one `Val` (the prelude is not itself
+                # twinned by `node_passes`, so it must emit both halves in a single pass).
+                body = [{"node_type": "HeapPrelude", "classes": classes,
+                         "container_types": container_types,
+                         "emit_twin": mode == "both"}] + body
+                ast_json["body"] = body
         user_names = _collect_user_names(body)
         code_key = f"lean_{target}"
         single = "approx" if mode == "run" else "exact"

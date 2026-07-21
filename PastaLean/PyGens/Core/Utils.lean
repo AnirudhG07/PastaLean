@@ -12,7 +12,15 @@ def withFreshVariables {α : Type} (x : PygenM α) : PygenM α :=
   withPygenStateField
     (·.varNames)
     (fun st varNames => { st with varNames := varNames })
-    (HashSet.emptyWithCapacity 100)
+    (HashSet.emptyWithCapacity 100) <|
+  withPygenStateField
+    (·.heapVarClasses)
+    (fun st v => { st with heapVarClasses := v })
+    [] <|
+  withPygenStateField
+    (·.heapVarContainers)
+    (fun st v => { st with heapVarContainers := v })
+    []
     x
 
 /--
@@ -291,6 +299,63 @@ partial def jsonUsesIOEffect (json : Json) : Bool :=
     | .arr elems => elems.toList.any jsonUsesIOEffect
     | .obj fields => fields.toList.any (fun (_, value) => jsonUsesIOEffect value)
     | _ => false
+
+/-- Recursively check whether a JSON subtree uses the heap (`--heap`): a class instantiation
+(`_class_ctor`), an instance-method call (`_receiver_class`), a heap-effectful call (`_heap_call`),
+or a mutable-container literal (`List`/`Dict`/`Set`). Such code must run in `HeapM`. -/
+partial def jsonUsesHeapEffect (json : Json) : Bool :=
+  let direct := (json.getObjValAs? String "_class_ctor").toOption.isSome
+             || (json.getObjValAs? String "_receiver_class").toOption.isSome
+             || (json.getObjValAs? Bool "_heap_call").toOption.getD false
+             || (match json.getObjValAs? String "node_type" with
+                 | .ok nt => nt == "List" || nt == "Dict" || nt == "Set"
+                 | _ => false)
+  if direct then true
+  else match json with
+    | .arr elems => elems.toList.any jsonUsesHeapEffect
+    | .obj fields => fields.toList.any (fun (_, value) => jsonUsesHeapEffect value)
+    | _ => false
+
+/-- Whether a statement list touches the heap and therefore should run in `HeapM`. -/
+def bodyNeedsHeapMonad (bodyElems : Array Json) : Bool :=
+  bodyElems.toList.any jsonUsesHeapEffect
+
+/-- The tier-selection guard: `--heap` is on AND this body touches the heap, so it runs in the
+`HeapM`/`PyHeapIO`/`PyHeapProofM` tier instead of the value-mode monads. -/
+def needsHeapMonad (bodyElems : Array Json) : PygenM Bool :=
+  return (← getHeapMode) && bodyNeedsHeapMonad bodyElems
+
+/-- Under `--heap`, if `json` accesses a mutable container held by reference — a `self.f`/`obj.f`
+where `f` is a registered container field — return the code for that `Ref (List …)`/`Ref (HashMap …)`.
+The caller then dereferences (`(← readRef …)`) to read it, or `modifyRef`s it to mutate in place.
+`none` for non-container accesses (so they keep their ordinary lowering). -/
+def heapContainerRef? (json : Json) : PygenM (Option (TSyntax `term)) := do
+  unless ← getHeapMode do return none
+  match jsonNodeType? json with
+  | some "Name" =>
+      -- A local/parameter that holds a container by reference IS the ref.
+      let .ok id := json.getObjValAs? String "id" | return none
+      if ← isHeapVarContainer id.toName then return some (mkIdent id.toName) else return none
+  | some "Attribute" =>
+      -- `self.f`/`obj.f` where `f` is a registered container field → the field value `(← recv ~> f)`.
+      let some valueJson := (json.getObjVal? "value").toOption | return none
+      let .ok attr := json.getObjValAs? String "attr" | return none
+      unless jsonNodeType? valueJson == some "Name" do return none
+      let .ok recvId := valueJson.getObjValAs? String "id" | return none
+      let cls? ← if recvId == "self" then (if ← getHeapSelfRef then getCurrentClass else pure none)
+                 else heapVarClassOf? recvId.toName
+      let some cls := cls? | return none
+      unless ← isContainerField cls attr do return none
+      return some (← `((← $(mkIdent recvId.toName) ~> $(mkIdent attr.toName))))
+  | _ => return none
+
+/-- Under `--heap`, if `json` reads a mutable container held by reference, return the dereferenced
+container `(← readRef …)`, ready to be read (indexed / iterated / `len`-ed); `none` otherwise. The
+in-place mutation sites use `heapContainerRef?` directly, since they need the ref for `modifyRef`. -/
+def heapContainerDeref? (json : Json) : PygenM (Option (TSyntax `term)) := do
+  match ← heapContainerRef? json with
+  | some refCode => return some (← `((← PastaLean.readRefM $refCode)))
+  | none => return none
 
 /-- Detect whether a statement list uses translated exceptions and therefore should not run under `Id`. -/
 def bodyNeedsExceptionMonad (bodyElems : Array Json) : Bool :=

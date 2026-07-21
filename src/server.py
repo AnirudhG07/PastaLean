@@ -46,6 +46,7 @@ def create_app(
     mode: str = "both",
     best_effort: bool = True,
     prove_asserts: bool = True,
+    heap: bool = False,
 ):
     try:
         from fastapi import FastAPI, HTTPException
@@ -56,7 +57,8 @@ def create_app(
             "the HTTP server needs the optional 'server' extra: uv pip install -e '.[server]'"
         ) from err
 
-    session = Session(target=target, mode=mode, best_effort=best_effort, prove_asserts=prove_asserts)
+    session = Session(target=target, mode=mode, best_effort=best_effort,
+                      prove_asserts=prove_asserts, heap=heap)
 
     class TranslateRequest(BaseModel):
         source: str = Field(..., description="Python source text.")
@@ -64,6 +66,8 @@ def create_app(
         mode: Literal["prove", "run", "both"] | None = None
         best_effort: bool | None = None
         prove_asserts: bool | None = None
+        heap: bool | None = Field(None, description="Opt-in reference semantics (heap monad); "
+                                  "works with any mode.")
         check: bool = Field(True, description="Compile the generated Lean with `lake env lean`.")
         timeout: float = Field(600.0, gt=0, description="Seconds allowed for the Lean step.")
 
@@ -75,6 +79,7 @@ def create_app(
                     ("mode", self.mode),
                     ("best_effort", self.best_effort),
                     ("prove_asserts", self.prove_asserts),
+                    ("heap", self.heap),
                 )
                 if value is not None
             }
@@ -154,7 +159,8 @@ def create_app(
 
     @app.get("/health")
     def health() -> dict:
-        return {"status": "ok", "target": session.target, "mode": session.mode}
+        return {"status": "ok", "target": session.target, "mode": session.mode,
+                "heap": session.heap}
 
     @app.get("/libraries")
     def libraries() -> dict:
@@ -166,7 +172,9 @@ def create_app(
             return session.translate(request.source, **{**request.overrides(), **overrides})
         except SyntaxError as err:
             raise HTTPException(status_code=400, detail=f"invalid Python: {err}") from err
-        except TypeError as err:
+        except (TypeError, ValueError) as err:
+            # An unknown or malformed translation option (bad `mode`/`target` value, etc.) is a bad
+            # request, not a server fault.
             raise HTTPException(status_code=400, detail=str(err)) from err
 
     @app.post("/translate", response_model=TranslateResponse)
@@ -194,9 +202,12 @@ def create_app(
 
     @app.post("/run", response_model=RunResponse)
     def run(request: RunRequest) -> RunResponse:
-        # A runnable program needs Float semantics; 'prove' emits noncomputable declarations.
+        # A runnable program needs Float semantics: 'prove' emits noncomputable declarations, and
+        # 'both' runs its exact (noncomputable) `main`, not the `'rn` twin — so force 'run' when
+        # proving or under heap, to get a single computable `main`.
         mode = request.mode or session.mode
-        result = _translate(request, mode="run" if mode == "prove" else mode)
+        heap = request.heap if request.heap is not None else session.heap
+        result = _translate(request, mode="run" if (mode == "prove" or heap) else mode)
         if not result.ok:
             return RunResponse(ok=False, error=result.error)
 
@@ -308,6 +319,7 @@ def serve(
     mode: str = "both",
     best_effort: bool = True,
     prove_asserts: bool = True,
+    heap: bool = False,
 ) -> None:
     try:
         import uvicorn
@@ -316,7 +328,8 @@ def serve(
             "the HTTP server needs the optional 'server' extra: uv pip install -e '.[server]'"
         ) from err
 
-    app = create_app(target=target, mode=mode, best_effort=best_effort, prove_asserts=prove_asserts)
+    app = create_app(target=target, mode=mode, best_effort=best_effort,
+                     prove_asserts=prove_asserts, heap=heap)
 
     # flush=True: redirected stdout is block-buffered, so these would otherwise surface long after
     # uvicorn's own banner — or not at all until the server exits.

@@ -138,12 +138,17 @@ error (e.g. `EOFError` from `input()`) into a catchable `PyException`. Unlike wr
 in `captureIOErrors (do …)`, this keeps each statement in the enclosing `do`, so a hoisted `let mut`
 stays mutable (Lean forbids mutating an outer `let mut` from inside a nested `do`). -/
 partial def wrapIOAwaitsWithCapture (stx : Syntax) : PygenM Syntax := do
+  -- Heap run-mode awaits live in `PyHeapIO` (heap-call awaits raise `PyException`, `input()` awaits
+  -- raise `IO.Error`), so use the `PyHeapIO`-typed capture there; plain run mode uses `PyExcept`.
+  let captureName ←
+    if (← getHeapMode) then pure ``PastaLean.PyHeapIO.captureIOErrors
+    else pure ``PastaLean.PyExcept.captureIOErrors
   match stx with
   | .node info ``Lean.Parser.Term.liftMethod args =>
       if args.size ≥ 1 then
         let inner ← wrapIOAwaitsWithCapture args[args.size - 1]!
         let innerT : TSyntax `term := ⟨inner⟩
-        let captured ← `($(mkIdent ``PastaLean.PyExcept.captureIOErrors) $innerT)
+        let captured ← `($(mkIdent captureName) $innerT)
         return .node info ``Lean.Parser.Term.liftMethod (args.set! (args.size - 1) captured.raw)
       else return stx
   | .node info k args => return .node info k (← args.mapM wrapIOAwaitsWithCapture)

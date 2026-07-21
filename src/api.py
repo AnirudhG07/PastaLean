@@ -80,6 +80,7 @@ class Session:
         best_effort: bool = True,
         prove_asserts: bool = True,
         imports_add: bool = True,
+        heap: bool = False,
         repo_root: Path = REPO_ROOT,
         client: LeanBackendClient | None = None,
     ):
@@ -92,6 +93,7 @@ class Session:
         self.best_effort = best_effort
         self.prove_asserts = prove_asserts
         self.imports_add = imports_add
+        self.heap = heap
         self.client = client or LeanBackendClient(repo_root)
         self._lock = threading.Lock()
 
@@ -116,6 +118,7 @@ class Session:
             "best_effort": self.best_effort,
             "prove_asserts": self.prove_asserts,
             "imports_add": self.imports_add,
+            "heap": self.heap,
         }
         unknown = set(overrides) - set(opts)
         if unknown:
@@ -140,6 +143,7 @@ class Session:
                 best_effort=opts["best_effort"],
                 mode=opts["mode"],
                 prove_asserts=opts["prove_asserts"],
+                heap=opts["heap"],
                 client=self.client,
             )
             # Set by the front end during the call above; read under the same lock.
@@ -204,7 +208,7 @@ def _default_session(**kwargs) -> Session:
 
 def translate(source_code: str, *, filepath: str | Path | None = None, **kwargs) -> TranslationResult:
     """One-shot translation of Python source text, reusing the process-wide warm backend."""
-    session_opts = {k: kwargs.pop(k) for k in list(kwargs) if k in ("target", "mode", "best_effort", "prove_asserts", "imports_add")}
+    session_opts = {k: kwargs.pop(k) for k in list(kwargs) if k in ("target", "mode", "best_effort", "prove_asserts", "imports_add", "heap")}
     return _default_session(**session_opts).translate(source_code, filepath=filepath, **kwargs)
 
 

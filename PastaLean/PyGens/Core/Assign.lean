@@ -128,8 +128,27 @@ class method body (`self` is the method's `let mut` shadow). -/
 def selfRecordUpdateDoElem (attr : String) (rhs : TSyntax `term) : PygenM (TSyntax `doElem) := do
   let selfId := mkIdent `self
   let attrId := mkIdent attr.toName
+  -- Under `--heap` in a method body, `self` is a `Ref C`: write the field through it with the
+  -- `self ~> attr <~ rhs` pointer notation (`rhs` may itself read fields — those `←`s lift). The
+  -- `<~` doElem can't be produced by a quotation with an antiquote LHS, so build the node directly;
+  -- the pretty-printed text re-parses and macro-expands to a `writeRef` when the file is compiled.
+  if ← getHeapSelfRef then
+    let lhs ← `($selfId ~> $attrId:ident)
+    return ⟨mkNode ``PastaLean.ptrWrite #[lhs.raw, mkAtom "<~", rhs.raw]⟩
   let fields := #[← `(Lean.Parser.Term.structInstField| $attrId:ident := $rhs)]
   `(doElem| $selfId:ident := { $selfId:term with $fields:structInstField,* })
+
+/-- The class name of a value expression that produces a heap object, if statically known: a
+constructor call (`_class_ctor` stamp) or a variable already known to hold one (`q = p`). -/
+def heapClassOfValue? (value : Json) : PygenM (Option String) := do
+  match (value.getObjValAs? String "_class_ctor").toOption with
+  | some c => return some c
+  | none =>
+    if jsonNodeType? value == some "Name" then
+      match value.getObjValAs? String "id" with
+      | .ok vid => heapVarClassOf? vid.toName
+      | _ => return none
+    else return none
 
 /-- Lower a possibly-nested subscript assignment `a[i]…[k] = value` to a reassignment of the
 base variable. Each level is rebuilt innermost-first with `pySetItem`: `a[i][j] = v` becomes
@@ -147,6 +166,10 @@ partial def nestedSubscriptSetDoElem? (target : Json) (value : TSyntax `term) :
   if jsonNodeType? sliceJson == some "Slice" then return none
   let indexTerm ← getCode sliceJson `term
   let setItemIdent := mkIdent ``PastaLean.pySetItem
+  -- Under `--heap`, `a[i] = v` on a container held by reference mutates it in place through the ref.
+  if let some refCode ← heapContainerRef? containerJson then
+    let lVar := mkIdent `__hc_l
+    return some (← `(doElem| PastaLean.modifyRefM $refCode (fun $lVar => $setItemIdent $lVar $indexTerm $value)))
   let containerCode ← getCode containerJson `term
   let newContainer ← `($setItemIdent $containerCode $indexTerm $value)
   match jsonNodeType? containerJson with
@@ -333,7 +356,9 @@ def assignSyntax : (kind : SyntaxNodeKind) → Json →
             -- `self` via record update. The `hasVar self` guard keeps top-level `obj.x = v`
             -- (no mutable `self` in scope) on its normal path.
             if let some attr := selfAttrTarget? target then
-              if ← hasVar `self then
+              -- Value mode: `self` is the `let mut` shadow (`hasVar`). Heap mode: `self` is a `Ref C`
+              -- parameter (not a var), so also fire when `heapSelfRef` is set → `writeRef` update.
+              if (← hasVar `self) || (← getHeapSelfRef) then
                 return ← selfRecordUpdateDoElem attr rhs
             match ← sliceTargetParts? target with
             | some (containerIdent, lowerTerm, upperTerm) =>
@@ -347,6 +372,23 @@ def assignSyntax : (kind : SyntaxNodeKind) → Json →
                 pure setStx
             | none =>
                 let nameIdent ← getCode target `ident
+                -- Under `--heap`, remember that this local now holds a heap object of a known class
+                -- (`p = Point(..)`, or `q = p`), so later `p.x` reads dereference it.
+                if ← getHeapMode then
+                  let cls? ← heapClassOfValue? value
+                  match cls? with
+                  | some cls => registerHeapVarClass nameIdent.getId cls
+                  | none => pure ()
+                  -- A constructor result or a container literal is a `Ref`; suppress the
+                  -- value-semantics `_ty` ascription and let Lean infer the ref type from the RHS.
+                  let isContainerLit := match jsonNodeType? value with
+                    | some "List" | some "Dict" | some "Set" => true | _ => false
+                  -- The RHS is a container ref if it's a literal or aliases another container
+                  -- (`ys = xs`, `xs = self.items`); track it so reads/mutations of the target deref.
+                  let isContainerRhs := isContainerLit || (← heapContainerRef? value).isSome
+                  if isContainerRhs then registerHeapVarContainer nameIdent.getId
+                  if cls?.isSome || isContainerRhs then
+                    return ← bindOrAssignLocal nameIdent rhs none
                 bindOrAssignLocal nameIdent rhs (← stampedTypeSyntax? target)
     | _, _ => throwError s!"Unsupported syntax category for Assign node"
 
