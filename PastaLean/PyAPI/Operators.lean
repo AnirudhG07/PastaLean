@@ -39,6 +39,17 @@ instance : PyHAdd String String String where
 instance : PyHAdd String Char String where
   hAdd := fun s c => s ++ c.toString
 
+/-- Concatenating single-character results of string indexing (`word[i] + word[j]`, which are
+`Char`s here) and prepending a char (`word[i] + rest`). Python yields a string in both cases. -/
+instance : PyHAdd Char Char String where hAdd := fun a b => a.toString ++ b.toString
+instance : PyHAdd Char String String where hAdd := fun c s => c.toString ++ s
+
+/-- Python list `+` CONCATENATES (`[1,2] + [3,4] = [1,2,3,4]`). Without this the generic
+`[HAdd α β γ]` instance resolves to Mathlib's *pointwise* `Add (List α)` (`= [4,6]`) — silently
+wrong. High priority so it wins over that generic instance. -/
+instance (priority := high) {α : Type} : PyHAdd (List α) (List α) (List α) where
+  hAdd := (· ++ ·)
+
 /-! Mixed numeric `+`. Lean has no heterogeneous `HAdd Nat Int` / `HAdd Rat Int`, so the
 generic `[HAdd α β γ]` instance does not cover these mixed-type sums that arise when one
 operand came from integer division (`Rat`) or a length/count (`Nat`). The result widens to
@@ -54,6 +65,10 @@ instance (priority := high) : PyHAdd Nat Int Int where
 
 instance (priority := high) : PyHAdd Int Nat Int where
   hAdd := fun a b => a + (b : Int)
+
+-- `Nat` (e.g. a raw length) meeting a `bool` predicate, mirroring the `Int`/`Bool` mixes above.
+instance (priority := high) : PyHAdd Nat Bool Int where hAdd a b := (a : Int) + pyBoolToInt b
+instance (priority := high) : PyHAdd Bool Nat Int where hAdd a b := pyBoolToInt a + (b : Int)
 
 class PyHSub (α β : Type) (γ : outParam Type) where
   hSub : α → β → γ
@@ -93,6 +108,8 @@ instance {α β γ} [HMul α β γ] : PyHMul α β γ where
 
 instance (priority := high) : PyHMul Int Bool Int where hMul a b := a * pyBoolToInt b
 instance (priority := high) : PyHMul Bool Int Int where hMul a b := pyBoolToInt a * b
+instance (priority := high) : PyHMul Nat Bool Int where hMul a b := (a : Int) * pyBoolToInt b
+instance (priority := high) : PyHMul Bool Nat Int where hMul a b := pyBoolToInt a * (b : Int)
 
 instance : PyHMul String Nat String where
   hMul := fun s n => String.intercalate "" (List.replicate n s)
@@ -171,6 +188,30 @@ instance (priority := high) : PyModulo Int Int Int where
 instance : PyModulo Nat Nat Nat where
   hMod := fun a b => a % b
 
+-- Integer `%` mixing `Nat` and `Int` (`n % len(xs)`), floored via `pyMod`, result `Int`.
+instance (priority := high) : PyModulo Nat Int Int where hMod a b := pyMod (a : Int) b
+instance (priority := high) : PyModulo Int Nat Int where hMod a b := pyMod a (b : Int)
+
+/-- Python `%` on rationals: the result takes the *divisor's* sign (`a - b·⌊a/b⌋`), unlike Lean's
+truncating `%`. So `(-5.5 : ℚ) % 2 = 0.5`. -/
+def pyRatMod (a b : Rat) : Rat := if b == 0 then a else a - b * ((⌊a / b⌋ : Int) : Rat)
+
+/-- Python `%` on floats (floored, divisor-signed) — see `pyRatMod`. -/
+def pyFloatMod (a b : Float) : Float := if b == 0.0 then a else a - b * (a / b).floor
+
+instance : PyModulo Rat Rat Rat where hMod := pyRatMod
+instance : PyModulo Float Float Float where hMod := pyFloatMod
+
+-- Mixed `%` promotes to the wider computable type (as `/ₚ` does), keeping Python's floor semantics.
+instance (priority := high) : PyModulo Float Int Float where hMod a b := pyFloatMod a (Float.ofInt b)
+instance (priority := high) : PyModulo Int Float Float where hMod a b := pyFloatMod (Float.ofInt a) b
+instance (priority := high) : PyModulo Float Nat Float where hMod a b := pyFloatMod a (Float.ofNat b)
+instance (priority := high) : PyModulo Nat Float Float where hMod a b := pyFloatMod (Float.ofNat a) b
+instance (priority := high) : PyModulo Rat Int Rat where hMod a b := pyRatMod a (b : Rat)
+instance (priority := high) : PyModulo Int Rat Rat where hMod a b := pyRatMod (a : Rat) b
+instance (priority := high) : PyModulo Rat Nat Rat where hMod a b := pyRatMod a (b : Rat)
+instance (priority := high) : PyModulo Nat Rat Rat where hMod a b := pyRatMod (a : Rat) b
+
 @[default_instance]
 instance {α β γ} [HPow α β γ] : PyHPow α β γ where
   hPow := HPow.hPow
@@ -200,6 +241,15 @@ instance (priority := high) : PyHPow Int Float Float where
 
 instance (priority := high) : PyHPow Float Float Float where
   hPow := fun a b => Float.pow a b
+
+/-- Float base with an integer exponent — the everyday `x ** 2` idiom (the literal exponent stays
+`Int`/`Nat`, not `Float`). -/
+instance (priority := high) : PyHPow Float Int Float where hPow a b := Float.pow a (Float.ofInt b)
+instance (priority := high) : PyHPow Float Nat Float where hPow a b := Float.pow a (Float.ofNat b)
+
+/-- `Nat` base with an `Int` exponent (`2 ** n`); the exponent is taken non-negative, as with
+`Int ** Int`. -/
+instance (priority := high) : PyHPow Nat Int Nat where hPow a b := a ^ b.toNat
 
 @[default_instance]
 instance (priority := high) : Neg Rat where
