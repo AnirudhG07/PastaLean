@@ -1,0 +1,12 @@
+{
+  "problem": "find-the-pivot-integer",
+  "module": "FindThePivotInteger",
+  "method": "pivotInteger",
+  "params": [
+    "n"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 52
+}

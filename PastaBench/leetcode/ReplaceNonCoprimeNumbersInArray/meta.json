@@ -1,0 +1,12 @@
+{
+  "problem": "replace-non-coprime-numbers-in-array",
+  "module": "ReplaceNonCoprimeNumbersInArray",
+  "method": "replaceNonCoprimes",
+  "params": [
+    "nums"
+  ],
+  "difficulty": "Hard",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 134
+}

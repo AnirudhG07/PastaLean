@@ -1,0 +1,12 @@
+{
+  "problem": "construct-the-rectangle",
+  "module": "ConstructTheRectangle",
+  "method": "constructRectangle",
+  "params": [
+    "area"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 74
+}

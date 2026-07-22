@@ -1,0 +1,12 @@
+{
+  "problem": "daily-temperatures",
+  "module": "DailyTemperatures",
+  "method": "dailyTemperatures",
+  "params": [
+    "temperatures"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 107
+}

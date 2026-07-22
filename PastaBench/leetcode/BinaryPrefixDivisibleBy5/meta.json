@@ -1,0 +1,12 @@
+{
+  "problem": "binary-prefix-divisible-by-5",
+  "module": "BinaryPrefixDivisibleBy5",
+  "method": "prefixesDivBy5",
+  "params": [
+    "nums"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 69
+}

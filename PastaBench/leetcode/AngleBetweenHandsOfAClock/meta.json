@@ -1,0 +1,13 @@
+{
+  "problem": "angle-between-hands-of-a-clock",
+  "module": "AngleBetweenHandsOfAClock",
+  "method": "angleClock",
+  "params": [
+    "hour",
+    "minutes"
+  ],
+  "difficulty": "Medium",
+  "bucket": "term",
+  "feature": "term",
+  "n_tests": 72
+}

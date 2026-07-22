@@ -1,0 +1,13 @@
+{
+  "problem": "k-inverse-pairs-array",
+  "module": "KInversePairsArray",
+  "method": "kInversePairs",
+  "params": [
+    "n",
+    "k"
+  ],
+  "difficulty": "Hard",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 80
+}

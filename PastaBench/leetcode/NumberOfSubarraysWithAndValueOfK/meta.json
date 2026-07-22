@@ -1,0 +1,13 @@
+{
+  "problem": "number-of-subarrays-with-and-value-of-k",
+  "module": "NumberOfSubarraysWithAndValueOfK",
+  "method": "countSubarrays",
+  "params": [
+    "nums",
+    "k"
+  ],
+  "difficulty": "Hard",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 127
+}

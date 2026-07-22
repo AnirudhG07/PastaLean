@@ -1,0 +1,12 @@
+{
+  "problem": "nth-digit",
+  "module": "NthDigit",
+  "method": "findNthDigit",
+  "params": [
+    "n"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 50
+}

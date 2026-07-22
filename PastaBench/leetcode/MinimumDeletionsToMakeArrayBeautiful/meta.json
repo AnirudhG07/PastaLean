@@ -1,0 +1,12 @@
+{
+  "problem": "minimum-deletions-to-make-array-beautiful",
+  "module": "MinimumDeletionsToMakeArrayBeautiful",
+  "method": "minDeletion",
+  "params": [
+    "nums"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 125
+}

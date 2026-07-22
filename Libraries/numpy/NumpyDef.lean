@@ -127,6 +127,12 @@ def pyNumpySameShape? {α β} (lhs : List (List α)) (rhs : List (List β)) : Bo
 def pyNumpyArray {α} [PyNumpyScalar α] (matrix : List (List α)) : List (List Float) :=
   matrix.map (List.map toFloat)
 
+/-- Normalize a matrix into its compute field `γ` (`ℚ` stays `ℚ`, `Float` stays `Float`), so an
+algebraic numpy op returns a value in the SAME field as the surrounding code instead of always
+collapsing to `Float`. -/
+def pyNumpyArrayOver {α γ} [PyNumpyCompute α γ] (matrix : List (List α)) : List (List γ) :=
+  matrix.map (List.map PyNumpyCompute.cast)
+
 /-- Return the matrix shape as `[rows, cols]`. A `List Int` (not a `Prod`) so that both indexing
 (`np.shape(x)[0]`) and tuple-unpack assignment (`rows, cols = np.shape(x)`) — which the codegen
 lowers to `⦋0⦌`/`⦋1⦌` (`pyGetItem`) — work; a `Prod` has no `PyGetItem` instance. -/

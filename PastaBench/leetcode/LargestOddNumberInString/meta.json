@@ -1,0 +1,12 @@
+{
+  "problem": "largest-odd-number-in-string",
+  "module": "LargestOddNumberInString",
+  "method": "largestOddNumber",
+  "params": [
+    "num"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 140
+}

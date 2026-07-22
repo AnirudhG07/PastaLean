@@ -1,0 +1,13 @@
+{
+  "problem": "path-sum-ii",
+  "module": "PathSumIi",
+  "method": "pathSum",
+  "params": [
+    "root",
+    "targetSum"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "class",
+  "n_tests": 41
+}

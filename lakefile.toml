@@ -29,6 +29,11 @@ name = "TypeInfer"
 [[lean_lib]]
 name = "PALC"
 
+# The shipped verification benchmark. Not a default target: 300 Mathlib-importing modules.
+# Build it explicitly with `lake build PastaBench`.
+[[lean_lib]]
+name = "PastaBench"
+
 [[lean_lib]]
 name = "Slides"
 srcDir = "docs/ppt"

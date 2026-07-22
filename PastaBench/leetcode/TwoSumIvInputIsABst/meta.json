@@ -1,0 +1,13 @@
+{
+  "problem": "two-sum-iv-input-is-a-bst",
+  "module": "TwoSumIvInputIsABst",
+  "method": "findTarget",
+  "params": [
+    "root",
+    "k"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "class",
+  "n_tests": 89
+}

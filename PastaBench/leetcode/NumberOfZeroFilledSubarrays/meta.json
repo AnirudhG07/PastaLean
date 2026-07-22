@@ -1,0 +1,12 @@
+{
+  "problem": "number-of-zero-filled-subarrays",
+  "module": "NumberOfZeroFilledSubarrays",
+  "method": "zeroFilledSubarray",
+  "params": [
+    "nums"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 99
+}

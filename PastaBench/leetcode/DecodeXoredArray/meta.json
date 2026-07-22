@@ -1,0 +1,13 @@
+{
+  "problem": "decode-xored-array",
+  "module": "DecodeXoredArray",
+  "method": "decode",
+  "params": [
+    "encoded",
+    "first"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 97
+}

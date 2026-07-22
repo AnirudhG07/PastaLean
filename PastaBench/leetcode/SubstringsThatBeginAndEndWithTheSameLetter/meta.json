@@ -1,0 +1,12 @@
+{
+  "problem": "substrings-that-begin-and-end-with-the-same-letter",
+  "module": "SubstringsThatBeginAndEndWithTheSameLetter",
+  "method": "numberOfSubstrings",
+  "params": [
+    "s"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 78
+}

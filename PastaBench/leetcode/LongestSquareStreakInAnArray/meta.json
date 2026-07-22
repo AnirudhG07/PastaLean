@@ -1,0 +1,12 @@
+{
+  "problem": "longest-square-streak-in-an-array",
+  "module": "LongestSquareStreakInAnArray",
+  "method": "longestSquareStreak",
+  "params": [
+    "nums"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 144
+}

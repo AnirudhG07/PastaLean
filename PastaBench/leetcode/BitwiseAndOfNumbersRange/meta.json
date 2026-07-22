@@ -1,0 +1,13 @@
+{
+  "problem": "bitwise-and-of-numbers-range",
+  "module": "BitwiseAndOfNumbersRange",
+  "method": "rangeBitwiseAnd",
+  "params": [
+    "left",
+    "right"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 97
+}

@@ -1,0 +1,13 @@
+{
+  "problem": "search-a-2d-matrix-ii",
+  "module": "SearchA2dMatrixIi",
+  "method": "searchMatrix",
+  "params": [
+    "matrix",
+    "target"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 95
+}

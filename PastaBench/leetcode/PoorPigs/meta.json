@@ -1,0 +1,14 @@
+{
+  "problem": "poor-pigs",
+  "module": "PoorPigs",
+  "method": "poorPigs",
+  "params": [
+    "buckets",
+    "minutesToDie",
+    "minutesToTest"
+  ],
+  "difficulty": "Hard",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 99
+}

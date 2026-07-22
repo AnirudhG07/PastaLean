@@ -1,0 +1,13 @@
+{
+  "problem": "maximum-beauty-of-an-array-after-applying-operation",
+  "module": "MaximumBeautyOfAnArrayAfterApplyingOperation",
+  "method": "maximumBeauty",
+  "params": [
+    "nums",
+    "k"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 119
+}

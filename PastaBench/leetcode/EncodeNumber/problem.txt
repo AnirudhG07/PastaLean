@@ -1,0 +1,26 @@
+Given a non-negative integer num, Return its encoding string.\r
+\r
+The encoding is done by converting the integer to a string using a secret function that you should deduce from the following table:\r
+\r
+\r
+\r
+ \r
+Example 1:\r
+\r
+\r
+Input: num = 23\r
+Output: "1000"\r
+\r
+\r
+Example 2:\r
+\r
+\r
+Input: num = 107\r
+Output: "101100"\r
+\r
+\r
+ \r
+Constraints:\r
+\r
+\r
+	0 <= num <= 10^9\r

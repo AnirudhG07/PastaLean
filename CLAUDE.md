@@ -200,3 +200,4 @@ lake exe palc <dir|file>    # run PALC checks directly
 
 - Keep comments concise and only important notes should be in the code. Don't stuff paragraphs of them.
 - Think about robustness solution for the same, touching a generic problem, then just a temporary solution for the same. This will help in future bugs, to avoid code duplication and will help in maintainability of the code.
+- If you find some python code very nice/hard/typical, add them within pre-existing regression tests for those files testing them, or make new ones. Add those examples which really test the boundaries of PastaLean, and which are likely to be bugs if not handled properly.

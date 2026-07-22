@@ -1,0 +1,13 @@
+{
+  "problem": "number-of-distinct-binary-strings-after-applying-operations",
+  "module": "NumberOfDistinctBinaryStringsAfterApplyingOperations",
+  "method": "countDistinctStrings",
+  "params": [
+    "s",
+    "k"
+  ],
+  "difficulty": "Medium",
+  "bucket": "term",
+  "feature": "term",
+  "n_tests": 111
+}

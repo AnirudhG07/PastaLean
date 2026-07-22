@@ -1,0 +1,13 @@
+{
+  "problem": "count-substrings-starting-and-ending-with-given-character",
+  "module": "CountSubstringsStartingAndEndingWithGivenCharacter",
+  "method": "countSubstrings",
+  "params": [
+    "s",
+    "c"
+  ],
+  "difficulty": "Medium",
+  "bucket": "term",
+  "feature": "term",
+  "n_tests": 105
+}

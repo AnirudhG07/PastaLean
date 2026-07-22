@@ -1,0 +1,12 @@
+{
+  "problem": "harshad-number",
+  "module": "HarshadNumber",
+  "method": "sumOfTheDigitsOfHarshadNumber",
+  "params": [
+    "x"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 53
+}

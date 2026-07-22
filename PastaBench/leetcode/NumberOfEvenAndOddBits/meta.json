@@ -1,0 +1,12 @@
+{
+  "problem": "number-of-even-and-odd-bits",
+  "module": "NumberOfEvenAndOddBits",
+  "method": "evenOddBit",
+  "params": [
+    "n"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 62
+}

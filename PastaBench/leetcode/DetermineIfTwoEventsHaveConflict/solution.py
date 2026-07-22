@@ -1,0 +1,18 @@
+import random
+import functools
+import collections
+import string
+import math
+import datetime
+from typing import *
+from functools import *
+from collections import *
+from itertools import *
+from heapq import *
+from bisect import *
+from string import *
+from operator import *
+from math import *
+
+def haveConflict(event1: List[str], event2: List[str]) -> bool:
+    return not (event1[0] > event2[1] or event1[1] < event2[0])

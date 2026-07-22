@@ -1,0 +1,13 @@
+{
+  "problem": "incremental-memory-leak",
+  "module": "IncrementalMemoryLeak",
+  "method": "memLeak",
+  "params": [
+    "memory1",
+    "memory2"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 82
+}

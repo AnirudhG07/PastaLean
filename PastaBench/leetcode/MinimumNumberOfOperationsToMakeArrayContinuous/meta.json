@@ -1,0 +1,12 @@
+{
+  "problem": "minimum-number-of-operations-to-make-array-continuous",
+  "module": "MinimumNumberOfOperationsToMakeArrayContinuous",
+  "method": "minOperations",
+  "params": [
+    "nums"
+  ],
+  "difficulty": "Hard",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 136
+}

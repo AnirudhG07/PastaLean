@@ -1,0 +1,12 @@
+{
+  "problem": "minimum-number-of-increasing-subsequence-to-be-removed",
+  "module": "MinimumNumberOfIncreasingSubsequenceToBeRemoved",
+  "method": "minOperations",
+  "params": [
+    "nums"
+  ],
+  "difficulty": "Hard",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 119
+}

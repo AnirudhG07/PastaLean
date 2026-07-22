@@ -1,0 +1,5878 @@
+{
+  "source_dataset": "/home/anirudhgupta/PyAstLean/cp_harness/dataset_leetcode",
+  "source_hf_repo": "newfacade/LeetCodeDataset",
+  "seed": 20260722,
+  "counts": {
+    "total": 300,
+    "by_bucket": {
+      "loop": 200,
+      "term": 100
+    },
+    "by_difficulty": {
+      "Easy": 93,
+      "Hard": 60,
+      "Medium": 147
+    },
+    "by_feature": {
+      "class": 25,
+      "for": 75,
+      "while": 100,
+      "term": 100
+    }
+  },
+  "problems": [
+    {
+      "problem": "average-of-levels-in-binary-tree",
+      "module": "AverageOfLevelsInBinaryTree",
+      "difficulty": "Easy",
+      "method": "averageOfLevels",
+      "params": [
+        "root"
+      ],
+      "n_tests": 93,
+      "lean_lines": 86,
+      "py_lines": 36,
+      "term": false,
+      "while": true,
+      "for": true,
+      "class": true,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "class"
+    },
+    {
+      "problem": "binary-tree-inorder-traversal",
+      "module": "BinaryTreeInorderTraversal",
+      "difficulty": "Easy",
+      "method": "inorderTraversal",
+      "params": [
+        "root"
+      ],
+      "n_tests": 81,
+      "lean_lines": 70,
+      "py_lines": 33,
+      "term": false,
+      "while": false,
+      "for": false,
+      "class": true,
+      "recursive": true,
+      "bucket": "loop",
+      "feature": "class"
+    },
+    {
+      "problem": "binary-tree-postorder-traversal",
+      "module": "BinaryTreePostorderTraversal",
+      "difficulty": "Easy",
+      "method": "postorderTraversal",
+      "params": [
+        "root"
+      ],
+      "n_tests": 91,
+      "lean_lines": 70,
+      "py_lines": 33,
+      "term": false,
+      "while": false,
+      "for": false,
+      "class": true,
+      "recursive": true,
+      "bucket": "loop",
+      "feature": "class"
+    },
+    {
+      "problem": "binary-tree-preorder-traversal",
+      "module": "BinaryTreePreorderTraversal",
+      "difficulty": "Easy",
+      "method": "preorderTraversal",
+      "params": [
+        "root"
+      ],
+      "n_tests": 87,
+      "lean_lines": 70,
+      "py_lines": 33,
+      "term": false,
+      "while": false,
+      "for": false,
+      "class": true,
+      "recursive": true,
+      "bucket": "loop",
+      "feature": "class"
+    },
+    {
+      "problem": "binary-tree-tilt",
+      "module": "BinaryTreeTilt",
+      "difficulty": "Easy",
+      "method": "findTilt",
+      "params": [
+        "root"
+      ],
+      "n_tests": 89,
+      "lean_lines": 98,
+      "py_lines": 34,
+      "term": false,
+      "while": false,
+      "for": false,
+      "class": true,
+      "recursive": true,
+      "bucket": "loop",
+      "feature": "class"
+    },
+    {
+      "problem": "linked-list-frequency",
+      "module": "LinkedListFrequency",
+      "difficulty": "Easy",
+      "method": "frequenciesOfElements",
+      "params": [
+        "head"
+      ],
+      "n_tests": 54,
+      "lean_lines": 58,
+      "py_lines": 30,
+      "term": false,
+      "while": true,
+      "for": true,
+      "class": true,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "class"
+    },
+    {
+      "problem": "path-sum",
+      "module": "PathSum",
+      "difficulty": "Easy",
+      "method": "hasPathSum",
+      "params": [
+        "root",
+        "targetSum"
+      ],
+      "n_tests": 75,
+      "lean_lines": 82,
+      "py_lines": 32,
+      "term": false,
+      "while": false,
+      "for": false,
+      "class": true,
+      "recursive": true,
+      "bucket": "loop",
+      "feature": "class"
+    },
+    {
+      "problem": "range-sum-of-bst",
+      "module": "RangeSumOfBst",
+      "difficulty": "Easy",
+      "method": "rangeSumBST",
+      "params": [
+        "root",
+        "low",
+        "high"
+      ],
+      "n_tests": 81,
+      "lean_lines": 79,
+      "py_lines": 35,
+      "term": false,
+      "while": false,
+      "for": false,
+      "class": true,
+      "recursive": true,
+      "bucket": "loop",
+      "feature": "class"
+    },
+    {
+      "problem": "two-sum-iv-input-is-a-bst",
+      "module": "TwoSumIvInputIsABst",
+      "difficulty": "Easy",
+      "method": "findTarget",
+      "params": [
+        "root",
+        "k"
+      ],
+      "n_tests": 89,
+      "lean_lines": 100,
+      "py_lines": 33,
+      "term": false,
+      "while": false,
+      "for": false,
+      "class": true,
+      "recursive": true,
+      "bucket": "loop",
+      "feature": "class"
+    },
+    {
+      "problem": "count-the-number-of-k-big-indices",
+      "module": "CountTheNumberOfKBigIndices",
+      "difficulty": "Hard",
+      "method": "kBigIndices",
+      "params": [
+        "nums",
+        "k"
+      ],
+      "n_tests": 105,
+      "lean_lines": 106,
+      "py_lines": 46,
+      "term": false,
+      "while": true,
+      "for": true,
+      "class": true,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "class"
+    },
+    {
+      "problem": "create-sorted-array-through-instructions",
+      "module": "CreateSortedArrayThroughInstructions",
+      "difficulty": "Hard",
+      "method": "createSortedArray",
+      "params": [
+        "instructions"
+      ],
+      "n_tests": 113,
+      "lean_lines": 104,
+      "py_lines": 44,
+      "term": false,
+      "while": true,
+      "for": true,
+      "class": true,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "class"
+    },
+    {
+      "problem": "k-empty-slots",
+      "module": "KEmptySlots",
+      "difficulty": "Hard",
+      "method": "kEmptySlots",
+      "params": [
+        "bulbs",
+        "k"
+      ],
+      "n_tests": 115,
+      "lean_lines": 130,
+      "py_lines": 48,
+      "term": false,
+      "while": true,
+      "for": true,
+      "class": true,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "class"
+    },
+    {
+      "problem": "vertical-order-traversal-of-a-binary-tree",
+      "module": "VerticalOrderTraversalOfABinaryTree",
+      "difficulty": "Hard",
+      "method": "verticalTraversal",
+      "params": [
+        "root"
+      ],
+      "n_tests": 89,
+      "lean_lines": 102,
+      "py_lines": 41,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": true,
+      "recursive": true,
+      "bucket": "loop",
+      "feature": "class"
+    },
+    {
+      "problem": "binary-search-tree-to-greater-sum-tree",
+      "module": "BinarySearchTreeToGreaterSumTree",
+      "difficulty": "Medium",
+      "method": "bstToGst",
+      "params": [
+        "root"
+      ],
+      "n_tests": 86,
+      "lean_lines": 74,
+      "py_lines": 35,
+      "term": false,
+      "while": false,
+      "for": false,
+      "class": true,
+      "recursive": true,
+      "bucket": "loop",
+      "feature": "class"
+    },
+    {
+      "problem": "closest-nodes-queries-in-a-binary-search-tree",
+      "module": "ClosestNodesQueriesInABinarySearchTree",
+      "difficulty": "Medium",
+      "method": "closestNodes",
+      "params": [
+        "root",
+        "queries"
+      ],
+      "n_tests": 65,
+      "lean_lines": 92,
+      "py_lines": 40,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": true,
+      "recursive": true,
+      "bucket": "loop",
+      "feature": "class"
+    },
+    {
+      "problem": "count-nodes-equal-to-sum-of-descendants",
+      "module": "CountNodesEqualToSumOfDescendants",
+      "difficulty": "Medium",
+      "method": "equalToDescendants",
+      "params": [
+        "root"
+      ],
+      "n_tests": 103,
+      "lean_lines": 104,
+      "py_lines": 35,
+      "term": false,
+      "while": false,
+      "for": false,
+      "class": true,
+      "recursive": true,
+      "bucket": "loop",
+      "feature": "class"
+    },
+    {
+      "problem": "distribute-coins-in-binary-tree",
+      "module": "DistributeCoinsInBinaryTree",
+      "difficulty": "Medium",
+      "method": "distributeCoins",
+      "params": [
+        "root"
+      ],
+      "n_tests": 46,
+      "lean_lines": 98,
+      "py_lines": 34,
+      "term": false,
+      "while": false,
+      "for": false,
+      "class": true,
+      "recursive": true,
+      "bucket": "loop",
+      "feature": "class"
+    },
+    {
+      "problem": "find-leaves-of-binary-tree",
+      "module": "FindLeavesOfBinaryTree",
+      "difficulty": "Medium",
+      "method": "findLeaves",
+      "params": [
+        "root"
+      ],
+      "n_tests": 92,
+      "lean_lines": 108,
+      "py_lines": 36,
+      "term": false,
+      "while": false,
+      "for": false,
+      "class": true,
+      "recursive": true,
+      "bucket": "loop",
+      "feature": "class"
+    },
+    {
+      "problem": "kth-largest-sum-in-a-binary-tree",
+      "module": "KthLargestSumInABinaryTree",
+      "difficulty": "Medium",
+      "method": "kthLargestLevelSum",
+      "params": [
+        "root",
+        "k"
+      ],
+      "n_tests": 47,
+      "lean_lines": 84,
+      "py_lines": 39,
+      "term": false,
+      "while": true,
+      "for": true,
+      "class": true,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "class"
+    },
+    {
+      "problem": "kth-smallest-element-in-a-bst",
+      "module": "KthSmallestElementInABst",
+      "difficulty": "Medium",
+      "method": "kthSmallest",
+      "params": [
+        "root",
+        "k"
+      ],
+      "n_tests": 78,
+      "lean_lines": 78,
+      "py_lines": 34,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": true,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "class"
+    },
+    {
+      "problem": "linked-list-components",
+      "module": "LinkedListComponents",
+      "difficulty": "Medium",
+      "method": "numComponents",
+      "params": [
+        "head",
+        "nums"
+      ],
+      "n_tests": 106,
+      "lean_lines": 58,
+      "py_lines": 31,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": true,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "class"
+    },
+    {
+      "problem": "maximum-twin-sum-of-a-linked-list",
+      "module": "MaximumTwinSumOfALinkedList",
+      "difficulty": "Medium",
+      "method": "pairSum",
+      "params": [
+        "head"
+      ],
+      "n_tests": 89,
+      "lean_lines": 58,
+      "py_lines": 28,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": true,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "class"
+    },
+    {
+      "problem": "next-greater-node-in-linked-list",
+      "module": "NextGreaterNodeInLinkedList",
+      "difficulty": "Medium",
+      "method": "nextLargerNodes",
+      "params": [
+        "head"
+      ],
+      "n_tests": 115,
+      "lean_lines": 72,
+      "py_lines": 36,
+      "term": false,
+      "while": true,
+      "for": true,
+      "class": true,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "class"
+    },
+    {
+      "problem": "path-sum-ii",
+      "module": "PathSumIi",
+      "difficulty": "Medium",
+      "method": "pathSum",
+      "params": [
+        "root",
+        "targetSum"
+      ],
+      "n_tests": 41,
+      "lean_lines": 114,
+      "py_lines": 41,
+      "term": false,
+      "while": false,
+      "for": false,
+      "class": true,
+      "recursive": true,
+      "bucket": "loop",
+      "feature": "class"
+    },
+    {
+      "problem": "print-binary-tree",
+      "module": "PrintBinaryTree",
+      "difficulty": "Medium",
+      "method": "printTree",
+      "params": [
+        "root"
+      ],
+      "n_tests": 63,
+      "lean_lines": 97,
+      "py_lines": 40,
+      "term": false,
+      "while": false,
+      "for": false,
+      "class": true,
+      "recursive": true,
+      "bucket": "loop",
+      "feature": "class"
+    },
+    {
+      "problem": "binary-prefix-divisible-by-5",
+      "module": "BinaryPrefixDivisibleBy5",
+      "difficulty": "Easy",
+      "method": "prefixesDivBy5",
+      "params": [
+        "nums"
+      ],
+      "n_tests": 69,
+      "lean_lines": 34,
+      "py_lines": 23,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "check-whether-two-strings-are-almost-equivalent",
+      "module": "CheckWhetherTwoStringsAreAlmostEquivalent",
+      "difficulty": "Easy",
+      "method": "checkAlmostEquivalent",
+      "params": [
+        "word1",
+        "word2"
+      ],
+      "n_tests": 148,
+      "lean_lines": 34,
+      "py_lines": 21,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "count-equal-and-divisible-pairs-in-an-array",
+      "module": "CountEqualAndDivisiblePairsInAnArray",
+      "difficulty": "Easy",
+      "method": "countPairs",
+      "params": [
+        "nums",
+        "k"
+      ],
+      "n_tests": 89,
+      "lean_lines": 36,
+      "py_lines": 22,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "count-pairs-that-form-a-complete-day-i",
+      "module": "CountPairsThatFormACompleteDayI",
+      "difficulty": "Easy",
+      "method": "countCompleteDayPairs",
+      "params": [
+        "hours"
+      ],
+      "n_tests": 83,
+      "lean_lines": 34,
+      "py_lines": 23,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "count-tested-devices-after-test-operations",
+      "module": "CountTestedDevicesAfterTestOperations",
+      "difficulty": "Easy",
+      "method": "countTestedDevices",
+      "params": [
+        "batteryPercentages"
+      ],
+      "n_tests": 107,
+      "lean_lines": 30,
+      "py_lines": 21,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "create-target-array-in-the-given-order",
+      "module": "CreateTargetArrayInTheGivenOrder",
+      "difficulty": "Easy",
+      "method": "createTargetArray",
+      "params": [
+        "nums",
+        "index"
+      ],
+      "n_tests": 115,
+      "lean_lines": 34,
+      "py_lines": 21,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "decode-xored-array",
+      "module": "DecodeXoredArray",
+      "difficulty": "Easy",
+      "method": "decode",
+      "params": [
+        "encoded",
+        "first"
+      ],
+      "n_tests": 97,
+      "lean_lines": 30,
+      "py_lines": 21,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "excel-sheet-column-number",
+      "module": "ExcelSheetColumnNumber",
+      "difficulty": "Easy",
+      "method": "titleToNumber",
+      "params": [
+        "columnTitle"
+      ],
+      "n_tests": 201,
+      "lean_lines": 30,
+      "py_lines": 21,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "find-maximum-number-of-string-pairs",
+      "module": "FindMaximumNumberOfStringPairs",
+      "difficulty": "Easy",
+      "method": "maximumNumberOfStringPairs",
+      "params": [
+        "words"
+      ],
+      "n_tests": 65,
+      "lean_lines": 34,
+      "py_lines": 23,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "find-the-distance-value-between-two-arrays",
+      "module": "FindTheDistanceValueBetweenTwoArrays",
+      "difficulty": "Easy",
+      "method": "findTheDistanceValue",
+      "params": [
+        "arr1",
+        "arr2",
+        "d"
+      ],
+      "n_tests": 115,
+      "lean_lines": 36,
+      "py_lines": 23,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "find-the-encrypted-string",
+      "module": "FindTheEncryptedString",
+      "difficulty": "Easy",
+      "method": "getEncryptedString",
+      "params": [
+        "s",
+        "k"
+      ],
+      "n_tests": 93,
+      "lean_lines": 34,
+      "py_lines": 22,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "find-the-pivot-integer",
+      "module": "FindThePivotInteger",
+      "difficulty": "Easy",
+      "method": "pivotInteger",
+      "params": [
+        "n"
+      ],
+      "n_tests": 52,
+      "lean_lines": 36,
+      "py_lines": 21,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "largest-3-same-digit-number-in-string",
+      "module": "Largest3SameDigitNumberInString",
+      "difficulty": "Easy",
+      "method": "largestGoodInteger",
+      "params": [
+        "num"
+      ],
+      "n_tests": 133,
+      "lean_lines": 36,
+      "py_lines": 21,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "largest-odd-number-in-string",
+      "module": "LargestOddNumberInString",
+      "difficulty": "Easy",
+      "method": "largestOddNumber",
+      "params": [
+        "num"
+      ],
+      "n_tests": 140,
+      "lean_lines": 36,
+      "py_lines": 21,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "number-of-good-pairs",
+      "module": "NumberOfGoodPairs",
+      "difficulty": "Easy",
+      "method": "numIdenticalPairs",
+      "params": [
+        "nums"
+      ],
+      "n_tests": 102,
+      "lean_lines": 34,
+      "py_lines": 23,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "reverse-bits",
+      "module": "ReverseBits",
+      "difficulty": "Easy",
+      "method": "reverseBits",
+      "params": [
+        "n"
+      ],
+      "n_tests": 44,
+      "lean_lines": 34,
+      "py_lines": 22,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "take-gifts-from-the-richest-pile",
+      "module": "TakeGiftsFromTheRichestPile",
+      "difficulty": "Easy",
+      "method": "pickGifts",
+      "params": [
+        "gifts",
+        "k"
+      ],
+      "n_tests": 108,
+      "lean_lines": 34,
+      "py_lines": 22,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "teemo-attacking",
+      "module": "TeemoAttacking",
+      "difficulty": "Easy",
+      "method": "findPoisonedDuration",
+      "params": [
+        "timeSeries",
+        "duration"
+      ],
+      "n_tests": 120,
+      "lean_lines": 34,
+      "py_lines": 21,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "time-needed-to-buy-tickets",
+      "module": "TimeNeededToBuyTickets",
+      "difficulty": "Easy",
+      "method": "timeRequiredToBuy",
+      "params": [
+        "tickets",
+        "k"
+      ],
+      "n_tests": 100,
+      "lean_lines": 34,
+      "py_lines": 21,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "best-time-to-buy-and-sell-stock-iii",
+      "module": "BestTimeToBuyAndSellStockIii",
+      "difficulty": "Hard",
+      "method": "maxProfit",
+      "params": [
+        "prices"
+      ],
+      "n_tests": 117,
+      "lean_lines": 46,
+      "py_lines": 24,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "burst-balloons",
+      "module": "BurstBalloons",
+      "difficulty": "Hard",
+      "method": "maxCoins",
+      "params": [
+        "nums"
+      ],
+      "n_tests": 96,
+      "lean_lines": 48,
+      "py_lines": 25,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "count-array-pairs-divisible-by-k",
+      "module": "CountArrayPairsDivisibleByK",
+      "difficulty": "Hard",
+      "method": "countPairs",
+      "params": [
+        "nums",
+        "k"
+      ],
+      "n_tests": 102,
+      "lean_lines": 48,
+      "py_lines": 26,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "count-unique-characters-of-all-substrings-of-a-given-string",
+      "module": "CountUniqueCharactersOfAllSubstringsOfAGivenString",
+      "difficulty": "Hard",
+      "method": "uniqueLetterString",
+      "params": [
+        "s"
+      ],
+      "n_tests": 160,
+      "lean_lines": 46,
+      "py_lines": 26,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "count-ways-to-distribute-candies",
+      "module": "CountWaysToDistributeCandies",
+      "difficulty": "Hard",
+      "method": "waysToDistribute",
+      "params": [
+        "n",
+        "k"
+      ],
+      "n_tests": 78,
+      "lean_lines": 44,
+      "py_lines": 24,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "delete-columns-to-make-sorted-iii",
+      "module": "DeleteColumnsToMakeSortedIii",
+      "difficulty": "Hard",
+      "method": "minDeletionSize",
+      "params": [
+        "strs"
+      ],
+      "n_tests": 105,
+      "lean_lines": 44,
+      "py_lines": 24,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "find-a-value-of-a-mysterious-function-closest-to-target",
+      "module": "FindAValueOfAMysteriousFunctionClosestToTarget",
+      "difficulty": "Hard",
+      "method": "closestToTarget",
+      "params": [
+        "arr",
+        "target"
+      ],
+      "n_tests": 119,
+      "lean_lines": 38,
+      "py_lines": 23,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "find-maximum-non-decreasing-array-length",
+      "module": "FindMaximumNonDecreasingArrayLength",
+      "difficulty": "Hard",
+      "method": "findMaximumLength",
+      "params": [
+        "nums"
+      ],
+      "n_tests": 111,
+      "lean_lines": 44,
+      "py_lines": 27,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "find-the-kth-smallest-sum-of-a-matrix-with-sorted-rows",
+      "module": "FindTheKthSmallestSumOfAMatrixWithSortedRows",
+      "difficulty": "Hard",
+      "method": "kthSmallest",
+      "params": [
+        "mat",
+        "k"
+      ],
+      "n_tests": 85,
+      "lean_lines": 42,
+      "py_lines": 21,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "k-inverse-pairs-array",
+      "module": "KInversePairsArray",
+      "difficulty": "Hard",
+      "method": "kInversePairs",
+      "params": [
+        "n",
+        "k"
+      ],
+      "n_tests": 80,
+      "lean_lines": 46,
+      "py_lines": 26,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "longest-happy-prefix",
+      "module": "LongestHappyPrefix",
+      "difficulty": "Hard",
+      "method": "longestPrefix",
+      "params": [
+        "s"
+      ],
+      "n_tests": 162,
+      "lean_lines": 36,
+      "py_lines": 21,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "maximum-number-of-ones",
+      "module": "MaximumNumberOfOnes",
+      "difficulty": "Hard",
+      "method": "maximumNumberOfOnes",
+      "params": [
+        "width",
+        "height",
+        "sideLength",
+        "maxOnes"
+      ],
+      "n_tests": 110,
+      "lean_lines": 40,
+      "py_lines": 25,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "maximum-total-reward-using-operations-ii",
+      "module": "MaximumTotalRewardUsingOperationsIi",
+      "difficulty": "Hard",
+      "method": "maxTotalReward",
+      "params": [
+        "rewardValues"
+      ],
+      "n_tests": 87,
+      "lean_lines": 38,
+      "py_lines": 22,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "minimum-number-of-operations-to-make-array-continuous",
+      "module": "MinimumNumberOfOperationsToMakeArrayContinuous",
+      "difficulty": "Hard",
+      "method": "minOperations",
+      "params": [
+        "nums"
+      ],
+      "n_tests": 136,
+      "lean_lines": 44,
+      "py_lines": 23,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "number-of-subarrays-with-and-value-of-k",
+      "module": "NumberOfSubarraysWithAndValueOfK",
+      "difficulty": "Hard",
+      "method": "countSubarrays",
+      "params": [
+        "nums",
+        "k"
+      ],
+      "n_tests": 127,
+      "lean_lines": 46,
+      "py_lines": 27,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "number-of-ways-to-rearrange-sticks-with-k-sticks-visible",
+      "module": "NumberOfWaysToRearrangeSticksWithKSticksVisible",
+      "difficulty": "Hard",
+      "method": "rearrangeSticks",
+      "params": [
+        "n",
+        "k"
+      ],
+      "n_tests": 57,
+      "lean_lines": 46,
+      "py_lines": 24,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "orderly-queue",
+      "module": "OrderlyQueue",
+      "difficulty": "Hard",
+      "method": "orderlyQueue",
+      "params": [
+        "s",
+        "k"
+      ],
+      "n_tests": 118,
+      "lean_lines": 44,
+      "py_lines": 24,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "power-of-heroes",
+      "module": "PowerOfHeroes",
+      "difficulty": "Hard",
+      "method": "sumOfPower",
+      "params": [
+        "nums"
+      ],
+      "n_tests": 93,
+      "lean_lines": 42,
+      "py_lines": 26,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "4-keys-keyboard",
+      "module": "N4KeysKeyboard",
+      "difficulty": "Medium",
+      "method": "maxA",
+      "params": [
+        "n"
+      ],
+      "n_tests": 49,
+      "lean_lines": 34,
+      "py_lines": 22,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "apply-operations-to-make-sum-of-array-greater-than-or-equal-to-k",
+      "module": "ApplyOperationsToMakeSumOfArrayGreaterThanOrEqualToK",
+      "difficulty": "Medium",
+      "method": "minOperations",
+      "params": [
+        "k"
+      ],
+      "n_tests": 58,
+      "lean_lines": 34,
+      "py_lines": 23,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "count-number-of-bad-pairs",
+      "module": "CountNumberOfBadPairs",
+      "difficulty": "Medium",
+      "method": "countBadPairs",
+      "params": [
+        "nums"
+      ],
+      "n_tests": 132,
+      "lean_lines": 38,
+      "py_lines": 23,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "count-pairs-that-form-a-complete-day-ii",
+      "module": "CountPairsThatFormACompleteDayIi",
+      "difficulty": "Medium",
+      "method": "countCompleteDayPairs",
+      "params": [
+        "hours"
+      ],
+      "n_tests": 73,
+      "lean_lines": 34,
+      "py_lines": 23,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "equal-row-and-column-pairs",
+      "module": "EqualRowAndColumnPairs",
+      "difficulty": "Medium",
+      "method": "equalPairs",
+      "params": [
+        "grid"
+      ],
+      "n_tests": 77,
+      "lean_lines": 34,
+      "py_lines": 23,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "find-champion-ii",
+      "module": "FindChampionIi",
+      "difficulty": "Medium",
+      "method": "findChampion",
+      "params": [
+        "n",
+        "edges"
+      ],
+      "n_tests": 78,
+      "lean_lines": 38,
+      "py_lines": 21,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "find-the-divisibility-array-of-a-string",
+      "module": "FindTheDivisibilityArrayOfAString",
+      "difficulty": "Medium",
+      "method": "divisibilityArray",
+      "params": [
+        "word",
+        "m"
+      ],
+      "n_tests": 138,
+      "lean_lines": 34,
+      "py_lines": 23,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "find-the-n-th-value-after-k-seconds",
+      "module": "FindTheNThValueAfterKSeconds",
+      "difficulty": "Medium",
+      "method": "valueAfterKSeconds",
+      "params": [
+        "n",
+        "k"
+      ],
+      "n_tests": 63,
+      "lean_lines": 36,
+      "py_lines": 23,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "find-triangular-sum-of-an-array",
+      "module": "FindTriangularSumOfAnArray",
+      "difficulty": "Medium",
+      "method": "triangularSum",
+      "params": [
+        "nums"
+      ],
+      "n_tests": 96,
+      "lean_lines": 34,
+      "py_lines": 21,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "flip-columns-for-maximum-number-of-equal-rows",
+      "module": "FlipColumnsForMaximumNumberOfEqualRows",
+      "difficulty": "Medium",
+      "method": "maxEqualRowsAfterFlips",
+      "params": [
+        "matrix"
+      ],
+      "n_tests": 88,
+      "lean_lines": 38,
+      "py_lines": 22,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "frog-jump-ii",
+      "module": "FrogJumpIi",
+      "difficulty": "Medium",
+      "method": "maxJump",
+      "params": [
+        "stones"
+      ],
+      "n_tests": 106,
+      "lean_lines": 30,
+      "py_lines": 21,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "global-and-local-inversions",
+      "module": "GlobalAndLocalInversions",
+      "difficulty": "Medium",
+      "method": "isIdealPermutation",
+      "params": [
+        "nums"
+      ],
+      "n_tests": 109,
+      "lean_lines": 38,
+      "py_lines": 22,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "group-anagrams",
+      "module": "GroupAnagrams",
+      "difficulty": "Medium",
+      "method": "groupAnagrams",
+      "params": [
+        "strs"
+      ],
+      "n_tests": 69,
+      "lean_lines": 34,
+      "py_lines": 22,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "h-index",
+      "module": "HIndex",
+      "difficulty": "Medium",
+      "method": "hIndex",
+      "params": [
+        "citations"
+      ],
+      "n_tests": 79,
+      "lean_lines": 38,
+      "py_lines": 22,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "largest-combination-with-bitwise-and-greater-than-zero",
+      "module": "LargestCombinationWithBitwiseAndGreaterThanZero",
+      "difficulty": "Medium",
+      "method": "largestCombination",
+      "params": [
+        "candidates"
+      ],
+      "n_tests": 92,
+      "lean_lines": 38,
+      "py_lines": 21,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "largest-element-in-an-array-after-merge-operations",
+      "module": "LargestElementInAnArrayAfterMergeOperations",
+      "difficulty": "Medium",
+      "method": "maxArrayValue",
+      "params": [
+        "nums"
+      ],
+      "n_tests": 124,
+      "lean_lines": 38,
+      "py_lines": 21,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "last-moment-before-all-ants-fall-out-of-a-plank",
+      "module": "LastMomentBeforeAllAntsFallOutOfAPlank",
+      "difficulty": "Medium",
+      "method": "getLastMoment",
+      "params": [
+        "n",
+        "left",
+        "right"
+      ],
+      "n_tests": 127,
+      "lean_lines": 34,
+      "py_lines": 23,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "longest-arithmetic-subsequence-of-given-difference",
+      "module": "LongestArithmeticSubsequenceOfGivenDifference",
+      "difficulty": "Medium",
+      "method": "longestSubsequence",
+      "params": [
+        "arr",
+        "difference"
+      ],
+      "n_tests": 154,
+      "lean_lines": 32,
+      "py_lines": 21,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "make-k-subarray-sums-equal",
+      "module": "MakeKSubarraySumsEqual",
+      "difficulty": "Medium",
+      "method": "makeSubKSumEqual",
+      "params": [
+        "arr",
+        "k"
+      ],
+      "n_tests": 102,
+      "lean_lines": 38,
+      "py_lines": 25,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "maximize-greatness-of-an-array",
+      "module": "MaximizeGreatnessOfAnArray",
+      "difficulty": "Medium",
+      "method": "maximizeGreatness",
+      "params": [
+        "nums"
+      ],
+      "n_tests": 86,
+      "lean_lines": 34,
+      "py_lines": 22,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "maximum-beauty-of-an-array-after-applying-operation",
+      "module": "MaximumBeautyOfAnArrayAfterApplyingOperation",
+      "difficulty": "Medium",
+      "method": "maximumBeauty",
+      "params": [
+        "nums",
+        "k"
+      ],
+      "n_tests": 119,
+      "lean_lines": 36,
+      "py_lines": 23,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "maximum-consecutive-floors-without-special-floors",
+      "module": "MaximumConsecutiveFloorsWithoutSpecialFloors",
+      "difficulty": "Medium",
+      "method": "maxConsecutive",
+      "params": [
+        "bottom",
+        "top",
+        "special"
+      ],
+      "n_tests": 94,
+      "lean_lines": 38,
+      "py_lines": 22,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "maximum-element-after-decreasing-and-rearranging",
+      "module": "MaximumElementAfterDecreasingAndRearranging",
+      "difficulty": "Medium",
+      "method": "maximumElementAfterDecrementingAndRearranging",
+      "params": [
+        "arr"
+      ],
+      "n_tests": 135,
+      "lean_lines": 38,
+      "py_lines": 23,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "maximum-linear-stock-score",
+      "module": "MaximumLinearStockScore",
+      "difficulty": "Medium",
+      "method": "maxScore",
+      "params": [
+        "prices"
+      ],
+      "n_tests": 153,
+      "lean_lines": 36,
+      "py_lines": 21,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "maximum-number-of-consecutive-values-you-can-make",
+      "module": "MaximumNumberOfConsecutiveValuesYouCanMake",
+      "difficulty": "Medium",
+      "method": "getMaximumConsecutive",
+      "params": [
+        "coins"
+      ],
+      "n_tests": 98,
+      "lean_lines": 38,
+      "py_lines": 23,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "maximum-product-after-k-increments",
+      "module": "MaximumProductAfterKIncrements",
+      "difficulty": "Medium",
+      "method": "maximumProduct",
+      "params": [
+        "nums",
+        "k"
+      ],
+      "n_tests": 101,
+      "lean_lines": 36,
+      "py_lines": 22,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "maximum-subarray",
+      "module": "MaximumSubarray",
+      "difficulty": "Medium",
+      "method": "maxSubArray",
+      "params": [
+        "nums"
+      ],
+      "n_tests": 98,
+      "lean_lines": 36,
+      "py_lines": 22,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "minimize-the-difference-between-target-and-chosen-elements",
+      "module": "MinimizeTheDifferenceBetweenTargetAndChosenElements",
+      "difficulty": "Medium",
+      "method": "minimizeTheDifference",
+      "params": [
+        "mat",
+        "target"
+      ],
+      "n_tests": 104,
+      "lean_lines": 32,
+      "py_lines": 21,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "minimum-number-of-steps-to-make-two-strings-anagram",
+      "module": "MinimumNumberOfStepsToMakeTwoStringsAnagram",
+      "difficulty": "Medium",
+      "method": "minSteps",
+      "params": [
+        "s",
+        "t"
+      ],
+      "n_tests": 113,
+      "lean_lines": 34,
+      "py_lines": 23,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "minimum-number-of-steps-to-make-two-strings-anagram-ii",
+      "module": "MinimumNumberOfStepsToMakeTwoStringsAnagramIi",
+      "difficulty": "Medium",
+      "method": "minSteps",
+      "params": [
+        "s",
+        "t"
+      ],
+      "n_tests": 110,
+      "lean_lines": 32,
+      "py_lines": 21,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "minimum-suffix-flips",
+      "module": "MinimumSuffixFlips",
+      "difficulty": "Medium",
+      "method": "minFlips",
+      "params": [
+        "target"
+      ],
+      "n_tests": 117,
+      "lean_lines": 36,
+      "py_lines": 22,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "number-of-subarrays-with-gcd-equal-to-k",
+      "module": "NumberOfSubarraysWithGcdEqualToK",
+      "difficulty": "Medium",
+      "method": "subarrayGCD",
+      "params": [
+        "nums",
+        "k"
+      ],
+      "n_tests": 124,
+      "lean_lines": 36,
+      "py_lines": 24,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "number-of-ways-to-buy-pens-and-pencils",
+      "module": "NumberOfWaysToBuyPensAndPencils",
+      "difficulty": "Medium",
+      "method": "waysToBuyPensPencils",
+      "params": [
+        "total",
+        "cost1",
+        "cost2"
+      ],
+      "n_tests": 102,
+      "lean_lines": 32,
+      "py_lines": 22,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "number-of-zero-filled-subarrays",
+      "module": "NumberOfZeroFilledSubarrays",
+      "difficulty": "Medium",
+      "method": "zeroFilledSubarray",
+      "params": [
+        "nums"
+      ],
+      "n_tests": 99,
+      "lean_lines": 36,
+      "py_lines": 22,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "remove-stones-to-minimize-the-total",
+      "module": "RemoveStonesToMinimizeTheTotal",
+      "difficulty": "Medium",
+      "method": "minStoneSum",
+      "params": [
+        "piles",
+        "k"
+      ],
+      "n_tests": 88,
+      "lean_lines": 34,
+      "py_lines": 22,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "search-a-2d-matrix-ii",
+      "module": "SearchA2dMatrixIi",
+      "difficulty": "Medium",
+      "method": "searchMatrix",
+      "params": [
+        "matrix",
+        "target"
+      ],
+      "n_tests": 95,
+      "lean_lines": 36,
+      "py_lines": 22,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "sort-features-by-popularity",
+      "module": "SortFeaturesByPopularity",
+      "difficulty": "Medium",
+      "method": "sortFeatures",
+      "params": [
+        "features",
+        "responses"
+      ],
+      "n_tests": 52,
+      "lean_lines": 34,
+      "py_lines": 22,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "substrings-that-begin-and-end-with-the-same-letter",
+      "module": "SubstringsThatBeginAndEndWithTheSameLetter",
+      "difficulty": "Medium",
+      "method": "numberOfSubstrings",
+      "params": [
+        "s"
+      ],
+      "n_tests": 78,
+      "lean_lines": 34,
+      "py_lines": 23,
+      "term": false,
+      "while": false,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "for"
+    },
+    {
+      "problem": "1-bit-and-2-bit-characters",
+      "module": "N1BitAnd2BitCharacters",
+      "difficulty": "Easy",
+      "method": "isOneBitCharacter",
+      "params": [
+        "bits"
+      ],
+      "n_tests": 95,
+      "lean_lines": 38,
+      "py_lines": 21,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "armstrong-number",
+      "module": "ArmstrongNumber",
+      "difficulty": "Easy",
+      "method": "isArmstrong",
+      "params": [
+        "n"
+      ],
+      "n_tests": 56,
+      "lean_lines": 42,
+      "py_lines": 23,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "binary-number-with-alternating-bits",
+      "module": "BinaryNumberWithAlternatingBits",
+      "difficulty": "Easy",
+      "method": "hasAlternatingBits",
+      "params": [
+        "n"
+      ],
+      "n_tests": 72,
+      "lean_lines": 44,
+      "py_lines": 25,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "calculate-digit-sum-of-a-string",
+      "module": "CalculateDigitSumOfAString",
+      "difficulty": "Easy",
+      "method": "digitSum",
+      "params": [
+        "s",
+        "k"
+      ],
+      "n_tests": 112,
+      "lean_lines": 44,
+      "py_lines": 27,
+      "term": false,
+      "while": true,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "construct-the-rectangle",
+      "module": "ConstructTheRectangle",
+      "difficulty": "Easy",
+      "method": "constructRectangle",
+      "params": [
+        "area"
+      ],
+      "n_tests": 74,
+      "lean_lines": 32,
+      "py_lines": 21,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "count-operations-to-obtain-zero",
+      "module": "CountOperationsToObtainZero",
+      "difficulty": "Easy",
+      "method": "countOperations",
+      "params": [
+        "num1",
+        "num2"
+      ],
+      "n_tests": 78,
+      "lean_lines": 42,
+      "py_lines": 25,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "count-substrings-with-only-one-distinct-letter",
+      "module": "CountSubstringsWithOnlyOneDistinctLetter",
+      "difficulty": "Easy",
+      "method": "countLetters",
+      "params": [
+        "s"
+      ],
+      "n_tests": 57,
+      "lean_lines": 44,
+      "py_lines": 26,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "distribute-candies-to-people",
+      "module": "DistributeCandiesToPeople",
+      "difficulty": "Easy",
+      "method": "distributeCandies",
+      "params": [
+        "candies",
+        "num_people"
+      ],
+      "n_tests": 88,
+      "lean_lines": 40,
+      "py_lines": 24,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "harshad-number",
+      "module": "HarshadNumber",
+      "difficulty": "Easy",
+      "method": "sumOfTheDigitsOfHarshadNumber",
+      "params": [
+        "x"
+      ],
+      "n_tests": 53,
+      "lean_lines": 40,
+      "py_lines": 22,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "keep-multiplying-found-values-by-two",
+      "module": "KeepMultiplyingFoundValuesByTwo",
+      "difficulty": "Easy",
+      "method": "findFinalValue",
+      "params": [
+        "nums",
+        "original"
+      ],
+      "n_tests": 115,
+      "lean_lines": 32,
+      "py_lines": 21,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "length-of-last-word",
+      "module": "LengthOfLastWord",
+      "difficulty": "Easy",
+      "method": "lengthOfLastWord",
+      "params": [
+        "s"
+      ],
+      "n_tests": 48,
+      "lean_lines": 38,
+      "py_lines": 22,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "maximum-number-of-balls-in-a-box",
+      "module": "MaximumNumberOfBallsInABox",
+      "difficulty": "Easy",
+      "method": "countBalls",
+      "params": [
+        "lowLimit",
+        "highLimit"
+      ],
+      "n_tests": 86,
+      "lean_lines": 42,
+      "py_lines": 25,
+      "term": false,
+      "while": true,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "minimum-amount-of-time-to-fill-cups",
+      "module": "MinimumAmountOfTimeToFillCups",
+      "difficulty": "Easy",
+      "method": "fillCups",
+      "params": [
+        "amount"
+      ],
+      "n_tests": 178,
+      "lean_lines": 38,
+      "py_lines": 24,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "minimum-moves-to-convert-string",
+      "module": "MinimumMovesToConvertString",
+      "difficulty": "Easy",
+      "method": "minimumMoves",
+      "params": [
+        "s"
+      ],
+      "n_tests": 166,
+      "lean_lines": 42,
+      "py_lines": 25,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "minimum-right-shifts-to-sort-the-array",
+      "module": "MinimumRightShiftsToSortTheArray",
+      "difficulty": "Easy",
+      "method": "minimumRightShifts",
+      "params": [
+        "nums"
+      ],
+      "n_tests": 129,
+      "lean_lines": 40,
+      "py_lines": 25,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "minimum-sum-of-four-digit-number-after-splitting-digits",
+      "module": "MinimumSumOfFourDigitNumberAfterSplittingDigits",
+      "difficulty": "Easy",
+      "method": "minimumSum",
+      "params": [
+        "num"
+      ],
+      "n_tests": 83,
+      "lean_lines": 38,
+      "py_lines": 23,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "number-of-1-bits",
+      "module": "NumberOf1Bits",
+      "difficulty": "Easy",
+      "method": "hammingWeight",
+      "params": [
+        "n"
+      ],
+      "n_tests": 139,
+      "lean_lines": 34,
+      "py_lines": 22,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "number-of-even-and-odd-bits",
+      "module": "NumberOfEvenAndOddBits",
+      "difficulty": "Easy",
+      "method": "evenOddBit",
+      "params": [
+        "n"
+      ],
+      "n_tests": 62,
+      "lean_lines": 38,
+      "py_lines": 24,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "number-of-steps-to-reduce-a-number-to-zero",
+      "module": "NumberOfStepsToReduceANumberToZero",
+      "difficulty": "Easy",
+      "method": "numberOfSteps",
+      "params": [
+        "num"
+      ],
+      "n_tests": 59,
+      "lean_lines": 40,
+      "py_lines": 25,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "power-of-three",
+      "module": "PowerOfThree",
+      "difficulty": "Easy",
+      "method": "isPowerOfThree",
+      "params": [
+        "n"
+      ],
+      "n_tests": 78,
+      "lean_lines": 40,
+      "py_lines": 22,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "separate-the-digits-in-an-array",
+      "module": "SeparateTheDigitsInAnArray",
+      "difficulty": "Easy",
+      "method": "separateDigits",
+      "params": [
+        "nums"
+      ],
+      "n_tests": 110,
+      "lean_lines": 40,
+      "py_lines": 25,
+      "term": false,
+      "while": true,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "sum-of-digits-in-base-k",
+      "module": "SumOfDigitsInBaseK",
+      "difficulty": "Easy",
+      "method": "sumBase",
+      "params": [
+        "n",
+        "k"
+      ],
+      "n_tests": 87,
+      "lean_lines": 34,
+      "py_lines": 22,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "sum-of-digits-in-the-minimum-number",
+      "module": "SumOfDigitsInTheMinimumNumber",
+      "difficulty": "Easy",
+      "method": "sumOfDigits",
+      "params": [
+        "nums"
+      ],
+      "n_tests": 121,
+      "lean_lines": 36,
+      "py_lines": 23,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "ugly-number",
+      "module": "UglyNumber",
+      "difficulty": "Easy",
+      "method": "isUgly",
+      "params": [
+        "n"
+      ],
+      "n_tests": 76,
+      "lean_lines": 42,
+      "py_lines": 23,
+      "term": false,
+      "while": true,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "water-bottles",
+      "module": "WaterBottles",
+      "difficulty": "Easy",
+      "method": "numWaterBottles",
+      "params": [
+        "numBottles",
+        "numExchange"
+      ],
+      "n_tests": 73,
+      "lean_lines": 34,
+      "py_lines": 22,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "building-boxes",
+      "module": "BuildingBoxes",
+      "difficulty": "Hard",
+      "method": "minimumBoxes",
+      "params": [
+        "n"
+      ],
+      "n_tests": 101,
+      "lean_lines": 52,
+      "py_lines": 29,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "consecutive-numbers-sum",
+      "module": "ConsecutiveNumbersSum",
+      "difficulty": "Hard",
+      "method": "consecutiveNumbersSum",
+      "params": [
+        "n"
+      ],
+      "n_tests": 54,
+      "lean_lines": 48,
+      "py_lines": 24,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "constrained-subsequence-sum",
+      "module": "ConstrainedSubsequenceSum",
+      "difficulty": "Hard",
+      "method": "constrainedSubsetSum",
+      "params": [
+        "nums",
+        "k"
+      ],
+      "n_tests": 115,
+      "lean_lines": 55,
+      "py_lines": 31,
+      "term": false,
+      "while": true,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "count-subarrays-with-score-less-than-k",
+      "module": "CountSubarraysWithScoreLessThanK",
+      "difficulty": "Hard",
+      "method": "countSubarrays",
+      "params": [
+        "nums",
+        "k"
+      ],
+      "n_tests": 79,
+      "lean_lines": 52,
+      "py_lines": 29,
+      "term": false,
+      "while": true,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "cycle-length-queries-in-a-tree",
+      "module": "CycleLengthQueriesInATree",
+      "difficulty": "Hard",
+      "method": "cycleLengthQueries",
+      "params": [
+        "n",
+        "queries"
+      ],
+      "n_tests": 70,
+      "lean_lines": 48,
+      "py_lines": 28,
+      "term": false,
+      "while": true,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "find-minimum-in-rotated-sorted-array-ii",
+      "module": "FindMinimumInRotatedSortedArrayIi",
+      "difficulty": "Hard",
+      "method": "findMin",
+      "params": [
+        "nums"
+      ],
+      "n_tests": 120,
+      "lean_lines": 52,
+      "py_lines": 27,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "find-the-number-of-subarrays-where-boundary-elements-are-maximum",
+      "module": "FindTheNumberOfSubarraysWhereBoundaryElementsAreMaximum",
+      "difficulty": "Hard",
+      "method": "numberOfSubarrays",
+      "params": [
+        "nums"
+      ],
+      "n_tests": 110,
+      "lean_lines": 48,
+      "py_lines": 28,
+      "term": false,
+      "while": true,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "first-missing-positive",
+      "module": "FirstMissingPositive",
+      "difficulty": "Hard",
+      "method": "firstMissingPositive",
+      "params": [
+        "nums"
+      ],
+      "n_tests": 126,
+      "lean_lines": 56,
+      "py_lines": 26,
+      "term": false,
+      "while": true,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "kth-smallest-number-in-multiplication-table",
+      "module": "KthSmallestNumberInMultiplicationTable",
+      "difficulty": "Hard",
+      "method": "findKthNumber",
+      "params": [
+        "m",
+        "n",
+        "k"
+      ],
+      "n_tests": 95,
+      "lean_lines": 50,
+      "py_lines": 28,
+      "term": false,
+      "while": true,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "least-operators-to-express-number",
+      "module": "LeastOperatorsToExpressNumber",
+      "difficulty": "Hard",
+      "method": "leastOpsExpressTarget",
+      "params": [
+        "x",
+        "target"
+      ],
+      "n_tests": 161,
+      "lean_lines": 62,
+      "py_lines": 29,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": true,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "max-chunks-to-make-sorted-ii",
+      "module": "MaxChunksToMakeSortedIi",
+      "difficulty": "Hard",
+      "method": "maxChunksToSorted",
+      "params": [
+        "arr"
+      ],
+      "n_tests": 149,
+      "lean_lines": 46,
+      "py_lines": 27,
+      "term": false,
+      "while": true,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "maximum-element-sum-of-a-complete-subset-of-indices",
+      "module": "MaximumElementSumOfACompleteSubsetOfIndices",
+      "difficulty": "Hard",
+      "method": "maximumSum",
+      "params": [
+        "nums"
+      ],
+      "n_tests": 63,
+      "lean_lines": 42,
+      "py_lines": 27,
+      "term": false,
+      "while": true,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "maximum-running-time-of-n-computers",
+      "module": "MaximumRunningTimeOfNComputers",
+      "difficulty": "Hard",
+      "method": "maxRunTime",
+      "params": [
+        "n",
+        "batteries"
+      ],
+      "n_tests": 119,
+      "lean_lines": 44,
+      "py_lines": 25,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "minimum-number-of-coins-for-fruits-ii",
+      "module": "MinimumNumberOfCoinsForFruitsIi",
+      "difficulty": "Hard",
+      "method": "minimumCoins",
+      "params": [
+        "prices"
+      ],
+      "n_tests": 119,
+      "lean_lines": 54,
+      "py_lines": 28,
+      "term": false,
+      "while": true,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "minimum-number-of-increasing-subsequence-to-be-removed",
+      "module": "MinimumNumberOfIncreasingSubsequenceToBeRemoved",
+      "difficulty": "Hard",
+      "method": "minOperations",
+      "params": [
+        "nums"
+      ],
+      "n_tests": 119,
+      "lean_lines": 58,
+      "py_lines": 31,
+      "term": false,
+      "while": true,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "minimum-one-bit-operations-to-make-integers-zero",
+      "module": "MinimumOneBitOperationsToMakeIntegersZero",
+      "difficulty": "Hard",
+      "method": "minimumOneBitOperations",
+      "params": [
+        "n"
+      ],
+      "n_tests": 71,
+      "lean_lines": 34,
+      "py_lines": 22,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "number-of-valid-subarrays",
+      "module": "NumberOfValidSubarrays",
+      "difficulty": "Hard",
+      "method": "validSubarrays",
+      "params": [
+        "nums"
+      ],
+      "n_tests": 138,
+      "lean_lines": 58,
+      "py_lines": 27,
+      "term": false,
+      "while": true,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "number-of-visible-people-in-a-queue",
+      "module": "NumberOfVisiblePeopleInAQueue",
+      "difficulty": "Hard",
+      "method": "canSeePersonsCount",
+      "params": [
+        "heights"
+      ],
+      "n_tests": 123,
+      "lean_lines": 48,
+      "py_lines": 28,
+      "term": false,
+      "while": true,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "patching-array",
+      "module": "PatchingArray",
+      "difficulty": "Hard",
+      "method": "minPatches",
+      "params": [
+        "nums",
+        "n"
+      ],
+      "n_tests": 105,
+      "lean_lines": 46,
+      "py_lines": 27,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "poor-pigs",
+      "module": "PoorPigs",
+      "difficulty": "Hard",
+      "method": "poorPigs",
+      "params": [
+        "buckets",
+        "minutesToDie",
+        "minutesToTest"
+      ],
+      "n_tests": 99,
+      "lean_lines": 40,
+      "py_lines": 23,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "remove-9",
+      "module": "Remove9",
+      "difficulty": "Hard",
+      "method": "newInteger",
+      "params": [
+        "n"
+      ],
+      "n_tests": 58,
+      "lean_lines": 36,
+      "py_lines": 22,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "replace-non-coprime-numbers-in-array",
+      "module": "ReplaceNonCoprimeNumbersInArray",
+      "difficulty": "Hard",
+      "method": "replaceNonCoprimes",
+      "params": [
+        "nums"
+      ],
+      "n_tests": 134,
+      "lean_lines": 54,
+      "py_lines": 28,
+      "term": false,
+      "while": true,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "stone-game-iv",
+      "module": "StoneGameIv",
+      "difficulty": "Hard",
+      "method": "winnerSquareGame",
+      "params": [
+        "n"
+      ],
+      "n_tests": 66,
+      "lean_lines": 50,
+      "py_lines": 29,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": true,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "sum-of-floored-pairs",
+      "module": "SumOfFlooredPairs",
+      "difficulty": "Hard",
+      "method": "sumOfFlooredPairs",
+      "params": [
+        "nums"
+      ],
+      "n_tests": 60,
+      "lean_lines": 56,
+      "py_lines": 32,
+      "term": false,
+      "while": true,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "sum-of-scores-of-built-strings",
+      "module": "SumOfScoresOfBuiltStrings",
+      "difficulty": "Hard",
+      "method": "sumScores",
+      "params": [
+        "s"
+      ],
+      "n_tests": 123,
+      "lean_lines": 58,
+      "py_lines": 30,
+      "term": false,
+      "while": true,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "132-pattern",
+      "module": "N132Pattern",
+      "difficulty": "Medium",
+      "method": "find132pattern",
+      "params": [
+        "nums"
+      ],
+      "n_tests": 143,
+      "lean_lines": 49,
+      "py_lines": 27,
+      "term": false,
+      "while": true,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "bitwise-and-of-numbers-range",
+      "module": "BitwiseAndOfNumbersRange",
+      "difficulty": "Medium",
+      "method": "rangeBitwiseAnd",
+      "params": [
+        "left",
+        "right"
+      ],
+      "n_tests": 97,
+      "lean_lines": 30,
+      "py_lines": 20,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "broken-calculator",
+      "module": "BrokenCalculator",
+      "difficulty": "Medium",
+      "method": "brokenCalc",
+      "params": [
+        "startValue",
+        "target"
+      ],
+      "n_tests": 96,
+      "lean_lines": 42,
+      "py_lines": 26,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "build-an-array-with-stack-operations",
+      "module": "BuildAnArrayWithStackOperations",
+      "difficulty": "Medium",
+      "method": "buildArray",
+      "params": [
+        "target",
+        "n"
+      ],
+      "n_tests": 113,
+      "lean_lines": 40,
+      "py_lines": 26,
+      "term": false,
+      "while": true,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "check-if-number-is-a-sum-of-powers-of-three",
+      "module": "CheckIfNumberIsASumOfPowersOfThree",
+      "difficulty": "Medium",
+      "method": "checkPowersOfThree",
+      "params": [
+        "n"
+      ],
+      "n_tests": 110,
+      "lean_lines": 38,
+      "py_lines": 22,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "container-with-most-water",
+      "module": "ContainerWithMostWater",
+      "difficulty": "Medium",
+      "method": "maxArea",
+      "params": [
+        "height"
+      ],
+      "n_tests": 116,
+      "lean_lines": 48,
+      "py_lines": 27,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "count-good-meals",
+      "module": "CountGoodMeals",
+      "difficulty": "Medium",
+      "method": "countPairs",
+      "params": [
+        "deliciousness"
+      ],
+      "n_tests": 101,
+      "lean_lines": 44,
+      "py_lines": 28,
+      "term": false,
+      "while": true,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "count-nice-pairs-in-an-array",
+      "module": "CountNicePairsInAnArray",
+      "difficulty": "Medium",
+      "method": "countNicePairs",
+      "params": [
+        "nums"
+      ],
+      "n_tests": 107,
+      "lean_lines": 50,
+      "py_lines": 27,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "count-substrings-without-repeating-character",
+      "module": "CountSubstringsWithoutRepeatingCharacter",
+      "difficulty": "Medium",
+      "method": "numberOfSpecialSubstrings",
+      "params": [
+        "s"
+      ],
+      "n_tests": 133,
+      "lean_lines": 48,
+      "py_lines": 26,
+      "term": false,
+      "while": true,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "cutting-ribbons",
+      "module": "CuttingRibbons",
+      "difficulty": "Medium",
+      "method": "maxLength",
+      "params": [
+        "ribbons",
+        "k"
+      ],
+      "n_tests": 100,
+      "lean_lines": 46,
+      "py_lines": 26,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "daily-temperatures",
+      "module": "DailyTemperatures",
+      "difficulty": "Medium",
+      "method": "dailyTemperatures",
+      "params": [
+        "temperatures"
+      ],
+      "n_tests": 107,
+      "lean_lines": 46,
+      "py_lines": 27,
+      "term": false,
+      "while": true,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "factorial-trailing-zeroes",
+      "module": "FactorialTrailingZeroes",
+      "difficulty": "Medium",
+      "method": "trailingZeroes",
+      "params": [
+        "n"
+      ],
+      "n_tests": 71,
+      "lean_lines": 34,
+      "py_lines": 22,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "find-a-peak-element-ii",
+      "module": "FindAPeakElementIi",
+      "difficulty": "Medium",
+      "method": "findPeakGrid",
+      "params": [
+        "mat"
+      ],
+      "n_tests": 85,
+      "lean_lines": 48,
+      "py_lines": 26,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "find-peak-element",
+      "module": "FindPeakElement",
+      "difficulty": "Medium",
+      "method": "findPeakElement",
+      "params": [
+        "nums"
+      ],
+      "n_tests": 92,
+      "lean_lines": 44,
+      "py_lines": 25,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "find-permutation",
+      "module": "FindPermutation",
+      "difficulty": "Medium",
+      "method": "findPermutation",
+      "params": [
+        "s"
+      ],
+      "n_tests": 243,
+      "lean_lines": 48,
+      "py_lines": 27,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "find-the-longest-semi-repetitive-substring",
+      "module": "FindTheLongestSemiRepetitiveSubstring",
+      "difficulty": "Medium",
+      "method": "longestSemiRepetitiveSubstring",
+      "params": [
+        "s"
+      ],
+      "n_tests": 197,
+      "lean_lines": 50,
+      "py_lines": 26,
+      "term": false,
+      "while": true,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "find-the-most-competitive-subsequence",
+      "module": "FindTheMostCompetitiveSubsequence",
+      "difficulty": "Medium",
+      "method": "mostCompetitive",
+      "params": [
+        "nums",
+        "k"
+      ],
+      "n_tests": 106,
+      "lean_lines": 47,
+      "py_lines": 25,
+      "term": false,
+      "while": true,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "h-index-ii",
+      "module": "HIndexIi",
+      "difficulty": "Medium",
+      "method": "hIndex",
+      "params": [
+        "citations"
+      ],
+      "n_tests": 80,
+      "lean_lines": 46,
+      "py_lines": 26,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "incremental-memory-leak",
+      "module": "IncrementalMemoryLeak",
+      "difficulty": "Medium",
+      "method": "memLeak",
+      "params": [
+        "memory1",
+        "memory2"
+      ],
+      "n_tests": 82,
+      "lean_lines": 44,
+      "py_lines": 25,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "jump-game-vi",
+      "module": "JumpGameVi",
+      "difficulty": "Medium",
+      "method": "maxResult",
+      "params": [
+        "nums",
+        "k"
+      ],
+      "n_tests": 92,
+      "lean_lines": 50,
+      "py_lines": 28,
+      "term": false,
+      "while": true,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "length-of-longest-subarray-with-at-most-k-frequency",
+      "module": "LengthOfLongestSubarrayWithAtMostKFrequency",
+      "difficulty": "Medium",
+      "method": "maxSubarrayLength",
+      "params": [
+        "nums",
+        "k"
+      ],
+      "n_tests": 107,
+      "lean_lines": 48,
+      "py_lines": 26,
+      "term": false,
+      "while": true,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "lexicographical-numbers",
+      "module": "LexicographicalNumbers",
+      "difficulty": "Medium",
+      "method": "lexicalOrder",
+      "params": [
+        "n"
+      ],
+      "n_tests": 68,
+      "lean_lines": 44,
+      "py_lines": 28,
+      "term": false,
+      "while": true,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "longest-consecutive-sequence",
+      "module": "LongestConsecutiveSequence",
+      "difficulty": "Medium",
+      "method": "longestConsecutive",
+      "params": [
+        "nums"
+      ],
+      "n_tests": 138,
+      "lean_lines": 44,
+      "py_lines": 28,
+      "term": false,
+      "while": true,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "longest-nice-subarray",
+      "module": "LongestNiceSubarray",
+      "difficulty": "Medium",
+      "method": "longestNiceSubarray",
+      "params": [
+        "nums"
+      ],
+      "n_tests": 116,
+      "lean_lines": 48,
+      "py_lines": 25,
+      "term": false,
+      "while": true,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "longest-square-streak-in-an-array",
+      "module": "LongestSquareStreakInAnArray",
+      "difficulty": "Medium",
+      "method": "longestSquareStreak",
+      "params": [
+        "nums"
+      ],
+      "n_tests": 144,
+      "lean_lines": 48,
+      "py_lines": 27,
+      "term": false,
+      "while": true,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "magical-string",
+      "module": "MagicalString",
+      "difficulty": "Medium",
+      "method": "magicalString",
+      "params": [
+        "n"
+      ],
+      "n_tests": 41,
+      "lean_lines": 40,
+      "py_lines": 25,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "maximum-array-hopping-score-ii",
+      "module": "MaximumArrayHoppingScoreIi",
+      "difficulty": "Medium",
+      "method": "maxScore",
+      "params": [
+        "nums"
+      ],
+      "n_tests": 109,
+      "lean_lines": 50,
+      "py_lines": 27,
+      "term": false,
+      "while": true,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "maximum-candies-allocated-to-k-children",
+      "module": "MaximumCandiesAllocatedToKChildren",
+      "difficulty": "Medium",
+      "method": "maximumCandies",
+      "params": [
+        "candies",
+        "k"
+      ],
+      "n_tests": 82,
+      "lean_lines": 44,
+      "py_lines": 25,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "maximum-score-from-removing-stones",
+      "module": "MaximumScoreFromRemovingStones",
+      "difficulty": "Medium",
+      "method": "maximumScore",
+      "params": [
+        "a",
+        "b",
+        "c"
+      ],
+      "n_tests": 88,
+      "lean_lines": 38,
+      "py_lines": 25,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "maximum-value-after-insertion",
+      "module": "MaximumValueAfterInsertion",
+      "difficulty": "Medium",
+      "method": "maxValue",
+      "params": [
+        "n",
+        "x"
+      ],
+      "n_tests": 133,
+      "lean_lines": 44,
+      "py_lines": 26,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "minimum-deletions-to-make-array-beautiful",
+      "module": "MinimumDeletionsToMakeArrayBeautiful",
+      "difficulty": "Medium",
+      "method": "minDeletion",
+      "params": [
+        "nums"
+      ],
+      "n_tests": 125,
+      "lean_lines": 46,
+      "py_lines": 27,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "minimum-garden-perimeter-to-collect-enough-apples",
+      "module": "MinimumGardenPerimeterToCollectEnoughApples",
+      "difficulty": "Medium",
+      "method": "minimumPerimeter",
+      "params": [
+        "neededApples"
+      ],
+      "n_tests": 68,
+      "lean_lines": 32,
+      "py_lines": 21,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "nth-digit",
+      "module": "NthDigit",
+      "difficulty": "Medium",
+      "method": "findNthDigit",
+      "params": [
+        "n"
+      ],
+      "n_tests": 50,
+      "lean_lines": 48,
+      "py_lines": 25,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "number-of-smooth-descent-periods-of-a-stock",
+      "module": "NumberOfSmoothDescentPeriodsOfAStock",
+      "difficulty": "Medium",
+      "method": "getDescentPeriods",
+      "params": [
+        "prices"
+      ],
+      "n_tests": 116,
+      "lean_lines": 48,
+      "py_lines": 27,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "peak-index-in-a-mountain-array",
+      "module": "PeakIndexInAMountainArray",
+      "difficulty": "Medium",
+      "method": "peakIndexInMountainArray",
+      "params": [
+        "arr"
+      ],
+      "n_tests": 87,
+      "lean_lines": 44,
+      "py_lines": 25,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "print-words-vertically",
+      "module": "PrintWordsVertically",
+      "difficulty": "Medium",
+      "method": "printVertically",
+      "params": [
+        "s"
+      ],
+      "n_tests": 141,
+      "lean_lines": 42,
+      "py_lines": 26,
+      "term": false,
+      "while": true,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "reach-a-number",
+      "module": "ReachANumber",
+      "difficulty": "Medium",
+      "method": "reachNumber",
+      "params": [
+        "target"
+      ],
+      "n_tests": 70,
+      "lean_lines": 48,
+      "py_lines": 24,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "remove-adjacent-almost-equal-characters",
+      "module": "RemoveAdjacentAlmostEqualCharacters",
+      "difficulty": "Medium",
+      "method": "removeAlmostEqualCharacters",
+      "params": [
+        "word"
+      ],
+      "n_tests": 95,
+      "lean_lines": 46,
+      "py_lines": 26,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "sentence-screen-fitting",
+      "module": "SentenceScreenFitting",
+      "difficulty": "Medium",
+      "method": "wordsTyping",
+      "params": [
+        "sentence",
+        "rows",
+        "cols"
+      ],
+      "n_tests": 113,
+      "lean_lines": 48,
+      "py_lines": 27,
+      "term": false,
+      "while": true,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "shortest-unsorted-continuous-subarray",
+      "module": "ShortestUnsortedContinuousSubarray",
+      "difficulty": "Medium",
+      "method": "findUnsortedSubarray",
+      "params": [
+        "nums"
+      ],
+      "n_tests": 158,
+      "lean_lines": 44,
+      "py_lines": 24,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "single-element-in-a-sorted-array",
+      "module": "SingleElementInASortedArray",
+      "difficulty": "Medium",
+      "method": "singleNonDuplicate",
+      "params": [
+        "nums"
+      ],
+      "n_tests": 133,
+      "lean_lines": 46,
+      "py_lines": 25,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "smallest-string-with-a-given-numeric-value",
+      "module": "SmallestStringWithAGivenNumericValue",
+      "difficulty": "Medium",
+      "method": "getSmallestString",
+      "params": [
+        "n",
+        "k"
+      ],
+      "n_tests": 74,
+      "lean_lines": 46,
+      "py_lines": 25,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "sort-integers-by-the-power-value",
+      "module": "SortIntegersByThePowerValue",
+      "difficulty": "Medium",
+      "method": "getKth",
+      "params": [
+        "lo",
+        "hi",
+        "k"
+      ],
+      "n_tests": 94,
+      "lean_lines": 48,
+      "py_lines": 29,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "subarray-product-less-than-k",
+      "module": "SubarrayProductLessThanK",
+      "difficulty": "Medium",
+      "method": "numSubarrayProductLessThanK",
+      "params": [
+        "nums",
+        "k"
+      ],
+      "n_tests": 128,
+      "lean_lines": 48,
+      "py_lines": 26,
+      "term": false,
+      "while": true,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "taking-maximum-energy-from-the-mystic-dungeon",
+      "module": "TakingMaximumEnergyFromTheMysticDungeon",
+      "difficulty": "Medium",
+      "method": "maximumEnergy",
+      "params": [
+        "energy",
+        "k"
+      ],
+      "n_tests": 120,
+      "lean_lines": 49,
+      "py_lines": 27,
+      "term": false,
+      "while": true,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "time-needed-to-rearrange-a-binary-string",
+      "module": "TimeNeededToRearrangeABinaryString",
+      "difficulty": "Medium",
+      "method": "secondsToRemoveOccurrences",
+      "params": [
+        "s"
+      ],
+      "n_tests": 127,
+      "lean_lines": 34,
+      "py_lines": 22,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "valid-palindrome-iv",
+      "module": "ValidPalindromeIv",
+      "difficulty": "Medium",
+      "method": "makePalindrome",
+      "params": [
+        "s"
+      ],
+      "n_tests": 141,
+      "lean_lines": 48,
+      "py_lines": 23,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "validate-stack-sequences",
+      "module": "ValidateStackSequences",
+      "difficulty": "Medium",
+      "method": "validateStackSequences",
+      "params": [
+        "pushed",
+        "popped"
+      ],
+      "n_tests": 101,
+      "lean_lines": 40,
+      "py_lines": 25,
+      "term": false,
+      "while": true,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "verify-preorder-sequence-in-binary-search-tree",
+      "module": "VerifyPreorderSequenceInBinarySearchTree",
+      "difficulty": "Medium",
+      "method": "verifyPreorder",
+      "params": [
+        "preorder"
+      ],
+      "n_tests": 97,
+      "lean_lines": 49,
+      "py_lines": 27,
+      "term": false,
+      "while": true,
+      "for": true,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "water-bottles-ii",
+      "module": "WaterBottlesIi",
+      "difficulty": "Medium",
+      "method": "maxBottlesDrunk",
+      "params": [
+        "numBottles",
+        "numExchange"
+      ],
+      "n_tests": 86,
+      "lean_lines": 40,
+      "py_lines": 24,
+      "term": false,
+      "while": true,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "loop",
+      "feature": "while"
+    },
+    {
+      "problem": "a-number-after-a-double-reversal",
+      "module": "ANumberAfterADoubleReversal",
+      "difficulty": "Easy",
+      "method": "isSameAfterReversals",
+      "params": [
+        "num"
+      ],
+      "n_tests": 66,
+      "lean_lines": 20,
+      "py_lines": 18,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "add-digits",
+      "module": "AddDigits",
+      "difficulty": "Easy",
+      "method": "addDigits",
+      "params": [
+        "num"
+      ],
+      "n_tests": 75,
+      "lean_lines": 19,
+      "py_lines": 18,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "add-two-integers",
+      "module": "AddTwoIntegers",
+      "difficulty": "Easy",
+      "method": "sum",
+      "params": [
+        "num1",
+        "num2"
+      ],
+      "n_tests": 59,
+      "lean_lines": 18,
+      "py_lines": 18,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "build-array-from-permutation",
+      "module": "BuildArrayFromPermutation",
+      "difficulty": "Easy",
+      "method": "buildArray",
+      "params": [
+        "nums"
+      ],
+      "n_tests": 82,
+      "lean_lines": 18,
+      "py_lines": 18,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "check-if-a-string-is-an-acronym-of-words",
+      "module": "CheckIfAStringIsAnAcronymOfWords",
+      "difficulty": "Easy",
+      "method": "isAcronym",
+      "params": [
+        "words",
+        "s"
+      ],
+      "n_tests": 129,
+      "lean_lines": 20,
+      "py_lines": 18,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "check-if-all-as-appears-before-all-bs",
+      "module": "CheckIfAllAsAppearsBeforeAllBs",
+      "difficulty": "Easy",
+      "method": "checkString",
+      "params": [
+        "s"
+      ],
+      "n_tests": 152,
+      "lean_lines": 18,
+      "py_lines": 18,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "check-if-all-characters-have-equal-number-of-occurrences",
+      "module": "CheckIfAllCharactersHaveEqualNumberOfOccurrences",
+      "difficulty": "Easy",
+      "method": "areOccurrencesEqual",
+      "params": [
+        "s"
+      ],
+      "n_tests": 91,
+      "lean_lines": 20,
+      "py_lines": 18,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "check-if-binary-string-has-at-most-one-segment-of-ones",
+      "module": "CheckIfBinaryStringHasAtMostOneSegmentOfOnes",
+      "difficulty": "Easy",
+      "method": "checkOnesSegment",
+      "params": [
+        "s"
+      ],
+      "n_tests": 113,
+      "lean_lines": 18,
+      "py_lines": 18,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "check-if-the-sentence-is-pangram",
+      "module": "CheckIfTheSentenceIsPangram",
+      "difficulty": "Easy",
+      "method": "checkIfPangram",
+      "params": [
+        "sentence"
+      ],
+      "n_tests": 98,
+      "lean_lines": 18,
+      "py_lines": 18,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "check-if-two-string-arrays-are-equivalent",
+      "module": "CheckIfTwoStringArraysAreEquivalent",
+      "difficulty": "Easy",
+      "method": "arrayStringsAreEqual",
+      "params": [
+        "word1",
+        "word2"
+      ],
+      "n_tests": 105,
+      "lean_lines": 20,
+      "py_lines": 18,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "concatenation-of-array",
+      "module": "ConcatenationOfArray",
+      "difficulty": "Easy",
+      "method": "getConcatenation",
+      "params": [
+        "nums"
+      ],
+      "n_tests": 72,
+      "lean_lines": 18,
+      "py_lines": 18,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "count-distinct-numbers-on-board",
+      "module": "CountDistinctNumbersOnBoard",
+      "difficulty": "Easy",
+      "method": "distinctIntegers",
+      "params": [
+        "n"
+      ],
+      "n_tests": 50,
+      "lean_lines": 18,
+      "py_lines": 18,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "count-odd-numbers-in-an-interval-range",
+      "module": "CountOddNumbersInAnIntervalRange",
+      "difficulty": "Easy",
+      "method": "countOdds",
+      "params": [
+        "low",
+        "high"
+      ],
+      "n_tests": 93,
+      "lean_lines": 20,
+      "py_lines": 18,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "count-of-matches-in-tournament",
+      "module": "CountOfMatchesInTournament",
+      "difficulty": "Easy",
+      "method": "numberOfMatches",
+      "params": [
+        "n"
+      ],
+      "n_tests": 60,
+      "lean_lines": 18,
+      "py_lines": 18,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "counting-bits",
+      "module": "CountingBits",
+      "difficulty": "Easy",
+      "method": "countBits",
+      "params": [
+        "n"
+      ],
+      "n_tests": 50,
+      "lean_lines": 18,
+      "py_lines": 18,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "defanging-an-ip-address",
+      "module": "DefangingAnIpAddress",
+      "difficulty": "Easy",
+      "method": "defangIPaddr",
+      "params": [
+        "address"
+      ],
+      "n_tests": 48,
+      "lean_lines": 18,
+      "py_lines": 18,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "determine-color-of-a-chessboard-square",
+      "module": "DetermineColorOfAChessboardSquare",
+      "difficulty": "Easy",
+      "method": "squareIsWhite",
+      "params": [
+        "coordinates"
+      ],
+      "n_tests": 74,
+      "lean_lines": 20,
+      "py_lines": 18,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "determine-if-two-events-have-conflict",
+      "module": "DetermineIfTwoEventsHaveConflict",
+      "difficulty": "Easy",
+      "method": "haveConflict",
+      "params": [
+        "event1",
+        "event2"
+      ],
+      "n_tests": 109,
+      "lean_lines": 20,
+      "py_lines": 18,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "divisor-game",
+      "module": "DivisorGame",
+      "difficulty": "Easy",
+      "method": "divisorGame",
+      "params": [
+        "n"
+      ],
+      "n_tests": 51,
+      "lean_lines": 18,
+      "py_lines": 18,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "final-value-of-variable-after-performing-operations",
+      "module": "FinalValueOfVariableAfterPerformingOperations",
+      "difficulty": "Easy",
+      "method": "finalValueAfterOperations",
+      "params": [
+        "operations"
+      ],
+      "n_tests": 88,
+      "lean_lines": 20,
+      "py_lines": 18,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "find-greatest-common-divisor-of-array",
+      "module": "FindGreatestCommonDivisorOfArray",
+      "difficulty": "Easy",
+      "method": "findGCD",
+      "params": [
+        "nums"
+      ],
+      "n_tests": 117,
+      "lean_lines": 18,
+      "py_lines": 18,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "find-the-highest-altitude",
+      "module": "FindTheHighestAltitude",
+      "difficulty": "Easy",
+      "method": "largestAltitude",
+      "params": [
+        "gain"
+      ],
+      "n_tests": 110,
+      "lean_lines": 20,
+      "py_lines": 18,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "find-the-integer-added-to-array-i",
+      "module": "FindTheIntegerAddedToArrayI",
+      "difficulty": "Easy",
+      "method": "addedInteger",
+      "params": [
+        "nums1",
+        "nums2"
+      ],
+      "n_tests": 100,
+      "lean_lines": 19,
+      "py_lines": 18,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "find-the-maximum-achievable-number",
+      "module": "FindTheMaximumAchievableNumber",
+      "difficulty": "Easy",
+      "method": "theMaximumAchievableX",
+      "params": [
+        "num",
+        "t"
+      ],
+      "n_tests": 82,
+      "lean_lines": 18,
+      "py_lines": 18,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "furthest-point-from-origin",
+      "module": "FurthestPointFromOrigin",
+      "difficulty": "Easy",
+      "method": "furthestDistanceFromOrigin",
+      "params": [
+        "moves"
+      ],
+      "n_tests": 151,
+      "lean_lines": 20,
+      "py_lines": 18,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "generate-a-string-with-characters-that-have-odd-counts",
+      "module": "GenerateAStringWithCharactersThatHaveOddCounts",
+      "difficulty": "Easy",
+      "method": "generateTheString",
+      "params": [
+        "n"
+      ],
+      "n_tests": 58,
+      "lean_lines": 20,
+      "py_lines": 18,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "goal-parser-interpretation",
+      "module": "GoalParserInterpretation",
+      "difficulty": "Easy",
+      "method": "interpret",
+      "params": [
+        "command"
+      ],
+      "n_tests": 95,
+      "lean_lines": 20,
+      "py_lines": 18,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "hamming-distance",
+      "module": "HammingDistance",
+      "difficulty": "Easy",
+      "method": "hammingDistance",
+      "params": [
+        "x",
+        "y"
+      ],
+      "n_tests": 88,
+      "lean_lines": 18,
+      "py_lines": 18,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "intersection-of-two-arrays",
+      "module": "IntersectionOfTwoArrays",
+      "difficulty": "Easy",
+      "method": "intersection",
+      "params": [
+        "nums1",
+        "nums2"
+      ],
+      "n_tests": 124,
+      "lean_lines": 20,
+      "py_lines": 18,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "longest-uncommon-subsequence-i",
+      "module": "LongestUncommonSubsequenceI",
+      "difficulty": "Easy",
+      "method": "findLUSlength",
+      "params": [
+        "a",
+        "b"
+      ],
+      "n_tests": 125,
+      "lean_lines": 20,
+      "py_lines": 18,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "make-two-arrays-equal-by-reversing-subarrays",
+      "module": "MakeTwoArraysEqualByReversingSubarrays",
+      "difficulty": "Easy",
+      "method": "canBeEqual",
+      "params": [
+        "target",
+        "arr"
+      ],
+      "n_tests": 122,
+      "lean_lines": 18,
+      "py_lines": 18,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "maximum-number-of-words-found-in-sentences",
+      "module": "MaximumNumberOfWordsFoundInSentences",
+      "difficulty": "Easy",
+      "method": "mostWordsFound",
+      "params": [
+        "sentences"
+      ],
+      "n_tests": 78,
+      "lean_lines": 20,
+      "py_lines": 18,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "minimize-string-length",
+      "module": "MinimizeStringLength",
+      "difficulty": "Easy",
+      "method": "minimizedStringLength",
+      "params": [
+        "s"
+      ],
+      "n_tests": 112,
+      "lean_lines": 18,
+      "py_lines": 18,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "minimum-bit-flips-to-convert-number",
+      "module": "MinimumBitFlipsToConvertNumber",
+      "difficulty": "Easy",
+      "method": "minBitFlips",
+      "params": [
+        "start",
+        "goal"
+      ],
+      "n_tests": 85,
+      "lean_lines": 18,
+      "py_lines": 18,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "nim-game",
+      "module": "NimGame",
+      "difficulty": "Easy",
+      "method": "canWinNim",
+      "params": [
+        "n"
+      ],
+      "n_tests": 114,
+      "lean_lines": 18,
+      "py_lines": 18,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "number-complement",
+      "module": "NumberComplement",
+      "difficulty": "Easy",
+      "method": "findComplement",
+      "params": [
+        "num"
+      ],
+      "n_tests": 44,
+      "lean_lines": 20,
+      "py_lines": 18,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "number-of-bit-changes-to-make-two-integers-equal",
+      "module": "NumberOfBitChangesToMakeTwoIntegersEqual",
+      "difficulty": "Easy",
+      "method": "minChanges",
+      "params": [
+        "n",
+        "k"
+      ],
+      "n_tests": 91,
+      "lean_lines": 20,
+      "py_lines": 18,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "running-sum-of-1d-array",
+      "module": "RunningSumOf1dArray",
+      "difficulty": "Easy",
+      "method": "runningSum",
+      "params": [
+        "nums"
+      ],
+      "n_tests": 95,
+      "lean_lines": 18,
+      "py_lines": 18,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "smallest-even-multiple",
+      "module": "SmallestEvenMultiple",
+      "difficulty": "Easy",
+      "method": "smallestEvenMultiple",
+      "params": [
+        "n"
+      ],
+      "n_tests": 91,
+      "lean_lines": 18,
+      "py_lines": 18,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "sort-integers-by-the-number-of-1-bits",
+      "module": "SortIntegersByTheNumberOf1Bits",
+      "difficulty": "Easy",
+      "method": "sortByBits",
+      "params": [
+        "arr"
+      ],
+      "n_tests": 96,
+      "lean_lines": 18,
+      "py_lines": 18,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "check-if-it-is-a-good-array",
+      "module": "CheckIfItIsAGoodArray",
+      "difficulty": "Hard",
+      "method": "isGoodArray",
+      "params": [
+        "nums"
+      ],
+      "n_tests": 141,
+      "lean_lines": 18,
+      "py_lines": 18,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "check-if-point-is-reachable",
+      "module": "CheckIfPointIsReachable",
+      "difficulty": "Hard",
+      "method": "isReachable",
+      "params": [
+        "targetX",
+        "targetY"
+      ],
+      "n_tests": 86,
+      "lean_lines": 22,
+      "py_lines": 19,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "divide-array-into-increasing-sequences",
+      "module": "DivideArrayIntoIncreasingSequences",
+      "difficulty": "Hard",
+      "method": "canDivideIntoSubsequences",
+      "params": [
+        "nums",
+        "k"
+      ],
+      "n_tests": 103,
+      "lean_lines": 32,
+      "py_lines": 19,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "maximum-score-from-performing-multiplication-operations",
+      "module": "MaximumScoreFromPerformingMultiplicationOperations",
+      "difficulty": "Hard",
+      "method": "maximumScore",
+      "params": [
+        "nums",
+        "multipliers"
+      ],
+      "n_tests": 118,
+      "lean_lines": 40,
+      "py_lines": 28,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": true,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "minimum-cost-to-equalize-array",
+      "module": "MinimumCostToEqualizeArray",
+      "difficulty": "Hard",
+      "method": "minCostToEqualizeArray",
+      "params": [
+        "nums",
+        "cost1",
+        "cost2"
+      ],
+      "n_tests": 122,
+      "lean_lines": 66,
+      "py_lines": 33,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "minimum-insertion-steps-to-make-a-string-palindrome",
+      "module": "MinimumInsertionStepsToMakeAStringPalindrome",
+      "difficulty": "Hard",
+      "method": "minInsertions",
+      "params": [
+        "s"
+      ],
+      "n_tests": 123,
+      "lean_lines": 33,
+      "py_lines": 26,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": true,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "minimum-number-of-days-to-eat-n-oranges",
+      "module": "MinimumNumberOfDaysToEatNOranges",
+      "difficulty": "Hard",
+      "method": "minDays",
+      "params": [
+        "n"
+      ],
+      "n_tests": 235,
+      "lean_lines": 34,
+      "py_lines": 24,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": true,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "minimum-number-of-increments-on-subarrays-to-form-a-target-array",
+      "module": "MinimumNumberOfIncrementsOnSubarraysToFormATargetArray",
+      "difficulty": "Hard",
+      "method": "minNumberOperations",
+      "params": [
+        "target"
+      ],
+      "n_tests": 105,
+      "lean_lines": 30,
+      "py_lines": 18,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "put-marbles-in-bags",
+      "module": "PutMarblesInBags",
+      "difficulty": "Hard",
+      "method": "putMarbles",
+      "params": [
+        "weights",
+        "k"
+      ],
+      "n_tests": 87,
+      "lean_lines": 34,
+      "py_lines": 19,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "regular-expression-matching",
+      "module": "RegularExpressionMatching",
+      "difficulty": "Hard",
+      "method": "isMatch",
+      "params": [
+        "s",
+        "p"
+      ],
+      "n_tests": 151,
+      "lean_lines": 54,
+      "py_lines": 27,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": true,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "subtree-removal-game-with-fibonacci-tree",
+      "module": "SubtreeRemovalGameWithFibonacciTree",
+      "difficulty": "Hard",
+      "method": "findGameWinner",
+      "params": [
+        "n"
+      ],
+      "n_tests": 100,
+      "lean_lines": 18,
+      "py_lines": 18,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "triples-with-bitwise-and-equal-to-zero",
+      "module": "TriplesWithBitwiseAndEqualToZero",
+      "difficulty": "Hard",
+      "method": "countTriplets",
+      "params": [
+        "nums"
+      ],
+      "n_tests": 93,
+      "lean_lines": 34,
+      "py_lines": 19,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "wildcard-matching",
+      "module": "WildcardMatching",
+      "difficulty": "Hard",
+      "method": "isMatch",
+      "params": [
+        "s",
+        "p"
+      ],
+      "n_tests": 209,
+      "lean_lines": 54,
+      "py_lines": 28,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": true,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "4sum-ii",
+      "module": "N4sumIi",
+      "difficulty": "Medium",
+      "method": "fourSumCount",
+      "params": [
+        "nums1",
+        "nums2",
+        "nums3",
+        "nums4"
+      ],
+      "n_tests": 97,
+      "lean_lines": 28,
+      "py_lines": 19,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "add-minimum-number-of-rungs",
+      "module": "AddMinimumNumberOfRungs",
+      "difficulty": "Medium",
+      "method": "addRungs",
+      "params": [
+        "rungs",
+        "dist"
+      ],
+      "n_tests": 102,
+      "lean_lines": 30,
+      "py_lines": 19,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "alice-and-bob-playing-flower-game",
+      "module": "AliceAndBobPlayingFlowerGame",
+      "difficulty": "Medium",
+      "method": "flowerGame",
+      "params": [
+        "n",
+        "m"
+      ],
+      "n_tests": 66,
+      "lean_lines": 28,
+      "py_lines": 22,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "angle-between-hands-of-a-clock",
+      "module": "AngleBetweenHandsOfAClock",
+      "difficulty": "Medium",
+      "method": "angleClock",
+      "params": [
+        "hour",
+        "minutes"
+      ],
+      "n_tests": 72,
+      "lean_lines": 26,
+      "py_lines": 21,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "apply-bitwise-operations-to-make-strings-equal",
+      "module": "ApplyBitwiseOperationsToMakeStringsEqual",
+      "difficulty": "Medium",
+      "method": "makeStringsEqual",
+      "params": [
+        "s",
+        "target"
+      ],
+      "n_tests": 95,
+      "lean_lines": 20,
+      "py_lines": 18,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "best-time-to-buy-and-sell-stock-ii",
+      "module": "BestTimeToBuyAndSellStockIi",
+      "difficulty": "Medium",
+      "method": "maxProfit",
+      "params": [
+        "prices"
+      ],
+      "n_tests": 125,
+      "lean_lines": 28,
+      "py_lines": 18,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "binary-string-with-substrings-representing-1-to-n",
+      "module": "BinaryStringWithSubstringsRepresenting1ToN",
+      "difficulty": "Medium",
+      "method": "queryString",
+      "params": [
+        "s",
+        "n"
+      ],
+      "n_tests": 96,
+      "lean_lines": 28,
+      "py_lines": 20,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "bulb-switcher",
+      "module": "BulbSwitcher",
+      "difficulty": "Medium",
+      "method": "bulbSwitch",
+      "params": [
+        "n"
+      ],
+      "n_tests": 85,
+      "lean_lines": 18,
+      "py_lines": 18,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "check-if-array-pairs-are-divisible-by-k",
+      "module": "CheckIfArrayPairsAreDivisibleByK",
+      "difficulty": "Medium",
+      "method": "canArrange",
+      "params": [
+        "arr",
+        "k"
+      ],
+      "n_tests": 105,
+      "lean_lines": 26,
+      "py_lines": 19,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "circular-permutation-in-binary-representation",
+      "module": "CircularPermutationInBinaryRepresentation",
+      "difficulty": "Medium",
+      "method": "circularPermutation",
+      "params": [
+        "n",
+        "start"
+      ],
+      "n_tests": 92,
+      "lean_lines": 28,
+      "py_lines": 20,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "construct-k-palindrome-strings",
+      "module": "ConstructKPalindromeStrings",
+      "difficulty": "Medium",
+      "method": "canConstruct",
+      "params": [
+        "s",
+        "k"
+      ],
+      "n_tests": 100,
+      "lean_lines": 28,
+      "py_lines": 21,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "construct-the-longest-new-string",
+      "module": "ConstructTheLongestNewString",
+      "difficulty": "Medium",
+      "method": "longestString",
+      "params": [
+        "x",
+        "y",
+        "z"
+      ],
+      "n_tests": 88,
+      "lean_lines": 22,
+      "py_lines": 22,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "count-substrings-starting-and-ending-with-given-character",
+      "module": "CountSubstringsStartingAndEndingWithGivenCharacter",
+      "difficulty": "Medium",
+      "method": "countSubstrings",
+      "params": [
+        "s",
+        "c"
+      ],
+      "n_tests": 105,
+      "lean_lines": 22,
+      "py_lines": 19,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "determine-if-a-cell-is-reachable-at-a-given-time",
+      "module": "DetermineIfACellIsReachableAtAGivenTime",
+      "difficulty": "Medium",
+      "method": "isReachableAtTime",
+      "params": [
+        "sx",
+        "sy",
+        "fx",
+        "fy",
+        "t"
+      ],
+      "n_tests": 89,
+      "lean_lines": 28,
+      "py_lines": 22,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "determine-if-two-strings-are-close",
+      "module": "DetermineIfTwoStringsAreClose",
+      "difficulty": "Medium",
+      "method": "closeStrings",
+      "params": [
+        "word1",
+        "word2"
+      ],
+      "n_tests": 106,
+      "lean_lines": 30,
+      "py_lines": 19,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "encode-number",
+      "module": "EncodeNumber",
+      "difficulty": "Medium",
+      "method": "encode",
+      "params": [
+        "num"
+      ],
+      "n_tests": 138,
+      "lean_lines": 18,
+      "py_lines": 18,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "find-first-and-last-position-of-element-in-sorted-array",
+      "module": "FindFirstAndLastPositionOfElementInSortedArray",
+      "difficulty": "Medium",
+      "method": "searchRange",
+      "params": [
+        "nums",
+        "target"
+      ],
+      "n_tests": 137,
+      "lean_lines": 24,
+      "py_lines": 20,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "find-the-original-array-of-prefix-xor",
+      "module": "FindTheOriginalArrayOfPrefixXor",
+      "difficulty": "Medium",
+      "method": "findArray",
+      "params": [
+        "pref"
+      ],
+      "n_tests": 108,
+      "lean_lines": 26,
+      "py_lines": 18,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "find-three-consecutive-integers-that-sum-to-a-given-number",
+      "module": "FindThreeConsecutiveIntegersThatSumToAGivenNumber",
+      "difficulty": "Medium",
+      "method": "sumOfThree",
+      "params": [
+        "num"
+      ],
+      "n_tests": 52,
+      "lean_lines": 26,
+      "py_lines": 19,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "house-robber",
+      "module": "HouseRobber",
+      "difficulty": "Medium",
+      "method": "rob",
+      "params": [
+        "nums"
+      ],
+      "n_tests": 117,
+      "lean_lines": 26,
+      "py_lines": 24,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": true,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "maximum-number-of-weeks-for-which-you-can-work",
+      "module": "MaximumNumberOfWeeksForWhichYouCanWork",
+      "difficulty": "Medium",
+      "method": "numberOfWeeks",
+      "params": [
+        "milestones"
+      ],
+      "n_tests": 80,
+      "lean_lines": 28,
+      "py_lines": 20,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "maximum-number-that-makes-result-of-bitwise-and-zero",
+      "module": "MaximumNumberThatMakesResultOfBitwiseAndZero",
+      "difficulty": "Medium",
+      "method": "maxNumber",
+      "params": [
+        "n"
+      ],
+      "n_tests": 88,
+      "lean_lines": 18,
+      "py_lines": 18,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "maximum-size-of-a-set-after-removals",
+      "module": "MaximumSizeOfASetAfterRemovals",
+      "difficulty": "Medium",
+      "method": "maximumSetSize",
+      "params": [
+        "nums1",
+        "nums2"
+      ],
+      "n_tests": 103,
+      "lean_lines": 30,
+      "py_lines": 23,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "mice-and-cheese",
+      "module": "MiceAndCheese",
+      "difficulty": "Medium",
+      "method": "miceAndCheese",
+      "params": [
+        "reward1",
+        "reward2",
+        "k"
+      ],
+      "n_tests": 96,
+      "lean_lines": 26,
+      "py_lines": 20,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "minimize-length-of-array-using-operations",
+      "module": "MinimizeLengthOfArrayUsingOperations",
+      "difficulty": "Medium",
+      "method": "minimumArrayLength",
+      "params": [
+        "nums"
+      ],
+      "n_tests": 136,
+      "lean_lines": 24,
+      "py_lines": 21,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "minimum-elements-to-add-to-form-a-given-sum",
+      "module": "MinimumElementsToAddToFormAGivenSum",
+      "difficulty": "Medium",
+      "method": "minElements",
+      "params": [
+        "nums",
+        "limit",
+        "goal"
+      ],
+      "n_tests": 106,
+      "lean_lines": 22,
+      "py_lines": 19,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "minimum-health-to-beat-game",
+      "module": "MinimumHealthToBeatGame",
+      "difficulty": "Medium",
+      "method": "minimumHealth",
+      "params": [
+        "damage",
+        "armor"
+      ],
+      "n_tests": 95,
+      "lean_lines": 20,
+      "py_lines": 18,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "minimum-length-of-string-after-operations",
+      "module": "MinimumLengthOfStringAfterOperations",
+      "difficulty": "Medium",
+      "method": "minimumLength",
+      "params": [
+        "s"
+      ],
+      "n_tests": 47,
+      "lean_lines": 26,
+      "py_lines": 19,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "minimum-moves-to-equal-array-elements",
+      "module": "MinimumMovesToEqualArrayElements",
+      "difficulty": "Medium",
+      "method": "minMoves",
+      "params": [
+        "nums"
+      ],
+      "n_tests": 77,
+      "lean_lines": 18,
+      "py_lines": 18,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "minimum-number-of-operations-to-make-word-k-periodic",
+      "module": "MinimumNumberOfOperationsToMakeWordKPeriodic",
+      "difficulty": "Medium",
+      "method": "minimumOperationsToMakeKPeriodic",
+      "params": [
+        "word",
+        "k"
+      ],
+      "n_tests": 105,
+      "lean_lines": 30,
+      "py_lines": 19,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "minimum-numbers-of-function-calls-to-make-target-array",
+      "module": "MinimumNumbersOfFunctionCallsToMakeTargetArray",
+      "difficulty": "Medium",
+      "method": "minOperations",
+      "params": [
+        "nums"
+      ],
+      "n_tests": 98,
+      "lean_lines": 22,
+      "py_lines": 18,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "minimum-operations-to-make-array-equal",
+      "module": "MinimumOperationsToMakeArrayEqual",
+      "difficulty": "Medium",
+      "method": "minOperations",
+      "params": [
+        "n"
+      ],
+      "n_tests": 53,
+      "lean_lines": 24,
+      "py_lines": 18,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "mirror-reflection",
+      "module": "MirrorReflection",
+      "difficulty": "Medium",
+      "method": "mirrorReflection",
+      "params": [
+        "p",
+        "q"
+      ],
+      "n_tests": 84,
+      "lean_lines": 26,
+      "py_lines": 23,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "most-expensive-item-that-can-not-be-bought",
+      "module": "MostExpensiveItemThatCanNotBeBought",
+      "difficulty": "Medium",
+      "method": "mostExpensiveItem",
+      "params": [
+        "primeOne",
+        "primeTwo"
+      ],
+      "n_tests": 80,
+      "lean_lines": 18,
+      "py_lines": 18,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "number-of-burgers-with-no-waste-of-ingredients",
+      "module": "NumberOfBurgersWithNoWasteOfIngredients",
+      "difficulty": "Medium",
+      "method": "numOfBurgers",
+      "params": [
+        "tomatoSlices",
+        "cheeseSlices"
+      ],
+      "n_tests": 73,
+      "lean_lines": 26,
+      "py_lines": 21,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "number-of-distinct-binary-strings-after-applying-operations",
+      "module": "NumberOfDistinctBinaryStringsAfterApplyingOperations",
+      "difficulty": "Medium",
+      "method": "countDistinctStrings",
+      "params": [
+        "s",
+        "k"
+      ],
+      "n_tests": 111,
+      "lean_lines": 21,
+      "py_lines": 18,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "number-of-distinct-substrings-in-a-string",
+      "module": "NumberOfDistinctSubstringsInAString",
+      "difficulty": "Medium",
+      "method": "countDistinct",
+      "params": [
+        "s"
+      ],
+      "n_tests": 84,
+      "lean_lines": 30,
+      "py_lines": 19,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "number-of-ways-to-build-house-of-cards",
+      "module": "NumberOfWaysToBuildHouseOfCards",
+      "difficulty": "Medium",
+      "method": "houseOfCards",
+      "params": [
+        "n"
+      ],
+      "n_tests": 89,
+      "lean_lines": 30,
+      "py_lines": 27,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": true,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "partitioning-into-minimum-number-of-deci-binary-numbers",
+      "module": "PartitioningIntoMinimumNumberOfDeciBinaryNumbers",
+      "difficulty": "Medium",
+      "method": "minPartitions",
+      "params": [
+        "n"
+      ],
+      "n_tests": 72,
+      "lean_lines": 18,
+      "py_lines": 18,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "rectangle-area",
+      "module": "RectangleArea",
+      "difficulty": "Medium",
+      "method": "computeArea",
+      "params": [
+        "ax1",
+        "ay1",
+        "ax2",
+        "ay2",
+        "bx1",
+        "by1",
+        "bx2",
+        "by2"
+      ],
+      "n_tests": 76,
+      "lean_lines": 30,
+      "py_lines": 22,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "reverse-words-in-a-string",
+      "module": "ReverseWordsInAString",
+      "difficulty": "Medium",
+      "method": "reverseWords",
+      "params": [
+        "s"
+      ],
+      "n_tests": 44,
+      "lean_lines": 18,
+      "py_lines": 16,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "sort-the-students-by-their-kth-score",
+      "module": "SortTheStudentsByTheirKthScore",
+      "difficulty": "Medium",
+      "method": "sortTheStudents",
+      "params": [
+        "score",
+        "k"
+      ],
+      "n_tests": 83,
+      "lean_lines": 19,
+      "py_lines": 18,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "strictly-palindromic-number",
+      "module": "StrictlyPalindromicNumber",
+      "difficulty": "Medium",
+      "method": "isStrictlyPalindromic",
+      "params": [
+        "n"
+      ],
+      "n_tests": 57,
+      "lean_lines": 18,
+      "py_lines": 18,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "sum-of-number-and-its-reverse",
+      "module": "SumOfNumberAndItsReverse",
+      "difficulty": "Medium",
+      "method": "sumOfNumberAndReverse",
+      "params": [
+        "num"
+      ],
+      "n_tests": 180,
+      "lean_lines": 24,
+      "py_lines": 18,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "top-k-frequent-words",
+      "module": "TopKFrequentWords",
+      "difficulty": "Medium",
+      "method": "topKFrequent",
+      "params": [
+        "words",
+        "k"
+      ],
+      "n_tests": 92,
+      "lean_lines": 22,
+      "py_lines": 19,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "vowels-game-in-a-string",
+      "module": "VowelsGameInAString",
+      "difficulty": "Medium",
+      "method": "doesAliceWin",
+      "params": [
+        "s"
+      ],
+      "n_tests": 121,
+      "lean_lines": 22,
+      "py_lines": 19,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    },
+    {
+      "problem": "water-and-jug-problem",
+      "module": "WaterAndJugProblem",
+      "difficulty": "Medium",
+      "method": "canMeasureWater",
+      "params": [
+        "x",
+        "y",
+        "target"
+      ],
+      "n_tests": 192,
+      "lean_lines": 30,
+      "py_lines": 26,
+      "term": true,
+      "while": false,
+      "for": false,
+      "class": false,
+      "recursive": false,
+      "bucket": "term",
+      "feature": "term"
+    }
+  ]
+}

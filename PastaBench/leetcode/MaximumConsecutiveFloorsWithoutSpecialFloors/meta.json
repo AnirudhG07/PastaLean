@@ -1,0 +1,14 @@
+{
+  "problem": "maximum-consecutive-floors-without-special-floors",
+  "module": "MaximumConsecutiveFloorsWithoutSpecialFloors",
+  "method": "maxConsecutive",
+  "params": [
+    "bottom",
+    "top",
+    "special"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 94
+}

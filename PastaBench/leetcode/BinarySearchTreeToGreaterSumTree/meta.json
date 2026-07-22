@@ -1,0 +1,12 @@
+{
+  "problem": "binary-search-tree-to-greater-sum-tree",
+  "module": "BinarySearchTreeToGreaterSumTree",
+  "method": "bstToGst",
+  "params": [
+    "root"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "class",
+  "n_tests": 86
+}

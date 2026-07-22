@@ -1,0 +1,12 @@
+{
+  "problem": "group-anagrams",
+  "module": "GroupAnagrams",
+  "method": "groupAnagrams",
+  "params": [
+    "strs"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 69
+}

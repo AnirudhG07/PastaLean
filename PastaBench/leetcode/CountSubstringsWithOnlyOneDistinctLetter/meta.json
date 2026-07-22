@@ -1,0 +1,12 @@
+{
+  "problem": "count-substrings-with-only-one-distinct-letter",
+  "module": "CountSubstringsWithOnlyOneDistinctLetter",
+  "method": "countLetters",
+  "params": [
+    "s"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 57
+}

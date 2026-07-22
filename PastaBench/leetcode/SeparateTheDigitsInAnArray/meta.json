@@ -1,0 +1,12 @@
+{
+  "problem": "separate-the-digits-in-an-array",
+  "module": "SeparateTheDigitsInAnArray",
+  "method": "separateDigits",
+  "params": [
+    "nums"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 110
+}

@@ -1,0 +1,13 @@
+{
+  "problem": "maximum-candies-allocated-to-k-children",
+  "module": "MaximumCandiesAllocatedToKChildren",
+  "method": "maximumCandies",
+  "params": [
+    "candies",
+    "k"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 82
+}

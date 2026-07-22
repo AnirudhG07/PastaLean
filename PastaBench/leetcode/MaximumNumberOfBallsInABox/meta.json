@@ -1,0 +1,13 @@
+{
+  "problem": "maximum-number-of-balls-in-a-box",
+  "module": "MaximumNumberOfBallsInABox",
+  "method": "countBalls",
+  "params": [
+    "lowLimit",
+    "highLimit"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 86
+}

@@ -1,0 +1,12 @@
+{
+  "problem": "find-triangular-sum-of-an-array",
+  "module": "FindTriangularSumOfAnArray",
+  "method": "triangularSum",
+  "params": [
+    "nums"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 96
+}

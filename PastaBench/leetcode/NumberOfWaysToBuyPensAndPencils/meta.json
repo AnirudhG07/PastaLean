@@ -1,0 +1,14 @@
+{
+  "problem": "number-of-ways-to-buy-pens-and-pencils",
+  "module": "NumberOfWaysToBuyPensAndPencils",
+  "method": "waysToBuyPensPencils",
+  "params": [
+    "total",
+    "cost1",
+    "cost2"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 102
+}

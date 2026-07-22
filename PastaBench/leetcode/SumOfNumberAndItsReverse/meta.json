@@ -1,0 +1,12 @@
+{
+  "problem": "sum-of-number-and-its-reverse",
+  "module": "SumOfNumberAndItsReverse",
+  "method": "sumOfNumberAndReverse",
+  "params": [
+    "num"
+  ],
+  "difficulty": "Medium",
+  "bucket": "term",
+  "feature": "term",
+  "n_tests": 180
+}

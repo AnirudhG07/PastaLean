@@ -1,0 +1,12 @@
+{
+  "problem": "maximum-linear-stock-score",
+  "module": "MaximumLinearStockScore",
+  "method": "maxScore",
+  "params": [
+    "prices"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 153
+}

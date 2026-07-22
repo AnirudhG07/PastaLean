@@ -1,0 +1,382 @@
+[
+  {
+    "input": "bits = [1,1,1,0]",
+    "output": "False"
+  },
+  {
+    "input": "bits = [0,0,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,0,1,1,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,1,1,1,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,0,1,1,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,0,1,0]",
+    "output": "False"
+  },
+  {
+    "input": "bits = [1,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,0,1,0,1,0]",
+    "output": "False"
+  },
+  {
+    "input": "bits = [1,1,1,0,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,1,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,0,0,1,0]",
+    "output": "False"
+  },
+  {
+    "input": "bits = [1,1,0,1,0]",
+    "output": "False"
+  },
+  {
+    "input": "bits = [1,1,1,1,1,0]",
+    "output": "False"
+  },
+  {
+    "input": "bits = [0,0,0,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,0,0,1,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,1,0,1,1,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [0,1,1,0,0,1,0]",
+    "output": "False"
+  },
+  {
+    "input": "bits = [1,1,1,1,1,1,1,1,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,1,1,0,1,1,0,1,1,0,1,1,0,1,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,1,0,1,1,0,1,1,0,1,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,0,1,0,1,1,0,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,1,0,0,1,0,1,1,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,0,1,1,0,1,1,0,1,0,1,1,0,1,0]",
+    "output": "False"
+  },
+  {
+    "input": "bits = [1,1,0,1,1,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,0,1,0,1,0,1,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,0,1,1,0,1,1,1,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [0,0,0,0,0,0,0,0,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [0,1,0,1,0,1,0,1,0,1,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,0,1,0,1,1,0,1,0]",
+    "output": "False"
+  },
+  {
+    "input": "bits = [1,0,1,0,1,0,1,0,1,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,0,1,0,1,0,1,0,1,0,1,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,0,1,1,0,0,1,1,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,1,1,1,0,1,1,1,0,1,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,1,0,1,0,1,1,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,1,0,1,0,1,0,0,1,1,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,0,0,1,0,0,1,0,0,1,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,1,1,1,1,1,1,1,0,1,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,1,1,1,0,1,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,1,0,1,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,1,1,0,1,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,1,1,0,0,1,1,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,1,1,1,0,1,0,1,0,1,0,1,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,0,1,1,0,0,1,0]",
+    "output": "False"
+  },
+  {
+    "input": "bits = [1,1,0,0,1,0,1]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [0,1,0,1,1,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,0,1,1,0,1,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,0,1,1,1,1,0,1,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,0,1,1,0,1,0]",
+    "output": "False"
+  },
+  {
+    "input": "bits = [1,0,0,1,1,0,0,1,0]",
+    "output": "False"
+  },
+  {
+    "input": "bits = [1,1,1,0,1,0,1,1,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,0,1,0,1,0,1,0]",
+    "output": "False"
+  },
+  {
+    "input": "bits = [1,0,1,0,1,0,1,0,1,0,1,0,1,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,0,1,1,0,1,1,0,1,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,0,1,1,1,0,1,1,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,1,1,1,0,1,0,1,1,0,0,1,0]",
+    "output": "False"
+  },
+  {
+    "input": "bits = [0,0,0,0,0,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,0,1,1,1,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,1,1,0,1,1,0,1,1,0,1,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,1,1,1,0,1,0,0,1,0]",
+    "output": "False"
+  },
+  {
+    "input": "bits = [1,0,1,1,1,1,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,1,1,0,1,0,0,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [0,0,1,0,1,0,0,1,1,0,1,0]",
+    "output": "False"
+  },
+  {
+    "input": "bits = [1,1,0,0,1,0,1,0]",
+    "output": "False"
+  },
+  {
+    "input": "bits = [1,1,1,0,1,1,1,0,1,0,1,1,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,0,1,1,1,0,1,0,1,1,0,1,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,1,1,0,1,1,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,1,0,1,1,0,1,0]",
+    "output": "False"
+  },
+  {
+    "input": "bits = [1,1,1,0,1,0,1,0]",
+    "output": "False"
+  },
+  {
+    "input": "bits = [1,1,0,1,0,1,1,0,0,1,0]",
+    "output": "False"
+  },
+  {
+    "input": "bits = [1,1,1,1,0,1,0,1,1,0,1,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,1,0,1,0,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,0,1,0,1,1,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,1,0,1,1,0,1,1,0,1,0,1,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,1,0,0,1,0,1,1,0,1,1,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [0,0,0,0,0,0,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [0,1,1,0,1,1,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,1,0,1,1,1,0,1,0,1,0,1,0,1,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,0,1,1,0,1,0,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,0,1,1,1,0,1,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,0,1,1,1,0,1,1,1,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,1,1,0,1,1,0,1,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,0,1,1,0,1,1,0,1,1,0,1,1,0,1,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,1,1,1,1,1,1,1,1,1,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,1,1,0,1,1,0,1,0,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [0,1,0,1,0,1,0]",
+    "output": "False"
+  },
+  {
+    "input": "bits = [1,1,0,0,1,1,0,0,1,1,0,0,1,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,1,0,0,1,0,1,1,0,1,0]",
+    "output": "False"
+  },
+  {
+    "input": "bits = [1,0,1,0,1,1,0,1,0,1,1,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [0,1,1,0,1,1,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,0,1,1,0,1,1,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,0,1,1,0,1,0,1,1,0,1,1,0,1,1,0,1,0,1,0,0]",
+    "output": "True"
+  },
+  {
+    "input": "bits = [1,0,1,1,0,1,0,1,1,0,1,0,1,0,0]",
+    "output": "True"
+  }
+]

@@ -1,0 +1,12 @@
+{
+  "problem": "length-of-last-word",
+  "module": "LengthOfLastWord",
+  "method": "lengthOfLastWord",
+  "params": [
+    "s"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 48
+}

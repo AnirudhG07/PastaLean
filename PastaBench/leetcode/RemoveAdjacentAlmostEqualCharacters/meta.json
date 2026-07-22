@@ -1,0 +1,12 @@
+{
+  "problem": "remove-adjacent-almost-equal-characters",
+  "module": "RemoveAdjacentAlmostEqualCharacters",
+  "method": "removeAlmostEqualCharacters",
+  "params": [
+    "word"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 95
+}

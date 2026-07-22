@@ -1,0 +1,13 @@
+{
+  "problem": "taking-maximum-energy-from-the-mystic-dungeon",
+  "module": "TakingMaximumEnergyFromTheMysticDungeon",
+  "method": "maximumEnergy",
+  "params": [
+    "energy",
+    "k"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 120
+}

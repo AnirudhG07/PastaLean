@@ -1,0 +1,13 @@
+{
+  "problem": "maximum-product-after-k-increments",
+  "module": "MaximumProductAfterKIncrements",
+  "method": "maximumProduct",
+  "params": [
+    "nums",
+    "k"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 101
+}

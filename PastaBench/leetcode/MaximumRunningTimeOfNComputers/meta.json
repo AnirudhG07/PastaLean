@@ -1,0 +1,13 @@
+{
+  "problem": "maximum-running-time-of-n-computers",
+  "module": "MaximumRunningTimeOfNComputers",
+  "method": "maxRunTime",
+  "params": [
+    "n",
+    "batteries"
+  ],
+  "difficulty": "Hard",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 119
+}

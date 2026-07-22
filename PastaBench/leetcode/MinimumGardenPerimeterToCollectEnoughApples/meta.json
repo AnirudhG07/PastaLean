@@ -1,0 +1,12 @@
+{
+  "problem": "minimum-garden-perimeter-to-collect-enough-apples",
+  "module": "MinimumGardenPerimeterToCollectEnoughApples",
+  "method": "minimumPerimeter",
+  "params": [
+    "neededApples"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 68
+}

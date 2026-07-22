@@ -1,0 +1,12 @@
+{
+  "problem": "power-of-three",
+  "module": "PowerOfThree",
+  "method": "isPowerOfThree",
+  "params": [
+    "n"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 78
+}

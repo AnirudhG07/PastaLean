@@ -1,0 +1,13 @@
+{
+  "problem": "find-the-encrypted-string",
+  "module": "FindTheEncryptedString",
+  "method": "getEncryptedString",
+  "params": [
+    "s",
+    "k"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 93
+}

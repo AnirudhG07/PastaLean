@@ -1,0 +1,12 @@
+{
+  "problem": "find-maximum-number-of-string-pairs",
+  "module": "FindMaximumNumberOfStringPairs",
+  "method": "maximumNumberOfStringPairs",
+  "params": [
+    "words"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 65
+}

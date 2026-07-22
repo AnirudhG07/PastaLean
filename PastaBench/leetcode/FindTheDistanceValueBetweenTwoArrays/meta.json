@@ -1,0 +1,14 @@
+{
+  "problem": "find-the-distance-value-between-two-arrays",
+  "module": "FindTheDistanceValueBetweenTwoArrays",
+  "method": "findTheDistanceValue",
+  "params": [
+    "arr1",
+    "arr2",
+    "d"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 115
+}
