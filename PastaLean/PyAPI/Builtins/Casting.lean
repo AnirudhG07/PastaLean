@@ -157,6 +157,32 @@ def pyRatNonFinite (literal : String) : Rat :=
     let big : Rat := (10 : Rat) ^ (30 : Nat)
     if s.startsWith "-" then -big else big
 
+/-- `ℤ` form of the same sentinel, for an integer DP (`ans = -inf; ans = max(ans, …)` where the
+function is annotated `-> int`). Python compares `-inf` against ints happily; Lean needs one type. -/
+def pyIntNonFinite (literal : String) : Int :=
+  let s := literal.toLower
+  if s.endsWith "nan" then 0
+  else
+    let big : Int := (10 : Int) ^ (30 : Nat)
+    if s.startsWith "-" then -big else big
+
+/-- A non-finite float literal takes its type from the slot it lands in, so one `float('inf')`
+serves an `ℚ` table and an `ℤ` one. `ℚ` is the default when the context leaves it open. -/
+class PyNonFinite (α : Type) where
+  nonFinite : String → α
+
+@[default_instance] instance : PyNonFinite Rat where nonFinite := pyRatNonFinite
+instance : PyNonFinite Int where nonFinite := pyIntNonFinite
+instance : PyNonFinite Float where
+  nonFinite s :=
+    let t := s.toLower
+    if t.endsWith "nan" then 0.0
+    else if t.startsWith "-" then -(1.0 / 0.0) else 1.0 / 0.0
+
+/-- Codegen target for a literal `float('inf')` / `float('nan')`. -/
+def pyNonFinite {α : Type} [PyNonFinite α] (literal : String) : α :=
+  PyNonFinite.nonFinite literal
+
 /-- Typeclass for exact-mode `float(...)` coercions producing `ℚ`. -/
 class PyRatCast (α : Type) where
   pyRat : α → Rat

@@ -70,6 +70,13 @@ def toString : PyType → String
 
 instance : ToString PyType := ⟨toString⟩
 
+/-- The class a field access projects from. An `Option`-wrapped node still projects its class's
+fields (`root.left` where `root : Optional[TreeNode]`) — codegen inserts the unwrap. -/
+def classNameOf? : PyType → Option String
+  | .cls n => Option.some n
+  | .opt (.cls n) => Option.some n
+  | _ => Option.none
+
 /-- True when the type is fully determined, so a Lean type can be emitted for it. -/
 partial def isKnown : PyType → Bool
   | .unknown | .any => false
@@ -90,6 +97,10 @@ def needsAscription : PyType → Bool
   -- `List ℚ` by a cross-variable link (`vk = stk.pop()` with `vk` a float), which then fails when the
   -- element is read as an `Int`. `float`/`unknown` elements stay unascribed (the numpy-`Float` hazard).
   | .list e | .set e => needsAscription e
+  -- Same reasoning for a dict of concrete scalars (`graph = {}` refined to `dict[int, int]`): it is
+  -- unambiguous, and without the ascription a captured dict is lifted as an untyped parameter and
+  -- `PyGetItem ?m …` goes stuck. A `float`/`unknown` side stays unascribed, as above.
+  | .dict k v => needsAscription k && needsAscription v
   | _ => false
 
 /-- Least upper bound.

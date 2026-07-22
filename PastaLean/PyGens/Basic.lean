@@ -158,14 +158,14 @@ def nonFiniteFloatLiteral? (funcJson : Json) (argsArray : Array Json) : Option S
   guard (body == "inf" || body == "infinity" || body == "nan")
   return raw
 
-/-- In exact mode, lower a literal `float('inf')`/`float('nan')` to the `ℚ` sentinel
-`pyRatNonFinite`, because `pyRat` would silently degrade it to `0`. `none` leaves the call on its
-normal path: `--mode run` lowers `float` to `pyFloat`, and `Float` represents these exactly. -/
+/-- Lower a literal `float('inf')`/`float('nan')` to `pyNonFinite`, which takes its numeric type
+from the slot it lands in: `ℤ` inside an integer DP, `Float` in a run-twin float slot, `ℚ` (the
+default instance) otherwise. Plain `pyRat`/`pyFloat` cannot serve all three — `pyRat` degrades
+these to `0`, and a `Float` infinity does not fit an `ℤ` result. -/
 def nonFiniteFloatTerm? (funcJson : Json) (argsArray : Array Json) :
     PygenM (Option (TSyntax `term)) := do
-  unless (← getNumericMode) == .exact do return none
   let some raw := nonFiniteFloatLiteral? funcJson argsArray | return none
-  let nonFiniteIdent := mkIdent ``PastaLean.pyRatNonFinite
+  let nonFiniteIdent := mkIdent ``PastaLean.pyNonFinite
   return some (← `($nonFiniteIdent $(Syntax.mkStrLit raw)))
 
 @[pygen "Name"]

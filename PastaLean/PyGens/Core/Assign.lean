@@ -135,11 +135,15 @@ def selfRecordUpdateDoElem (attr : String) (rhs : TSyntax `term) : PygenM (TSynt
 `obj.field=v`): rebuild the receiver record `{recv with attr := rhs}` and store it back — a `Name`
 receiver is reassigned, a nested attribute recurses. (Emitting `let mut obj.field := …` is invalid
 Lean; this is the general form of the `self` record update.) -/
-partial def attrRecordUpdateDoElem (recvJson : Json) (attr : String) (rhs : TSyntax `term) :
-    PygenM (TSyntax `doElem) := do
+partial def attrRecordUpdateDoElem (recvJson : Json) (attr : String) (rhs : TSyntax `term)
+    (recvIsOpt : Bool := false) : PygenM (TSyntax `doElem) := do
   let recvTerm ← getCode recvJson `term
   let attrId := mkIdent attr.toName
-  let updated ← `({ $recvTerm with $attrId:ident := $rhs })
+  -- An `Option`-typed receiver (`root.left = v` on a tree node) must be unwrapped for the record
+  -- update and re-wrapped, since `{ opt with f := v }` is not a valid update.
+  let updated ← if recvIsOpt then
+      `(some { ($recvTerm).getD default with $attrId:ident := $rhs })
+    else `({ $recvTerm with $attrId:ident := $rhs })
   match jsonNodeType? recvJson with
   | some "Name" =>
       let recvIdent ← getCode recvJson `ident
@@ -148,6 +152,7 @@ partial def attrRecordUpdateDoElem (recvJson : Json) (attr : String) (rhs : TSyn
       let .ok inner := recvJson.getObjVal? "value" | throwError s!"Attribute missing 'value': {recvJson}"
       let .ok innerAttr := recvJson.getObjValAs? String "attr" | throwError s!"Attribute missing 'attr': {recvJson}"
       attrRecordUpdateDoElem inner innerAttr updated
+        (recvJson.getObjValAs? Bool "_unwrap_opt" == .ok true)
   | _ => throwError "attribute assignment `x.f = v` needs a variable or attribute receiver."
 
 /-- Lower a possibly-nested subscript assignment `a[i]…[k] = value` to a reassignment of the
@@ -181,7 +186,8 @@ partial def nestedSubscriptSetDoElem? (target : Json) (value : TSyntax `term) :
         s!"Attribute container is missing 'value': {containerJson}"
       let .ok attr := containerJson.getObjValAs? String "attr" | throwError
         s!"Attribute container is missing 'attr': {containerJson}"
-      return some (← attrRecordUpdateDoElem recv attr newContainer)
+      return some (← attrRecordUpdateDoElem recv attr newContainer
+        (containerJson.getObjValAs? Bool "_unwrap_opt" == .ok true))
   | _ =>
       throwError "Subscript assignment requires the base container to be a variable \
         (`a[i]…[k] = v`); got an unsupported container expression."
@@ -274,6 +280,13 @@ def assignSyntax : (kind : SyntaxNodeKind) → Json →
                 or an `if __name__ == \"__main__\"` block."
             let nameIdent ← getCode target `ident
             let valueStx ← getCode value `term
+            -- `inf = float('inf')` must stay polymorphic in its numeric type: a monomorphic `def`
+            -- would pin it to `ℚ` and then `-inf` inside an `int`-returning DP would not typecheck.
+            if (← nonFiniteFloatTerm? ((value.getObjVal? "func").toOption.getD Json.null)
+                  ((value.getObjValAs? (Array Json) "args").toOption.getD #[])).isSome then
+              let α := mkIdent `α
+              return ← applyPrivacy nameIdent.getId.toString
+                (← `(def $nameIdent {$α : Type} [$(mkIdent ``PastaLean.PyNonFinite) $α] : $α := $valueStx))
             applyPrivacy nameIdent.getId.toString (← `(def $nameIdent := $valueStx))
     | `doElem, json => withRealIfMarked json do
         let .ok target := json.getObjVal? "target" | throwError
@@ -363,6 +376,7 @@ def assignSyntax : (kind : SyntaxNodeKind) → Json →
               let .ok recv := target.getObjVal? "value" | throwError s!"Attribute missing 'value': {target}"
               let .ok attr := target.getObjValAs? String "attr" | throwError s!"Attribute missing 'attr': {target}"
               return ← attrRecordUpdateDoElem recv attr rhs
+                (target.getObjValAs? Bool "_unwrap_opt" == .ok true)
             match ← sliceTargetParts? target with
             | some (containerIdent, lowerTerm, upperTerm) =>
                 -- `s[a:b] = repl` replaces the slice and reassigns the variable.

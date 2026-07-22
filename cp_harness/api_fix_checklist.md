@@ -11,17 +11,64 @@ negative bitwise, set comparison, for-target, `or`/`and` value, mutual recursion
 are already smaller. 6 agents diagnosing (results appended below).
 
 **COMPILE_FAIL buckets (801):**
-- [ ] **D1. Application type mismatch** (190) — Bool/Float/tuple in an ℤ position; xor-queries, construct-binary-tree-from-string.
-- [ ] **D2. typeclass stuck** (73) — metavar in explicit arg (untyped binder); sudoku-solver, valid-arrangement-of-pairs. (division/float-cast partly fixed.)
-- [ ] **D3. Type mismatch** (53) — String/Bool/branch types; tallest-billboard, count-valid-paths-in-a-tree.
-- [ ] **D4. `PyHAdd Bool Bool`** (51) — bool sum wants Bool not Int; height-checker, find-the-number-of-good-pairs-i. (may be fixed — added `PyHAdd Bool Bool Int`.)
+- [~] **D1. Application type mismatch** (190) — PARTLY FIXED. Two root causes closed:
+      (a) **class container fields defaulted to `Int`** — `classStructFieldSyntax` typed a field via
+      `ofValue` (literal shapes only), so `self.p = list(range(n))` (a *Call*) fell back to `Int` and
+      every later `self.p[x]` cascaded into `PyGetItem ℤ ?m` stuck errors. TypeInfer now collects
+      class field types (`classFieldSigs`, typing the initialiser with `typeOfExpr` under the
+      `__init__` params) and writes them into the field's empty `annotation`, which the struct
+      codegen already prefers. GUARD: types that mention a user class are NOT stamped — the run twin
+      renames `TreeNode`→`TreeNode'rn` and only the codegen's class-name path applies that suffix.
+      (b) **self-recursive methods** (`UnionFind.find` path compression) had no termination proof;
+      now emitted `partial def` (and without `@[simp]`, the recursive-unfolding hazard).
+      Also fixed: `stampNodeWith` read a ClassDef's methods from `"body"`, but the IR uses
+      `"methods"` — so class methods were never type-stamped at all. (was: — Bool/Float/tuple in an ℤ position; xor-queries, construct-binary-tree-from-string.
+- [~] **D2. typeclass stuck** (73) — LARGELY FIXED. Root cause: a nested def's captures are lifted
+      into real parameters, and Lean will not infer a `def`'s param types from its body, so an
+      un-inferred capture becomes `PyGetItem ?m …` stuck. Five inference gaps fed it, all closed:
+      1. `applyStmt`'s `For` case used `nameId? target`, which is `none` for a TUPLE target — so
+         `for a, b in pairs` bound NOTHING, and anything indexed by `a`/`b` stayed unknown. Now uses
+         the existing `bindTargetType` (which already distributes over tuples).
+      2. `needsAscription` was `false` for `.dict`, so a dict local was never ascribed → captured
+         untyped. Now true when key AND value are concrete (mirrors the list/set rule).
+      3. `counts[k] += 1` (AugAssign through a Subscript) taught nothing — a `Counter()`/`{}` never
+         escaped `unknown`. Now learns both sides.
+      4. `graph[k].append(v)` (mutation through a Subscript) taught nothing. `applyMutation` now
+         attributes the learned type to the OUTER container's value slot.
+      5. `d.get(k, 0)` ignored the DEFAULT argument, so `d[k] = d.get(k,0)+1` could never break out
+         of `unknown`. `get`/`pop`/`setdefault` now join the default's type.
+      Also: a module-qualified constructor (`collections.Counter()`) never reached `builtinReturn`
+      because `library_module` was set and the registry has no type for it — a registry MISS now
+      falls through to the builtin path.
+      GUARD: a dict from a LIBRARY call is NOT ascribed — `defaultdict`/`Counter` are `PyDefaultDict`,
+      not the `Std.HashMap` a `dict[_,_]` annotation emits; ascribing fought the real type.
+      REMAINING: because of that guard, a captured `defaultdict`/`Counter` is still untyped
+      (valid-arrangement-of-pairs). Needs `PyDefaultDict` represented in the lattice (a `PyType`
+      variant + `Emit`/`Annotation` cases) so the capture can be annotated with the right type.
+      Plain dict/list/set captures now work (verified vs CPython). (was: — metavar in explicit arg (untyped binder); sudoku-solver, valid-arrangement-of-pairs. (division/float-cast partly fixed.)
+- [~] **D3. Type mismatch** (53) — PARTLY FIXED: `float('inf')` in an INTEGER slot. Python compares
+      `-inf` with ints freely; Lean needs one type. The sentinel is now polymorphic — `PyNonFinite`
+      class with `ℚ` (default_instance), `ℤ` (`pyIntNonFinite`) and `Float` instances — so the slot
+      picks it, and a top-level `inf = float('inf')` is emitted as a polymorphic
+      `def inf {α} [PyNonFinite α] : α` rather than a monomorphic ℚ def. Applies in BOTH numeric
+      modes now (approx previously took the `pyFloat` path, which broke an int DP the same way).
+      tallest-billboard compiles; verified vs CPython (6/2/3.0). (was: — String/Bool/branch types; tallest-billboard, count-valid-paths-in-a-tree.
+- [x] **D4. `PyHAdd Bool Bool`** (51) — VERIFIED FIXED (`PySummand` coercion; `sum(x!=y ...)` → Int).
+      (was: — bool sum wants Bool not Int; height-checker, find-the-number-of-good-pairs-i. (may be fixed — added `PyHAdd Bool Bool Int`.)
 - [ ] **D5. `PySetItem (List ℚ)`** (41) — int-list element defaulted to ℚ; greatest-sum-divisible-by-three, campus-bikes-ii.
 - [ ] **D6. invalid reassignment** (40) — var rebound to conflicting type → should box PyAny; total-appeal-of-a-string, min-cost-to-connect-all-points.
 - [ ] **D7. `PyContains PyAny`** (37) — `x in y` on PyAny/no-membership; longest-nice-substring, check-if-n-and-its-double-exist.
 - [ ] **D8. Unknown identifier** (34) — missing builtin/method/field; sort-an-array, compare-strings-by-frequency-of-the-smallest-character.
 - [ ] **D9. `PyIterable (ℤ×…)` / `PyGetItem (ℤ×ℤ)`** (29+16) — tuple iterated/indexed as list; spiral-matrix, advantage-shuffle.
-- [ ] **D10. Invalid field `.val`/`.left`/`.next`** (23) — Option TreeNode/ListNode unwrap; height-of-special-binary-tree, flatten-binary-tree-to-linked-list.
-- [ ] **D11. kwargs `Invalid argument name`** (19) — `sorted(reverse=)`, `dict.get(k,d)`; reverse-nodes-in-k-group, minimum-falling-path-sum-ii.
+- [x] **D10. Invalid field `.val`/`.left`/`.next`** (23) — FIXED. `typeOfExpr` had no `Attribute`
+      case, so a chained receiver was `unknown` and the unwrap fired only on the OUTERMOST receiver.
+      Added class-field types to `sigs` (`"Class.field"` keys, from each `ClassDef`, mirroring the
+      struct codegen's `None`-default → `Option Class` rule) + an `Attribute` case in `typeOfExpr` +
+      `PyType.classNameOf?`. Also made `attrRecordUpdateDoElem` Option-aware (unwrap + re-wrap in
+      `some`), since `{ opt with f := v }` is not a valid record update.
+      Verified vs CPython: `root.left.val`→2, depth→3, ListNode walk. (was: — Option TreeNode/ListNode unwrap; height-of-special-binary-tree, flatten-binary-tree-to-linked-list.
+- [x] **D11. kwargs** (19) — `dict.get(k,d)`, `dict.pop(k,d)`, `dict.setdefault(k,d)`,
+      `sorted(reverse=/key=)`, `min/max(default=)` all work now. (was: — `sorted(reverse=)`, `dict.get(k,d)`; reverse-nodes-in-k-group, minimum-falling-path-sum-ii.
 - [ ] **D12. LinearOrder / PyTruthy on class** (12+8) — sorting/truthiness on a user type; process-tasks-using-servers.
 - [ ] tail: Function expected (8), Invalid match (8), PyGetItem ℤ ℤ scalar-indexed (7).
 
@@ -29,7 +76,7 @@ are already smaller. 6 agents diagnosing (results appended below).
 - [ ] **D13. closure-as-value CAPTURING** (41) — `sort(key=helper)` where helper captures; needs `fun p ↦ new p caps`. number-of-beautiful-integers-in-the-range, house-robber-iv.
 - [ ] **D14. tuple** (26) — recover-binary-search-tree, stone-game-vi.
 - [ ] **D15. mutual recursion** (22) — sibling nested defs; MAY be fixed this session (typed); untyped still fails. beautiful-pairs, sliding-puzzle.
-- [ ] **D16. subscript-through-attribute** (21) — `self.grid[i][j]=v` / `obj.arr[i]=v`; longest-word-with-all-prefixes, search-suggestions-system.
+- [x] **D16. subscript-through-attribute** (21) — VERIFIED FIXED by `attrRecordUpdateDoElem`. (was: — `self.grid[i][j]=v` / `obj.arr[i]=v`; longest-word-with-all-prefixes, search-suggestions-system.
 - [ ] **D17. generator-rebind** (15) — `dfs` mutating in a GeneratorExp; max-area-of-island, smallest-string-with-swaps.
 - [ ] **D18. kwargs (convert)** (12), **walrus in BoolOp** (6).
 - [ ] **D19. "other" convert-fail** (114) — UNCATEGORISED, needs fresh diagnosis. count-of-sub-multisets-with-bounded-sum, find-servers-that-handled-most-number-of-requests.
@@ -291,3 +338,24 @@ adding-two-negabinary-numbers, increasing-triplet-subsequence, minimum-average-d
 - [x] **D11. `dict.setdefault(k, default)`** — value+mutate like pop: value `pyGetD d k default`,
       rest `pyDictSetdefaultRest d k default` (inserts only when absent). Both `x = d.setdefault(...)`
       and bare-statement forms. TypeInfer already returns the dict-value type. ✓ (2/some 2/some 9)
+
+
+### PROGRESS update 4 (D1 / D3)
+- [x] class container field types + `partial` recursive methods (see D1 above). UnionFind verified
+      vs CPython (True/False/apple/2).
+- [x] polymorphic `float('inf')` sentinel (see D3 above). Verified vs CPython (6/2/3.0).
+- [ ] **REMAINING GAP (found while testing): an EMPTY container class field** (`self.seen = {}`) has
+      unknown element types, so `toAnnotation?` yields nothing and it still falls back to `Int`.
+      Pre-existing (both the old `ofValue` path and the new one bottom out the same way). Needs the
+      field type refined from *method-body usage* (`self.seen[w] = …`), not just the initialiser.
+- Regression examples added: `example_scripts/typing/class_field_types.py`,
+  `example_scripts/typing/numeric_sentinels.py` (both also run-verified against CPython).
+
+
+### PROGRESS update 5 (D2 / D4)
+- [x] **D4 CONFIRMED FIXED** — re-translated both named problems (height-checker `heightChecker`,
+      find-the-number-of-good-pairs-i `numberOfPairs`); both compile clean. The corpus logs were
+      stale (predate the `PySummand` fix).
+- [x] **D2 largely fixed** — see above; 5 inference gaps + the library-registry fallthrough.
+- [ ] **D2 remainder**: captured `defaultdict`/`Counter` need `PyDefaultDict` in the lattice.
+- Regression example added: `example_scripts/typing/captured_containers.py` (run-verified: 1/6).
