@@ -8,14 +8,16 @@ ordering invariant is trivially maintained; ops are O(n log n) rather than O(log
 mutating calls (`heapify`/`heappush`/`heappop`) are lowered to reassignments of the heap variable by
 `PyGens/Calls/SpecialCalls/Heapq.lean`. -/
 
-private def sortAsc {α : Type} [LinearOrder α] (xs : List α) : List α :=
-  xs.mergeSort (fun a b => decide (a ≤ b))
+-- `Ord` (not `LinearOrder`) so a heap of TUPLES works: Lean's `Ord (α × β)` is lexicographic, exactly
+-- Python's tuple comparison — whereas Mathlib's `Prod` order is the (non-linear) product order.
+private def sortAsc {α : Type} [Ord α] (xs : List α) : List α :=
+  xs.mergeSort (fun a b => (compare a b).isLE)
 
 /-- `heapq.heapify(h)`: reorder into a (sorted) heap. -/
-def pyHeapify {α : Type} [LinearOrder α] (xs : List α) : List α := sortAsc xs
+def pyHeapify {α : Type} [Ord α] (xs : List α) : List α := sortAsc xs
 
 /-- `heapq.heappush(h, x)`: add `x`, keeping the heap ordered. -/
-def pyHeappush {α : Type} [LinearOrder α] (h : List α) (x : α) : List α := sortAsc (x :: h)
+def pyHeappush {α : Type} [Ord α] (h : List α) (x : α) : List α := sortAsc (x :: h)
 
 /-- The value `heappop(h)` returns: the smallest element (the sorted head). -/
 def pyHeappopVal {α : Type} [Inhabited α] (h : List α) : α := h.headD default
@@ -27,14 +29,14 @@ def pyHeappopRest {α : Type} (h : List α) : List α := h.tail
 def pyHeapreplaceVal {α : Type} [Inhabited α] (h : List α) (_x : α) : α := h.headD default
 
 /-- The heap after `heapreplace(h, x)`: drop the min, then insert `x`. -/
-def pyHeapreplaceRest {α : Type} [LinearOrder α] (h : List α) (x : α) : List α := sortAsc (x :: h.tail)
+def pyHeapreplaceRest {α : Type} [Ord α] (h : List α) (x : α) : List α := sortAsc (x :: h.tail)
 
 /-- `heapq.nsmallest(n, iterable)`: the `n` smallest elements, ascending. -/
-def pyNsmallest {α β : Type} [PastaLean.PyIterable α β] [LinearOrder β] (n : Int) (xs : α) : List β :=
+def pyNsmallest {α β : Type} [PastaLean.PyIterable α β] [Ord β] (n : Int) (xs : α) : List β :=
   (sortAsc (PastaLean.pyIter xs)).take n.toNat
 
 /-- `heapq.nlargest(n, iterable)`: the `n` largest elements, descending. -/
-def pyNlargest {α β : Type} [PastaLean.PyIterable α β] [LinearOrder β] (n : Int) (xs : α) : List β :=
-  ((PastaLean.pyIter xs).mergeSort (fun a b => decide (b ≤ a))).take n.toNat
+def pyNlargest {α β : Type} [PastaLean.PyIterable α β] [Ord β] (n : Int) (xs : α) : List β :=
+  ((PastaLean.pyIter xs).mergeSort (fun a b => (compare b a).isLE)).take n.toNat
 
 end Libraries.heapq

@@ -229,22 +229,29 @@ def mappedCallableValueCode (json : Json) : PygenM (TSyntax `term) := do
 def lowerMinMaxCall (which : String) (argsArray : Array Json) (argsCodes : Array (TSyntax `term))
     (keyWordsMap : PyKeywordArgs) : PygenM (TSyntax `term) := do
   for (kwName, _) in keyWordsMap.toList do
-    unless kwName == "key" do
+    unless kwName == "key" || kwName == "default" do
       throwError s!"{which}() keyword argument '{kwName}' is not supported yet."
   unless argsArray.size ≥ 1 do
     throwError s!"{which}() expects at least one argument."
   let keyOpt := keyWordsMap.get? "key"
+  -- `min(xs, default=d)` returns `d` for an empty iterable rather than raising.
+  let defaultCode ← match keyWordsMap.get? "default" with
+    | some d => some <$> getCode d `term
+    | none => pure none
   buildIOPureApplicationFromArgs argsArray argsCodes fun resolvedArgs => do
     let iterable ← if resolvedArgs.size == 1 then pure resolvedArgs[0]!
       else `([$resolvedArgs,*])
-    match keyOpt with
-    | none =>
-        let fn := mkIdent (if which == "min" then ``pyMin else ``pyMax)
-        `($fn $iterable)
-    | some kJson =>
-        let keyCode ← mappedCallableValueCode kJson
-        let fn := mkIdent (if which == "min" then ``pyMinBy else ``pyMaxBy)
-        `($fn $keyCode $iterable)
+    let base ← match keyOpt with
+      | none =>
+          let fn := mkIdent (if which == "min" then ``pyMin else ``pyMax)
+          `($fn $iterable)
+      | some kJson =>
+          let keyCode ← mappedCallableValueCode kJson
+          let fn := mkIdent (if which == "min" then ``pyMinBy else ``pyMaxBy)
+          `($fn $keyCode $iterable)
+    match defaultCode with
+    | some d => `(if $(mkIdent ``PastaLean.pyLen) $iterable == (0 : Int) then $d else $base)
+    | none => pure base
 
 /-- Resolve the class of a method-call receiver `recv.m(...)`: `self` inside a class body resolves
 to the class being lowered; otherwise fall back to the unique registered class that declares a
@@ -306,6 +313,7 @@ def statementMutatorRebuild? (attr : String) : Option (Lean.Name × List Nat) :=
   | "remove"     => some (``pySetRemove,   [1])
   | "pop"        => some (``pyPopRest,     [0, 1])
   | "popleft"    => some (``pyPopLeftRest, [0])
+  | "setdefault" => some (``pyDictSetdefaultRest, [2])
   | _            => none
 
 /-- The class to construct for a call `f(...)` whose callee is the `Name` `funcName`: a registered
@@ -610,6 +618,15 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
             | _ => throwError "round() expects one or two arguments."
         | .ok "Name", .ok "min" => return ← lowerMinMaxCall "min" argsArray argsCodes keyWordsMap
         | .ok "Name", .ok "max" => return ← lowerMinMaxCall "max" argsArray argsCodes keyWordsMap
+        | .ok "Name", .ok "next" =>
+            -- `next(it)` / `next(it, default)`. Our comprehensions/`iter(...)` are eager `List`s, so
+            -- this is the first element (or the default when empty).
+            unless keyWordsMap.isEmpty do throwError "next() keyword arguments are not supported."
+            return ← buildIOPureApplicationFromArgs argsArray argsCodes fun r => do
+              let iter ← `($(mkIdent ``PastaLean.pyIter) $(r[0]!))
+              match r[1]? with
+              | some d => `(($iter).headD $d)
+              | none   => `(($iter).headD default)
         | .ok "Name", .ok funcName =>
             -- Class instantiation `C(args)` (or `cls(args)` in a classmethod) -> `C.mk args`.
             -- Prefer the py2lean dispatch stamp (`_class_ctor`); fall back to the local registry.

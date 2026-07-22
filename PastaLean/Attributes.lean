@@ -37,6 +37,14 @@ def pythonMethodMap? (attr : String) : Option Lean.Name :=
   | "isspace"    => some ``pyIsWhitespace
   | "partition"  => some ``pyPartition
   | "capitalize" => some ``pyStringCapitalize
+  | "title"        => some ``pyStringTitle
+  | "swapcase"     => some ``pyStringSwapcase
+  | "casefold"     => some ``pyStringCasefold
+  | "removeprefix" => some ``pyStringRemovePrefix
+  | "removesuffix" => some ``pyStringRemoveSuffix
+  | "rjust"        => some ``pyStringRjust
+  | "ljust"        => some ``pyStringLjust
+  | "center"       => some ``pyStringCenter
   -- List Only
   | "append"     => some ``pyAppend
   | "appendleft" => some ``pyAppendLeft

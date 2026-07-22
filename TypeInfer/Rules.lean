@@ -61,6 +61,8 @@ private def constReturnMethods : List (String × PyType) :=
   [ ("split", .list .str), ("rsplit", .list .str), ("splitlines", .list .str),
     ("join", .str), ("strip", .str), ("lstrip", .str), ("rstrip", .str),
     ("lower", .str), ("upper", .str), ("replace", .str), ("format", .str),
+    ("title", .str), ("swapcase", .str), ("casefold", .str), ("center", .str),
+    ("removeprefix", .str), ("removesuffix", .str), ("rjust", .str), ("ljust", .str),
     ("count", .int), ("find", .int), ("rfind", .int), ("index", .int),
     ("startswith", .bool), ("endswith", .bool), ("isdigit", .bool), ("isalpha", .bool) ]
 
@@ -182,6 +184,18 @@ partial def builtinReturn (sigs : Sigs) (env : Env) (name : String) (args : List
       | "set" | "frozenset" => .set arg0.elemType
       | "tuple" => .list arg0.elemType
       | "dict" => arg0
+      -- collections/itertools constructors, so a captured `graph = defaultdict(list)` etc. is typed
+      -- (an untyped closure-captured binder is the biggest `stuck`/`Unknown identifier` cascade).
+      | "Counter" => .dict arg0.elemType .int
+      | "accumulate" => .list arg0.elemType
+      | "defaultdict" =>
+          let vt := match args.head?.bind (·.getObjValAs? String "id" |>.toOption) with
+            | some "list" => .list .unknown
+            | some "set" => .set .unknown
+            | some "dict" => .dict .unknown .unknown
+            | some "int" | some "float" => .int
+            | _ => .unknown
+          .dict .unknown vt
       | "abs" | "min" | "max" | "sum" =>
           -- element for the container forms, else the argument itself.
           if args.length == 1 && arg0.elemType != .unknown then arg0.elemType else arg0

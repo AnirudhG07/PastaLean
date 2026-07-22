@@ -181,34 +181,47 @@ private def argNode (name : String) (annotation : Option Json) : Json :=
   Json.mkObj [("node_type", Json.str "arg"), ("arg", Json.str name),
               ("annotation", annotation.getD Json.null)]
 
-/-- Rewrite every call `old(args…)` into `new(args…, captures…)`.
+/-- The value form of a CAPTURING helper passed as a value (`sort(key=helper)`): a `Lambda`
+`fun params ↦ new(params…, caps…)`, partially applying the captured args (which come after the
+helper's own params). -/
+private def captureWrapperLambda (new : String) (origParams captures : Array String) : Json :=
+  let paramArgs := origParams.map (argNode · none)
+  let callArgs := (origParams ++ captures).map nameNode
+  let call := Json.mkObj [("node_type", Json.str "Call"), ("func", nameNode new),
+                          ("args", Json.arr callArgs), ("keywords", Json.mkObj [])]
+  Json.mkObj [("node_type", Json.str "Lambda"),
+              ("args", Json.mkObj [("node_type", Json.str "arguments"), ("args", Json.arr paramArgs)]),
+              ("body", call)]
 
-A bare reference to `old` outside call position (passing the helper as a value) would need a
-partially-applied closure over the captures; reject it instead of emitting something wrong. -/
-partial def rewriteHelperCalls (old new : String) (captures : Array String) (json : Json) :
+/-- Rewrite every call `old(args…)` into `new(args…, captures…)`. A bare reference to `old` outside
+call position (`sort(key=old)`) becomes a partial-application `fun p ↦ new p captures` when it
+captures; a capture-free helper is just `new`. `origParams` are `old`'s own parameter names. -/
+partial def rewriteHelperCalls (old new : String) (origParams captures : Array String) (json : Json) :
     PygenM Json := do
   match json with
-  | .arr elems => return Json.arr (← elems.mapM (rewriteHelperCalls old new captures))
+  | .arr elems => return Json.arr (← elems.mapM (rewriteHelperCalls old new origParams captures))
   | .obj fields =>
       if jsonNodeType? json == some "Call" then
         if let .ok func := json.getObjVal? "func" then
           if jsonNodeType? func == some "Name" && func.getObjValAs? String "id" == .ok old then
             let args := (json.getObjValAs? (Array Json) "args").toOption.getD #[]
-            let args ← args.mapM (rewriteHelperCalls old new captures)
+            let args ← args.mapM (rewriteHelperCalls old new origParams captures)
             let args := args ++ captures.map nameNode
             let keywords ← match json.getObjVal? "keywords" with
-              | .ok kw => rewriteHelperCalls old new captures kw
+              | .ok kw => rewriteHelperCalls old new origParams captures kw
               | _ => pure (Json.mkObj [])
             return (json.setObjVal! "func" (nameNode new)).setObjVal! "args" (Json.arr args)
               |>.setObjVal! "keywords" keywords
-      -- `old` as a VALUE (`sort(key=old)`): a capture-free helper is a real top-level def → just `new`.
-      -- A capturing one can't be a bare value (captures come after its params), so reject it.
+      -- `old` as a VALUE (`sort(key=old)`): capture-free → the lifted name. A capturing one COULD
+      -- become `fun p ↦ new p caps` (`captureWrapperLambda`), which works where the param type is
+      -- inferable (`key=`/`map`), but an ODE-style callback (`odeint(system, …)`) can't infer the
+      -- untyped wrapper binders — so keep rejecting until the wrapper carries inferred param types.
       if jsonNodeType? json == some "Name" && json.getObjValAs? String "id" == .ok old then
         if captures.isEmpty then return nameNode new
         else throwError s!"nested function '{old}' captures variables and is used as a value; \
           only direct calls are supported."
       let rewritten ← fields.toList.mapM fun (k, v) => do
-        return (k, ← rewriteHelperCalls old new captures v)
+        return (k, ← rewriteHelperCalls old new origParams captures v)
       return Json.mkObj rewritten
   | _ => return json
 
@@ -466,10 +479,11 @@ private def liftHelper (outerName : String) (outerJson innerJson : Json) :
   let readOnly := captures.filter fun c => !threaded.contains c
   let ordered := readOnly ++ threaded
 
-  -- A capture-free helper used as a value (`sort(key=f)`) is fine — lifted to a plain reference. A
-  -- capturing one can't be (captures come after its params), so reject that case.
-  if (usedAsValue innerName inner || usedAsValue innerName (Json.arr outerBody)) && !captures.isEmpty then
-    throwError s!"nested function '{innerName}' captures variables and is used as a value; unsupported."
+  -- A helper used as a value (`sort(key=f)`): capture-free → a plain reference; read-only captures →
+  -- a `fun p ↦ new p caps` wrapper (in `rewriteHelperCalls`). Only a THREADED (mutated) capture used
+  -- as a value is genuinely unsupported — a value lambda can't rebind the threaded state.
+  if (usedAsValue innerName inner || usedAsValue innerName (Json.arr outerBody)) && !threaded.isEmpty then
+    throwError s!"nested function '{innerName}' mutates a captured variable and is used as a value; unsupported."
 
   let hasValue := hasValuedReturn (Json.arr innerBody)
   unless threaded.isEmpty do
@@ -499,11 +513,12 @@ private def liftHelper (outerName : String) (outerJson innerJson : Json) :
     !(jsonNodeType? stmt == some "FunctionDef"
       && stmt.getObjValAs? String "name" == .ok innerName)
 
+  let origParams := functionParamNames inner
   let counter ← IO.mkRef 0
   let (helperBody, rewrittenOuter) ←
     if threaded.isEmpty then do
-      let body ← rewriteHelperCalls innerName helperName ordered (Json.arr innerBody)
-      let outer ← rewriteHelperCalls innerName helperName ordered (Json.arr remaining)
+      let body ← rewriteHelperCalls innerName helperName origParams ordered (Json.arr innerBody)
+      let outer ← rewriteHelperCalls innerName helperName origParams ordered (Json.arr remaining)
       pure (body, outer)
     else do
       let body ← rewriteThreadedStmts innerName helperName ordered threaded hasValue counter innerBody
@@ -603,7 +618,8 @@ private def liftMutualGroup (outerName : String) (outerJson : Json) (members : A
     -- Rewrite every call to any sibling (self included) to the lifted name + shared captures.
     let mut body := (m.getObjVal? "body").toOption.getD (Json.arr #[])
     for sibName in memberNames do
-      body ← rewriteHelperCalls sibName (helperNameOf sibName) shared body
+      let sibParams := (members.find? (·.getObjValAs? String "name" == .ok sibName)).elim #[] functionParamNames
+      body ← rewriteHelperCalls sibName (helperNameOf sibName) sibParams shared body
     let helper := ((m.setObjVal! "name" (Json.str (helperNameOf mName))).setObjVal! "args" mArgs)
       |>.setObjVal! "body" body
     helpers := helpers.push helper
@@ -613,7 +629,8 @@ private def liftMutualGroup (outerName : String) (outerJson : Json) (members : A
       && memberNames.contains ((stmt.getObjValAs? String "name").toOption.getD ""))
   let mut outerBodyJson := Json.arr remaining
   for sibName in memberNames do
-    outerBodyJson ← rewriteHelperCalls sibName (helperNameOf sibName) shared outerBodyJson
+    let sibParams := (members.find? (·.getObjValAs? String "name" == .ok sibName)).elim #[] functionParamNames
+    outerBodyJson ← rewriteHelperCalls sibName (helperNameOf sibName) sibParams shared outerBodyJson
   return (helpers, outerJson.setObjVal! "body" outerBodyJson)
 
 /-- Lift every nested `def` out of `fnJson`, outermost-first. Returns helper **groups** (each a lone

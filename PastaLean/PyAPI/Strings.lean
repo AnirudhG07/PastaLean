@@ -184,6 +184,51 @@ def pyStringCapitalize : String → String
     -- Python lowercases the tail, unlike Lean's `String.capitalize` which leaves it unchanged.
     | c :: rest => String.ofList (c.toUpper :: rest.map Char.toLower)
 
+/-- Python `title`: uppercase the first letter of each word, lowercase the rest. A "word" starts
+after any non-alphabetic character (`"ab c'd" → "Ab C'D"`). -/
+def pyStringTitle (s : String) : String :=
+  let step : (List Char × Bool) → Char → (List Char × Bool) := fun (acc, prevAlpha) c =>
+    let c' := if prevAlpha then c.toLower else c.toUpper
+    (c' :: acc, c.isAlpha)
+  String.ofList (s.toList.foldl step ([], false) |>.1).reverse
+
+/-- Python `swapcase`: lowercase becomes uppercase and vice versa. -/
+def pyStringSwapcase (s : String) : String :=
+  String.ofList (s.toList.map fun c => if c.isUpper then c.toLower else c.toUpper)
+
+/-- Python `casefold`: like `lower` for the ASCII range. -/
+def pyStringCasefold : String → String := pyStringLower
+
+/-- Python `removeprefix`: drop `pfx` from the front if present, else return `s` unchanged. -/
+def pyStringRemovePrefix (s pfx : String) : String :=
+  if pfx ≠ "" ∧ s.startsWith pfx then String.ofList (s.toList.drop pfx.length) else s
+
+/-- Python `removesuffix`: drop `sfx` from the end if present, else return `s` unchanged. -/
+def pyStringRemoveSuffix (s sfx : String) : String :=
+  if sfx ≠ "" ∧ s.endsWith sfx then String.ofList (s.toList.take (s.length - sfx.length)) else s
+
+/-- Python `rjust`: right-justify in a field of `width`, padding on the left with `fill`. -/
+def pyStringRjust (s : String) (width : Int) (fill : String := " ") : String :=
+  let pad := width - s.length
+  let ch := fill.toList.head?.getD ' '
+  if pad ≤ 0 then s else String.ofList (List.replicate pad.toNat ch) ++ s
+
+/-- Python `ljust`: left-justify in a field of `width`, padding on the right with `fill`. -/
+def pyStringLjust (s : String) (width : Int) (fill : String := " ") : String :=
+  let pad := width - s.length
+  let ch := fill.toList.head?.getD ' '
+  if pad ≤ 0 then s else s ++ String.ofList (List.replicate pad.toNat ch)
+
+/-- Python `center`: center in a field of `width`; the extra pad char (odd gap) goes on the right. -/
+def pyStringCenter (s : String) (width : Int) (fill : String := " ") : String :=
+  let pad := width - s.length
+  let ch := fill.toList.head?.getD ' '
+  if pad ≤ 0 then s
+  else
+    let left := pad.toNat / 2
+    let right := pad.toNat - left
+    String.ofList (List.replicate left ch) ++ s ++ String.ofList (List.replicate right ch)
+
 /--
 Concrete string implementation for Python `split`.
 

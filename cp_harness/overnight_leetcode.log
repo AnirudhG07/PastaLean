@@ -5228,3 +5228,4 @@ Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF
        15x  Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': nested function 'check' captures variables and is used as a value; unsupported.
        11x  Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': call to 'dfs' inside a GeneratorExp cannot rebind the threaded state.
 [*] Summary written to cp_harness/dataset_leetcode/convert_summary.json
+[*] Native: compiling 1494 harness(es) in ONE build (Mathlib once, 64 cores)…

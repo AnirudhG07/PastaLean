@@ -38,8 +38,10 @@ import queue
 import random
 import re
 import subprocess
+import shutil
 import sys
 import threading
+import warnings
 import time
 from pathlib import Path
 
@@ -408,7 +410,11 @@ def load_callable(fn_src, method):
     """Exec `fn_src` (with the star-import prelude) and return the `method` callable, or None."""
     ns = {}
     try:
-        exec(_PRELUDE + fn_src, ns)  # noqa: S102
+        # Dataset sources are third-party text; their SyntaxWarnings (`'\/'` in a regex, …) say
+        # nothing about the transpiler and would otherwise pepper the run log.
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            exec(_PRELUDE + fn_src, ns)  # noqa: S102
     except Exception:  # noqa: BLE001
         return None
     fn = ns.get(method)
@@ -441,6 +447,16 @@ def _ref_stream_worker(conn, fn, arg_list, start, mem_bytes):
         resource.setrlimit(resource.RLIMIT_AS, (mem_bytes, mem_bytes))
     except (ValueError, OSError, ImportError):
         pass  # platform without RLIMIT_AS — the parent's per-case timeout is still a backstop
+    # The child talks only over the pipe, so its stdio is pure noise in the run log. Solutions that
+    # print, or that spawn their own threads (a "web crawler" solution whose threads raise past our
+    # try/except and hit `threading.excepthook`), would otherwise spew into the parent's stderr.
+    try:
+        devnull = open(os.devnull, "w")
+        os.dup2(devnull.fileno(), 1)
+        os.dup2(devnull.fileno(), 2)
+        threading.excepthook = lambda _args: None
+    except Exception:  # noqa: BLE001
+        pass
     for offset, args in enumerate(arg_list):
         idx = start + offset
         try:
@@ -455,6 +471,9 @@ def _ref_stream_worker(conn, fn, arg_list, start, mem_bytes):
             except Exception:  # noqa: BLE001
                 break
     conn.close()
+    # Hard-exit: a solution may have left non-daemon threads running, which would otherwise keep
+    # this child alive until the parent's timeout terminates it.
+    os._exit(0)
 
 
 def guarded_ref_batch(fn, arg_list, *, mem_bytes=_REF_MEM_LIMIT, timeout=_REF_CASE_TIMEOUT):
@@ -651,16 +670,20 @@ class CPastaEval:
 
     def __init__(self, dataset, *, source=None, timeout=15, max_tests=0, skip_python=False,
                  random_n=None, seed=0, problems=None, max_solutions=3, split="test",
-                 workers=None, interpret=False, exclude_file="cp_harness/excluded_problems.txt"):
+                 workers=None, interpret=False, jobs=None,
+                 exclude_file="cp_harness/excluded_problems.txt"):
         self.dataset = Path(dataset)
         self.source = source
         self.timeout = timeout
-        # Default eval path COMPILES every harness in one build (Mathlib loaded once, all cores) then
-        # runs the native binaries — instant execution, no timeouts, no per-timeout Mathlib reboot.
+        # Default eval path COMPILES every harness in one build (Mathlib loaded once) then runs the
+        # native binaries — instant execution, no timeouts, no per-timeout Mathlib reboot.
         # `--interpret` falls back to the warm interpreter pool.
         self.interpret = interpret
         # Parallel workers: interpret-mode warm backends (~1.5 GB each), or native run concurrency.
         self.workers = workers or max(1, min(16, (os.cpu_count() or 4) // 4))
+        # `lake build` parallelism. Lake defaults to *every* core, which starves the rest of the
+        # machine; leave headroom (~3/4 of cores, hard-capped) unless `--jobs` says otherwise.
+        self.jobs = jobs or max(1, min(48, ((os.cpu_count() or 4) * 3) // 4))
         self.max_tests = max_tests
         self.skip_python = skip_python
         self.random_n = random_n
@@ -1271,9 +1294,24 @@ class CPastaEval:
         ns = f"CpHarness.H{hid}"
         return "\n".join(imports) + f"\nnamespace {ns}\n" + rest + f"\nend {ns}\n"
 
+    def _lake_build(self, target):
+        """`lake build <target>`, pinned to `self.jobs` CPUs. This Lake has no `-j`, so the cap is
+        enforced by CPU affinity (`taskset`) — otherwise a build saturates every core and the rest
+        of the machine stalls. Falls back to a plain command where `taskset` is unavailable."""
+        cmd = ["lake", "build", target]
+        if self.jobs < (os.cpu_count() or self.jobs) and shutil.which("taskset"):
+            return ["taskset", "-c", f"0-{self.jobs - 1}"] + cmd
+        return cmd
+
+    def _lake_env(self):
+        """Environment for a lake build: also cap Lean's own task-manager threads."""
+        env = dict(os.environ)
+        env["LEAN_NUM_THREADS"] = str(self.jobs)
+        return env
+
     def _evaluate_native(self, all_probs):
-        """Compile EVERY function-model harness in ONE `lake build` (Mathlib loaded once, all cores),
-        then run each native binary invocation — instant execution, no per-timeout Mathlib reboot."""
+        """Compile EVERY function-model harness in ONE `lake build` (Mathlib loaded once), then run
+        each native binary invocation — instant execution, no per-timeout Mathlib reboot."""
         import shutil
         native_dir = Path(REPO_ROOT) / "cp_harness" / ".native"
         ns_dir = native_dir / "CpHarness"
@@ -1325,11 +1363,12 @@ class CPastaEval:
         # embedded test literals don't typecheck won't sink the batch), so we keep only those whose
         # olean was produced.
         print(f"[*] Native: compiling {len(entries)} harness(es) in ONE build "
-              f"(Mathlib once, {os.cpu_count()} cores)…", flush=True)
+              f"(Mathlib once, -j{self.jobs})…", flush=True)
         (native_dir / "CpHarness.lean").write_text(
             "\n".join(f"import CpHarness.H{i}" for i in ids) + "\n")
         t0 = time.time()
-        subprocess.run(["lake", "build", "CpHarness"], cwd=REPO_ROOT, capture_output=True, text=True)
+        subprocess.run(self._lake_build("CpHarness"), cwd=REPO_ROOT,
+                       capture_output=True, text=True, env=self._lake_env())
         ok_ids = [i for i in ids if (olean_dir / f"H{i}.olean").exists()]
         bad_ids = set(ids) - set(ok_ids)
 
@@ -1341,8 +1380,8 @@ class CPastaEval:
                     + [f'  | some "{i}" => CpHarness.H{i}.run' for i in ok_ids]
                     + ["  | _ => pure ()", "  return 0"])
         (native_dir / "CpHarnessMain.lean").write_text("\n".join(dispatch) + "\n")
-        proc = subprocess.run(["lake", "build", "cpharness_run"], cwd=REPO_ROOT,
-                              capture_output=True, text=True)
+        proc = subprocess.run(self._lake_build("cpharness_run"), cwd=REPO_ROOT,
+                              capture_output=True, text=True, env=self._lake_env())
         print(f"[*] compile finished in {time.time() - t0:.0f}s — {len(ok_ids)} ok, "
               f"{len(bad_ids)} compile_fail (rc={proc.returncode})", flush=True)
         if proc.returncode != 0:
@@ -1629,6 +1668,9 @@ def _add_eval_opts(p):
     p.add_argument("--timeout", type=int, default=15, help="Per-run timeout (seconds)")
     p.add_argument("--workers", type=int, default=None,
                    help="Parallel eval backends/runs (default: min(16, cores/4))")
+    p.add_argument("--jobs", "-j", type=int, default=None,
+                   help="lake build parallelism (default: min(48, 3/4 of cores) — leaves the "
+                        "machine usable; lake alone would take every core)")
     p.add_argument("--interpret", action="store_true",
                    help="Use the warm interpreter pool instead of compiling all harnesses natively")
     p.add_argument("--max-tests", type=parse_max_tests, default=0,
@@ -1650,6 +1692,7 @@ def _harness(args):
         split=getattr(args, "split", "test"),
         workers=getattr(args, "workers", None),
         interpret=getattr(args, "interpret", False),
+        jobs=getattr(args, "jobs", None),
     )
 
 

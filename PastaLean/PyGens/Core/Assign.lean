@@ -131,6 +131,25 @@ def selfRecordUpdateDoElem (attr : String) (rhs : TSyntax `term) : PygenM (TSynt
   let fields := #[← `(Lean.Parser.Term.structInstField| $attrId:ident := $rhs)]
   `(doElem| $selfId:ident := { $selfId:term with $fields:structInstField,* })
 
+/-- `<recv>.attr = rhs` under value semantics, for ANY receiver (`node.children[i]=v` on a local,
+`obj.field=v`): rebuild the receiver record `{recv with attr := rhs}` and store it back — a `Name`
+receiver is reassigned, a nested attribute recurses. (Emitting `let mut obj.field := …` is invalid
+Lean; this is the general form of the `self` record update.) -/
+partial def attrRecordUpdateDoElem (recvJson : Json) (attr : String) (rhs : TSyntax `term) :
+    PygenM (TSyntax `doElem) := do
+  let recvTerm ← getCode recvJson `term
+  let attrId := mkIdent attr.toName
+  let updated ← `({ $recvTerm with $attrId:ident := $rhs })
+  match jsonNodeType? recvJson with
+  | some "Name" =>
+      let recvIdent ← getCode recvJson `ident
+      `(doElem| $recvIdent:ident := $updated)
+  | some "Attribute" =>
+      let .ok inner := recvJson.getObjVal? "value" | throwError s!"Attribute missing 'value': {recvJson}"
+      let .ok innerAttr := recvJson.getObjValAs? String "attr" | throwError s!"Attribute missing 'attr': {recvJson}"
+      attrRecordUpdateDoElem inner innerAttr updated
+  | _ => throwError "attribute assignment `x.f = v` needs a variable or attribute receiver."
+
 /-- Lower a possibly-nested subscript assignment `a[i]…[k] = value` to a reassignment of the
 base variable. Each level is rebuilt innermost-first with `pySetItem`: `a[i][j] = v` becomes
 `a := pySetItem a i (pySetItem (pyGetItem a i) j v)`. This mirrors Python, where mutating the
@@ -156,12 +175,13 @@ partial def nestedSubscriptSetDoElem? (target : Json) (value : TSyntax `term) :
   | some "Subscript" =>
       nestedSubscriptSetDoElem? containerJson newContainer
   | some "Attribute" =>
-      -- `self.c[i] = v` in a class method rebuilds the field: `self := { self with c := … }`.
-      let some attr := selfAttrTarget? containerJson
-        | throwError "Subscript assignment through an attribute is only supported on `self`."
-      unless ← hasVar `self do
-        throwError "`self.X[i] = v` is only supported inside a class method body."
-      return some (← selfRecordUpdateDoElem attr newContainer)
+      -- `recv.c[i] = v` rebuilds the field: `recv := { recv with c := … }` (self or any local, e.g.
+      -- a Trie walk-node `node.children[i] = Trie()`).
+      let .ok recv := containerJson.getObjVal? "value" | throwError
+        s!"Attribute container is missing 'value': {containerJson}"
+      let .ok attr := containerJson.getObjValAs? String "attr" | throwError
+        s!"Attribute container is missing 'attr': {containerJson}"
+      return some (← attrRecordUpdateDoElem recv attr newContainer)
   | _ =>
       throwError "Subscript assignment requires the base container to be a variable \
         (`a[i]…[k] = v`); got an unsupported container expression."
@@ -337,6 +357,12 @@ def assignSyntax : (kind : SyntaxNodeKind) → Json →
             if let some attr := selfAttrTarget? target then
               if ← hasVar `self then
                 return ← selfRecordUpdateDoElem attr rhs
+            -- `obj.field = v` for a non-`self` receiver (a local record/node): record-update + reassign,
+            -- rather than the invalid `let mut obj.field := v`.
+            if jsonNodeType? target == some "Attribute" then
+              let .ok recv := target.getObjVal? "value" | throwError s!"Attribute missing 'value': {target}"
+              let .ok attr := target.getObjValAs? String "attr" | throwError s!"Attribute missing 'attr': {target}"
+              return ← attrRecordUpdateDoElem recv attr rhs
             match ← sliceTargetParts? target with
             | some (containerIdent, lowerTerm, upperTerm) =>
                 -- `s[a:b] = repl` replaces the slice and reassigns the variable.

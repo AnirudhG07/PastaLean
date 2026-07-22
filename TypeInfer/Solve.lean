@@ -47,7 +47,10 @@ def applyMutation (sigs : Sigs) (env : Env) (value : Json) : Env :=
           let args := ((value.getObjValAs? (Array Json) "args").toOption.getD #[]).toList
           let elemFrom (i : Nat) : PyType := (args[i]?).elim .unknown (typeOfExpr sigs env)
           let learned : PyType := match attr with
-            | "append" | "add" | "insert" => .list (elemFrom (if attr == "insert" then 1 else 0))
+            -- `add` is a SET method — learn `.set`, not `.list`, so `s = set()` (`.set unknown`)
+            -- refines to `.set T` instead of joining `.set` with `.list` (→ unknown → PyAny).
+            | "add" => .set (elemFrom 0)
+            | "append" | "insert" => .list (elemFrom (if attr == "insert" then 1 else 0))
             | "extend" => match args[0]?.elim .unknown (typeOfExpr sigs env) with
                           | .list e => .list e
                           | _ => .unknown

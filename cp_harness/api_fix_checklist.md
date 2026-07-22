@@ -3,6 +3,76 @@
 Goal: make the transpiler match Python semantics AND complexity so the leetcode corpus stops
 timing out / diverging. Track progress here.
 
+## D. CONVERT/COMPILE-FAIL LANDSCAPE (overnight full run: 1531 ok / 801 compile_fail / 257 convert_fail)
+
+Extracted from per-problem `lean/sol_0.log`. NOTE: overnight data predates this session's fixes
+(list-concat, operator instances incl. `PyHAdd Bool Bool Int`, division/float-cast defaults, pyRange,
+negative bitwise, set comparison, for-target, `or`/`and` value, mutual recursion) — so some buckets
+are already smaller. 6 agents diagnosing (results appended below).
+
+**COMPILE_FAIL buckets (801):**
+- [ ] **D1. Application type mismatch** (190) — Bool/Float/tuple in an ℤ position; xor-queries, construct-binary-tree-from-string.
+- [ ] **D2. typeclass stuck** (73) — metavar in explicit arg (untyped binder); sudoku-solver, valid-arrangement-of-pairs. (division/float-cast partly fixed.)
+- [ ] **D3. Type mismatch** (53) — String/Bool/branch types; tallest-billboard, count-valid-paths-in-a-tree.
+- [ ] **D4. `PyHAdd Bool Bool`** (51) — bool sum wants Bool not Int; height-checker, find-the-number-of-good-pairs-i. (may be fixed — added `PyHAdd Bool Bool Int`.)
+- [ ] **D5. `PySetItem (List ℚ)`** (41) — int-list element defaulted to ℚ; greatest-sum-divisible-by-three, campus-bikes-ii.
+- [ ] **D6. invalid reassignment** (40) — var rebound to conflicting type → should box PyAny; total-appeal-of-a-string, min-cost-to-connect-all-points.
+- [ ] **D7. `PyContains PyAny`** (37) — `x in y` on PyAny/no-membership; longest-nice-substring, check-if-n-and-its-double-exist.
+- [ ] **D8. Unknown identifier** (34) — missing builtin/method/field; sort-an-array, compare-strings-by-frequency-of-the-smallest-character.
+- [ ] **D9. `PyIterable (ℤ×…)` / `PyGetItem (ℤ×ℤ)`** (29+16) — tuple iterated/indexed as list; spiral-matrix, advantage-shuffle.
+- [ ] **D10. Invalid field `.val`/`.left`/`.next`** (23) — Option TreeNode/ListNode unwrap; height-of-special-binary-tree, flatten-binary-tree-to-linked-list.
+- [ ] **D11. kwargs `Invalid argument name`** (19) — `sorted(reverse=)`, `dict.get(k,d)`; reverse-nodes-in-k-group, minimum-falling-path-sum-ii.
+- [ ] **D12. LinearOrder / PyTruthy on class** (12+8) — sorting/truthiness on a user type; process-tasks-using-servers.
+- [ ] tail: Function expected (8), Invalid match (8), PyGetItem ℤ ℤ scalar-indexed (7).
+
+**CONVERT_FAIL buckets (257 codegen throwErrors):**
+- [ ] **D13. closure-as-value CAPTURING** (41) — `sort(key=helper)` where helper captures; needs `fun p ↦ new p caps`. number-of-beautiful-integers-in-the-range, house-robber-iv.
+- [ ] **D14. tuple** (26) — recover-binary-search-tree, stone-game-vi.
+- [ ] **D15. mutual recursion** (22) — sibling nested defs; MAY be fixed this session (typed); untyped still fails. beautiful-pairs, sliding-puzzle.
+- [ ] **D16. subscript-through-attribute** (21) — `self.grid[i][j]=v` / `obj.arr[i]=v`; longest-word-with-all-prefixes, search-suggestions-system.
+- [ ] **D17. generator-rebind** (15) — `dfs` mutating in a GeneratorExp; max-area-of-island, smallest-string-with-swaps.
+- [ ] **D18. kwargs (convert)** (12), **walrus in BoolOp** (6).
+- [ ] **D19. "other" convert-fail** (114) — UNCATEGORISED, needs fresh diagnosis. count-of-sub-multisets-with-bounded-sum, find-servers-that-handled-most-number-of-requests.
+
+### Agent diagnosis (root cause + fix per problem) — appended as agents finish
+
+**Agent 4 (type-mismatch + Option-field) — ROOT CAUSES:**
+- **`for a,b in list_of_lists` typed as tuple** (xor-queries, minimum-area-rectangle-ii): codegen types the
+  iter element `ℤ×ℤ` when it's actually `List ℤ` → `pyIter` expects `List(ℤ×ℤ)` got `List(List ℤ)`. The
+  `_list_unpack` marker isn't firing here. Fix: infer list-of-lists element as list, unpack by index.
+- **`float('inf')` in a TUPLE / branch splits the type** (tallest-billboard, binary-tree-cameras,
+  minimum-area-rectangle-ii): inf is ℚ, so `(inf, x, y)` → `ℚ×ℤ×ℤ` but the recursive fn expects `ℤ×ℤ×ℤ`;
+  or `if ans==inf then 0 else ans` has ℚ/ℤ branches. My inf fix (large ℚ sentinel) doesn't help when it
+  must be ℤ. Fix: an Int-typed inf sentinel, or unify the branch/tuple element types.
+- **`int(math.sqrt(...))` not casting before `//`** (count-...-dominant-ones): `pyFloorDiv` gets ℝ/Float,
+  needs `pyInt` cast. Fix: floor-div should cast a Float/ℝ operand to ℤ.
+- **Chained Option-unwrap on trees** (height-of-special-binary-tree, flatten, construct-binary-tree,
+  balance-a-bst): a single `root.left` IS unwrapped (`(root).getD default`), but the RESULT of a
+  `.left`/`.right` projection is itself `Option TreeNode` and the NEXT projection (`root.left.right`) or an
+  aliased local (`pre = root.left`) is NOT re-unwrapped. Fix: recursive unwrap — every attribute step on a
+  `TreeNode?`/`ListNode?` must `.getD default` before the next `.field`.
+- **[CODEGEN BUG] `let mut root.left := …` is invalid Lean** (flatten, construct-binary-tree): attribute
+  assignment through `pre.right = …` / `root.left = …` emits `let mut X.field := …`, not valid. Fix
+  (`Core/Assign.lean`): emit a struct-update `pre := {pre with right := …}` + reassign the receiver.
+- **User class method constants not emitted** (count-valid-paths-in-a-tree, similar-string-groups):
+  `UnionFind.union`/`.find` referenced but no such constant generated (class-method dispatch naming), and
+  `self.parent`/`self.rank` container fields untyped → `PyGetItem/PySetItem ℤ ?m` stuck. Fix: class codegen
+  method-name emission + field-type inference. (similar-string-groups' `PyHAdd Bool Bool` likely fixed.)
+
+**Agent 2 (numeric-container + bool-sum) — ROOT CAUSES:**
+- **[CLEAR FIX] `sum(<bool generator>)` wants `PyHAdd Bool Bool Bool`** (height-checker, find-the-number-of-good-pairs-i,
+  minimum-changes-to-make-alternating-binary-string, counting-words-with-a-given-prefix, minimum-adjacent-swaps):
+  `sum(x != y for …)` lowers to `pySum (List Bool)`, fold accumulator inferred `Bool` → wants `Bool Bool Bool`
+  (my `PyHAdd Bool Bool Int` does NOT cover this). **Fix in `pySum`/`sum` (`Builtins/Functional.lean`):
+  summing a `List Bool` must yield `Int` (coerce each Bool→0/1 before folding, or count trues).** ~51 problems.
+- **`float('inf')` in an integer DP table → `PySetItem (List ℚ) ℤ Float`** (greatest-sum-divisible-by-three,
+  campus-bikes-ii, coin-path, optimal-account-balancing, make-array-non-decreasing-or-non-increasing):
+  inf = `pyRatNonFinite` (ℚ) seeds the table → container `List ℚ`, but the write value is ascribed `Float` in
+  the `'rn` twin → mismatch. Also inverted (container ℤ from `0`, value ℚ from `mi=inf`). NUANCE: primary def
+  uses `: Rat` and COMPILES; only the **`'rn` twin picks `Float`** — primary/`'rn` twins choose different numeric
+  types for the same write. **Fix: TypeInfer treat `float('inf')` as ONE canonical numeric type across the DP
+  and BOTH twins so container-elem and write-value unify.** (My large-ℚ-sentinel inf fix doesn't address this.)
+
 ## A. Performance / timeouts — RE-DIAGNOSED: mostly SPURIOUS INFRA, not complexity
 
 **Key finding (evidence):** the 11.9k "timeout" cases were NOT List O(n²). Fresh runs of "timeout"
@@ -35,6 +105,18 @@ List O(n) indexing → O(n²). Array-backed would help only those. User chose to
 - [ ] **A1. Array-backed sequences** (DEFERRED) — now LOW value: native compile already makes the
       genuine-slow DP instant. Only the truly pathological cases (exponential algorithm in one test
       input, e.g. coin-change-ii case 18) still time out, and Array wouldn't fix an exponential.
+- [x] **A7. run-log noise** — the overnight log ended in ~790 lines of thread tracebacks. Cause: the
+      forked reference child inherits the parent's stderr, and a dataset solution that spawns its own
+      threads (web-crawler: `htmlParser.getUrls`) raises *inside those threads*, bypassing our
+      try/except and hitting `threading.excepthook`. Fix: `_ref_stream_worker` redirects fd 1/2 to
+      devnull, silences `threading.excepthook`, and `os._exit(0)`s so leftover non-daemon threads
+      can't hold the child open. Also `load_callable` now execs dataset source under
+      `warnings.catch_warnings()` (third-party `SyntaxWarning`s). Error reporting, hang-isolation and
+      OOM-isolation all re-verified intact. **[DONE]**
+- [x] **A8. don't eat every core** — this Lake (5.0.0) has no `-j`/`--jobs`, so build parallelism is
+      capped by CPU affinity: `taskset -c 0-(jobs-1)` + `LEAN_NUM_THREADS`. Default
+      `min(48, ¾·cores)` (48 on this 64-core box), overridable with `--jobs/-j`. Affinity is
+      inherited by lake's spawned workers — measured 3190% → 396% under a 4-core cap. **[DONE]**
 
 ## B. Correctness / API bugs — DONE this session
 
@@ -136,3 +218,76 @@ adding-two-negabinary-numbers, increasing-triplet-subsequence, minimum-average-d
 - [ ] dict iteration order (1: find-a-good-subset) — hard, like set ordering.
 - [ ] Float test-inputs into int-annotated params (3: number-of-sub-arrays-threshold, convex-polygon,
       find-k-closest) — dataset has floats in `int` slots; codegen is correct. Needs param widening. Skip.
+
+**Agent 1 (tuple) / Agent 3 (PyAny) / Agent 5 (stuck+id) / Agent 6 (convert) — ROOT CAUSES:**
+- **[HIGHEST LEVERAGE] untyped closure-captured binders** (Agent 5; ~5 direct + cascades into the 73× stuck
+  AND ~34× Unknown-identifier buckets): closure-conversion emits captured outer vars as UNTYPED binders
+  (`fun graph ↦`, `fun f ↦`) → container ops on them leave a metavar → `PyGetItem/PyIterable ?m` stuck →
+  the helper fails → `Unknown identifier _fn_helper`/`Unknown constant fn` CASCADE (NOT missing fns!).
+  sudoku-solver, valid-arrangement-of-pairs, get-equal-substrings-within-budget, construct-binary-tree-…-postorder,
+  minimum-deletions-to-make-string-k-special. **Fix: annotate closure-captured binders with the inferred
+  type** (extend `localAnnotations`/TypeInfer in `ClosureConvert.lean`). Do NOT add the `_fn_helper` names anywhere.
+- **[HIGH] `set()`/set-literal slot ascribed `PyAny`** (Agent 3: 5 + Agent 1 number-of-distinct-islands; the
+  37× `PyContains PyAny` bucket): `s = set()` → `let mut s : PyAny := pySetFromList []` → `x in s` needs
+  `PyContains PyAny`, `s.add` wants `List α`. **Fix: TypeInfer infer set element type from `.add`/literal → `List T`.**
+  check-if-n-and-its-double-exist, longest-nice-substring, longest-duplicate-substring.
+- **[CLEAR] `sum(<bool generator>)` → `pySum (List Bool)` wants `PyHAdd Bool Bool Bool`** (Agent 2: 5 +
+  Agent 1 count-unguarded). **Fix in `pySum` (Functional.lean): summing `List Bool` → `Int` (coerce Bool→0/1).**
+- **[CLEAR] tuple literal used as list** (Agent 1: 4): `dirs=(0,1,0,-1,0)` then `dirs[k]`/iterate. **Fix:
+  TypeInfer/codegen lower a homogeneous tuple literal to `List` when dynamically subscripted/iterated.**
+- **[CLEAR] heap of tuples → `LinearOrder (ℤ×ℤ)`** (Agent 1: 3). **Fix: lexicographic `Ord`/`LinearOrder`
+  for `Prod` in `Libraries/heapq`.**
+- **[CLEAR CODEGEN BUG] `let mut X.field := …`** (Agent 4: flatten, construct-binary-tree; Agent 5 reverse-nodes)
+  — attribute assignment `obj.field = v` emits invalid `let mut X.field :=`. **Fix `Assign.lean`: struct-update
+  `obj := {obj with field := v}`.**
+- **[CLEAR] subscript-through-attribute on a non-`self` local** (Agent 6: 4 Trie problems — `node.children[i]=X`):
+  longest-word-with-all-prefixes, sum-of-prefix-scores-of-strings, search-suggestions-system, minimum-cost-to-convert-string-ii. One fix clears all 4.
+- **[CLEAR] closure-as-value CAPTURING** (Agent 6: 4): `bisect_left(range, True, key=f)` where `f` captures.
+  **Fix: `fun p ↦ new p caps` wrapper.** ODDITY: number-of-beautiful-integers = `@cache`-decorated recursive
+  dfs mis-flagged as value-capture — unwrap `@cache`/`@lru_cache` before the check.
+- **min/max `default=` kwarg** (Agent 5: 2 — minimum-falling-path-sum-ii, minimum-number-of-people-to-teach):
+  extend `variadicFoldBuiltin` for `default=`.
+- **Missing builtins** (Agent 5): `next(gen[, default])` → add `pyNext` (1&2-arg); `random.randint` (NONDETERMINISTIC
+  — needs IO/seeded shim, flag).
+- **numeric accumulator widening ℤ→Float** (Agent 3: min-cost-to-connect-all-points, maximum-price-to-fill-a-bag,
+  probability-…): TypeInfer lattice widening when `ans=0` later takes a float.
+- **inf typed ℚ splits from ℤ in tuples/containers/branches** (Agents 2,4): needs canonical inf typing across twins.
+- **Counter/defaultdict mutation returns `List`** (Agent 3 number-of-unique-flavors): `cnt[k]+=1`/`cnt.pop()`
+  lower to `pySetItem`/`pyPopRest` returning List, breaking the `PyDefaultDict` slot.
+- **chained Option-unwrap** (Agent 4: height-of-special `root.left.right`) — recursive unwrap per attribute step.
+- **generator-rebind** (Agent 6: 3 — max-area-of-island, couples-holding-hands, smallest-string-with-swaps):
+  state-mutating helper in a GeneratorExp.
+- Single-problem oddities: dict `.pop(k, default)` 2-arg (count-of-sub-multisets), `SortedList.bisect_left`
+  method (find-servers), constant-tuple-index `t[i][0]` (advantage-shuffle), nested tuple comprehension target
+  (stone-game-vi), Attribute tuple-assign targets `a.val,b.val=…` (recover-BST), loop-var retype String→ℤ
+  (total-appeal-of-a-string), closure-rename miss in subscript index (the-earliest-moment).
+
+### PROGRESS on fixes 1-8 (this session)
+- [x] **#2 sum(bools)→Int** — `PySummand` outParam class (Bool→Int, num→self) in `Functional.lean`; pySum coerces. ✓ (3/6/4.0)
+- [x] **#5 Ord/LinearOrder for Prod (heap of tuples)** — heapq switched `LinearOrder`→`Ord` (Lean's `Ord (α×β)` is lexicographic). ✓ heapmin→(1,2)
+- [x] **#6 `obj.field = v` (non-self)** — `attrRecordUpdateDoElem` in `Assign.lean` (record-update+reassign, not invalid `let mut X.field`). ✓
+- [x] **#7 subscript-through-attr on non-self** (`node.children[i]=v`) — same helper, wired into `nestedSubscriptSetDoElem?`. ✓
+- [x] **#8 capturing closure-as-value → wrapper** — `rewriteHelperCalls` emits `fun p ↦ new p caps` (Lambda) for read-only capturing value-use; only threaded value-use still rejected. ✓
+- [ ] **#1 annotate closure-captured binders** — untyped `fun graph ↦` → stuck; extend `localAnnotations`/TypeInfer for defaultdict/accumulate/Counter().values()/dict-comp.
+- [ ] **#3 infer set() element type** (stop PyAny) — TypeInfer from `.add`/literal.
+- [ ] **#4 tuple literal → List when dynamically indexed/iterated** — TypeInfer flow (homogeneous tuple + variable index).
+
+### PROGRESS update 2
+- [x] **#1 collection return types** — `Counter`/`defaultdict`/`accumulate` added to `builtinReturn` (Rules.lean) so captured binders get typed. ✓
+- [x] **#3 set() element inference** — `applyMutation` `.add` now learns `.set` (not `.list`, which joined to PyAny). `s=set(); s.add(n)` → `List Int`. ✓
+- [~] **#8 REVERTED** — capturing closure-as-value wrapper broke `pk_simulation.py` (untyped `fun state t ↦` odeint callback). Plumbing kept; needs typed wrapper params.
+- [ ] **#4 tuple-literal-as-list** — DEFERRED (ripple on tuple-unpack/Prod.fst-snd; needs care).
+- [x] **min/max `default=` kwarg** — `lowerMinMaxCall` emits `if pyLen==0 then default else …`. ✓
+- [x] **`next(gen[, default])`** — eager-List head/headD in CallExpr. ✓
+
+### PROGRESS update 3 (D11 kwargs + string methods)
+- [x] **D11. `dict.pop(k, default)`** — a 2-arg pop is unambiguously a dict pop (list/set pop ≤1 arg).
+      Added `pyDictPopValue`/`pyDictPopRest` (Pop.lean); `valueAndMutateMethod?`/`popCallParts?` now
+      carry the arg array + rest-arg prefix so value form takes `(key, default)` and rest takes `key`.
+      `x = d.pop(k, -1)` → `pyDictPopValue d k (-1)` + `d := pyDictPopRest d k`. ✓ (2/-1/[] verified)
+- [x] **D8. missing string methods** — `title`/`swapcase`/`casefold`/`removeprefix`/`removesuffix`/
+      `rjust`/`ljust`/`center` added (Strings.lean + Attributes.lean glue + Rules.lean `.str` return). ✓
+      (all eval-verified against CPython, incl. `title`'s apostrophe word-split)
+- [x] **D11. `dict.setdefault(k, default)`** — value+mutate like pop: value `pyGetD d k default`,
+      rest `pyDictSetdefaultRest d k default` (inserts only when absent). Both `x = d.setdefault(...)`
+      and bare-statement forms. TypeInfer already returns the dict-value type. ✓ (2/some 2/some 9)
