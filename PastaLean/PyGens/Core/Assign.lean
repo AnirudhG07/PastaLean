@@ -265,8 +265,10 @@ def assignSyntax : (kind : SyntaxNodeKind) → Json →
             -- into subscripts and never reach here, so a `Call` here means a `Prod` result).
             -- `_list_unpack` (stamped when the RHS is list-typed, e.g. `np.shape(x)` returns a list)
             -- forces list-index access even for a `Call` RHS that would otherwise be read as a `Prod`.
-            let isTuple := (jsonNodeType? value == some "Tuple" || jsonNodeType? value == some "Call")
-              && target.getObjValAs? Bool "_list_unpack" != .ok true
+            -- `_tuple_unpack` (TypeInfer saw a `tuple[...]`-typed RHS) settles it directly.
+            let isTuple := target.getObjValAs? Bool "_tuple_unpack" == .ok true
+              || ((jsonNodeType? value == some "Tuple" || jsonNodeType? value == some "Call")
+                  && target.getObjValAs? Bool "_list_unpack" != .ok true)
             let mut cmds : Array (TSyntax `command) := #[cmd0]
             for i in List.range n do
               let acc ← unpackAccessTerm isTuple unpackTmpIdent i n
@@ -321,8 +323,10 @@ def assignSyntax : (kind : SyntaxNodeKind) → Json →
             -- into subscripts and never reach here, so a `Call` here means a `Prod` result).
             -- `_list_unpack` (stamped when the RHS is list-typed, e.g. `np.shape(x)` returns a list)
             -- forces list-index access even for a `Call` RHS that would otherwise be read as a `Prod`.
-            let isTuple := (jsonNodeType? value == some "Tuple" || jsonNodeType? value == some "Call")
-              && target.getObjValAs? Bool "_list_unpack" != .ok true
+            -- `_tuple_unpack` (TypeInfer saw a `tuple[...]`-typed RHS) settles it directly.
+            let isTuple := target.getObjValAs? Bool "_tuple_unpack" == .ok true
+              || ((jsonNodeType? value == some "Tuple" || jsonNodeType? value == some "Call")
+                  && target.getObjValAs? Bool "_list_unpack" != .ok true)
             let mut binds : Array (TSyntax `doElem) := #[bindValueTmp, bindUnpackTmp]
             for i in List.range n do
               let acc ← unpackAccessTerm isTuple unpackTmpIdent i n

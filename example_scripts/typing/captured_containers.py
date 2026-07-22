@@ -6,6 +6,7 @@ types from its body — so an un-inferred capture becomes `PyGetItem ?m …` and
 gets stuck. Each local below is only pinned down by a *later* statement, not by its initialiser.
 """
 
+from collections import Counter, defaultdict
 from typing import List
 
 
@@ -44,9 +45,32 @@ def tally(words: List[str]) -> int:
     return score()
 
 
+# `defaultdict`/`Counter` are backed by `PyDefaultDict`, NOT the plain dict a `dict[_,_]`
+# annotation emits — so a captured one needs that exact type, not merely *a* type. `todo` is a list
+# of pairs, and `i, j = todo[k]` reads a TUPLE out of it (not a list, despite the subscript).
+def walk(pairs: List[List[int]]) -> int:
+    graph = defaultdict(list)
+    seen = Counter()
+    todo = []
+    for a, b in pairs:
+        graph[a].append(b)
+        seen[a] += 1
+        todo.append((a, b))
+
+    def total() -> int:
+        acc = 0
+        for k in range(len(todo)):
+            i, j = todo[k]
+            acc += len(graph[i]) + seen[i] + j
+        return acc
+
+    return total()
+
+
 def main():
     print(pick([[1, 1], [2, 3]]))
     print(tally(["ab", "ab", "c"]))
+    print(walk([[1, 2], [1, 3]]))
 
 
 if __name__ == "__main__":

@@ -90,7 +90,7 @@ unascribed literal would otherwise default (`5` → `ℚ` in exact mode). Contai
 Lean to infer from the assignment RHS, so an ascription never *forces* an element type (e.g. `ℚ`)
 against what the RHS actually elaborates to (e.g. a numpy `Float`). Parameters are ascribed
 separately — this governs only locals. -/
-def needsAscription : PyType → Bool
+partial def needsAscription : PyType → Bool
   | .int | .bool | .str => true
   -- A container of concrete scalars (`list[int]`, `set[str]`, `list[list[int]]`) is unambiguous, so
   -- ascribing it is safe *and* needed: without it a `List Int` local can be silently unified up to
@@ -101,6 +101,9 @@ def needsAscription : PyType → Bool
   -- unambiguous, and without the ascription a captured dict is lifted as an untyped parameter and
   -- `PyGetItem ?m …` goes stuck. A `float`/`unknown` side stays unascribed, as above.
   | .dict k v => needsAscription k && needsAscription v
+  -- A tuple of concrete scalars is unambiguous too (`t = []; t.append((i, j))` → `list[(int,int)]`),
+  -- and without it a captured list-of-pairs is lifted untyped.
+  | .tuple es => !es.isEmpty && es.all needsAscription
   | _ => false
 
 /-- Least upper bound.

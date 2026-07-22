@@ -116,10 +116,74 @@ def tally'rn := fun (words : List String) ↦
       let __py_ret_1 := _tally_score'rn seen buckets
       return __py_ret_1)
 
+-- `defaultdict`/`Counter` are backed by `PyDefaultDict`, NOT the plain dict a `dict[_,_]`
+-- annotation emits — so a captured one needs that exact type, not merely *a* type. `todo` is a list
+-- of pairs, and `i, j = todo[k]` reads a TUPLE out of it (not a list, despite the subscript).
+private def _walk_total := fun (graph : Libraries.collections.PyDefaultDict Int (List Int)) ↦
+  fun (seen : Libraries.collections.PyDefaultDict Int Int) ↦ fun (todo : List (Int × Int)) ↦
+  Id.run
+    (do
+      let mut acc : Int := (0 : Int)
+      for k in (PastaLean.pyRange (PastaLean.pyLen todo))do
+        let __unpack_value_1 := todo⦋k⦌
+        let __unpack_pair_1 := __unpack_value_1
+        let mut i := Prod.fst __unpack_pair_1
+        let mut j := Prod.snd __unpack_pair_1
+        acc := acc +ₚ (PastaLean.pyLen graph⦋i⦌ +ₚ seen⦋i⦌ +ₚ j)
+      return acc)
+
+attribute [simp, taste_ingr] _walk_total
+
+def walk := fun (pairs : List (List Int)) ↦
+  Id.run
+    (do
+      let mut graph : Libraries.collections.PyDefaultDict Int (List Int) := Libraries.collections.pyDefaultDictList
+      let mut seen : Libraries.collections.PyDefaultDict Int Int := Libraries.collections.pyCounterEmpty
+      let mut todo : List (Int × Int) := []
+      for _pair_1 in (PastaLean.pyIter pairs)do
+        let a := PastaLean.pyListGetItem _pair_1 (0 : Int)
+        let b := PastaLean.pyListGetItem _pair_1 (1 : Int)
+        graph := PastaLean.pySetItem graph a (PastaLean.pyAppend graph⦋a⦌ b)
+        seen := PastaLean.pySetItem seen a (seen⦋a⦌ +ₚ (1 : Int))
+        todo := PastaLean.pyAppend todo (a, b)
+      let __py_ret_1 := _walk_total graph seen todo
+      return __py_ret_1)
+
+attribute [simp, taste_ingr] walk
+
+private def _walk_total'rn := fun (graph : Libraries.collections.PyDefaultDict Int (List Int)) ↦
+  fun (seen : Libraries.collections.PyDefaultDict Int Int) ↦ fun (todo : List (Int × Int)) ↦
+  Id.run
+    (do
+      let mut acc : Int := (0 : Int)
+      for k in (PastaLean.pyRange (PastaLean.pyLen todo))do
+        let __unpack_value_1 := todo⦋k⦌
+        let __unpack_pair_1 := __unpack_value_1
+        let mut i := Prod.fst __unpack_pair_1
+        let mut j := Prod.snd __unpack_pair_1
+        acc := acc +ₚ (PastaLean.pyLen graph⦋i⦌ +ₚ seen⦋i⦌ +ₚ j)
+      return acc)
+
+def walk'rn := fun (pairs : List (List Int)) ↦
+  Id.run
+    (do
+      let mut graph : Libraries.collections.PyDefaultDict Int (List Int) := Libraries.collections.pyDefaultDictList
+      let mut seen : Libraries.collections.PyDefaultDict Int Int := Libraries.collections.pyCounterEmpty
+      let mut todo : List (Int × Int) := []
+      for _pair_1 in (PastaLean.pyIter pairs)do
+        let a := PastaLean.pyListGetItem _pair_1 (0 : Int)
+        let b := PastaLean.pyListGetItem _pair_1 (1 : Int)
+        graph := PastaLean.pySetItem graph a (PastaLean.pyAppend graph⦋a⦌ b)
+        seen := PastaLean.pySetItem seen a (seen⦋a⦌ +ₚ (1 : Int))
+        todo := PastaLean.pyAppend todo (a, b)
+      let __py_ret_1 := _walk_total'rn graph seen todo
+      return __py_ret_1)
+
 def main' :=
   ((do
       let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg (pick [[(1 : Int), (1 : Int)], [(2 : Int), (3 : Int)]])]
-      let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg (tally ["ab", "ab", "c"])]) :
+      let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg (tally ["ab", "ab", "c"])]
+      let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg (walk [[(1 : Int), (2 : Int)], [(1 : Int), (3 : Int)]])]) :
     PastaLean.ProofMode.PyProofM _)
 
 attribute [simp] main'
@@ -127,7 +191,8 @@ attribute [simp] main'
 def main''rn :=
   ((do
       let _ ← pyPrintIO [pyPrintArg (pick'rn [[(1 : Int), (1 : Int)], [(2 : Int), (3 : Int)]])]
-      let _ ← pyPrintIO [pyPrintArg (tally'rn ["ab", "ab", "c"])]) :
+      let _ ← pyPrintIO [pyPrintArg (tally'rn ["ab", "ab", "c"])]
+      let _ ← pyPrintIO [pyPrintArg (walk'rn [[(1 : Int), (2 : Int)], [(1 : Int), (3 : Int)]])]) :
     IO _)
 
 def main : IO Unit := do

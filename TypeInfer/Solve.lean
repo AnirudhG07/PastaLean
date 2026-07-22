@@ -272,6 +272,14 @@ partial def returnTypeOf (sigs : Sigs) (hints : Env) (fn : Json) : PyType := Id.
 
 /-! ### Writing the inferred types back onto the IR as `_ty` -/
 
+/-- A `defaultdict[k, v]` annotation node, for a dict whose runtime backing is `PyDefaultDict`. -/
+private def defaultDictAnnotation? (k v : PyType) : Option Json := do
+  let kj ← toAnnotation? k
+  let vj ← toAnnotation? v
+  return Json.mkObj [("node_type", .str "Subscript"),
+    ("value", Json.mkObj [("node_type", .str "Name"), ("id", .str "defaultdict")]),
+    ("slice", Json.mkObj [("node_type", .str "Tuple"), ("elts", Json.arr #[kj, vj])])]
+
 /-- Stamp `_ty` (an annotation node) on a target if we know a fully-determined type for it, unless a
 `_ty` is already present (the interprocedural pass stamps first; a later intraprocedural pass must
 not clobber its richer result). Tuple targets stamp each element. -/
@@ -290,11 +298,14 @@ partial def stampTarget (env : Env) (target : Json) (allowDict : Bool := true) :
         | some .any =>
             target.setObjVal! "_ty" (Json.mkObj [("node_type", .str "Name"), ("id", .str "PyAny")])
         | some t =>
-            -- A dict from a library call (`defaultdict`/`Counter`) is `PyDefaultDict`, NOT the plain
-            -- `Std.HashMap` a `dict[_, _]` annotation emits — its type must come from the callee.
-            let dictFromLibrary := match t with | .dict _ _ => !allowDict | _ => false
-            if t.needsAscription && !dictFromLibrary then
-              match toAnnotation? t with
+            -- A dict from a `defaultdict`/`Counter` call is backed by `PyDefaultDict`, not the
+            -- `Std.HashMap` a plain `dict[_, _]` annotation emits, so it is stamped as
+            -- `defaultdict[k, v]` — which the codegen annotation reader maps to the library type.
+            let ann? := match t, allowDict with
+              | .dict k v, false => defaultDictAnnotation? k v
+              | _, _ => toAnnotation? t
+            if t.needsAscription then
+              match ann? with
               | some ann => target.setObjVal! "_ty" ann
               | none => target
             else target
@@ -501,6 +512,9 @@ partial def stampStmt (sigs : Sigs) (env : Env) (s : Json) : Json :=
           if nodeTypeOf target == some "Tuple" then
             match typeOfExpr sigs env value with
             | .list _ => s := s.setObjVal! "target" (target.setObjVal! "_list_unpack" (Json.bool true))
+            -- Conversely a tuple-typed RHS that is neither a literal nor a call (`i, j = t[k]` with
+            -- `t : list[(int,int)]`) must be read as a `Prod`, which the shape heuristic misses.
+            | .tuple _ => s := s.setObjVal! "target" (target.setObjVal! "_tuple_unpack" (Json.bool true))
             | _ => pure ()
       | _, _ => pure ()
     for f in #["body", "orelse", "finalbody"] do

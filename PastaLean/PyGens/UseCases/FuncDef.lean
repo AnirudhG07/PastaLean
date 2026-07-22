@@ -68,7 +68,8 @@ partial def functionArgTypeSyntax? (annotationJson : Json) : PygenM (Option (TSy
           match ← functionArgTypeSyntax? sliceJson with
           | some elemTy => return some (← `(List $elemTy))
           | none => return none
-      | "dict" =>
+      -- `defaultdict`/`Counter` are backed by `PyDefaultDict`, not `Std.HashMap`.
+      | "dict" | "defaultdict" =>
           match sliceJson.getObjValAs? String "node_type" with
           | .ok "Tuple" =>
               let .ok elts := sliceJson.getObjValAs? (Array Json) "elts" | throwError
@@ -76,7 +77,10 @@ partial def functionArgTypeSyntax? (annotationJson : Json) : PygenM (Option (TSy
               match elts[0]?, elts[1]? with
               | some keyJson, some valJson =>
                   match ← functionArgTypeSyntax? keyJson, ← functionArgTypeSyntax? valJson with
-                  | some keyTy, some valTy => return some (← `(Std.HashMap $keyTy $valTy))
+                  | some keyTy, some valTy =>
+                      if container == "defaultdict" then
+                        return some (← `(Libraries.collections.PyDefaultDict $keyTy $valTy))
+                      else return some (← `(Std.HashMap $keyTy $valTy))
                   | _, _ => return none
               | _, _ => return none
           | _ => return none

@@ -18,7 +18,7 @@ def basic_types :=
     let mut c : String := "hello"
     let mut d : Bool := Bool.true
     let mut e : List Int := [(1 : Int), (2 : Int)]
-    let mut f := ((1 : Int), "a")
+    let mut f : Int × String := ((1 : Int), "a")
     let __unpack_value_1 := ((3 : Int), (4.5 : Rat))
     let __unpack_pair_1 := __unpack_value_1
     let mut g := Prod.fst __unpack_pair_1
@@ -28,7 +28,7 @@ def basic_types :=
     let mut m := Prod.fst __unpack_pair_2
     let mut n := Prod.fst (Prod.snd __unpack_pair_2)
     let mut p := Prod.snd (Prod.snd __unpack_pair_2)
-    let mut tup1 := ("foo", (42 : Int))
+    let mut tup1 : String × Int := ("foo", (42 : Int))
     let mut tup2 := (g, h)
 
 attribute [simp, taste_ingr] basic_types
@@ -40,7 +40,7 @@ def basic_types'rn :=
     let mut c : String := "hello"
     let mut d : Bool := Bool.true
     let mut e : List Int := [(1 : Int), (2 : Int)]
-    let mut f := ((1 : Int), "a")
+    let mut f : Int × String := ((1 : Int), "a")
     let __unpack_value_1 := ((3 : Int), (4.5 : Float))
     let __unpack_pair_1 := __unpack_value_1
     let mut g := Prod.fst __unpack_pair_1
@@ -50,7 +50,7 @@ def basic_types'rn :=
     let mut m := Prod.fst __unpack_pair_2
     let mut n := Prod.fst (Prod.snd __unpack_pair_2)
     let mut p := Prod.snd (Prod.snd __unpack_pair_2)
-    let mut tup1 := ("foo", (42 : Int))
+    let mut tup1 : String × Int := ("foo", (42 : Int))
     let mut tup2 := (g, h)
 
 def fstring :=

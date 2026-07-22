@@ -42,10 +42,8 @@ are already smaller. 6 agents diagnosing (results appended below).
       falls through to the builtin path.
       GUARD: a dict from a LIBRARY call is NOT ascribed — `defaultdict`/`Counter` are `PyDefaultDict`,
       not the `Std.HashMap` a `dict[_,_]` annotation emits; ascribing fought the real type.
-      REMAINING: because of that guard, a captured `defaultdict`/`Counter` is still untyped
-      (valid-arrangement-of-pairs). Needs `PyDefaultDict` represented in the lattice (a `PyType`
-      variant + `Emit`/`Annotation` cases) so the capture can be annotated with the right type.
-      Plain dict/list/set captures now work (verified vs CPython). (was: — metavar in explicit arg (untyped binder); sudoku-solver, valid-arrangement-of-pairs. (division/float-cast partly fixed.)
+      The `PyDefaultDict` gap is now CLOSED too — see PROGRESS update 6. Both named problems
+      (sudoku-solver, valid-arrangement-of-pairs) compile clean. (was: — metavar in explicit arg (untyped binder); sudoku-solver, valid-arrangement-of-pairs. (division/float-cast partly fixed.)
 - [~] **D3. Type mismatch** (53) — PARTLY FIXED: `float('inf')` in an INTEGER slot. Python compares
       `-inf` with ints freely; Lean needs one type. The sentinel is now polymorphic — `PyNonFinite`
       class with `ℚ` (default_instance), `ℤ` (`pyIntNonFinite`) and `Float` instances — so the slot
@@ -357,5 +355,24 @@ adding-two-negabinary-numbers, increasing-triplet-subsequence, minimum-average-d
       find-the-number-of-good-pairs-i `numberOfPairs`); both compile clean. The corpus logs were
       stale (predate the `PySummand` fix).
 - [x] **D2 largely fixed** — see above; 5 inference gaps + the library-registry fallthrough.
-- [ ] **D2 remainder**: captured `defaultdict`/`Counter` need `PyDefaultDict` in the lattice.
+- [x] **D2 remainder DONE** — see PROGRESS update 6.
 - Regression example added: `example_scripts/typing/captured_containers.py` (run-verified: 1/6).
+
+
+### PROGRESS update 6 (D2 remainder — both named problems now clean)
+- [x] **`defaultdict`/`Counter` captures** — rather than a new `PyType` variant (31 `.dict` match
+      sites would each need updating), the distinction lives at the annotation boundary only: a
+      `PyDefaultDict` *behaves* as a dict for inference, so `.dict` is kept and the stamp writes
+      `defaultdict[k, v]`. `ofAnnotation` parses it back to `.dict`; the codegen annotation reader
+      and `stampedTypeSyntax?` map it to `Libraries.collections.PyDefaultDict`. (`stampedTypeSyntax?`
+      needed its own case — it round-trips through `PyType`, which would collapse it to `HashMap`.)
+- [x] **tuple-typed locals ascribed** — `needsAscription` had no `.tuple` case, so a captured
+      `t = []; t.append((i, j))` lifted untyped (sudoku-solver). Now true for a tuple of concrete
+      scalars. Had to become `partial` (list recursion isn't structurally decreasing), matching
+      `isKnown`.
+- [x] **`i, j = t[k]` unpacked as a list** — the tuple-vs-list heuristic only accepted a Tuple
+      literal or a Call RHS, so a Subscript RHS fell through to `pyListGetItem` on a `Prod`.
+      TypeInfer now stamps `_tuple_unpack` when the RHS is tuple-typed, symmetric with
+      `_list_unpack`, and both unpack sites honour it.
+- Regression: `captured_containers.py` extended with a defaultdict/Counter/list-of-pairs capture;
+  run-verified 1/6/13. PALC: 82 OK, 0 FAILED.

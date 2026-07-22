@@ -18,12 +18,34 @@ def pyTypeSyntax? (t : TypeInfer.PyType) : PygenM (Option (TSyntax `term)) := do
     | .approx => pure (mkIdent ``Float)
   TypeInfer.toTypeSyntax? floatTy t
 
+/-- Split a `defaultdict[k, v]` annotation node into its key and value annotations. -/
+def defaultDictAnnParts? (ann : Json) : Option (Json × Json) :=
+  if jsonNodeType? ann != some "Subscript" then none
+  else match (ann.getObjVal? "value").toOption, (ann.getObjVal? "slice").toOption with
+    | some value, some slice =>
+        if value.getObjValAs? String "id" != .ok "defaultdict" then none
+        else if jsonNodeType? slice != some "Tuple" then none
+        else
+          let elts := (slice.getObjValAs? (Array Json) "elts").toOption.getD #[]
+          match elts[0]?, elts[1]? with
+          | some k, some v => some (k, v)
+          | _, _ => none
+    | _, _ => none
+
 /-- The Lean type stamped on a node by the inference pass (`_ty`), if any. `_ty` is an annotation
 node, so it round-trips through `PyType` and the full emitter — covering lists, dicts, tuples and
 `Optional`, not just the shapes the annotation reader handles directly. -/
 def stampedTypeSyntax? (node : Json) : PygenM (Option (TSyntax `term)) := do
   match jsonFieldOption node "_ty" with
-  | some ann => pyTypeSyntax? (TypeInfer.ofAnnotation ann)
+  | some ann =>
+      -- `defaultdict[k, v]` is backed by `PyDefaultDict`; `PyType` models it as a plain dict, so
+      -- round-tripping it through the emitter would wrongly yield `Std.HashMap`.
+      match defaultDictAnnParts? ann with
+      | some (k, v) =>
+          match ← pyTypeSyntax? (TypeInfer.ofAnnotation k), ← pyTypeSyntax? (TypeInfer.ofAnnotation v) with
+          | some kt, some vt => return some (← `(Libraries.collections.PyDefaultDict $kt $vt))
+          | _, _ => return none
+      | none => pyTypeSyntax? (TypeInfer.ofAnnotation ann)
   | none => return none
 
 /-- Infer a simple runtime type from a value expression when the shape is obvious. -/

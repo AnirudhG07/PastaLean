@@ -38,6 +38,9 @@ private def containerOf (name : String) (args : List PyType) : Option PyType :=
   | "list", [e] => some (.list e)
   | "set", [e] | "frozenset", [e] => some (.set e)
   | "dict", [k, v] => some (.dict k v)
+  -- A `defaultdict`/`Counter` behaves as a dict for inference; only its EMITTED Lean type
+  -- differs (`PyDefaultDict`, not `Std.HashMap`), which the codegen annotation reader handles.
+  | "defaultdict", [k, v] => some (.dict k v)
   | "tuple", es => some (.tuple es)
   | "Optional", [e] => some (.opt e)
   | "Union", es => some (PyType.joinAll es)
