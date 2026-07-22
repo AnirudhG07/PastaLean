@@ -47,3 +47,13 @@ supportInterpreter = true
 name="palc"
 root = "PALC.PastaCheck"
 supportInterpreter = true
+
+[[lean_lib]]
+name = "CpHarness"
+srcDir = "cp_harness/.native"
+
+[[lean_exe]]
+name = "cpharness_run"
+srcDir = "cp_harness/.native"
+root = "CpHarnessMain"
+supportInterpreter = true

@@ -21,11 +21,20 @@ List O(n) indexing → O(n²). Array-backed would help only those. User chose to
       `.tmp` cleared + low-disk warning at convert/evaluate start (`_prepare_tmp`). **[FIXED]**
 - [x] **A2/infra. Proactive backend reboot** — `WarmLeanEval.REBOOT_EVERY=400`: reboot before the
       ~1950 heartbeat-poisoning cliff. **[FIXED]**
-- [ ] **A1. Array-backed sequences** (DEFERRED per user) — only needed for the genuine-slow ~20%
-      (heavy array-DP, coin-change-ii). Back lists with `Array α` (O(1) append/index). Big refactor:
-      Lists/Sets/CommonProtocols + list-literal codegen + comprehensions. Must not break 77 showcases.
-- [ ] A3. Re-run overnight fresh → measure real remaining timeouts (should drop from 11.9k to the
-      genuine-slow minority).
+- [x] **A4. BATCHED NATIVE COMPILE eval (the real fix, default)** — Mathlib ships native objects
+      (`.c.o.export`, 8176), so harnesses CAN compile+run native (~1000× faster than the interpreter:
+      heavy DP 0.055s vs timeout). But per-harness compile reloads Mathlib (~5s). Fix: emit every
+      function harness as a namespaced module `CpHarness.H<id>` (`def run`), one dispatcher exe, and
+      ONE `lake build` (Mathlib loaded ONCE, all 64 cores) → run each native binary invocation
+      (instant, parallel, per-run timeout kills one run — no Mathlib reboot). `cpasta_eval.py`
+      `_evaluate_native` (default; `--interpret` = old warm pool). 10 problems: 23s compile + instant
+      runs. Idle placeholders keep `lake build` working. **[DONE]**
+- [x] **A5. PARTIAL results on timeout** — harness flushes `PROG t p` per case; a native timeout now
+      reports `18/124 [timeout@18/124]` (passed-so-far + where it hung) not a bare `0/124`. **[DONE]**
+- [x] **A6. Parallel interpret pool** (`--interpret`) — pool of warm backends, serialized boots. **[DONE]**
+- [ ] **A1. Array-backed sequences** (DEFERRED) — now LOW value: native compile already makes the
+      genuine-slow DP instant. Only the truly pathological cases (exponential algorithm in one test
+      input, e.g. coin-change-ii case 18) still time out, and Array wouldn't fix an exponential.
 
 ## B. Correctness / API bugs — DONE this session
 

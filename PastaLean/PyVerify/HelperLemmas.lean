@@ -43,8 +43,7 @@ theorem pyRange_eq_ofNat (n : Int) : pyRange n = (List.range n.toNat).map Int.of
 theorem pyRange_eq_start (stop start : Int) :
     pyRange stop start = (List.range (stop - start).toNat).map (fun k => start + Int.ofNat k) := by
   unfold pyRange
-  simp only [gt_iff_lt, List.range_eq_range', show (Int.toNat 1) = 1 from rfl, Int.ediv_one,
-    add_sub_cancel_right, Int.add_zero, if_pos (show (0 : Int) < 1 by norm_num)]
+  simp only [List.range_eq_range', Int.ediv_one, add_sub_cancel_right]
   rw [coe_list_eq, List.map_map]; rfl
 
 /-- Start-aware reduction: a `for i in range(start, stop)` loop becomes the native `List.range` loop
