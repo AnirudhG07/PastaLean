@@ -7,12 +7,16 @@ namespace PastaLean
 /-!
 ## Syntactic desugaring of the JSON IR
 
-Two rewrites that turn Python-only syntax into shapes the lowering already handles. Both run once
-per translation request, before codegen (see `py2lean.lean`).
+Rewrites that turn Python-only syntax into shapes the lowering already handles. All run once per
+translation request, before codegen (see `py2lean.lean`).
 
 * **Nested `for` targets.** `for i, (a, b) in xs` binds a tuple element, but the `for` lowering only
   binds plain names. Tuple *assignment* already handles nesting, so rewrite to
   `for i, __for_unpack_1 in xs` with `a, b = __for_unpack_1` at the top of the body.
+
+* **Unbounded iterators.** `for k in count(1):` has no finite `List` to iterate, so it becomes a
+  `while True` whose body starts by advancing `k`. Which library members are unbounded is declared
+  by the library (`Libraries.libraryInfiniteIter?`), not listed here.
 
 * **The walrus operator.** `if (y := e) in d:` becomes `y = e` followed by `if y in d:`. Hoisting is
   only sound where the expression is evaluated exactly once and unconditionally, so a walrus in a
@@ -302,11 +306,92 @@ def hoistMutatingCalls (stmts : Array Json) : DesugarM (Array Json) := do
     out := out.push stmt
   return out
 
+/-! ### Unbounded iterators -/
+
+private def intConst (n : Int) : Json :=
+  Json.mkObj [("node_type", Json.str "Constant"), ("value", Json.num n)]
+
+private def binOp (op : String) (left right : Json) : Json :=
+  Json.mkObj [("node_type", Json.str "BinOp"), ("op", Json.str op), ("left", left), ("right", right)]
+
+private def callOf (fn : String) (args : Array Json) : Json :=
+  Json.mkObj [("node_type", Json.str "Call"), ("func", nameLoad fn), ("args", Json.arr args),
+    ("keywords", Json.mkObj [])]
+
+private def whileTrue (body : Array Json) : Json :=
+  Json.mkObj
+    [("node_type", Json.str "While"),
+     ("test", Json.mkObj [("node_type", Json.str "Constant"), ("value", Json.bool true)]),
+     ("body", Json.arr body), ("orelse", Json.arr #[])]
+
+/-- The `InfiniteIter` a `for` header iterates over, if any, with the call's arguments. -/
+private def infiniteIter? (iter : Json) : Option (Libraries.InfiniteIter × Array Json) := do
+  guard (jsonNodeType? iter == some "Call")
+  let f ← (iter.getObjVal? "func").toOption
+  let m ← (f.getObjValAs? String "library_module").toOption
+  let mem ← (f.getObjValAs? String "library_member").toOption
+  let spec ← Libraries.libraryInfiniteIter? m mem
+  let args := (iter.getObjValAs? (Array Json) "args").toOption.getD #[]
+  -- `repeat(x, n)` is finite; only the 1-argument form is unbounded.
+  guard (spec != .constant || args.size == 1)
+  pure (spec, args)
+
+/-- Statements seeding the loop, and the prologue that advances `target` on each iteration. -/
+private def unrollShape (spec : Libraries.InfiniteIter) (target : Json) (args : Array Json) :
+    DesugarM (Array Json × Array Json) := do
+  match spec with
+  | .counter =>
+      -- Seed one step BELOW `start`, so the shared prologue can do the first advance too.
+      let start := args[0]?.getD (intConst 0)
+      let step := args[1]?.getD (intConst 1)
+      return (#[assignStmt target (binOp "sub" start step)],
+        #[Json.mkObj [("node_type", Json.str "AugAssign"), ("target", target),
+            ("op", Json.str "add"), ("value", step)]])
+  | .cyclic =>
+      let xs := args[0]?.getD (Json.arr #[])
+      let src ← freshVar "__cycle_"
+      let idx ← freshVar "__cycle_i_"
+      let wrapped := binOp "mod" (binOp "add" (nameLoad idx) (intConst 1))
+        (callOf "len" #[nameLoad src])
+      return (#[assignStmt (nameLoad src) xs, assignStmt (nameLoad idx) (intConst (-1))],
+        #[assignStmt (nameLoad idx) wrapped,
+          assignStmt target (Json.mkObj [("node_type", Json.str "Subscript"),
+            ("value", nameLoad src), ("slice", nameLoad idx)])])
+  | .constant =>
+      let v ← freshVar "__repeat_"
+      return (#[assignStmt (nameLoad v) (args[0]?.getD (intConst 0))],
+        #[assignStmt target (nameLoad v)])
+
+/-- `for x in <unbounded iterator>:` → `while True:` with `x` advanced by a prologue at the TOP of
+the body. Advancing at the top rather than the bottom is what keeps `continue` correct: Python's
+`for` always advances, but a `continue` would jump over a trailing bump.
+
+A `for … else` is left alone rather than rewritten — the `else` can only run on exhaustion, which
+never happens here, so silently dropping it would hide a genuinely dead branch. -/
+def unrollInfiniteIter (stmts : Array Json) : DesugarM (Array Json) := do
+  let mut out := #[]
+  for stmt in stmts do
+    match (do
+      guard (jsonNodeType? stmt == some "For")
+      let target ← (stmt.getObjVal? "target").toOption
+      guard (jsonNodeType? target == some "Name")
+      guard (((stmt.getObjValAs? (Array Json) "orelse").toOption.getD #[]).isEmpty)
+      let (spec, args) ← infiniteIter? (← (stmt.getObjVal? "iter").toOption)
+      pure (target, spec, args)) with
+    | some (target, spec, args) =>
+        let (seed, prologue) ← unrollShape spec target args
+        let body := (stmt.getObjValAs? (Array Json) "body").toOption.getD #[]
+        out := out ++ seed
+        out := out.push (whileTrue (prologue ++ body))
+    | none => out := out.push stmt
+  return out
+
 /-- Run every desugaring over one translation request's AST. -/
 def desugarAst (json : Json) : Except String Json := do
   let pass : DesugarM Json := do
     let json ← rewriteStatementLists splitChainedAssign json
     let json ← rewriteStatementLists flattenForTargets json
+    let json ← rewriteStatementLists unrollInfiniteIter json
     let json ← rewriteStatementLists hoistWalrus json
     rewriteStatementLists hoistMutatingCalls json
   return (← pass.run 0).1

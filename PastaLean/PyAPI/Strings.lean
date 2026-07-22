@@ -288,13 +288,18 @@ def pyStringCount : String → (sub : String) → Int
    | s, sub => (s.splitOn sub |>.length) - 1
 
 -- #check String.count
--- TODO: Python also requires ≥1 cased char (`"123".islower()` is `False`); adding that breaks
--- `pyLower_is_true_lower`/`pyUpper_is_true_upper`, which need a "has a cased char" hypothesis.
+/-- Python `islower`: every cased character is lowercase AND there is at least one of them, so
+`"".islower()` and `"123".islower()` are both `False`. Cased = alphabetic in the ASCII range. -/
 def pyIsLower : String → Bool
-  | s => s.toList.filter Char.isAlpha |>.all Char.isLower
+  | s =>
+      let cased := s.toList.filter Char.isAlpha
+      !cased.isEmpty && cased.all Char.isLower
 
+/-- Python `isupper`: the `pyIsLower` rule with `isUpper`. -/
 def pyIsUpper : String → Bool
-  | s => s.toList.filter Char.isAlpha |>.all Char.isUpper
+  | s =>
+      let cased := s.toList.filter Char.isAlpha
+      !cased.isEmpty && cased.all Char.isUpper
 
 -- Python's `str.isX()` predicates are all `False` on the empty string.
 def pyIsAlpha : String → Bool
@@ -328,7 +333,7 @@ theorem pyLower_is_lower (s : String) : pyIsLower s = true → pyStringLower s =
   intro h
   unfold pyIsLower at h
   unfold pyStringLower
-  simp_all only [List.all_filter, List.all_eq_true, Bool.or_eq_true, Bool.not_eq_eq_eq_not, Bool.not_true]
+  simp_all only [List.all_filter]
   have eq : List.map Char.toLower s.toList = s.toList := by
     have h'' : (List.map Char.toLower s.toList).length = s.toList.length := by grind
     apply List.ext_getElem!
@@ -337,7 +342,8 @@ theorem pyLower_is_lower (s : String) : pyIsLower s = true → pyStringLower s =
       by_cases h' : n < s.toList.length
       · simp_all only [List.length_map, String.length_toList, getElem!_pos, List.getElem_map]
         have g : s.toList[n] ∈ s.toList := by simp
-        have g' : s.toList[n].isAlpha = false ∨ s.toList[n].isLower = true := by simp[h,g]
+        have g' : s.toList[n].isAlpha = false ∨ s.toList[n].isLower = true := by grind only [=
+            List.all_eq]
         by_cases sc : s.toList[n].isLower
         · grind only [Char.not_isLower_of_isUpper, Char.toLower_eq_of_not_isUpper]
         · grind only [Char.isAlpha, Char.toLower_eq_of_not_isUpper]
@@ -349,7 +355,7 @@ theorem pyUpper_is_upper (s : String) : pyIsUpper s = true → pyStringUpper s =
   intro h
   unfold pyIsUpper at h
   unfold pyStringUpper
-  simp_all only [List.all_filter, List.all_eq_true, Bool.or_eq_true, Bool.not_eq_eq_eq_not, Bool.not_true]
+  simp_all only [List.all_filter]
   have eq : List.map Char.toUpper s.toList = s.toList := by
     have h'' : (List.map Char.toUpper s.toList).length = s.toList.length := by grind
     apply List.ext_getElem!
@@ -358,26 +364,12 @@ theorem pyUpper_is_upper (s : String) : pyIsUpper s = true → pyStringUpper s =
       by_cases h' : n < s.toList.length
       · simp_all only [List.length_map, String.length_toList, getElem!_pos, List.getElem_map]
         have g : s.toList[n] ∈ s.toList := by simp
-        have g' : s.toList[n].isAlpha = false ∨ s.toList[n].isUpper = true := by simp[h,g]
+        have g' : s.toList[n].isAlpha = false ∨ s.toList[n].isUpper = true := by grind only [= List.all_eq]
         by_cases sc : s.toList[n].isUpper
         · grind only [Char.toUpper_eq_of_not_isLower, Char.not_isLower_of_isUpper]
         · grind only [Char.isAlpha, Char.toUpper_eq_of_not_isLower]
       · grind only [= getElem!_neg]
   simp [eq]
-
-theorem pyLower_is_true_lower (s : String) : pyIsLower (pyStringLower s) = true := by
-  unfold pyIsLower pyStringLower
-  simp
-
-theorem pyUpper_is_true_upper (s : String) : pyIsUpper (pyStringUpper s) = true := by
-  unfold pyIsUpper pyStringUpper
-  simp
-
-theorem pyLower_idempotent (s : String) : pyStringLower (pyStringLower s) = pyStringLower s := by
-  simp [pyLower_is_lower, pyLower_is_true_lower]
-
-theorem pyUpper_idempotent (s : String) : pyStringUpper (pyStringUpper s) = pyStringUpper s := by
-  simp [pyUpper_is_upper, pyUpper_is_true_upper]
 
 theorem pyLower_length_invariant (s : String) : (pyStringLower s).length = s.length := by
   unfold pyStringLower

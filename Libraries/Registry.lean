@@ -74,6 +74,14 @@ codegen names no specific library. -/
 def libraryMutator? (moduleName member : String) : Option LibraryMutator :=
   match moduleName with
   | "heapq" => heapq.heapqMutator? member
+  | "bisect" => bisect.bisectMutator? member
+  | _ => none
+
+/-- The unbounded-iterator spec of a library member, for the core codegen — one entry point, so
+codegen names no specific library. -/
+def libraryInfiniteIter? (moduleName member : String) : Option InfiniteIter :=
+  match moduleName with
+  | "itertools" => itertools.itertoolsInfiniteIter? member
   | _ => none
 
 end Libraries

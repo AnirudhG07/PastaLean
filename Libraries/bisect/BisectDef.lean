@@ -38,4 +38,17 @@ def pyBisectRight {α : Type} [LinearOrder α] [Inhabited α]
   let arr := w.toArray
   Int.ofNat loN + Int.ofNat (bisectSearch false (fun p q => decide (p < q)) arr x 0 arr.size)
 
+/-- `bisect.insort_left(a, x, lo=0, hi=len(a))`: insert `x` in place at its `bisect_left` position.
+`pyInsortLeft [1, 3, 5] 3 = [1, 3, 3, 5]`. -/
+def pyInsortLeft {α : Type} [LinearOrder α] [Inhabited α]
+    (a : List α) (x : α) (lo : Int := 0) (hi : Int := -1) : List α :=
+  let i := (pyBisectLeft a x lo hi).toNat
+  a.take i ++ x :: a.drop i
+
+/-- `bisect.insort_right(a, x, lo=0, hi=len(a))`: the same at the `bisect_right` position. -/
+def pyInsortRight {α : Type} [LinearOrder α] [Inhabited α]
+    (a : List α) (x : α) (lo : Int := 0) (hi : Int := -1) : List α :=
+  let i := (pyBisectRight a x lo hi).toNat
+  a.take i ++ x :: a.drop i
+
 end Libraries.bisect
