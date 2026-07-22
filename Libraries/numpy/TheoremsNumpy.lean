@@ -41,13 +41,13 @@ theorem isRect_of_all_len {α} (m : List (List α)) (k : Nat)
 /-! ### Constructor shapes -/
 
 /-- `zeros((r, c))` has exactly `r` rows. -/
-@[simp] theorem pyNumpyRows_zeros (r c : Nat) :
-    pyNumpyRows (pyNumpyZeros ((r : Int), (c : Int))) = r := by
+@[simp] theorem pyNumpyRows_zeros {γ} [Zero γ] (r c : Nat) :
+    pyNumpyRows (pyNumpyZeros (γ := γ) ((r : Int), (c : Int))) = r := by
   simp [pyNumpyRows, pyNumpyZeros]
 
 /-- `ones((r, c))` has exactly `r` rows. -/
-@[simp] theorem pyNumpyRows_ones (r c : Nat) :
-    pyNumpyRows (pyNumpyOnes ((r : Int), (c : Int))) = r := by
+@[simp] theorem pyNumpyRows_ones {γ} [One γ] (r c : Nat) :
+    pyNumpyRows (pyNumpyOnes (γ := γ) ((r : Int), (c : Int))) = r := by
   simp [pyNumpyRows, pyNumpyOnes]
 
 /-- `full((r, c), v)` has exactly `r` rows. -/
@@ -56,33 +56,33 @@ theorem isRect_of_all_len {α} (m : List (List α)) (k : Nat)
   simp [pyNumpyRows, pyNumpyFull]
 
 /-- Every row of `zeros((r, c))` has `c` columns, so the matrix is rectangular. -/
-theorem pyNumpyZeros_isRectangular (r c : Nat) :
-    pyNumpyIsRectangular (pyNumpyZeros ((r : Int), (c : Int))) = true := by
+theorem pyNumpyZeros_isRectangular {γ} [Zero γ] (r c : Nat) :
+    pyNumpyIsRectangular (pyNumpyZeros (γ := γ) ((r : Int), (c : Int))) = true := by
   apply isRect_of_all_len _ c
   intro row hrow
   simp only [pyNumpyZeros, natFromInt_natCast, List.mem_replicate] at hrow
   rw [hrow.2]; simp
 
 /-- Every row of `ones((r, c))` has `c` columns, so the matrix is rectangular. -/
-theorem pyNumpyOnes_isRectangular (r c : Nat) :
-    pyNumpyIsRectangular (pyNumpyOnes ((r : Int), (c : Int))) = true := by
+theorem pyNumpyOnes_isRectangular {γ} [One γ] (r c : Nat) :
+    pyNumpyIsRectangular (pyNumpyOnes (γ := γ) ((r : Int), (c : Int))) = true := by
   apply isRect_of_all_len _ c
   intro row hrow
   simp only [pyNumpyOnes, natFromInt_natCast, List.mem_replicate] at hrow
   rw [hrow.2]; simp
 
 /-- `eye(n)` is a square matrix: `n` rows, each of length `n`. -/
-theorem pyNumpyEye_isSquare (n : Nat) :
-    pyNumpyIsSquare (pyNumpyEye (n : Int)) = true := by
-  have hlen : ∀ row ∈ pyNumpyEye (n : Int), row.length = n := by
+theorem pyNumpyEye_isSquare {γ} [Zero γ] [One γ] (n : Nat) :
+    pyNumpyIsSquare (pyNumpyEye (γ := γ) (n : Int)) = true := by
+  have hlen : ∀ row ∈ pyNumpyEye (γ := γ) (n : Int), row.length = n := by
     intro row hrow
     simp only [pyNumpyEye, natFromInt_natCast, List.mem_map] at hrow
     obtain ⟨i, _, rfl⟩ := hrow
     simp
-  have hrows : (pyNumpyEye (n : Int)).length = n := by simp [pyNumpyEye]
+  have hrows : (pyNumpyEye (γ := γ) (n : Int)).length = n := by simp [pyNumpyEye]
   unfold pyNumpyIsSquare
   rw [isRect_of_all_len _ n hlen, Bool.true_and]
-  cases hm : pyNumpyEye (n : Int) with
+  cases hm : pyNumpyEye (γ := γ) (n : Int) with
   | nil => rfl
   | cons row rows =>
     simp only [decide_eq_true_eq]

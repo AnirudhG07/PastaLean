@@ -2,47 +2,49 @@ import Libraries.numpy.NumpyDef
 
 namespace Libraries.numpy
 
-/-- Transpose a rectangular matrix. -/
-def pyNumpyTranspose {α} [PyNumpyScalar α] (matrix : List (List α)) : List (List Float) :=
+/-- Transpose a rectangular matrix, in the entries' own compute field. -/
+def pyNumpyTranspose {α γ} [PyNumpyCompute α γ] [Zero γ] [Inhabited γ]
+    (matrix : List (List α)) : List (List γ) :=
   if pyNumpyIsRectangular matrix then
-    let normalized := pyNumpyArray matrix
+    let normalized := pyNumpyArrayOver (γ := γ) matrix
     (List.range (pyNumpyCols matrix)).map (fun c =>
-      normalized.map (fun row => row.getD c 0.0))
+      normalized.map (fun row => row.getD c 0))
   else
     panic! "ValueError: transpose() expects a rectangular matrix"
 
-/-- Element-wise binary matrix operation. -/
+/-- Element-wise binary matrix operation, computed in the field both operands join to. -/
 def pyNumpyBinaryMatrix
-    {α β : Type} [PyNumpyScalar α] [PyNumpyScalar β]
-    (f : Float -> Float -> Float)
-    (lhs : List (List α)) (rhs : List (List β)) : List (List Float) :=
+    {α β γ : Type} [PyNumpyJoin α β γ] [Inhabited γ]
+    (f : γ -> γ -> γ)
+    (lhs : List (List α)) (rhs : List (List β)) : List (List γ) :=
   if pyNumpyIsRectangular lhs && pyNumpyIsRectangular rhs && pyNumpySameShape? lhs rhs then
     List.zipWith (fun lrow rrow =>
-      List.zipWith f (lrow.map toFloat) (rrow.map toFloat)) lhs rhs
+      List.zipWith f (lrow.map (PyNumpyJoin.castL (β := β)))
+                     (rrow.map (PyNumpyJoin.castR (α := α)))) lhs rhs
   else
     panic! "ValueError: matrices must have the same rectangular shape"
 
 /-- Add two matrices element-wise. -/
-def pyNumpyAdd {α β} [PyNumpyScalar α] [PyNumpyScalar β]
-    (lhs : List (List α)) (rhs : List (List β)) : List (List Float) :=
+def pyNumpyAdd {α β γ} [PyNumpyJoin α β γ] [Add γ] [Inhabited γ]
+    (lhs : List (List α)) (rhs : List (List β)) : List (List γ) :=
   pyNumpyBinaryMatrix (· + ·) lhs rhs
 
 /-- Subtract two matrices element-wise. -/
-def pyNumpySubtract {α β} [PyNumpyScalar α] [PyNumpyScalar β]
-    (lhs : List (List α)) (rhs : List (List β)) : List (List Float) :=
+def pyNumpySubtract {α β γ} [PyNumpyJoin α β γ] [Sub γ] [Inhabited γ]
+    (lhs : List (List α)) (rhs : List (List β)) : List (List γ) :=
   pyNumpyBinaryMatrix (· - ·) lhs rhs
 
 /-- Multiply two matrices element-wise. -/
-def pyNumpyMultiply {α β} [PyNumpyScalar α] [PyNumpyScalar β]
-    (lhs : List (List α)) (rhs : List (List β)) : List (List Float) :=
+def pyNumpyMultiply {α β γ} [PyNumpyJoin α β γ] [Mul γ] [Inhabited γ]
+    (lhs : List (List α)) (rhs : List (List β)) : List (List γ) :=
   pyNumpyBinaryMatrix (· * ·) lhs rhs
 
 /-- Scale every element in a matrix by a scalar. -/
-def pyNumpyScale {α β} [PyNumpyScalar α] [PyNumpyScalar β]
-    (scalar : α) (matrix : List (List β)) : List (List Float) :=
+def pyNumpyScale {α β γ} [PyNumpyJoin α β γ] [Mul γ] [Inhabited γ]
+    (scalar : α) (matrix : List (List β)) : List (List γ) :=
   if pyNumpyIsRectangular matrix then
-    let s := toFloat scalar
-    (pyNumpyArray matrix).map (fun row => row.map (fun x => s * x))
+    let s : γ := PyNumpyJoin.castL (β := β) scalar
+    matrix.map (fun row => row.map (fun x => s * PyNumpyJoin.castR (α := α) x))
   else
     panic! "ValueError: scale() expects a rectangular matrix"
 
@@ -70,23 +72,26 @@ def pyNumpyDot {α β γ} [PyNumpyJoin α β γ] [Add γ] [Mul γ] [Zero γ] [In
   else
     panic! "ValueError: dot() expects vectors of the same length"
 
-/-- Matrix multiplication. -/
-def pyNumpyMatmul {α β} [PyNumpyScalar α] [PyNumpyScalar β]
-    (lhs : List (List α)) (rhs : List (List β)) : List (List Float) :=
+/-- Matrix multiplication, computed in the field both operands join to. -/
+def pyNumpyMatmul {α β γ} [PyNumpyJoin α β γ] [Add γ] [Mul γ] [Zero γ] [Inhabited γ]
+    (lhs : List (List α)) (rhs : List (List β)) : List (List γ) :=
   if pyNumpyIsRectangular lhs && pyNumpyIsRectangular rhs && pyNumpyCols lhs = pyNumpyRows rhs then
-    let lhsF := pyNumpyArray lhs
-    let rhsT := pyNumpyTranspose rhs
-    lhsF.map (fun row => rhsT.map (fun col => pyNumpyDotFloats row col))
+    let lhsF : List (List γ) := lhs.map (List.map (PyNumpyJoin.castL (β := β)))
+    let rhsF : List (List γ) := rhs.map (List.map (PyNumpyJoin.castR (α := α)))
+    let rhsT : List (List γ) :=
+      (List.range (pyNumpyCols rhs)).map (fun c => rhsF.map (fun row => row.getD c 0))
+    lhsF.map (fun row => rhsT.map (fun col => pyNumpyDotField row col))
   else
     panic! "ValueError: matmul() requires compatible rectangular matrices"
 
-/-- Trace of a square matrix. -/
-def pyNumpyTrace {α} [PyNumpyScalar α] (matrix : List (List α)) : Float :=
+/-- Trace of a square matrix, in the entries' own compute field. -/
+def pyNumpyTrace {α γ} [PyNumpyCompute α γ] [Add γ] [Zero γ] [Inhabited γ]
+    (matrix : List (List α)) : γ :=
   if pyNumpyIsSquare matrix then
-    let normalized := pyNumpyArray matrix
+    let normalized := pyNumpyArrayOver (γ := γ) matrix
     (List.range normalized.length).foldl
-      (fun acc i => acc + (normalized.getD i []).getD i 0.0)
-      0.0
+      (fun acc i => acc + (normalized.getD i []).getD i 0)
+      0
   else
     panic! "ValueError: trace() expects a square matrix"
 

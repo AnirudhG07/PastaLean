@@ -18,23 +18,24 @@ def pyNumpyFull {α} [PyNumpyScalar α] (shape : Int × Int) (fillValue : α) : 
   let cols := pyNumpyNatFromInt shape.2
   List.replicate rows (List.replicate cols (toFloat fillValue))
 
-/-- Build a zero-filled matrix. -/
-def pyNumpyZeros (shape : Int × Int) : List (List Float) :=
+/-- Build a zero-filled matrix. Output-polymorphic: a constructor has no argument to take its
+field from, so the surrounding code decides (`ℚ` in exact mode, `Float` under `--approx`). -/
+def pyNumpyZeros {γ} [Zero γ] (shape : Int × Int) : List (List γ) :=
   let rows' := pyNumpyNatFromInt shape.1
   let cols' := pyNumpyNatFromInt shape.2
-  List.replicate rows' (List.replicate cols' 0.0)
+  List.replicate rows' (List.replicate cols' 0)
 
 /-- Build a one-filled matrix. -/
-def pyNumpyOnes (shape : Int × Int) : List (List Float) :=
+def pyNumpyOnes {γ} [One γ] (shape : Int × Int) : List (List γ) :=
   let rows' := pyNumpyNatFromInt shape.1
   let cols' := pyNumpyNatFromInt shape.2
-  List.replicate rows' (List.replicate cols' 1.0)
+  List.replicate rows' (List.replicate cols' 1)
 
 /-- Build an identity matrix. -/
-def pyNumpyEye (n : Int) : List (List Float) :=
+def pyNumpyEye {γ} [Zero γ] [One γ] (n : Int) : List (List γ) :=
   let n' := pyNumpyNatFromInt n
   (List.range n').map (fun i =>
-    (List.range n').map (fun j => if i = j then 1.0 else 0.0))
+    (List.range n').map (fun j => if i = j then 1 else 0))
 
 /-- NumPy-style `arange` with 1-, 2-, or 3-argument behavior encoded by defaults. -/
 def pyNumpyArange (a : Float) (b : Float := pyNumpyNaN) (c : Float := pyNumpyNaN) : List Float :=
@@ -175,5 +176,17 @@ def pyNumpyTile (matrix : List (List Float)) (reps : Int × Int) : List (List Fl
   let colReps := pyNumpyNatFromInt reps.2
   let repeatedRows := matrix.map (fun row => (List.replicate colReps row).flatten)
   (List.replicate rowReps repeatedRows).flatten
+
+/-! A constructor takes its field from nowhere, so an unconstrained use (`print(np.zeros((2,3)))`)
+would leave a metavariable. Codegen therefore maps `np.zeros` to a CONCRETE variant per numeric
+mode: `ℚ` in exact mode (provable), `Float` under `--approx` (runnable). -/
+
+def pyNumpyZerosFloat (shape : Int × Int) : List (List Float) := pyNumpyZeros shape
+def pyNumpyOnesFloat  (shape : Int × Int) : List (List Float) := pyNumpyOnes shape
+def pyNumpyEyeFloat   (n : Int) : List (List Float) := pyNumpyEye n
+
+def pyNumpyZerosRat (shape : Int × Int) : List (List Rat) := pyNumpyZeros shape
+def pyNumpyOnesRat  (shape : Int × Int) : List (List Rat) := pyNumpyOnes shape
+def pyNumpyEyeRat   (n : Int) : List (List Rat) := pyNumpyEye n
 
 end Libraries.numpy

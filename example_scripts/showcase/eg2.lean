@@ -30,7 +30,7 @@ def process_data := fun (data : List (List Rat)) ↦ fun (weights : List (List R
           let e := caught
           let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg s! "Processing failed: {e}"]
           -- Fallback to a zero matrix if dimensions fail
-          let __py_ret_1 := Libraries.numpy.pyNumpyZeros ((2 : Int), (2 : Int))
+          let __py_ret_1 := Libraries.numpy.pyNumpyZerosRat ((2 : Int), (2 : Int))
           return __py_ret_1
         else
           throw caught) :
@@ -57,7 +57,7 @@ def process_data'rn : List (List Float) → List (List Float) → PastaLean.PyEx
       let e := caught
       let _ ← pyPrintIO [pyPrintArg s! "Processing failed: {e}"]
       -- Fallback to a zero matrix if dimensions fail
-      let __py_ret_1 := Libraries.numpy.pyNumpyZeros ((2 : Int), (2 : Int))
+      let __py_ret_1 := Libraries.numpy.pyNumpyZerosFloat ((2 : Int), (2 : Int))
       return __py_ret_1
     else
       throw caught
@@ -78,7 +78,7 @@ def run_example :=
       let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg "\n[2] Structural Operations:"]
       let _ ←
         PastaLean.ProofMode.pyPrintProof
-            [pyPrintArg s! "Identity Matrix (2x2):\n{Libraries.numpy.pyNumpyEye (2 : Int)}"]
+            [pyPrintArg s! "Identity Matrix (2x2):\n{Libraries.numpy.pyNumpyEyeRat (2 : Int)}"]
       let _ ←
         PastaLean.ProofMode.pyPrintProof [pyPrintArg s! "Flattened Weights: {Libraries.numpy.pyNumpyFlatten weights}"]
       -- 3. Shape Info
@@ -111,7 +111,7 @@ def run_example'rn :=
       let _ ← pyPrintIO [pyPrintArg s! "Final Result:\n{output}"]
       -- 2. Utility Operations
       let _ ← pyPrintIO [pyPrintArg "\n[2] Structural Operations:"]
-      let _ ← pyPrintIO [pyPrintArg s! "Identity Matrix (2x2):\n{Libraries.numpy.pyNumpyEye (2 : Int)}"]
+      let _ ← pyPrintIO [pyPrintArg s! "Identity Matrix (2x2):\n{Libraries.numpy.pyNumpyEyeFloat (2 : Int)}"]
       let _ ← pyPrintIO [pyPrintArg s! "Flattened Weights: {Libraries.numpy.pyNumpyFlatten weights}"]
       -- 3. Shape Info
       -- Note: np.shape returns (rows, cols)

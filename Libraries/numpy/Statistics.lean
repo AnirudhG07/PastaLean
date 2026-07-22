@@ -427,11 +427,13 @@ def pyNumpySum {α} [PyNumpyScalar α] (matrix : List (List α)) : Float :=
   (pyNumpyArray matrix).flatten.foldl (· + ·) 0.0
 
 /-- Mean of all entries in a matrix. -/
-def pyNumpyMean {α} [PyNumpyScalar α] (matrix : List (List α)) : Float :=
-  let entries := (pyNumpyArray matrix).flatten
+def pyNumpyMean {α γ} [PyNumpyCompute α γ] [PyOdeScalar γ] [Add γ] [Zero γ] [Inhabited γ]
+    (matrix : List (List α)) : γ :=
+  let entries := (pyNumpyArrayOver (γ := γ) matrix).flatten
   if entries.isEmpty then
     panic! "ValueError: mean() of an empty matrix is undefined"
   else
-    entries.foldl (· + ·) 0.0 / Rat.toFloat (entries.length : Rat)
+    -- `PyOdeScalar` (not `NatCast`/`Div`) because `Float` has neither in Mathlib.
+    PyOdeScalar.div (entries.foldl (· + ·) 0) (PyOdeScalar.ofNat entries.length)
 
 end Libraries.numpy

@@ -56,6 +56,7 @@ and before the regular (`Float`) map. -/
 def pythonLibraryMapExact? (moduleName member : String) : Option Lean.Name :=
   match moduleName with
   | "math" => math.pythonMathMemberMapExact? member
+  | "numpy" => numpy.pythonNumpyMemberMapExact? member
   | _ => none
 
 /-- Return type of a library member, for TypeInfer — the single entry point, so `TypeInfer` names no
