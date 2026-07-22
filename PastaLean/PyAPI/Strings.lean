@@ -140,6 +140,28 @@ def pyStringStrip : String → (chars : String := " ") → String
         let stripCharSet := chars.toList
         stripBy (fun c => stripCharSet.contains c) s
 
+/-- Python `lstrip`: drop leading whitespace, or leading characters from `chars`. -/
+def pyStringLstrip : String → (chars : String := " ") → String
+  | s, chars =>
+      let p := if chars = " " then isPyWhitespace else (fun c => chars.toList.contains c)
+      String.ofList (stripLeftBy p s.toList)
+
+/-- Python `rstrip`: drop trailing whitespace, or trailing characters from `chars`. -/
+def pyStringRstrip : String → (chars : String := " ") → String
+  | s, chars =>
+      let p := if chars = " " then isPyWhitespace else (fun c => chars.toList.contains c)
+      String.ofList (stripLeftBy p s.toList.reverse).reverse
+
+/-- Python `rfind`: index of the LAST occurrence of `sub`, or `-1`. -/
+def pyStringRfind (s sub : String) : Int :=
+  let n := s.length
+  let m := sub.length
+  let rec go (i : Nat) : Int :=
+    if i = 0 then (if (s.toList.take m) = sub.toList then 0 else -1)
+    else if (s.toList.drop i).take m = sub.toList then (i : Int)
+    else go (i - 1)
+  if m = 0 then (n : Int) else if m > n then -1 else go (n - m)
+
 /--
 Concrete string implementation for Python `find`.
 

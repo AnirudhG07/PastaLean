@@ -138,3 +138,12 @@ theorem pyMax_singleton [inst : PyIterable α β] [Ord β] [Inhabited β] : ∀ 
   | x :: y :: s =>
     have c : (x :: y :: s).length ≥ 2 := by grind
     grind
+
+/-- Python `zip(*rows)`: transpose, truncated to the shortest row (`zip` stops at the shortest).
+`zip(*grid)` is the idiomatic column-wise walk of a matrix. -/
+def pyZipStar {α : Type} [Inhabited α] (rows : List (List α)) : List (List α) :=
+  match rows with
+  | [] => []
+  | first :: _ =>
+      let width := rows.foldl (fun acc r => min acc r.length) first.length
+      (List.range width).map (fun c => rows.map (fun r => r[c]!))

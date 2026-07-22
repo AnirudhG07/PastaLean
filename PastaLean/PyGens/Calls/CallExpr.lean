@@ -640,6 +640,13 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
             if let some (foldFn, dir) := variadicFoldBuiltin? funcName then
               unless keyWordsMap.isEmpty do
                 throwError s!"{funcName}() keyword arguments are not supported yet."
+              -- `zip(*rows)` is a transpose, not a fold over several iterables: one starred arg.
+              if funcName == "zip" && argsArray.size == 1
+                  && jsonNodeType? argsArray[0]! == some "Starred" then
+                let .ok inner := argsArray[0]!.getObjVal? "value" | throwError
+                  s!"Starred argument is missing a 'value': {argsArray[0]!}"
+                let innerCode ← getCode inner `term
+                return ← `($(mkIdent ``PastaLean.pyZipStar) $innerCode)
               unless argsArray.size ≥ 2 do
                 throwError s!"{funcName}() expects at least two arguments."
               let foldIdent := mkIdent foldFn

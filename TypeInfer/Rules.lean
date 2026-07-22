@@ -64,6 +64,7 @@ private def constReturnMethods : List (String × PyType) :=
     ("title", .str), ("swapcase", .str), ("casefold", .str), ("center", .str),
     ("removeprefix", .str), ("removesuffix", .str), ("rjust", .str), ("ljust", .str),
     ("count", .int), ("find", .int), ("rfind", .int), ("index", .int),
+    ("lstrip", .str), ("rstrip", .str),
     ("startswith", .bool), ("endswith", .bool), ("isdigit", .bool), ("isalpha", .bool) ]
 
 mutual

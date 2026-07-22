@@ -50,9 +50,11 @@ def lowerCollectionsCallTerm? (funcJson : Json) (argsArray : Array Json)
       | some "list" | some "set" =>
           return some (← `($(mkIdent ``Libraries.collections.pyDefaultDictList)))
       | some "int"  => return some (← `($(mkIdent ``Libraries.collections.pyDefaultDictInt)))
+      | some "dict" => return some (← `($(mkIdent ``Libraries.collections.pyDefaultDictDict)))
+      | some "Counter" => return some (← `($(mkIdent ``Libraries.collections.pyDefaultDictCounter)))
       | other =>
-          throwError s!"defaultdict({other.getD "?"}) is not supported; only `list`, `set` and \
-            `int` default factories are."
+          throwError s!"defaultdict({other.getD "?"}) is not supported; only `list`, `set`, `int`, \
+            `dict` and `Counter` default factories are."
   | "deque" =>
       unless keyWordsMap.isEmpty do
         throwError "deque() keyword arguments are not supported yet."

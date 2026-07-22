@@ -110,7 +110,11 @@ def applyStmt (sigs : Sigs) (env : Env) (s : Json) : Env :=
           | some name => learn env name (typeOfExpr sigs env value)
           -- `xs[i] = v` teaches the element/value type of the container `xs`.
           | none =>
-              if nodeTypeOf target == some "Subscript" then
+              -- A TUPLE target distributes, exactly as in a `for` (`a, (b, c) = …` after desugaring
+              -- leaves `b, c = tmp`, whose element types are what pick tuple- over list-unpacking).
+              if nodeTypeOf target == some "Tuple" || nodeTypeOf target == some "List" then
+                bindTargetType env target (typeOfExpr sigs env value)
+              else if nodeTypeOf target == some "Subscript" then
                 match (getField target "value").bind nameId? with
                 | some cname =>
                     let vt := typeOfExpr sigs env value

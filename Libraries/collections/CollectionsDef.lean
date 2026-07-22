@@ -43,6 +43,14 @@ def pyDefaultDictInt : PyDefaultDict κ Int := PyDefaultDict.empty 0
 /-- `collections.Counter()`. -/
 def pyCounterEmpty : PyDefaultDict κ Int := PyDefaultDict.empty 0
 
+/-- `collections.defaultdict(dict)` — each missing key defaults to an empty mapping. -/
+def pyDefaultDictDict [BEq α] [Hashable α] : PyDefaultDict κ (Std.HashMap α ν) :=
+  PyDefaultDict.empty ∅
+
+/-- `collections.defaultdict(Counter)` — each missing key defaults to an empty counter. -/
+def pyDefaultDictCounter [BEq α] [Hashable α] : PyDefaultDict κ (PyDefaultDict α Int) :=
+  PyDefaultDict.empty (PyDefaultDict.empty 0)
+
 /-- `collections.Counter(xs)`. -/
 def pyCounter {α : Type} [PyIterable α κ] (xs : α) : PyDefaultDict κ Int :=
   PyDefaultDict.ofIterable xs
