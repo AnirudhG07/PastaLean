@@ -71,7 +71,13 @@ are already smaller. 6 agents diagnosing (results appended below).
 - [ ] tail: Function expected (8), Invalid match (8), PyGetItem ℤ ℤ scalar-indexed (7).
 
 **CONVERT_FAIL buckets (257 codegen throwErrors):**
-- [ ] **D13. closure-as-value CAPTURING** (41) — `sort(key=helper)` where helper captures; needs `fun p ↦ new p caps`. number-of-beautiful-integers-in-the-range, house-robber-iv.
+- [~] **D13. closure-as-value CAPTURING** (41) — FIXED for the typed case. Lifting a capturing
+      helper that is passed as a VALUE (`sorted(key=score)`) leaves a partial application, so the
+      wrapper `fun p ↦ helper p caps` needs its param TYPED — an untyped binder is what broke
+      pk_simulation last time. `functionParamTypedNames` now reads each param's annotation or its
+      `_ty` stamp and the wrapper carries them; the reject only remains when a param has no type at
+      all (with a message saying so). Verified: `sorted(items, key=score)` where `score` captures
+      `weights` → `pySortBy (fun (x : Int) ↦ _rank_score x weights)`, run-verified `[1, 3, 2]`. (was: — `sort(key=helper)` where helper captures; needs `fun p ↦ new p caps`. number-of-beautiful-integers-in-the-range, house-robber-iv.
 - [ ] **D14. tuple** (26) — recover-binary-search-tree, stone-game-vi.
 - [ ] **D15. mutual recursion** (22) — sibling nested defs; MAY be fixed this session (typed); untyped still fails. beautiful-pairs, sliding-puzzle.
 - [x] **D16. subscript-through-attribute** (21) — VERIFIED FIXED by `attrRecordUpdateDoElem`. (was: — `self.grid[i][j]=v` / `obj.arr[i]=v`; longest-word-with-all-prefixes, search-suggestions-system.
@@ -376,3 +382,17 @@ adding-two-negabinary-numbers, increasing-triplet-subsequence, minimum-average-d
       `_list_unpack`, and both unpack sites honour it.
 - Regression: `captured_containers.py` extended with a defaultdict/Counter/list-of-pairs capture;
   run-verified 1/6/13. PALC: 82 OK, 0 FAILED.
+
+
+### PROGRESS update 7 (D13 + a hole in the regression suite)
+- [x] **D13 typed capture wrapper** — see above. Only an un-inferable param still rejects.
+- [!] **PALC could not see silent degradation.** `src/main.py` set the `unsupported` record field
+      from `driver._LAST_UNSUPPORTED` only, but `TranslationResult.degraded` ALSO greps the emitted
+      Lean — so a file whose body collapsed to `pyUnsupported` passed as OK. Exactly one file was
+      affected: **`pk_simulation.py` is fully degraded** (its whole `main` is one placeholder) and
+      has been passing green. Detection now uses `degraded`; `pk_simulation.py` is listed in
+      `expectUnsupported` with a comment naming the cause, so the suite stays honest AND green and
+      any NEW degradation fails loudly.
+- [ ] **pk_simulation is genuinely broken** — `odeint(system, …)`: `system(state, t)` is unannotated,
+      and inferring `state : list[float]` needs BACKWARD inference from `g, r_pop, w = state` plus
+      the float arithmetic on those components. That is the remaining blocker for this showcase.

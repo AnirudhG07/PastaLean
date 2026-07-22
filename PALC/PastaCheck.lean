@@ -65,7 +65,10 @@ def translateAll (pyBin : String) (dir : System.FilePath) : IO (Array Json) := d
   | .error e => throw (IO.userError s!"could not parse batch summary: {e}")
 
 /-- Files where a `pyUnsupported` placeholder is expected (best-effort degradation demos). -/
-def expectUnsupported : List String := ["unsupported_demo.py"]
+-- `pk_simulation.py` is KNOWN-DEGRADED: its `odeint(system, …)` callback captures and is passed as
+-- a value, and `system(state, t)` has no inferred param types, so the whole body becomes a
+-- placeholder. It passed silently until the `degraded` check below started reading the emitted Lean.
+def expectUnsupported : List String := ["unsupported_demo.py", "pk_simulation.py"]
 
 /-- Directories whose generated `.lean` is written next to the `.py` (reviewable output). -/
 def writeInPlaceDirs : List String := ["showcase", "mvcgen_playground", "random", "general", "typing", "terms", "proof_mode",  "commands"]

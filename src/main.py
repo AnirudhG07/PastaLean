@@ -202,8 +202,11 @@ def cmd_batch(args) -> int:
                         record["error"] = check.first_error()
                 tally[status] += 1
                 record["status"] = status
-                if result.unsupported:
-                    record["unsupported"] = result.unsupported
+                # `degraded` also greps the emitted Lean, catching a placeholder that the
+                # driver's own list missed — otherwise silently-degraded output passes as OK.
+                if result.degraded:
+                    record["unsupported"] = (result.unsupported
+                                             or ["pyUnsupported placeholder in emitted Lean"])
                 if args.emit_lean:
                     record["lean"] = result.lean_code
             records.append(record)

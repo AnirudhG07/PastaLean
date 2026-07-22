@@ -96,6 +96,20 @@ def functionParamNames (fnJson : Json) : Array String := Id.run do
     | .ok name => acc.push name
     | _ => acc) #[]
 
+/-- Each parameter of a `FunctionDef` with the type we can give it: its explicit annotation, else
+the `_ty` the inference pass stamped. `none` where neither exists. -/
+def functionParamTypedNames (fnJson : Json) : Array (String × Option Json) := Id.run do
+  let .ok args := fnJson.getObjVal? "args" | return #[]
+  let .ok argsArray := args.getObjValAs? (Array Json) "args" | return #[]
+  return argsArray.foldl (fun acc arg =>
+    match arg.getObjValAs? String "arg" with
+    | .ok name =>
+        let ann? := match (arg.getObjVal? "annotation").toOption with
+          | some a => if a.isNull then jsonFieldOption arg "_ty" else some a
+          | none => jsonFieldOption arg "_ty"
+        acc.push (name, ann?)
+    | _ => acc) #[]
+
 /-- `param name → annotation` for a `FunctionDef`, so a lifted capture keeps its type. -/
 def functionParamAnnotations (fnJson : Json) : Std.HashMap String Json := Id.run do
   let .ok args := fnJson.getObjVal? "args" | return {}
@@ -184,9 +198,10 @@ private def argNode (name : String) (annotation : Option Json) : Json :=
 /-- The value form of a CAPTURING helper passed as a value (`sort(key=helper)`): a `Lambda`
 `fun params ↦ new(params…, caps…)`, partially applying the captured args (which come after the
 helper's own params). -/
-private def captureWrapperLambda (new : String) (origParams captures : Array String) : Json :=
-  let paramArgs := origParams.map (argNode · none)
-  let callArgs := (origParams ++ captures).map nameNode
+private def captureWrapperLambda (new : String) (origParams : Array (String × Option Json))
+    (captures : Array String) : Json :=
+  let paramArgs := origParams.map (fun (n, ann?) => argNode n ann?)
+  let callArgs := (origParams.map (·.1) ++ captures).map nameNode
   let call := Json.mkObj [("node_type", Json.str "Call"), ("func", nameNode new),
                           ("args", Json.arr callArgs), ("keywords", Json.mkObj [])]
   Json.mkObj [("node_type", Json.str "Lambda"),
@@ -196,7 +211,8 @@ private def captureWrapperLambda (new : String) (origParams captures : Array Str
 /-- Rewrite every call `old(args…)` into `new(args…, captures…)`. A bare reference to `old` outside
 call position (`sort(key=old)`) becomes a partial-application `fun p ↦ new p captures` when it
 captures; a capture-free helper is just `new`. `origParams` are `old`'s own parameter names. -/
-partial def rewriteHelperCalls (old new : String) (origParams captures : Array String) (json : Json) :
+partial def rewriteHelperCalls (old new : String) (origParams : Array (String × Option Json))
+    (captures : Array String) (json : Json) :
     PygenM Json := do
   match json with
   | .arr elems => return Json.arr (← elems.mapM (rewriteHelperCalls old new origParams captures))
@@ -218,8 +234,10 @@ partial def rewriteHelperCalls (old new : String) (origParams captures : Array S
       -- untyped wrapper binders — so keep rejecting until the wrapper carries inferred param types.
       if jsonNodeType? json == some "Name" && json.getObjValAs? String "id" == .ok old then
         if captures.isEmpty then return nameNode new
-        else throwError s!"nested function '{old}' captures variables and is used as a value; \
-          only direct calls are supported."
+        else if origParams.all (·.2.isSome) then
+          return captureWrapperLambda new origParams captures
+        else throwError s!"nested function '{old}' captures variables and is used as a value, and \
+          its parameters have no inferred types to give the wrapper; only direct calls are supported."
       let rewritten ← fields.toList.mapM fun (k, v) => do
         return (k, ← rewriteHelperCalls old new origParams captures v)
       return Json.mkObj rewritten
@@ -513,7 +531,7 @@ private def liftHelper (outerName : String) (outerJson innerJson : Json) :
     !(jsonNodeType? stmt == some "FunctionDef"
       && stmt.getObjValAs? String "name" == .ok innerName)
 
-  let origParams := functionParamNames inner
+  let origParams := functionParamTypedNames inner
   let counter ← IO.mkRef 0
   let (helperBody, rewrittenOuter) ←
     if threaded.isEmpty then do
@@ -618,7 +636,7 @@ private def liftMutualGroup (outerName : String) (outerJson : Json) (members : A
     -- Rewrite every call to any sibling (self included) to the lifted name + shared captures.
     let mut body := (m.getObjVal? "body").toOption.getD (Json.arr #[])
     for sibName in memberNames do
-      let sibParams := (members.find? (·.getObjValAs? String "name" == .ok sibName)).elim #[] functionParamNames
+      let sibParams := (members.find? (·.getObjValAs? String "name" == .ok sibName)).elim #[] functionParamTypedNames
       body ← rewriteHelperCalls sibName (helperNameOf sibName) sibParams shared body
     let helper := ((m.setObjVal! "name" (Json.str (helperNameOf mName))).setObjVal! "args" mArgs)
       |>.setObjVal! "body" body
@@ -629,7 +647,7 @@ private def liftMutualGroup (outerName : String) (outerJson : Json) (members : A
       && memberNames.contains ((stmt.getObjValAs? String "name").toOption.getD ""))
   let mut outerBodyJson := Json.arr remaining
   for sibName in memberNames do
-    let sibParams := (members.find? (·.getObjValAs? String "name" == .ok sibName)).elim #[] functionParamNames
+    let sibParams := (members.find? (·.getObjValAs? String "name" == .ok sibName)).elim #[] functionParamTypedNames
     outerBodyJson ← rewriteHelperCalls sibName (helperNameOf sibName) sibParams shared outerBodyJson
   return (helpers, outerJson.setObjVal! "body" outerBodyJson)
 

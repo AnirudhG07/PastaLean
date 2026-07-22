@@ -179,11 +179,31 @@ def walk'rn := fun (pairs : List (List Int)) ↦
       let __py_ret_1 := _walk_total'rn graph seen todo
       return __py_ret_1)
 
+-- A capturing helper passed as a VALUE (`key=`), not called directly. Lifting it leaves a partial
+-- application, so the wrapper lambda needs its parameter TYPED — an untyped binder is exactly what
+-- an inference-hungry callback cannot resolve.
+private def _ranked_score := fun (x : Int) ↦ fun (weights : List Int) ↦ x *ₚ weights⦋x %ₚ PastaLean.pyLen weights⦌
+
+attribute [simp, taste_ingr] _ranked_score
+
+def ranked := fun (items : List Int) ↦ fun (weights : List Int) ↦
+  PastaLean.pySortBy (fun (x : Int) ↦ _ranked_score x weights) false items
+
+attribute [simp, taste_ingr] ranked
+
+private def _ranked_score'rn := fun (x : Int) ↦ fun (weights : List Int) ↦ x *ₚ weights⦋x %ₚ PastaLean.pyLen weights⦌
+
+def ranked'rn := fun (items : List Int) ↦ fun (weights : List Int) ↦
+  PastaLean.pySortBy (fun (x : Int) ↦ _ranked_score'rn x weights) false items
+
 def main' :=
   ((do
       let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg (pick [[(1 : Int), (1 : Int)], [(2 : Int), (3 : Int)]])]
       let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg (tally ["ab", "ab", "c"])]
-      let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg (walk [[(1 : Int), (2 : Int)], [(1 : Int), (3 : Int)]])]) :
+      let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg (walk [[(1 : Int), (2 : Int)], [(1 : Int), (3 : Int)]])]
+      let _ ←
+        PastaLean.ProofMode.pyPrintProof
+            [pyPrintArg (ranked [(1 : Int), (2 : Int), (3 : Int)] [(10 : Int), (1 : Int)])]) :
     PastaLean.ProofMode.PyProofM _)
 
 attribute [simp] main'
@@ -192,7 +212,8 @@ def main''rn :=
   ((do
       let _ ← pyPrintIO [pyPrintArg (pick'rn [[(1 : Int), (1 : Int)], [(2 : Int), (3 : Int)]])]
       let _ ← pyPrintIO [pyPrintArg (tally'rn ["ab", "ab", "c"])]
-      let _ ← pyPrintIO [pyPrintArg (walk'rn [[(1 : Int), (2 : Int)], [(1 : Int), (3 : Int)]])]) :
+      let _ ← pyPrintIO [pyPrintArg (walk'rn [[(1 : Int), (2 : Int)], [(1 : Int), (3 : Int)]])]
+      let _ ← pyPrintIO [pyPrintArg (ranked'rn [(1 : Int), (2 : Int), (3 : Int)] [(10 : Int), (1 : Int)])]) :
     IO _)
 
 def main : IO Unit := do
