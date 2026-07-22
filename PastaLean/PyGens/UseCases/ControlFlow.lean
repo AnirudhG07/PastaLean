@@ -180,11 +180,20 @@ def forTargetBinder (targetJson : Json) (bodyElems : Array Json := #[]) :
         let assign ← `(doElem| $targetIdent:ident := $loopIdent)
         pure (loopIdent, #[assign])
       else if mutated then
-        -- The body reassigns the loop var (`for w in …: if …: w = …`): mutable shadow of the value.
         let loopIdent := mkIdent (← freshName `__py_loop)
-        let decl ← `(doElem| let mut $targetIdent:ident := $loopIdent)
-        addVar targetIdent.getId
-        pure (loopIdent, #[decl])
+        -- A `_ty` of `PyAny` means the body rebinds this name to a CONFLICTING type
+        -- (`for ch in s: ch = ord(ch)`). A `let mut` has one fixed type and cannot be shadowed, so
+        -- bind it plainly and leave it unregistered — the rebind then emits its own `let mut`,
+        -- which shadows this one. That matches Python: code after the rebind sees the new value.
+        let conflicting := (jsonFieldOption targetJson "_ty").any
+          (fun t => t.getObjValAs? String "id" == .ok "PyAny")
+        if conflicting then
+          addVar targetIdent.getId
+          pure (loopIdent, #[← `(doElem| let $targetIdent:ident := $loopIdent)])
+        else
+          let decl ← `(doElem| let mut $targetIdent:ident := $loopIdent)
+          addVar targetIdent.getId
+          pure (loopIdent, #[decl])
       else
         pure (targetIdent, #[])
   | some "Tuple" =>
@@ -209,9 +218,17 @@ def forTargetBinder (targetJson : Json) (bodyElems : Array Json := #[]) :
             let iStx ← intToStx (i : Int)
             `($(mkIdent ``PastaLean.pyListGetItem) $pairIdent $iStx)
           else tupleAccessTerm pairIdent i n
-        -- An unpacked element the body reassigns (`for i, word in …: word = …`) must be `let mut`.
+        -- An unpacked element the body reassigns (`for i, word in …: word = …`) must be `let mut` —
+        -- UNLESS the rebind changes its type (`_ty` = `PyAny`, e.g. `for i, c in …: c = ord(c)`).
+        -- A `let mut` has one fixed type and cannot be shadowed, so bind that one plainly and let
+        -- the rebind introduce its own `let mut` over it.
+        let eltConflicts := (jsonFieldOption elts[i]! "_ty").any
+          (fun t => t.getObjValAs? String "id" == .ok "PyAny")
         if bodyElems.any (bodyReassignsName idents[i]!.getId.toString) then
-          prelude := prelude.push (← `(doElem| let mut $(idents[i]!) := $acc))
+          if eltConflicts then
+            prelude := prelude.push (← `(doElem| let $(idents[i]!) := $acc))
+          else
+            prelude := prelude.push (← `(doElem| let mut $(idents[i]!) := $acc))
           addVar idents[i]!.getId
         else
           prelude := prelude.push (← `(doElem| let $(idents[i]!) := $acc))

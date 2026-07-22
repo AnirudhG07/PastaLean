@@ -69,7 +69,13 @@ def unpackAccessTerm (isTuple : Bool) (sourceIdent : TSyntax `ident) (idx n : Na
 inferred type (`ty?`) is ascribed — `let mut x : T := …` — which stops Lean defaulting an
 unconstrained element/index to `ℚ`. A reassignment never re-ascribes. -/
 def bindOrAssignLocal (nameIdent : TSyntax `ident) (rhs : TSyntax `term)
-    (ty? : Option (TSyntax `term) := none) : PygenM (TSyntax `doElem) := do
+    (ty? : Option (TSyntax `term) := none) (rebindShadow : Bool := false) : PygenM (TSyntax `doElem) := do
+  -- Python may rebind a name to a DIFFERENT type (`for ch in s: ch = ord(ch)`). One `let mut` has a
+  -- fixed type, so a fresh `let mut` shadows the plain `let` the loop bound — matching Python, where
+  -- code before the rebind saw the old value and code after sees the new. Its type comes from the
+  -- RHS, NOT from the `PyAny` stamp: a single binding never has to hold both types.
+  if rebindShadow then
+    return ← `(doElem| let mut $nameIdent:ident := $rhs)
   if ← hasVar nameIdent.getId then
     `(doElem| $nameIdent:ident := $rhs)
   else
@@ -393,7 +399,13 @@ def assignSyntax : (kind : SyntaxNodeKind) → Json →
                 pure setStx
             | none =>
                 let nameIdent ← getCode target `ident
-                let bound ← bindOrAssignLocal nameIdent rhs (← stampedTypeSyntax? target)
+                -- `_ty` of `PyAny` on an already-bound name = the inference saw two incompatible
+                -- types for it, i.e. a rebind: shadow rather than reassign.
+                let conflicting := (jsonFieldOption target "_ty").any
+                  (fun t => t.getObjValAs? String "id" == .ok "PyAny")
+                let shadow := conflicting && (← hasVar nameIdent.getId)
+                let ty? ← if shadow then pure none else stampedTypeSyntax? target
+                let bound ← bindOrAssignLocal nameIdent rhs ty? shadow
                 -- Track whether this name now holds a set, so later `==`/`<=` on it use set semantics
                 -- (order-independent) rather than the list-backed ones.
                 setSetVar nameIdent.getId (← jsonIsSetExpr value)

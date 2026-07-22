@@ -54,7 +54,15 @@ are already smaller. 6 agents diagnosing (results appended below).
 - [x] **D4. `PyHAdd Bool Bool`** (51) — VERIFIED FIXED (`PySummand` coercion; `sum(x!=y ...)` → Int).
       (was: — bool sum wants Bool not Int; height-checker, find-the-number-of-good-pairs-i. (may be fixed — added `PyHAdd Bool Bool Int`.)
 - [ ] **D5. `PySetItem (List ℚ)`** (41) — int-list element defaulted to ℚ; greatest-sum-divisible-by-three, campus-bikes-ii.
-- [ ] **D6. invalid reassignment** (40) — var rebound to conflicting type → should box PyAny; total-appeal-of-a-string, min-cost-to-connect-all-points.
+- [x] **D6. invalid reassignment** (40) — FIXED for the loop-variable shape (the dominant one).
+      Python rebinds a name to a different type (`for i, c in enumerate(s): c = ord(c) - ord('a')`);
+      a Lean `let mut` has ONE fixed type, so reassigning is "invalid reassignment" — and a `let mut`
+      cannot be shadowed either. Fix: when the inference marks the loop target `_ty = PyAny` (two
+      incompatible types), bind it with a plain `let`; the rebind then emits its own `let mut` over
+      it, typed by its RHS rather than the `PyAny` stamp (a single binding never holds both types).
+      Applied to BOTH the single-name and the tuple-unpack loop-target paths. Matches Python: code
+      before the rebind saw the old value, code after sees the new.
+      Verified vs CPython: total-appeal-of-a-string → 28. (was: — var rebound to conflicting type → should box PyAny; total-appeal-of-a-string, min-cost-to-connect-all-points.
 - [ ] **D7. `PyContains PyAny`** (37) — `x in y` on PyAny/no-membership; longest-nice-substring, check-if-n-and-its-double-exist.
 - [ ] **D8. Unknown identifier** (34) — missing builtin/method/field; sort-an-array, compare-strings-by-frequency-of-the-smallest-character.
 - [ ] **D9. `PyIterable (ℤ×…)` / `PyGetItem (ℤ×ℤ)`** (29+16) — tuple iterated/indexed as list; spiral-matrix, advantage-shuffle.
@@ -396,3 +404,14 @@ adding-two-negabinary-numbers, increasing-triplet-subsequence, minimum-average-d
 - [ ] **pk_simulation is genuinely broken** — `odeint(system, …)`: `system(state, t)` is unannotated,
       and inferring `state : list[float]` needs BACKWARD inference from `g, r_pop, w = state` plus
       the float arithmetic on those components. That is the remaining blocker for this showcase.
+
+
+### PROGRESS update 8 (numpy field-correctness + D6)
+- [x] **numpy returns the entries' own field** — see commit; exact mode is now `ℚ` (provable),
+      `--approx` stays `Float`. Constructors (`zeros`/`ones`/`eye`), whose field cannot come from an
+      argument, get a concrete variant per mode via the existing `pythonLibraryMapExact?` hook.
+- [x] **D6 loop-variable rebind** — see above. `example_scripts/typing/rebound_names.py` (3/28/5).
+- [ ] **D5 still blocked** — numpy field-correctness was a PREREQUISITE but not sufficient: with
+      float ascription re-enabled, eg1 still fails `PyHSub ℤ ℤ ℚ`, a local typed `float` but fed by
+      integer arithmetic. Needs the int/float join tightened (or mixed-result operator instances).
+      Float ascription is currently OFF, so the tree is green.

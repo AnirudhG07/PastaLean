@@ -27,9 +27,8 @@ theorem coe_list_eq (l : List Nat) : (↑l : List Int) = l.map Int.ofNat := by
 /-- `pyRange n` (default start 0, step 1) is `List.range n.toNat` cast to `Int`. -/
 theorem pyRange_eq_ofNat (n : Int) : pyRange n = (List.range n.toNat).map Int.ofNat := by
   unfold pyRange
-  simp only [gt_iff_lt, List.range_eq_range', show (Int.toNat 1) = 1 from rfl, Int.ediv_one,
-    add_sub_cancel_right, Int.add_zero, Int.sub_zero, if_pos (show (0 : Int) < 1 by norm_num)]
-  rw [← coe_list_eq]; simp
+  simp_all [List.range_eq_range', show (Int.toNat 1) = 1 from rfl, add_sub_cancel_right]
+  rw [← coe_list_eq]; simp only [List.pure_def, List.bind_eq_flatMap]
 
 /-- **The reduction spec.** A `pyRange n` loop equals the native `List.range n.toNat` loop with the
 `Int` cast pushed into the body. Pass to mvcgen so index-style invariants close as they do for
