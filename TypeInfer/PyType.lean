@@ -179,6 +179,8 @@ def elemType : PyType → PyType
   | .str => .str
   | .dict k _ => k
   | .tuple es => joinAll es
+  -- Indexing/iterating a boxed value yields a boxed value.
+  | .any => .any
   | _ => .unknown
 
 /-- What to do when a value of type `actual` reaches a position expecting `expected`: the small

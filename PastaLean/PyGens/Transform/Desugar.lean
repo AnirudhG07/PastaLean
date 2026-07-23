@@ -62,11 +62,14 @@ partial def rewriteStatementLists (f : Array Json → DesugarM (Array Json)) (js
 
 /-! ### Nested `for` targets -/
 
-/-- Emit `target = value` as assignments whose tuple targets contain no further tuples. -/
+/-- Emit `target = value` as assignments whose tuple targets contain no further tuples. The tuple
+targets are stamped `_tuple_unpack` — a nested for-target (`for i, (a, b) in enumerate(zip(…))`)
+unpacks a `Prod`, so codegen must use `Prod.fst`/`Prod.snd`, not list indexing. -/
 partial def flattenAssign (target value : Json) : DesugarM (Array Json) := do
   unless isTupleTarget target do return #[assignStmt target value]
+  let tupleUnpack (t : Json) : Json := t.setObjVal! "_tuple_unpack" (Json.bool true)
   let elts := (target.getObjValAs? (Array Json) "elts").toOption.getD #[]
-  unless elts.any isTupleTarget do return #[assignStmt target value]
+  unless elts.any isTupleTarget do return #[assignStmt (tupleUnpack target) value]
   let mut flatElts := #[]
   let mut deferred := #[]
   for elt in elts do
@@ -76,7 +79,7 @@ partial def flattenAssign (target value : Json) : DesugarM (Array Json) := do
       deferred := deferred.push (elt, nameLoad name)
     else
       flatElts := flatElts.push elt
-  let mut stmts := #[assignStmt (target.setObjVal! "elts" (Json.arr flatElts)) value]
+  let mut stmts := #[assignStmt (tupleUnpack (target.setObjVal! "elts" (Json.arr flatElts))) value]
   for (nestedTarget, tempName) in deferred do
     stmts := stmts ++ (← flattenAssign nestedTarget tempName)
   return stmts

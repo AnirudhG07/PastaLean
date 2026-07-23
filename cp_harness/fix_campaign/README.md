@@ -59,14 +59,21 @@ re-running their problems should now pass. Fold survivors into their theme.
 
 _(newest first; one line per theme closed)_
 
-- **T1 typeinfer-numeric — partial (this session).** ✔ binary-gap, ✔ binary-subarrays-with-sum.
+- **T1 typeinfer-numeric — partial (this session).** ✔ binary-gap, ✔ coin-path,
+  ✔ check-if-a-string-is-a-valid-sequence-from-root-to-leaves-path-in-a-binary-tree,
+  ✔ check-if-there-is-a-valid-parentheses-string-path, ✔ count-number-of-maximum-bitwise-or-subsets,
+  ✔ minimum-costs-using-the-train-line (needed both the `[inf]*n` fix and the nested-for fix below).
   Mental model (Python numeric tower): int values stay `Int` and coerce **up** at op/boundary sites
-  (bottom-up); only a scalar var genuinely assigned **both** int and float needs to *be* float. Fix:
-  stamp the int **literal** at a `float`-scalar assignment (`ans = 0; ans = max(ans, inf)` → `(0 : ℚ)`),
-  NOT the binder — ascribing the binder wrongly forces `ℚ` over a transcendental `ℝ` (nn.py), and
-  ascribing float **containers** propagates `ℚ` into `Int` positions (eg1's `math.pow(a-b,2)`).
-  Remaining T1: int-**expression** → float-scalar (needs `((e:Int):ℚ)`), and other numeric buckets
-  (tuple/zip element typing, etc.) that are not the int-literal pattern.
+  (bottom-up); only a var genuinely assigned **both** int and float needs to *be* float. Fixes:
+  (1) stamp the int **literal** at a `float`-scalar assignment (`ans=0; ans=max(ans,inf)` → `(0:ℚ)`),
+  NOT the binder (that forces `ℚ` over a transcendental `ℝ` — nn.py); (2) coerce int-literal **elements**
+  of a `[0]*n` float container (`Constant` respects `_ty=float`); (3) value-ascribe a `[inf]*n`/`[x]*n`
+  float-container binding to `List <mode-float>` so the polymorphic `inf` adapts per twin (the
+  canonical `dp=[inf]*n; dp[0]=0` run-twin bug). NOT float containers in general (eg1's `math.pow(a-b,2)`).
+  (4) nested for-target `for i,(a,b) in enumerate(zip(...))` — `flattenAssign` stamps `_tuple_unpack`
+  so the desugared `a,b = __t` unpacks a `Prod`, not list-indexing (regression in `tuple_iteration.py`).
+  Confirmed non-issue: int-**expression** → float-scalar already coerces at the reassignment (Lean
+  inserts `Int→ℚ`). Remaining T1: untyped-param→PyAny arithmetic, and non-numeric buckets miscategorized here.
 
 - **T2 let-mut-rebind — partial (this session).** ✔ basic-calculator-iii, ✔ flipping-an-image.
   Fix: `bodyReassignsName` now counts in-place mutation (`ts.sort()`, `ts.append()`, `ts[i]=v`) as a

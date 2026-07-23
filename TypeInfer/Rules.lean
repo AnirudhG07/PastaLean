@@ -45,6 +45,8 @@ def literalIndex? (slice : Json) : Option Nat :=
 def arith : PyType → PyType → PyType
   | .str, .str => .str
   | .list a, .list b => .list (a.join b)
+  -- Arithmetic on a boxed value stays boxed (`PyAny + int` dispatches on the tag → `PyAny`).
+  | .any, _ | _, .any => .any
   | a, b =>
       if a.isNumeric && b.isNumeric then
         if a == .float || b == .float then .float else .int

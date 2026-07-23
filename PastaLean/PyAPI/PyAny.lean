@@ -123,6 +123,16 @@ instance : PyHAdd PyAny PyAny PyAny where hAdd := PyAny.add
 instance : PyHSub PyAny PyAny PyAny where hSub := PyAny.sub
 instance : PyHMul PyAny PyAny PyAny where hMul := PyAny.mul
 
+/-- Mixed `PyAny op scalar` / `scalar op PyAny`: box the scalar and dispatch on the tags, so
+arithmetic on an un-inferred (boxed) value against an `Int`/`ℚ` literal works (`x * 2` where `x` is a
+`PyAny` element of an untyped param). Low priority so the exact `PyAny × PyAny` instances win. -/
+instance (priority := low) {α} [PyToValue α] : PyHAdd PyAny α PyAny where hAdd a b := PyAny.add a (PyToValue.toValue b)
+instance (priority := low) {α} [PyToValue α] : PyHAdd α PyAny PyAny where hAdd a b := PyAny.add (PyToValue.toValue a) b
+instance (priority := low) {α} [PyToValue α] : PyHSub PyAny α PyAny where hSub a b := PyAny.sub a (PyToValue.toValue b)
+instance (priority := low) {α} [PyToValue α] : PyHSub α PyAny PyAny where hSub a b := PyAny.sub (PyToValue.toValue a) b
+instance (priority := low) {α} [PyToValue α] : PyHMul PyAny α PyAny where hMul a b := PyAny.mul a (PyToValue.toValue b)
+instance (priority := low) {α} [PyToValue α] : PyHMul α PyAny PyAny where hMul a b := PyAny.mul (PyToValue.toValue a) b
+
 /-! ### Container protocols — delegate to the boxed value's own instance
 
 A boxed slot that is indexed, iterated, or `len`-ed dispatches on the runtime tag and reuses the

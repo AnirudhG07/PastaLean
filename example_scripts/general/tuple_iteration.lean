@@ -95,9 +95,42 @@ def heterog_index'rn :=
   let t := (((1 : Int), ("a", (3 : Int))) : Int × String × Int)
   (Prod.fst t, (Prod.fst (Prod.snd t), Prod.snd (Prod.snd t)))
 
+-- Nested for-target: `(a, b)` comes from `zip` (a Prod), so it must unpack via Prod, not list index.
+def nested_for_unpack := fun (xs : List Int) ↦ fun (ys : List Int) ↦
+  Id.run
+    (do
+      let mut total : Int := (0 : Int)
+      for _pair_1 in (PastaLean.pyIter (PastaLean.pyEnumerate (PastaLean.pyZip xs ys) (1 : Int)))do
+        let i := Prod.fst _pair_1
+        let __for_unpack_1 := Prod.snd _pair_1
+        let __unpack_value_1 := __for_unpack_1
+        let __unpack_pair_1 := __unpack_value_1
+        let mut a := Prod.fst __unpack_pair_1
+        let mut b := Prod.snd __unpack_pair_1
+        total := total +ₚ i *ₚ (a +ₚ b)
+      return total)
+
+attribute [simp, taste_ingr] nested_for_unpack
+
+def nested_for_unpack'rn := fun (xs : List Int) ↦ fun (ys : List Int) ↦
+  Id.run
+    (do
+      let mut total : Int := (0 : Int)
+      for _pair_1 in (PastaLean.pyIter (PastaLean.pyEnumerate (PastaLean.pyZip xs ys) (1 : Int)))do
+        let i := Prod.fst _pair_1
+        let __for_unpack_1 := Prod.snd _pair_1
+        let __unpack_value_1 := __for_unpack_1
+        let __unpack_pair_1 := __unpack_value_1
+        let mut a := Prod.fst __unpack_pair_1
+        let mut b := Prod.snd __unpack_pair_1
+        total := total +ₚ i *ₚ (a +ₚ b)
+      return total)
+
 def main' :=
   ((do
       let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg (neighbours (5 : Int) (5 : Int))]
+      let _ ←
+        PastaLean.ProofMode.pyPrintProof [pyPrintArg (nested_for_unpack [(1 : Int), (2 : Int)] [(3 : Int), (4 : Int)])]
       let _ ←
         PastaLean.ProofMode.pyPrintProof
             [pyPrintArg (stats ((3 : Int), ((1 : Int), ((4 : Int), ((1 : Int), ((5 : Int), ((9 : Int), (2 : Int))))))))]
@@ -110,6 +143,7 @@ attribute [simp] main'
 def main''rn :=
   ((do
       let _ ← pyPrintIO [pyPrintArg (neighbours'rn (5 : Int) (5 : Int))]
+      let _ ← pyPrintIO [pyPrintArg (nested_for_unpack'rn [(1 : Int), (2 : Int)] [(3 : Int), (4 : Int)])]
       let _ ←
         pyPrintIO
             [pyPrintArg

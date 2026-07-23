@@ -40,8 +40,17 @@ def heterog_index():
     return t[0], t[1], t[2]
 
 
+# Nested for-target: `(a, b)` comes from `zip` (a Prod), so it must unpack via Prod, not list index.
+def nested_for_unpack(xs, ys):
+    total = 0
+    for i, (a, b) in enumerate(zip(xs, ys), 1):
+        total += i * (a + b)
+    return total
+
+
 def main():
     print(neighbours(5, 5))                 # [(4,5),(5,6),(6,5),(5,4)]
+    print(nested_for_unpack([1, 2], [3, 4]))  # 1*(1+3) + 2*(2+4) = 16
     print(stats((3, 1, 4, 1, 5, 9, 2)))     # (25, 9, 1)
     print(homog_index())                    # (3, 4, [1, 4, 1, 5], [3, 1, 4, 1, 5])
     print(heterog_index())                  # (1, a, 3)
