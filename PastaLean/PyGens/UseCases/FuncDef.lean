@@ -174,6 +174,11 @@ def functionReturnTypeSyntax? (json : Json) : PygenM (Option (TSyntax `term)) :=
   -- A boxed function (returns disagree in type) returns `PyAny` regardless of any union annotation.
   if json.getObjValAs? Bool "_box_return" == .ok true then
     return some (mkIdent ``PastaLean.PyAny)
+  -- A `_ret_float` body mixes `int` and `float` returns (`return 0` / `return ans` where `ans` is
+  -- `float` from a `-inf` seed): its codomain is the mode float, overriding an `int` annotation, so
+  -- both branches coerce (`(0 : ℚ)` and the float `ans`).
+  if json.getObjValAs? Bool "_ret_float" == .ok true then
+    return some (if (← getNumericMode) == .exact then mkIdent ``Rat else mkIdent ``Float)
   -- The explicit `returns` annotation wins; else the type inferred by `TypeInfer` (`_ret_ty`).
   match (jsonFieldOption json "returns").orElse (fun _ => jsonFieldOption json "_ret_ty") with
   | some returnJson =>

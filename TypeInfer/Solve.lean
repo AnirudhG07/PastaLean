@@ -24,6 +24,17 @@ private def getField (j : Json) (k : String) : Option Json := (j.getObjVal? k).t
 private def nameId? (j : Json) : Option String :=
   if nodeTypeOf j == some "Name" then (j.getObjValAs? String "id").toOption else none
 
+/-- For a (possibly nested) subscript target `f[h][i][j]`, the base name `f` and the nesting depth
+(here `3`), so codegen can learn `f : list[list[list[<v>]]]` from a deep `f[h][i][j] = v`. -/
+private partial def subscriptBaseDepth (target : Json) : Option (String × Nat) :=
+  if nodeTypeOf target == some "Subscript" then
+    match getField target "value" with
+    | some v => match nameId? v with
+        | some n => some (n, 1)
+        | none => (subscriptBaseDepth v).map (fun (b, d) => (b, d + 1))
+    | none => none
+  else none
+
 /-- The statement lists nested directly in `s` (`if`/`for`/`while`/`with`/`try` blocks), not
 descending into a nested `def`/`class` (those have their own scope). -/
 private def childBlocks (s : Json) : List (List Json) := Id.run do
@@ -122,7 +133,11 @@ def applyStmt (sigs : Sigs) (env : Env) (s : Json) : Env :=
                       | .dict _ _ => .dict ((getField target "slice").elim .unknown (typeOfExpr sigs env)) vt
                       | _ => .list vt
                     learn env cname learned
-                | none => env
+                -- Nested `f[h][i][j] = v` teaches `f : list[list[list[<v>]]]` (grid/tensor DP).
+                | none => match subscriptBaseDepth target with
+                    | some (base, depth) =>
+                        learn env base ((List.range depth).foldl (fun t _ => PyType.list t) (typeOfExpr sigs env value))
+                    | none => env
               else env
       | _, _ => env
   | some "AugAssign" =>
@@ -140,7 +155,11 @@ def applyStmt (sigs : Sigs) (env : Env) (s : Json) : Env :=
                       | .dict _ v => .dict ((getField target "slice").elim .unknown (typeOfExpr sigs env)) (arith v vt)
                       | _ => .list vt
                     learn env cname learned
-                | none => env
+                -- Nested `f[h][i][j] += v` widens the deep element (`join` at that depth).
+                | none => match subscriptBaseDepth target with
+                    | some (base, depth) =>
+                        learn env base ((List.range depth).foldl (fun t _ => PyType.list t) (typeOfExpr sigs env value))
+                    | none => env
               else env
       | _, _ => env
   | some "For" =>
@@ -474,6 +493,12 @@ private def stampIfIntConst (e : Json) : Json :=
     match toAnnotation? .float with | some ann => e.setObjVal! "_ty" ann | none => e
   else e
 
+/-- A container whose innermost element is `float` (`list[float]`, `list[list[list[float]]]`, …). -/
+private partial def deepFloatContainer : PyType → Bool
+  | .list .float | .set .float => true
+  | .list e | .set e => deepFloatContainer e
+  | _ => false
+
 /-- A list/set literal or a `[x] * n` repeat — a value whose element type an ascription can fix. -/
 private def isListLitOrRepeat (v : Json) : Bool :=
   match nodeTypeOf v with
@@ -483,17 +508,27 @@ private def isListLitOrRepeat (v : Json) : Bool :=
           || (getField v "right").any (fun r => nodeTypeOf r == some "List"))
   | _ => false
 
-/-- For a float-typed container assigned `value`, coerce its int-literal ELEMENTS to float:
-`[0, 1]`, `[0] * n`. Descends the list literal and the `[x] * n` repeat. -/
+/-- For a float-typed container assigned `value`, coerce its int-literal ELEMENTS to float. Descends
+list/set literals, the `[x] * n` repeat, and comprehensions — so a nested `[[[0]*n for _] for _]`
+DP grid (`list[list[list[float]]]`) coerces its innermost `0` to `(0 : ℚ)`. -/
 private partial def stampFloatListElems (value : Json) : Json :=
   match nodeTypeOf value with
+  | some "Constant" => stampIfIntConst value
   | some "List" | some "Set" =>
       match value.getObjValAs? (Array Json) "elts" with
-      | .ok elts => value.setObjVal! "elts" (Json.arr (elts.map stampIfIntConst))
+      | .ok elts => value.setObjVal! "elts" (Json.arr (elts.map stampFloatListElems))
       | _ => value
   | some "BinOp" =>
-      let value := (getField value "left").elim value (fun l => value.setObjVal! "left" (stampFloatListElems l))
-      (getField value "right").elim value (fun r => value.setObjVal! "right" (stampFloatListElems r))
+      -- `[x] * n` (or `n * [x]`): descend ONLY into the list operand, never the count `n` (whose
+      -- constants — e.g. the `1` in `n + 1` — must stay `Int`).
+      let descendIfList (side : String) (v : Json) : Json :=
+        (getField v side).elim v fun o =>
+          if nodeTypeOf o == some "List" then v.setObjVal! side (stampFloatListElems o) else v
+      descendIfList "right" (descendIfList "left" value)
+  | some "ListComp" | some "SetComp" | some "GeneratorExp" =>
+      (getField value "elt").elim value (fun e => value.setObjVal! "elt" (stampFloatListElems e))
+  | some "DictComp" =>
+      (getField value "value").elim value (fun e => value.setObjVal! "value" (stampFloatListElems e))
   | _ => value
 
 mutual
@@ -593,15 +628,13 @@ partial def stampStmt (sigs : Sigs) (env : Env) (roots : Array Json) (s : Json) 
           -- coerce int-literal elements to float, and ascribe a list-literal/`[x]*n` value to the
           -- float container so a polymorphic element (`inf`) adapts to the mode float — otherwise
           -- `[inf]*n` binds `List ℚ` and a run-twin `dp[0] = 0` (`(0 : Float)`) clashes.
-          else if let some ct := (nameId? target).bind (env.get? ·) then
-            match ct with
-            | .list .float | .set .float =>
-                let value := stampFloatListElems value
-                let value := if isListLitOrRepeat value && (getField value "_ty").isNone then
-                    (toAnnotation? ct).elim value (value.setObjVal! "_ty" ·)
-                  else value
-                s := s.setObjVal! "value" value
-            | _ => pure ()
+          else if (nameId? target).bind (env.get? ·) |>.any deepFloatContainer then
+            let ct := ((nameId? target).bind (env.get? ·)).getD .unknown
+            let value := stampFloatListElems value
+            let value := if isListLitOrRepeat value && (getField value "_ty").isNone then
+                (toAnnotation? ct).elim value (value.setObjVal! "_ty" ·)
+              else value
+            s := s.setObjVal! "value" value
       | _, _ => pure ()
     -- A tuple target unpacked from a *list* value (not a tuple) uses list indexing, not `Prod`:
     -- `for a, b in edges` with `edges : list[list[int]]`, or `a, b = np.shape(x)` (returns a list).

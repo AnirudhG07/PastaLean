@@ -63,7 +63,10 @@ _(newest first; one line per theme closed)_
   ✔ check-if-a-string-is-a-valid-sequence-from-root-to-leaves-path-in-a-binary-tree,
   ✔ check-if-there-is-a-valid-parentheses-string-path, ✔ count-number-of-maximum-bitwise-or-subsets,
   ✔ minimum-costs-using-the-train-line (needed both the `[inf]*n` fix and the nested-for fix below),
-  ✔ sort-items-by-groups-respecting-dependencies, ✔ smallest-string-starting-from-leaf.
+  ✔ sort-items-by-groups-respecting-dependencies, ✔ smallest-string-starting-from-leaf,
+  ✔ maximum-array-hopping-score-i, ✔ out-of-boundary-paths (nested-`dfs` + `max([...] or [0])`),
+  ✔ stone-game-iii, ✔ new-21-game (`ans=-inf` in a `dfs -> int` → `_ret_float` codomain),
+  ✔ knight-probability-in-chessboard (3D float DP grid).
   Mental model (Python numeric tower): int values stay `Int` and coerce **up** at op/boundary sites
   (bottom-up); only a var genuinely assigned **both** int and float needs to *be* float. Fixes:
   (1) stamp the int **literal** at a `float`-scalar assignment (`ans=0; ans=max(ans,inf)` → `(0:ℚ)`),
@@ -80,8 +83,15 @@ _(newest first; one line per theme closed)_
   `==` (`5 == 5.0`), `.any` propagation (`arith`/`elemType`), `PyFloatCast PyAny`; plus **mutVars**
   tracking so a `let mut PyAny` slot is reassigned (not shadowed) across a loop. Regressions:
   `untyped_param_arithmetic`, `untyped_param_compare_and_div`, `heterogeneous_pyany`.
-  Remaining PyAny gaps: bitwise / floor-div / string-methods on `PyAny` (rarer). Remaining T1: a
-  genuine long tail (nested-`dfs`, `list or [0]`, per-problem synth-fails) — no single root cause.
+  (6) bitwise / floor-div / shift on `PyAny` (typeclass-ified `pyFloorDiv`/`pyShift*` + PyAny instances;
+  regression `untyped_param_bitwise`). (7) value-position `a or b` on non-bool operands returns the
+  **operand** not a `Bool` (`max(xs or [0])`; regression `value_or_default`) — the nested-`dfs` idiom.
+  (8) `_ret_float` overrides an `int` return annotation when the body mixes int/float returns
+  (`ans=-inf; dfs -> int`). (9) multi-dim float DP: `applyStmt` learns nested subscript targets
+  (`f[h][i][j]=v` → `f:list[list[list[<v>]]]`) and `stampFloatListElems` descends comprehensions +
+  the list operand of `[x]*n` (never the count), coercing the innermost `0` (regression `grid_float_dp`).
+  Remaining PyAny gap: string-methods on `PyAny` (niche — usage-inference types `x.split()` params
+  `String`). Remaining T1: a shrinking per-problem tail (assorted synth-fails) — no single root cause.
 
 - **T2 let-mut-rebind — partial (this session).** ✔ basic-calculator-iii, ✔ flipping-an-image.
   Fix: `bodyReassignsName` now counts in-place mutation (`ts.sort()`, `ts.append()`, `ts[i]=v`) as a

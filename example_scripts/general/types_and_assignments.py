@@ -91,3 +91,15 @@ def untyped_param_bitwise(nums):
     for x in nums:
         r = (r | (x & 1)) + x // 2
     return r << 1
+
+
+def grid_float_dp(m: int, n: int) -> float:
+    # 2D grid DP initialised int (`[[0]*n ...]`) that becomes float via `/ 2` — the nested
+    # `f[i][j] = ...` teaches `f : list[list[float]]`, coercing the innermost `0`.
+    f = [[0] * n for _ in range(m)]
+    f[0][0] = 1
+    for i in range(m):
+        for j in range(n):
+            if i > 0:
+                f[i][j] += f[i - 1][j] / 2
+    return f[m - 1][n - 1]

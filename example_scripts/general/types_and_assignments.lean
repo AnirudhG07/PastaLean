@@ -244,3 +244,39 @@ def untyped_param_bitwise'rn := fun (nums : PyAny) ↦
         r := PastaLean.pyBitOr r (PastaLean.pyBitAnd x (1 : Int)) +ₚ PastaLean.pyFloorDiv x (2 : Int)
       let __py_ret_1 := PastaLean.pyShiftLeft r (1 : Int)
       return __py_ret_1)
+
+def grid_float_dp := fun (m : Int) ↦ fun (n : Int) ↦
+  Id.run
+    (do
+      -- 2D grid DP initialised int (`[[0]*n ...]`) that becomes float via `/ 2` — the nested
+      -- `f[i][j] = ...` teaches `f : list[list[float]]`, coercing the innermost `0`.
+      let mut f := (PastaLean.pyRange m).map fun _ => PastaLean.pyListRepeat [(0 : Rat)] n
+      f := PastaLean.pySetItem f (0 : Int) (PastaLean.pySetItem f⦋(0 : Int)⦌ (0 : Int) (1 : Rat))
+      for i in (PastaLean.pyRange m)do
+        for j in (PastaLean.pyRange n)do
+          if h_1 : i > (0 : Int) then 
+            f := PastaLean.pySetItem f i (PastaLean.pySetItem f⦋i⦌ j (f⦋i⦌⦋j⦌ +ₚ f⦋i -ₚ (1 : Int)⦌⦋j⦌ /ₚ (2 : Int)))
+          else
+            let _ := ()
+      let __py_ret_1 := f⦋m -ₚ (1 : Int)⦌⦋n -ₚ (1 : Int)⦌
+      return __py_ret_1)
+
+attribute [simp, taste_ingr] grid_float_dp
+
+def grid_float_dp'rn := fun (m : Int) ↦ fun (n : Int) ↦
+  Id.run
+    (do
+      -- 2D grid DP initialised int (`[[0]*n ...]`) that becomes float via `/ 2` — the nested
+      -- `f[i][j] = ...` teaches `f : list[list[float]]`, coercing the innermost `0`.
+      let mut f := (PastaLean.pyRange m).map fun _ => PastaLean.pyListRepeat [(0 : Float)] n
+      f := PastaLean.pySetItem f (0 : Int) (PastaLean.pySetItem f⦋(0 : Int)⦌ (0 : Int) (1 : Float))
+      for i in (PastaLean.pyRange m)do
+        for j in (PastaLean.pyRange n)do
+          if h_1 : i > (0 : Int) then 
+            f :=
+              PastaLean.pySetItem f i
+                (PastaLean.pySetItem f⦋i⦌ j (f⦋i⦌⦋j⦌ +ₚ PastaLean.pyFloat f⦋i -ₚ (1 : Int)⦌⦋j⦌ /ₚ (2 : Int)))
+          else
+            let _ := ()
+      let __py_ret_1 := f⦋m -ₚ (1 : Int)⦌⦋n -ₚ (1 : Int)⦌
+      return __py_ret_1)
