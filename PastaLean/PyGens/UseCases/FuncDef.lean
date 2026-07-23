@@ -905,9 +905,10 @@ def assignHeadSyntax : (kind : SyntaxNodeKind) → Json →
             let valueStx ← getCode value `term
             let unpackTmpIdent := mkIdent (← freshName `__unpack_pair)
             let isTuple := jsonNodeType? value == some "Tuple" || jsonNodeType? value == some "Call"
+            let nestedIsTuple := target.getObjValAs? Bool "_thread_unpack" == .ok true
             let mut result := tailCode
             for i in (List.range n).reverse do
-              result ← pureUnpackBinding isTuple elts[i]! (← unpackAccessTerm isTuple unpackTmpIdent i n) result
+              result ← pureUnpackBinding nestedIsTuple elts[i]! (← unpackAccessTerm isTuple unpackTmpIdent i n) result
             `(let $unpackTmpIdent := $valueStx
               $result)
         | none => do

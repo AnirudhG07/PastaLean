@@ -148,16 +148,38 @@ def augAssignSyntax : (kind : SyntaxNodeKind) → Json →
         | none => pure baseStx
     | _, _ => throwError s!"Unsupported syntax category for AugAssign node"
 
-/-- Does any statement in `json` reassign the bare name `target` (`Assign`/`AugAssign`/`AnnAssign`
-to `Name target`), searching nested `if`/`for`/`while`/`try` bodies but not nested `def`s? -/
+/-- In-place mutating methods that codegen lowers to a reassignment `x := f x`. -/
+def mutatingMethods : List String :=
+  ["sort", "append", "appendleft", "extend", "reverse", "insert", "remove", "clear",
+   "pop", "popleft", "add", "discard", "update"]
+
+/-- Does the assignment target `t` write `target` — the bare `Name`, or a subscript `target[i] = v`? -/
+private def targetHitsName (target : String) (t : Json) : Bool :=
+  (jsonNodeType? t == some "Name" && t.getObjValAs? String "id" == .ok target)
+  || (jsonNodeType? t == some "Subscript" && (t.getObjVal? "value").toOption.any
+        (fun v => jsonNodeType? v == some "Name" && v.getObjValAs? String "id" == .ok target))
+
+/-- Does any statement in `json` reassign `target` — an `Assign`/`AugAssign`/`AnnAssign` to the name
+or to `target[i]`, or an in-place mutating method `target.sort()` / `.append(…)` (which lowers to a
+reassignment)? Searches nested `if`/`for`/`while`/`try` bodies but not nested `def`s. -/
 partial def bodyReassignsName (target : String) (json : Json) : Bool :=
   match jsonNodeType? json with
   | some "FunctionDef" => false
   | some "Assign" | some "AugAssign" | some "AnnAssign" =>
       (match json.getObjVal? "target" with
-       | .ok t => jsonNodeType? t == some "Name" && t.getObjValAs? String "id" == .ok target
+       | .ok t => targetHitsName target t
        | _ => false)
       || (json.getObjVal? "value" |>.toOption |>.any (bodyReassignsName target))
+  | some "Call" =>
+      (match json.getObjVal? "func" with
+       | .ok f => jsonNodeType? f == some "Attribute"
+           && (f.getObjVal? "value").toOption.any
+                (fun v => jsonNodeType? v == some "Name" && v.getObjValAs? String "id" == .ok target)
+           && (f.getObjValAs? String "attr").toOption.any mutatingMethods.contains
+       | _ => false)
+      || (match json with
+          | .obj fields => fields.toList.any (fun (_, v) => bodyReassignsName target v)
+          | _ => false)
   | _ => match json with
     | .arr elems => elems.any (bodyReassignsName target)
     | .obj fields => fields.toList.any (fun (_, v) => bodyReassignsName target v)

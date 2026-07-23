@@ -59,6 +59,23 @@ re-running their problems should now pass. Fold survivors into their theme.
 
 _(newest first; one line per theme closed)_
 
+- **T6 / T10 / T5 / T3 — partial (this session).** Verify with `./verify_theme.sh` (one fresh
+  backend per file — reliable; do NOT trust the warm-Session `convert`, its backend goes stale
+  mid-run and reports false `convert_fail`). Directly compile-checked ✔ this session:
+  - **T5 tuple-targets:** ✔ count-nodes-equal-to-average-of-subtree, ✔ valid-boomerang,
+    ✔ valid-square. (Most other T5 are mislabeled tree/`nonlocal` = T3.) Nested tuple-unpack targets
+    `(a,b),(c,d)=…`; sub-access shape from `_thread_unpack` (Prod for a threaded call, List for
+    `list[list]`).
+  - **T3 closures-mutual-rec:** ✔ longest-palindromic-subsequence-ii,
+    ✔ paths-in-matrix-whose-sum-is-divisible-by-k, ✔ remove-boxes, ✔ student-attendance-record-ii.
+    Fix: `Head_AugAssign` pygen + nested-fn params inferred from call-site args (`nestedParamHints`)
+    + a param's hint beats an enclosing capture of the same name. Remaining T3 blockers (untouched):
+    nested-fn-used-as-value (bisect `key=`), union-find `find` mutating captured `p`, mutual-block
+    type annotations, nonlocal across a mutual cluster.
+  - **T6 option-field-proj:** ✔ binary-tree-level-order-traversal. Fix: `pop`/`popleft` typed as
+    element type → popped node is `Option TreeNode` → `.val`/`.left` unwrap.
+  - **T10 counter-methods:** ✔ top-k-frequent-elements. Fix: `Counter.most_common`/`.elements`.
+
 - **T4 genexp-rebind-state — partial (10/19 convert-clean).** A nested state-threading function
   called inside a comprehension is rewritten to its explicit accumulator loop, where the mutated
   state threads across iterations (`ClosureConvert.expandThreadedComprehension?` +

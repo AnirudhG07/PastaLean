@@ -66,8 +66,8 @@ def unpackAccessTerm (isTuple : Bool) (sourceIdent : TSyntax `ident) (idx n : Na
     `($getIdent $sourceIdent $idxStx)
 
 /-- Pure-term binding of one tuple-target element to `acc`, recursing into nested tuple targets
-(`(a, b), c = …`). `isTuple` (the RHS shape) is inherited by nested levels: all-`Prod` for a tuple
-literal / threaded call, all-`List` for a `list[list[...]]`. -/
+(`(a, b), c = …`). `isTuple` is the access mode for the *nested* levels: `Prod` for a threaded
+call's all-`Prod` return, `List` for a `list[list[...]]`. -/
 partial def pureUnpackBinding (isTuple : Bool) (elt : Json) (acc tail : TSyntax `term) :
     PygenM (TSyntax `term) := do
   match jsonNodeType? elt with
@@ -331,6 +331,7 @@ def assignSyntax : (kind : SyntaxNodeKind) → Json →
         match ← tupleTargetElts? target with
         | some elts => do
             let n := elts.size
+            let nestedIsTuple := target.getObjValAs? Bool "_thread_unpack" == .ok true
             -- RHS both yields a value (a tuple) and mutates its receiver (`d, node = heappop(h)`):
             -- bind the value first (reads the original receiver), apply the mutation, then unpack.
             if let some (valueTerm, update) ← mutatingCallRhsLowering? value then
@@ -339,7 +340,7 @@ def assignSyntax : (kind : SyntaxNodeKind) → Json →
               let mut binds : Array (TSyntax `doElem) := #[bindValueTmp, update]
               for i in List.range n do
                 let acc ← unpackAccessTerm true valueTmpIdent i n
-                binds := binds.push (← tupleElementAssignDoElem true elts[i]! acc)
+                binds := binds.push (← tupleElementAssignDoElem nestedIsTuple elts[i]! acc)
               return ⟨mkNullNode (binds.map TSyntax.raw)⟩
             let valueStx ← getCode value `term
             let valueTmpIdent := mkIdent (← freshName `__unpack_value)
@@ -363,7 +364,7 @@ def assignSyntax : (kind : SyntaxNodeKind) → Json →
             let mut binds : Array (TSyntax `doElem) := #[bindValueTmp, bindUnpackTmp]
             for i in List.range n do
               let acc ← unpackAccessTerm isTuple unpackTmpIdent i n
-              binds := binds.push (← tupleElementAssignDoElem isTuple elts[i]! acc)
+              binds := binds.push (← tupleElementAssignDoElem nestedIsTuple elts[i]! acc)
             -- Return the bindings as siblings (a flattened null-node), NOT wrapped in a
             -- nested `do` — wrapping would scope the unpacked names away from following
             -- statements. Consumers flatten via `appendDoElems`.

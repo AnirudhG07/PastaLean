@@ -621,7 +621,10 @@ partial def rewriteThreadedStmts (old new : String) (captures threaded : Array S
           let .ok target := stmt.getObjVal? "target" | throwError "Assign is missing a 'target'"
           let args := (value.getObjValAs? (Array Json) "args").toOption.getD #[]
           let call := retargetCall new captures value args
-          out := out.push (assignNode (tupleNode (#[target] ++ threadedNodes)) call)
+          -- The threaded return is a fully-`Prod` tuple, so a nested target (`(ls, ln), ans`) unpacks
+          -- with `Prod` at every level; `_thread_unpack` tells codegen to use `Prod`, not list access.
+          let tgt := (tupleNode (#[target] ++ threadedNodes)).setObjVal! "_thread_unpack" (Json.bool true)
+          out := out.push (assignNode tgt call)
           continue
 
     -- Anywhere else the call sits inside an expression: hoist it to a temporary first.

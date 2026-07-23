@@ -201,5 +201,6 @@ lake exe palc <dir|file>    # run PALC checks directly
 - **Comments: minimal and precise.** Most edits need NO comment. Only add one for a genuinely
   non-obvious invariant or gotcha, and keep it to one line. Do NOT narrate what the code plainly
   does, do NOT add a comment on every edit, and never write multi-line rationale/history blocks.
+  Also any pre-existing comment, don't remove it either.
 - Think about robustness solution for the same, touching a generic problem, then just a temporary solution for the same. This will help in future bugs, to avoid code duplication and will help in maintainability of the code.
 - If you find some python code very nice/hard/typical, add them within pre-existing regression tests for those files testing them, or make new ones. Add those examples which really test the boundaries of PastaLean, and which are likely to be bugs if not handled properly.
