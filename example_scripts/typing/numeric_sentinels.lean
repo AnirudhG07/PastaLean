@@ -23,30 +23,30 @@ def inf {α : Type} [PastaLean.PyNonFinite α] : α :=
   PastaLean.pyNonFinite "inf"
 
 -- The sentinel flows through an int-annotated recursive DP.
-private partial def _best_pair_dfs : Int → Int → List Int → Int := fun (i : Int) ↦ fun (j : Int) ↦
+private partial def _best_pair'dfs : Int → Int → List Int → Int := fun (i : Int) ↦ fun (j : Int) ↦
   fun (rods : List Int) ↦
   if decide (i ≥ PastaLean.pyLen rods) then if j == (0 : Int) then (0 : Int) else -inf
   else
     let ans :=
-      PastaLean.pyMax [_best_pair_dfs (i +ₚ (1 : Int)) j rods, _best_pair_dfs (i +ₚ (1 : Int)) (j +ₚ rods⦋i⦌) rods]
+      PastaLean.pyMax [_best_pair'dfs (i +ₚ (1 : Int)) j rods, _best_pair'dfs (i +ₚ (1 : Int)) (j +ₚ rods⦋i⦌) rods]
     PastaLean.pyMax
-      [ans, _best_pair_dfs (i +ₚ (1 : Int)) (PastaLean.pyAbs (rods⦋i⦌ -ₚ j)) rods +ₚ PastaLean.pyMin [j, rods⦋i⦌]]
+      [ans, _best_pair'dfs (i +ₚ (1 : Int)) (PastaLean.pyAbs (rods⦋i⦌ -ₚ j)) rods +ₚ PastaLean.pyMin [j, rods⦋i⦌]]
 
-def best_pair := fun (rods : List Int) ↦ _best_pair_dfs (0 : Int) (0 : Int) rods
+def best_pair := fun (rods : List Int) ↦ _best_pair'dfs (0 : Int) (0 : Int) rods
 
 attribute [simp, taste_ingr] best_pair
 
-private partial def _best_pair_dfs'rn : Int → Int → List Int → Int := fun (i : Int) ↦ fun (j : Int) ↦
+private partial def _best_pair'dfs'rn : Int → Int → List Int → Int := fun (i : Int) ↦ fun (j : Int) ↦
   fun (rods : List Int) ↦
   if decide (i ≥ PastaLean.pyLen rods) then if j == (0 : Int) then (0 : Int) else -inf
   else
     let ans :=
       PastaLean.pyMax
-        [_best_pair_dfs'rn (i +ₚ (1 : Int)) j rods, _best_pair_dfs'rn (i +ₚ (1 : Int)) (j +ₚ rods⦋i⦌) rods]
+        [_best_pair'dfs'rn (i +ₚ (1 : Int)) j rods, _best_pair'dfs'rn (i +ₚ (1 : Int)) (j +ₚ rods⦋i⦌) rods]
     PastaLean.pyMax
-      [ans, _best_pair_dfs'rn (i +ₚ (1 : Int)) (PastaLean.pyAbs (rods⦋i⦌ -ₚ j)) rods +ₚ PastaLean.pyMin [j, rods⦋i⦌]]
+      [ans, _best_pair'dfs'rn (i +ₚ (1 : Int)) (PastaLean.pyAbs (rods⦋i⦌ -ₚ j)) rods +ₚ PastaLean.pyMin [j, rods⦋i⦌]]
 
-def best_pair'rn := fun (rods : List Int) ↦ _best_pair_dfs'rn (0 : Int) (0 : Int) rods
+def best_pair'rn := fun (rods : List Int) ↦ _best_pair'dfs'rn (0 : Int) (0 : Int) rods
 
 -- `inf` as a minimisation seed, still an int result.
 def smallest := fun (xs : List Int) ↦

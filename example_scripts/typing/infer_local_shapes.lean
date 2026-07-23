@@ -28,21 +28,21 @@ structure Counter'rn where
 def Counter'rn.new : Int → Counter'rn := fun (n : Int) ↦
   ({ c := PastaLean.pyListRepeat [(0 : Int)] n, tag := "x" } : Counter'rn)
 
-private partial def _solve_go : Int → Int → List Int → Int := fun (i : Int) ↦ fun (n : Int) ↦ fun (grid : List Int) ↦
-  if decide (i ≥ n) then (0 : Int) else grid⦋i⦌ +ₚ _solve_go (i +ₚ (1 : Int)) n grid
+private partial def _solve'go : Int → Int → List Int → Int := fun (i : Int) ↦ fun (n : Int) ↦ fun (grid : List Int) ↦
+  if decide (i ≥ n) then (0 : Int) else grid⦋i⦌ +ₚ _solve'go (i +ₚ (1 : Int)) n grid
 
 def solve := fun (n : Int) ↦
   let grid := PastaLean.pyListRepeat [(0 : Int)] n
-  _solve_go (0 : Int) n grid
+  _solve'go (0 : Int) n grid
 
 attribute [simp, taste_ingr] solve
 
-private partial def _solve_go'rn : Int → Int → List Int → Int := fun (i : Int) ↦ fun (n : Int) ↦
-  fun (grid : List Int) ↦ if decide (i ≥ n) then (0 : Int) else grid⦋i⦌ +ₚ _solve_go'rn (i +ₚ (1 : Int)) n grid
+private partial def _solve'go'rn : Int → Int → List Int → Int := fun (i : Int) ↦ fun (n : Int) ↦
+  fun (grid : List Int) ↦ if decide (i ≥ n) then (0 : Int) else grid⦋i⦌ +ₚ _solve'go'rn (i +ₚ (1 : Int)) n grid
 
 def solve'rn := fun (n : Int) ↦
   let grid := PastaLean.pyListRepeat [(0 : Int)] n
-  _solve_go'rn (0 : Int) n grid
+  _solve'go'rn (0 : Int) n grid
 
 def main' :=
   ((do

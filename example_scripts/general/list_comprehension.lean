@@ -57,20 +57,20 @@ def nested_lc'rn :=
   let a := (PastaLean.pyRange (3 : Int)).map fun _ => (PastaLean.pyRange (5 : Int)).map fun x => x
   a
 
-private def _lc_with_function_call_add_one := fun (x : Int) ↦ x +ₚ (1 : Int)
+private def _lc_with_function_call'add_one := fun (x : Int) ↦ x +ₚ (1 : Int)
 
-attribute [simp, taste_ingr] _lc_with_function_call_add_one
+attribute [simp, taste_ingr] _lc_with_function_call'add_one
 
 def lc_with_function_call :=
-  let a := (PastaLean.pyRange (5 : Int)).map fun x => _lc_with_function_call_add_one x
+  let a := (PastaLean.pyRange (5 : Int)).map fun x => _lc_with_function_call'add_one x
   a
 
 attribute [simp, taste_ingr] lc_with_function_call
 
-private def _lc_with_function_call_add_one'rn := fun (x : Int) ↦ x +ₚ (1 : Int)
+private def _lc_with_function_call'add_one'rn := fun (x : Int) ↦ x +ₚ (1 : Int)
 
 def lc_with_function_call'rn :=
-  let a := (PastaLean.pyRange (5 : Int)).map fun x => _lc_with_function_call_add_one'rn x
+  let a := (PastaLean.pyRange (5 : Int)).map fun x => _lc_with_function_call'add_one'rn x
   a
 
 def lc_with_multiple_conditions :=

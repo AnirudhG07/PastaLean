@@ -788,6 +788,12 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
                 throwError "get() expects one or two positional arguments."
           return ← `(doElem| let _ := $t)
 
+        -- A library-declared no-op method (e.g. functools' `f.cache_clear()`): lower to the
+        -- library's no-op value. The set lives in the library, not here (see `libraryNoopMethod?`).
+        if let some noopFn := Libraries.libraryNoopMethod? attr then
+          let noopIdent := mkIdent noopFn
+          return ← `(doElem| let _ := $noopIdent)
+
         if attr == "sort" then
           -- In-place `list.sort()`: lower to a reassignment of the (immutable-value) list.
           -- Supports Python's `key=` / `reverse=` keywords; rejects positional args.

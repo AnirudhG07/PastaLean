@@ -11,6 +11,7 @@ import PastaLean.PyVerify.AssertTactic
 import PastaLean.PyVerify.Contracts
 import PastaLean.PyGens.Transform.ClosureConvert
 import PastaLean.PyGens.Transform.Desugar
+import PastaLean.PyGens.Transform.Decorators
 
 open Lean Meta Elab Term Qq Std
 
@@ -84,6 +85,22 @@ partial def functionArgTypeSyntax? (annotationJson : Json) : PygenM (Option (TSy
                   | _, _ => return none
               | _, _ => return none
           | _ => return none
+      -- `Callable[[A, B], R]` → the Lean arrow `A → B → R`. A function-typed parameter (a decorator's
+      -- wrapped function, a `key=`/comparator arg) needs this so its applications elaborate.
+      | "Callable" =>
+          match sliceJson.getObjValAs? String "node_type", sliceJson.getObjValAs? (Array Json) "elts" with
+          | .ok "Tuple", .ok elts =>
+              match elts[0]?, elts[1]? with
+              | some argsJson, some retJson =>
+                  let some retTy ← functionArgTypeSyntax? retJson | return none
+                  let argAnns := (argsJson.getObjValAs? (Array Json) "elts").toOption.getD #[]
+                  let mut ty := retTy
+                  for a in argAnns.reverse do
+                    let some aTy ← functionArgTypeSyntax? a | return none
+                    ty ← `($aTy → $ty)
+                  return some ty
+              | _, _ => return none
+          | _, _ => return none
       -- `Optional[T]` and other containers this reader misses fall back to `TypeInfer`.
       | _ => pyTypeSyntax? (TypeInfer.ofAnnotation annotationJson)
   -- `X | None` (`Optional`) and forward-ref strings: `TypeInfer` handles them.
@@ -663,6 +680,31 @@ def emitHelperGroup (group : Array Json) : PygenM (TSyntax `command) := do
 def funcDefSyntax : (kind : SyntaxNodeKind) → Json →
     PygenM (TSyntax kind)
     | `command, json => do
+        -- A genuine (non-transparent) decorator `@d` means `f = d(f)`. Emit the raw function under a
+        -- private name and bind the decorated name to the application `d1 (d2 raw)` (bottom-up: the
+        -- decorator nearest the `def` applies first). Both twins line up: the raw def and its
+        -- reference share this pass's run-suffix, and decorator names get the user-name suffix.
+        -- Transparent decorators (`@cache`, `@staticmethod`, …) are left for the normal path below.
+        let applied := Decorators.appliedDecorators json
+        if !applied.isEmpty then
+          let .ok decoName := json.getObjValAs? String "name" | throwError
+            s!"decorated FuncDef has no 'name': {json}"
+          let rawBase := decoName ++ "'undecorated"
+          let rawJson := (json.setObjVal! "name" (Json.str rawBase)).setObjVal!
+            "decorator_list" (Json.arr #[])
+          let rawCmd ← getCode rawJson `command
+          let bindName ← withRunSuffix decoName
+          let rawRef ← withRunSuffix rawBase
+          let mut acc : TSyntax `term ← `($(mkIdent rawRef.toName))
+          for d in applied.reverse do
+            let dRef ← suffixIfUserName d
+            acc ← `($(mkIdent dRef.toName) $acc)
+          let bindCmd ← `(command| def $(mkIdent bindName.toName) := $acc)
+          -- Flatten: the raw def's own emission is a null-node (`def` + `attribute`), so append
+          -- through `appendCommandSyntax` rather than nesting null-nodes (which won't elaborate).
+          let mut cmds := appendCommandSyntax #[] rawCmd
+          cmds := appendCommandSyntax cmds bindCmd
+          return ⟨mkNullNode (cmds.map TSyntax.raw)⟩
         -- A nested `def` becomes a sibling `partial def` emitted just before this one, with its
         -- captured variables as extra parameters (`Transform/ClosureConvert.lean`). Mutually-recursive
         -- siblings are emitted together in one `mutual` block. The rewritten function has no nested

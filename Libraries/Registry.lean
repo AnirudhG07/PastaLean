@@ -84,4 +84,16 @@ def libraryInfiniteIter? (moduleName member : String) : Option InfiniteIter :=
   | "itertools" => itertools.itertoolsInfiniteIter? member
   | _ => none
 
+/-- A method that a library declares as a no-op, for the core codegen — keyed on the method name
+alone (these come from decorated values, e.g. `f.cache_clear()`, which carry no module tag). One
+entry point, so codegen names no specific library. -/
+def libraryNoopMethod? (member : String) : Option Lean.Name :=
+  functools.functoolsNoopMethod? member
+
+/-- A decorator a library declares transparent — no effect on the transpiled value, so the decorated
+function is emitted unchanged (e.g. functools' `@cache`). One entry point, so codegen names no
+specific library. The caller passes the decorator's last dotted segment (`functools.cache` → `cache`). -/
+def libraryTransparentDecorator? (name : String) : Bool :=
+  functools.functoolsTransparentDecorator? name
+
 end Libraries

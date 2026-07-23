@@ -117,9 +117,13 @@ def functionParamAnnotations (fnJson : Json) : Std.HashMap String Json := Id.run
   let mut m : Std.HashMap String Json := {}
   for arg in argsArray do
     if let .ok name := arg.getObjValAs? String "arg" then
-      if let .ok annotation := arg.getObjVal? "annotation" then
-        unless annotation.isNull do
-          m := m.insert name annotation
+      -- Prefer the explicit annotation; fall back to the `_ty` TypeInfer stamped (an inferred
+      -- function-typed param, say), so a lifted capture keeps that type too.
+      let ann? := match arg.getObjVal? "annotation" with
+        | .ok a => if a.isNull then jsonFieldOption arg "_ty" else some a
+        | .error _ => jsonFieldOption arg "_ty"
+      if let some annotation := ann? then
+        m := m.insert name annotation
   return m
 
 /-- Annotations inferred for the enclosing function's locals, from their first assignment. Without
@@ -514,7 +518,7 @@ private def liftHelper (outerName : String) (outerJson innerJson : Json) :
       throwError s!"nested function '{innerName}' can fall off the end while threading state; \
         give it an explicit `return`."
 
-  let helperName := s!"_{outerName}_{innerName}"
+  let helperName := s!"_{outerName}'{innerName}"
   -- References to a user function are suffixed in the `'rn` twin; the helper is a user function too.
   userNamesRef.modify (helperName :: ·)
 
@@ -623,7 +627,7 @@ private def liftMutualGroup (outerName : String) (outerJson : Json) (members : A
   let annotations := (localAnnotations outerBody).fold
     (fun m k v => if m.contains k then m else m.insert k v) (functionParamAnnotations outerJson)
   let extraArgs := shared.map fun c => argNode c (annotations[c]?)
-  let helperNameOf := fun (nm : String) => s!"_{outerName}_{nm}"
+  let helperNameOf := fun (nm : String) => s!"_{outerName}'{nm}"
   for nm in memberNames do
     userNamesRef.modify (helperNameOf nm :: ·)
 

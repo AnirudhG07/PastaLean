@@ -579,6 +579,12 @@ private partial def collectCalls (sigs : Sigs) (env : Env) (json : Json) : Array
     | _ => #[]
   here ++ sub
 
+/-- The `Name` decorators of a `FunctionDef`, e.g. `@double` → `"double"`. Attribute/Call decorators
+(`@a.b`, `@lru_cache(...)`) are skipped — a user decorator whose type we can unify is a bare name. -/
+private def decoratorNamesOf (fn : Json) : Array String :=
+  ((fn.getObjValAs? (Array Json) "decorator_list").toOption.getD #[]).filterMap fun d =>
+    if nodeTypeOf d == some "Name" then nameId? d else none
+
 /-- Join `argTypes` into `params[name]` position-by-position (missing positions start `unknown`). -/
 private def refineParams (params : ParamSigs) (name : String) (arity : Nat) (argTypes : Array PyType) : ParamSigs :=
   let cur := (params.get? name).getD (Array.replicate arity .unknown)
@@ -640,6 +646,7 @@ private partial def mentionsClass : PyType → Bool
   | .list e | .set e | .opt e => mentionsClass e
   | .dict k v => mentionsClass k || mentionsClass v
   | .tuple es => es.any mentionsClass
+  | .fn as r => as.any mentionsClass || mentionsClass r
   | _ => false
 
 /-- Write each class field's inferred type into its (empty) `annotation` slot, which the struct
@@ -690,6 +697,21 @@ partial def collectSigs (module : Json) : Sigs × ParamSigs := Id.run do
       for (callee, argTypes) in collectCalls sigs {} stmt do
         if params.contains callee then
           nextParams := refineParams nextParams callee argTypes.size argTypes
+    -- Decorator unification: `@d def g` is `g = d(g_raw)`, so g's type and d's wrapped-parameter
+    -- type are the same. Flow each into the other: g's `.fn` type refines d's parameter 0 (so a
+    -- decorator's `f` is learned from the function it wraps), and d's parameter 0 — if a function
+    -- type — refines g's parameters (so an int-typed decorator pins an otherwise-unknown g's params).
+    for fn in fns do
+      if let .ok gname := fn.getObjValAs? String "name" then
+        for d in decoratorNamesOf fn do
+          if nextParams.contains d then
+            let gParams := (nextParams.get? gname).getD #[]
+            let gRet := (nextSigs.get? gname).getD .unknown
+            nextParams := refineParams nextParams d 1 #[PyType.fn gParams.toList gRet]
+            match ((nextParams.get? d).getD #[])[0]? with
+            | some (PyType.fn argTs _) =>
+                nextParams := refineParams nextParams gname gParams.size argTs.toArray
+            | _ => pure ()
     let stable := nextSigs.size == sigs.size
       && nextSigs.fold (fun ok k v => ok && (sigs.get? k |>.getD .unknown) == v) true
       && nextParams.fold (fun ok k v => ok && (params.get? k |>.getD #[]) == v) true

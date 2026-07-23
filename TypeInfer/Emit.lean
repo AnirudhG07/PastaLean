@@ -51,5 +51,13 @@ partial def toTypeSyntax? [Monad m] [MonadQuotation m]
       | [] => return none
       | [only] => return some only
       | first :: rest => return some (← rest.foldlM (fun acc p => `($acc × $p)) first)
+  -- `Callable[[A, B], R]` → `A → B → R`.
+  | .fn as r => do
+      let some ret ← toTypeSyntax? floatTy r | return none
+      let mut ty := ret
+      for a in as.reverse do
+        let some aTy ← toTypeSyntax? floatTy a | return none
+        ty ← `($aTy → $ty)
+      return some ty
 
 end TypeInfer

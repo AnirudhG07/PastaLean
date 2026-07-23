@@ -80,15 +80,30 @@ partial def ofAnnotation (json : Json) : PyType :=
             | some "Attribute" => (v.getObjValAs? String "attr").toOption
             | _ => none
         | _ => none
-      let args := match json.getObjVal? "slice" with
+      -- `Callable[[A, B], R]`: slice is a `Tuple` whose first element is the `List` of argument
+      -- annotations and whose second is the return annotation.
+      if name == some "Callable" then
+        match json.getObjVal? "slice" with
         | .ok slice =>
             if nodeType? slice == some "Tuple" then
-              ((slice.getObjValAs? (Array Json) "elts").toOption.getD #[]).toList.map ofAnnotation
-            else [ofAnnotation slice]
-        | _ => []
-      match name with
-      | some n => (containerOf (canonical n) args).getD .unknown
-      | none => .unknown
+              let elts := (slice.getObjValAs? (Array Json) "elts").toOption.getD #[]
+              match elts[0]?, elts[1]? with
+              | some argsJson, some retJson =>
+                  let argAnns := (argsJson.getObjValAs? (Array Json) "elts").toOption.getD #[]
+                  .fn (argAnns.toList.map ofAnnotation) (ofAnnotation retJson)
+              | _, _ => .unknown
+            else .unknown
+        | _ => .unknown
+      else
+        let args := match json.getObjVal? "slice" with
+          | .ok slice =>
+              if nodeType? slice == some "Tuple" then
+                ((slice.getObjValAs? (Array Json) "elts").toOption.getD #[]).toList.map ofAnnotation
+              else [ofAnnotation slice]
+          | _ => []
+        match name with
+        | some n => (containerOf (canonical n) args).getD .unknown
+        | none => .unknown
   | _ => .unknown
 
 private def nameAnn (id : String) : Json :=
@@ -116,5 +131,9 @@ partial def toAnnotation? (t : PyType) : Option Json := do
   | .opt e => subscriptAnn "Optional" [← toAnnotation? e]
   | .dict k v => subscriptAnn "dict" [← toAnnotation? k, ← toAnnotation? v]
   | .tuple es => subscriptAnn "tuple" (← es.mapM toAnnotation?)
+  | .fn as r =>
+      let argList := Json.mkObj [("node_type", .str "List"),
+        ("elts", Json.arr (← as.mapM toAnnotation?).toArray)]
+      subscriptAnn "Callable" [argList, ← toAnnotation? r]
 
 end TypeInfer

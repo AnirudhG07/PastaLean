@@ -21,7 +21,7 @@ gets stuck. Each local below is only pinned down by a *later* statement, not by 
 -/
 -- `graph` starts as `{}`; its key/value types come from the loop that fills it, and the loop target
 -- is a TUPLE (`for a, b in pairs`) — which the inference used to skip entirely.
-private def _pick_first_one := fun (pairs : List (List Int)) ↦ fun (graph : Std.HashMap Int Int) ↦
+private def _pick'first_one := fun (pairs : List (List Int)) ↦ fun (graph : Std.HashMap Int Int) ↦
   Id.run
     (do
       for u in (PastaLean.pyIter (PastaLean.pyKeys graph))do
@@ -32,7 +32,7 @@ private def _pick_first_one := fun (pairs : List (List Int)) ↦ fun (graph : St
       let __py_ret_1 := pairs⦋(0 : Int)⦌⦋(0 : Int)⦌
       return __py_ret_1)
 
-attribute [simp, taste_ingr] _pick_first_one
+attribute [simp, taste_ingr] _pick'first_one
 
 def pick := fun (pairs : List (List Int)) ↦
   Id.run
@@ -42,12 +42,12 @@ def pick := fun (pairs : List (List Int)) ↦
         let a := PastaLean.pyListGetItem _pair_1 (0 : Int)
         let b := PastaLean.pyListGetItem _pair_1 (1 : Int)
         graph := PastaLean.pySetItem graph a b
-      let __py_ret_1 := _pick_first_one pairs graph
+      let __py_ret_1 := _pick'first_one pairs graph
       return __py_ret_1)
 
 attribute [simp, taste_ingr] pick
 
-private def _pick_first_one'rn := fun (pairs : List (List Int)) ↦ fun (graph : Std.HashMap Int Int) ↦
+private def _pick'first_one'rn := fun (pairs : List (List Int)) ↦ fun (graph : Std.HashMap Int Int) ↦
   Id.run
     (do
       for u in (PastaLean.pyIter (PastaLean.pyKeys graph))do
@@ -66,11 +66,11 @@ def pick'rn := fun (pairs : List (List Int)) ↦
         let a := PastaLean.pyListGetItem _pair_1 (0 : Int)
         let b := PastaLean.pyListGetItem _pair_1 (1 : Int)
         graph := PastaLean.pySetItem graph a b
-      let __py_ret_1 := _pick_first_one'rn pairs graph
+      let __py_ret_1 := _pick'first_one'rn pairs graph
       return __py_ret_1)
 
 -- `seen` is refined by `+=` through a subscript, and `buckets` by `.append` through a subscript.
-private def _tally_score := fun (seen : Std.HashMap String Int) ↦ fun (buckets : Std.HashMap Int (List String)) ↦
+private def _tally'score := fun (seen : Std.HashMap String Int) ↦ fun (buckets : Std.HashMap Int (List String)) ↦
   Id.run
     (do
       let mut total : Int := (0 : Int)
@@ -78,7 +78,7 @@ private def _tally_score := fun (seen : Std.HashMap String Int) ↦ fun (buckets
         total := total +ₚ (seen⦋w⦌ +ₚ PastaLean.pyLen buckets⦋PastaLean.pyLen w⦌)
       return total)
 
-attribute [simp, taste_ingr] _tally_score
+attribute [simp, taste_ingr] _tally'score
 
 def tally := fun (words : List String) ↦
   Id.run
@@ -90,12 +90,12 @@ def tally := fun (words : List String) ↦
         buckets := PastaLean.pySetItem buckets (PastaLean.pyLen w) []
       for w in (PastaLean.pyIter words)do
         buckets := PastaLean.pySetItem buckets (PastaLean.pyLen w) (PastaLean.pyAppend buckets⦋PastaLean.pyLen w⦌ w)
-      let __py_ret_1 := _tally_score seen buckets
+      let __py_ret_1 := _tally'score seen buckets
       return __py_ret_1)
 
 attribute [simp, taste_ingr] tally
 
-private def _tally_score'rn := fun (seen : Std.HashMap String Int) ↦ fun (buckets : Std.HashMap Int (List String)) ↦
+private def _tally'score'rn := fun (seen : Std.HashMap String Int) ↦ fun (buckets : Std.HashMap Int (List String)) ↦
   Id.run
     (do
       let mut total : Int := (0 : Int)
@@ -113,13 +113,13 @@ def tally'rn := fun (words : List String) ↦
         buckets := PastaLean.pySetItem buckets (PastaLean.pyLen w) []
       for w in (PastaLean.pyIter words)do
         buckets := PastaLean.pySetItem buckets (PastaLean.pyLen w) (PastaLean.pyAppend buckets⦋PastaLean.pyLen w⦌ w)
-      let __py_ret_1 := _tally_score'rn seen buckets
+      let __py_ret_1 := _tally'score'rn seen buckets
       return __py_ret_1)
 
 -- `defaultdict`/`Counter` are backed by `PyDefaultDict`, NOT the plain dict a `dict[_,_]`
 -- annotation emits — so a captured one needs that exact type, not merely *a* type. `todo` is a list
 -- of pairs, and `i, j = todo[k]` reads a TUPLE out of it (not a list, despite the subscript).
-private def _walk_total := fun (graph : Libraries.collections.PyDefaultDict Int (List Int)) ↦
+private def _walk'total := fun (graph : Libraries.collections.PyDefaultDict Int (List Int)) ↦
   fun (seen : Libraries.collections.PyDefaultDict Int Int) ↦ fun (todo : List (Int × Int)) ↦
   Id.run
     (do
@@ -132,7 +132,7 @@ private def _walk_total := fun (graph : Libraries.collections.PyDefaultDict Int 
         acc := acc +ₚ (PastaLean.pyLen graph⦋i⦌ +ₚ seen⦋i⦌ +ₚ j)
       return acc)
 
-attribute [simp, taste_ingr] _walk_total
+attribute [simp, taste_ingr] _walk'total
 
 def walk := fun (pairs : List (List Int)) ↦
   Id.run
@@ -146,12 +146,12 @@ def walk := fun (pairs : List (List Int)) ↦
         graph := PastaLean.pySetItem graph a (PastaLean.pyAppend graph⦋a⦌ b)
         seen := PastaLean.pySetItem seen a (seen⦋a⦌ +ₚ (1 : Int))
         todo := PastaLean.pyAppend todo (a, b)
-      let __py_ret_1 := _walk_total graph seen todo
+      let __py_ret_1 := _walk'total graph seen todo
       return __py_ret_1)
 
 attribute [simp, taste_ingr] walk
 
-private def _walk_total'rn := fun (graph : Libraries.collections.PyDefaultDict Int (List Int)) ↦
+private def _walk'total'rn := fun (graph : Libraries.collections.PyDefaultDict Int (List Int)) ↦
   fun (seen : Libraries.collections.PyDefaultDict Int Int) ↦ fun (todo : List (Int × Int)) ↦
   Id.run
     (do
@@ -176,25 +176,25 @@ def walk'rn := fun (pairs : List (List Int)) ↦
         graph := PastaLean.pySetItem graph a (PastaLean.pyAppend graph⦋a⦌ b)
         seen := PastaLean.pySetItem seen a (seen⦋a⦌ +ₚ (1 : Int))
         todo := PastaLean.pyAppend todo (a, b)
-      let __py_ret_1 := _walk_total'rn graph seen todo
+      let __py_ret_1 := _walk'total'rn graph seen todo
       return __py_ret_1)
 
 -- A capturing helper passed as a VALUE (`key=`), not called directly. Lifting it leaves a partial
 -- application, so the wrapper lambda needs its parameter TYPED — an untyped binder is exactly what
 -- an inference-hungry callback cannot resolve.
-private def _ranked_score := fun (x : Int) ↦ fun (weights : List Int) ↦ x *ₚ weights⦋x %ₚ PastaLean.pyLen weights⦌
+private def _ranked'score := fun (x : Int) ↦ fun (weights : List Int) ↦ x *ₚ weights⦋x %ₚ PastaLean.pyLen weights⦌
 
-attribute [simp, taste_ingr] _ranked_score
+attribute [simp, taste_ingr] _ranked'score
 
 def ranked := fun (items : List Int) ↦ fun (weights : List Int) ↦
-  PastaLean.pySortBy (fun (x : Int) ↦ _ranked_score x weights) false items
+  PastaLean.pySortBy (fun (x : Int) ↦ _ranked'score x weights) false items
 
 attribute [simp, taste_ingr] ranked
 
-private def _ranked_score'rn := fun (x : Int) ↦ fun (weights : List Int) ↦ x *ₚ weights⦋x %ₚ PastaLean.pyLen weights⦌
+private def _ranked'score'rn := fun (x : Int) ↦ fun (weights : List Int) ↦ x *ₚ weights⦋x %ₚ PastaLean.pyLen weights⦌
 
 def ranked'rn := fun (items : List Int) ↦ fun (weights : List Int) ↦
-  PastaLean.pySortBy (fun (x : Int) ↦ _ranked_score'rn x weights) false items
+  PastaLean.pySortBy (fun (x : Int) ↦ _ranked'score'rn x weights) false items
 
 def main' :=
   ((do

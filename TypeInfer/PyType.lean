@@ -37,6 +37,9 @@ inductive PyType where
   | opt   (inner : PyType)
   /-- A user class, `TreeNode`, `ListNode`, … -/
   | cls   (name : String)
+  /-- A function type — `Callable[[A, B], R]`. The type of a decorator's wrapped parameter, and of
+  a function passed as a value. -/
+  | fn    (args : List PyType) (ret : PyType)
   deriving Inhabited, Repr
 
 namespace PyType
@@ -49,6 +52,8 @@ partial def beq : PyType → PyType → Bool
   | .cls a, .cls b => a == b
   | .tuple as, .tuple bs =>
       as.length == bs.length && (as.zip bs).all fun (a, b) => beq a b
+  | .fn as r₁, .fn bs r₂ =>
+      as.length == bs.length && (as.zip bs).all (fun (a, b) => beq a b) && beq r₁ r₂
   | _, _ => false
 
 instance : BEq PyType := ⟨beq⟩
@@ -67,6 +72,7 @@ def toString : PyType → String
   | .opt i => s!"Optional[{toString i}]"
   | .cls n => n
   | .tuple es => "tuple[" ++ String.intercalate ", " (es.map toString) ++ "]"
+  | .fn as r => "Callable[[" ++ String.intercalate ", " (as.map toString) ++ s!"], {toString r}]"
 
 instance : ToString PyType := ⟨toString⟩
 
@@ -83,6 +89,7 @@ partial def isKnown : PyType → Bool
   | .list e | .set e | .opt e => isKnown e
   | .dict k v => isKnown k && isKnown v
   | .tuple es => es.all isKnown
+  | .fn as r => as.all isKnown && isKnown r
   | _ => true
 
 /-- Should a *local* binding of this type be ascribed at all? Only discrete scalars, where an
@@ -132,6 +139,9 @@ partial def join : PyType → PyType → PyType
   | .tuple as, .tuple bs =>
       if as.length == bs.length then .tuple ((as.zip bs).map fun (a, b) => join a b)
       else .any
+  | .fn as r₁, .fn bs r₂ =>
+      if as.length == bs.length then .fn ((as.zip bs).map fun (a, b) => join a b) (join r₁ r₂)
+      else .any
   | a, b => if a.beq b then a else .any
 
 /-- Join a whole list, starting from `unknown`. -/
@@ -151,6 +161,8 @@ partial def consistent : PyType → PyType → Bool
   | .dict k₁ v₁, .dict k₂ v₂ => consistent k₁ k₂ && consistent v₁ v₂
   | .tuple as, .tuple bs =>
       as.length == bs.length && (as.zip bs).all fun (a, b) => consistent a b
+  | .fn as r₁, .fn bs r₂ =>
+      as.length == bs.length && (as.zip bs).all (fun (a, b) => consistent a b) && consistent r₁ r₂
   | a, b => a.beq b
 
 /-- Is this a number Python arithmetic accepts? -/
