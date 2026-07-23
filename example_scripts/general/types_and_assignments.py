@@ -64,3 +64,12 @@ def heterogeneous_pyany():
     total = 0
     total = total + xs[0] * 2
     return total
+
+
+def untyped_param_arithmetic(nums):
+    # `nums` is un-inferred → boxed `PyAny`; the two-pass seed propagates `PyAny` to the accumulator so
+    # `total` is `PyAny` (not `Int`), matching the boxed element arithmetic.
+    total = 0
+    for x in nums:
+        total += x * 2
+    return total

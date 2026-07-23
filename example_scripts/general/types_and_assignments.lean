@@ -170,3 +170,25 @@ def heterogeneous_pyany'rn :=
     let total := total +ₚ xs⦋(0 : Int)⦌ *ₚ (2 : Int)
     total :
     PastaLean.PyAny)
+
+def untyped_param_arithmetic := fun (nums : PyAny) ↦
+  Id.run
+    (do
+      -- `nums` is un-inferred → boxed `PyAny`; the two-pass seed propagates `PyAny` to the accumulator so
+      -- `total` is `PyAny` (not `Int`), matching the boxed element arithmetic.
+      let mut total : PyAny := (0 : Int)
+      for x in (PastaLean.pyIter nums)do
+        total := total +ₚ x *ₚ (2 : Int)
+      return total)
+
+attribute [simp, taste_ingr] untyped_param_arithmetic
+
+def untyped_param_arithmetic'rn := fun (nums : PyAny) ↦
+  Id.run
+    (do
+      -- `nums` is un-inferred → boxed `PyAny`; the two-pass seed propagates `PyAny` to the accumulator so
+      -- `total` is `PyAny` (not `Int`), matching the boxed element arithmetic.
+      let mut total : PyAny := (0 : Int)
+      for x in (PastaLean.pyIter nums)do
+        total := total +ₚ x *ₚ (2 : Int)
+      return total)

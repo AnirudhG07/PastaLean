@@ -503,7 +503,16 @@ calls with `sigs`), stamp its params and every binder in its body, and recurse i
 A function whose returns disagree (`.any`) and that has no return annotation is marked `_box_return`
 so codegen boxes its result as `PyAny`. -/
 partial def stampFunction (sigs : Sigs) (outer hints : Env) (fn : Json) : Json :=
-  let env := inferFunction sigs outer hints fn
+  let env1 := inferFunction sigs outer hints fn
+  -- Second pass: a param that pass 1 leaves `unknown` but that is used in a `PyAny`-dispatch position
+  -- WILL be boxed to `PyAny` by codegen. Seed those as `.any` and re-infer, so `PyAny` propagates
+  -- through the body (`for x in nums: total += x*2` → `total : PyAny`) and matches what codegen emits;
+  -- otherwise `total` stays `Int` and the `total := <PyAny>` reassignment fails to type-check.
+  let body := (fn.getObjValAs? (Array Json) "body").toOption.getD #[]
+  let pyAnySeed : Env := (paramNames fn).foldl (fun m name =>
+    if (env1.get? name).getD .unknown == .unknown && body.any (usedInPyAnyPosition name)
+    then m.insert name .any else m) hints
+  let env := if pyAnySeed.size == hints.size then env1 else inferFunction sigs outer pyAnySeed fn
   let fn := stampParams env fn
   let fn := match fn.getObjValAs? String "name" with
     | .ok name =>

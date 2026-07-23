@@ -62,7 +62,8 @@ _(newest first; one line per theme closed)_
 - **T1 typeinfer-numeric — partial (this session).** ✔ binary-gap, ✔ coin-path,
   ✔ check-if-a-string-is-a-valid-sequence-from-root-to-leaves-path-in-a-binary-tree,
   ✔ check-if-there-is-a-valid-parentheses-string-path, ✔ count-number-of-maximum-bitwise-or-subsets,
-  ✔ minimum-costs-using-the-train-line (needed both the `[inf]*n` fix and the nested-for fix below).
+  ✔ minimum-costs-using-the-train-line (needed both the `[inf]*n` fix and the nested-for fix below),
+  ✔ sort-items-by-groups-respecting-dependencies, ✔ smallest-string-starting-from-leaf.
   Mental model (Python numeric tower): int values stay `Int` and coerce **up** at op/boundary sites
   (bottom-up); only a var genuinely assigned **both** int and float needs to *be* float. Fixes:
   (1) stamp the int **literal** at a `float`-scalar assignment (`ans=0; ans=max(ans,inf)` → `(0:ℚ)`),
@@ -73,7 +74,10 @@ _(newest first; one line per theme closed)_
   (4) nested for-target `for i,(a,b) in enumerate(zip(...))` — `flattenAssign` stamps `_tuple_unpack`
   so the desugared `a,b = __t` unpacks a `Prod`, not list-indexing (regression in `tuple_iteration.py`).
   Confirmed non-issue: int-**expression** → float-scalar already coerces at the reassignment (Lean
-  inserts `Int→ℚ`). Remaining T1: untyped-param→PyAny arithmetic, and non-numeric buckets miscategorized here.
+  inserts `Int→ℚ`). (5) untyped-param→PyAny arithmetic: two-pass infer/seed/re-infer propagates PyAny
+  to the accumulator (`for x in nums: total += x*2` → `total : PyAny`), plus mixed `PyAny×scalar`
+  operators + `.any` propagation (regression `untyped_param_arithmetic`/`heterogeneous_pyany`).
+  Remaining T1: assorted per-problem buckets (synth-fail, tuple/zip element typing) not one root cause.
 
 - **T2 let-mut-rebind — partial (this session).** ✔ basic-calculator-iii, ✔ flipping-an-image.
   Fix: `bodyReassignsName` now counts in-place mutation (`ts.sort()`, `ts.append()`, `ts[i]=v`) as a
