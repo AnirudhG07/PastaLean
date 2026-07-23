@@ -21,7 +21,7 @@ def main' :=
           y := (10 : Int) /ₚ x
         catch caught =>
           if Bool.true then 
-            y := (0 : Int)
+            y := (0 : Rat)
           else
             throw caught
         let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg y]
@@ -43,7 +43,7 @@ def main''rn :=
           y := PastaLean.pyFloat (10 : Int) /ₚ x
         catch caught =>
           if Bool.true then 
-            y := (0 : Int)
+            y := (0 : Float)
           else
             throw caught
         let _ ← pyPrintIO [pyPrintArg y]

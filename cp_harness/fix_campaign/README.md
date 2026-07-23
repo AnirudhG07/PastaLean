@@ -59,6 +59,23 @@ re-running their problems should now pass. Fold survivors into their theme.
 
 _(newest first; one line per theme closed)_
 
+- **T1 typeinfer-numeric — partial (this session).** ✔ binary-gap, ✔ binary-subarrays-with-sum.
+  Mental model (Python numeric tower): int values stay `Int` and coerce **up** at op/boundary sites
+  (bottom-up); only a scalar var genuinely assigned **both** int and float needs to *be* float. Fix:
+  stamp the int **literal** at a `float`-scalar assignment (`ans = 0; ans = max(ans, inf)` → `(0 : ℚ)`),
+  NOT the binder — ascribing the binder wrongly forces `ℚ` over a transcendental `ℝ` (nn.py), and
+  ascribing float **containers** propagates `ℚ` into `Int` positions (eg1's `math.pow(a-b,2)`).
+  Remaining T1: int-**expression** → float-scalar (needs `((e:Int):ℚ)`), and other numeric buckets
+  (tuple/zip element typing, etc.) that are not the int-literal pattern.
+
+- **T2 let-mut-rebind — partial (this session).** ✔ basic-calculator-iii, ✔ flipping-an-image.
+  Fix: `bodyReassignsName` now counts in-place mutation (`ts.sort()`, `ts.append()`, `ts[i]=v`) as a
+  reassignment, so a `for k, ts in d.items(): ts.sort()` loop var is bound `let mut`. Remaining T2 is
+  a grab-bag of distinct bugs, NOT one root cause: "invalid reassignment, value has type" is usually
+  a method mis-dispatch (`dict.pop(k)` → list `pyPopRest`) or a genuine cross-type rebind in a `do`
+  block (needs PyAny boxing); "mutable var cannot be shadowed"; `PySort (List PyAny)` from
+  `defaultdict(list)` with an unknown element (needs PyAny container-protocol instances).
+
 - **T6 / T10 / T5 / T3 — partial (this session).** Verify with `./verify_theme.sh` (one fresh
   backend per file — reliable; do NOT trust the warm-Session `convert`, its backend goes stale
   mid-run and reports false `convert_fail`). Directly compile-checked ✔ this session:

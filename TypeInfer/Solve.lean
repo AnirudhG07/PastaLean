@@ -542,6 +542,14 @@ partial def stampStmt (sigs : Sigs) (env : Env) (roots : Array Json) (s : Json) 
              && typeOfExpr sigs env target == .float then
             if let some ann := toAnnotation? .float then
               s := s.setObjVal! "value" (value.setObjVal! "_ty" ann)
+          -- `x = <int literal>` where `x` is a float-typed scalar (`ans = 0; ans = max(ans, inf)`):
+          -- stamp the literal so codegen coerces `(0 : ℚ)` and Lean infers `x : ℚ`, WITHOUT ascribing
+          -- the binder — that would force `ℚ` over a transcendental `ℝ` in a pure-float var.
+          else if (nameId? target).any (fun n => (env.get? n).getD .unknown == .float)
+             && nodeTypeOf value == some "Constant" && (getField value "_ty").isNone
+             && typeOfExpr sigs env value == .int then
+            if let some ann := toAnnotation? .float then
+              s := s.setObjVal! "value" (value.setObjVal! "_ty" ann)
       | _, _ => pure ()
     -- A tuple target unpacked from a *list* value (not a tuple) uses list indexing, not `Prod`:
     -- `for a, b in edges` with `edges : list[list[int]]`, or `a, b = np.shape(x)` (returns a list).
