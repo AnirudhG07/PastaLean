@@ -65,6 +65,22 @@ def unpackAccessTerm (isTuple : Bool) (sourceIdent : TSyntax `ident) (idx n : Na
     let idxStx ← intToStx (Int.ofNat idx)
     `($getIdent $sourceIdent $idxStx)
 
+/-- Pure-term binding of one tuple-target element to `acc`, recursing into nested tuple targets
+(`(a, b), c = …`). Emits `let … := acc` in front of `tail`. -/
+partial def pureUnpackBinding (elt : Json) (acc tail : TSyntax `term) : PygenM (TSyntax `term) := do
+  match jsonNodeType? elt with
+  | some "Tuple" | some "List" =>
+    let subElts := (elt.getObjValAs? (Array Json) "elts").toOption.getD #[]
+    let tmp := mkIdent (← freshName `__unpack_pair)
+    let mut body := tail
+    for i in (List.range subElts.size).reverse do
+      body ← pureUnpackBinding subElts[i]! (← unpackAccessTerm false tmp i subElts.size) body
+    `(let $tmp := $acc
+      $body)
+  | _ =>
+    `(let $(← getCode elt `ident) := $acc
+      $tail)
+
 /-- Emit either a fresh `let mut` or a reassignment for one local binding. On the first binding an
 inferred type (`ty?`) is ascribed — `let mut x : T := …` — which stops Lean defaulting an
 unconstrained element/index to `ℚ`. A reassignment never re-ascribes. -/
@@ -213,7 +229,7 @@ partial def tupleElementAssignDoElem (elt : Json) (acc : TSyntax `term) : PygenM
       let tmp := mkIdent (← freshName `__unpack_nested)
       let mut binds := #[← `(doElem| let $tmp:ident := $acc)]
       for i in [0:subElts.size] do
-        binds := binds.push (← tupleElementAssignDoElem subElts[i]! (← unpackAccessTerm true tmp i subElts.size))
+        binds := binds.push (← tupleElementAssignDoElem subElts[i]! (← unpackAccessTerm false tmp i subElts.size))
       pure ⟨mkNullNode (binds.map TSyntax.raw)⟩
     | _ =>
       throwError s!"Unsupported tuple-assignment target element (only `Name`, nested tuple, and \
