@@ -87,6 +87,23 @@ def floatNumToStx (mantissa : Int) (exponent : Nat) (scientific : Bool) :
   else
     pure base
 
+/-- An integer literal emitted at the numeric-mode float type (`(0 : ℚ)`/`ℝ`/`Float`). Used for an
+int literal that TypeInfer stamped `_ty = float` — a float-container element like the `0` in
+`[0]*n` where the list later holds floats, so the list is `List ℚ` not `List Int`. -/
+def intAsFloatStx (n : Int) : MetaM <| TSyntax `term := do
+  let mode ← getNumericMode
+  let real ← getRealContext
+  let ty : Name := match mode with
+    | .approx => ``Float
+    | .exact => if real then ``Real else ``Rat
+  let nAbs := Syntax.mkNumLit (toString n.natAbs)
+  let lit : TSyntax `term ← if n < 0 then `(- $nAbs:num) else pure ⟨nAbs⟩
+  `(($lit : $(mkIdent ty)))
+
+/-- Whether a node's inference stamp (`_ty`) is the scalar `float` annotation. -/
+def stampedFloat (json : Json) : Bool :=
+  (json.getObjVal? "_ty").toOption.any (·.getObjValAs? String "id" == .ok "float")
+
 @[pygen "Constant"]
 def constantSyntax : (kind : SyntaxNodeKind) → Json →
     PygenM (TSyntax kind)
@@ -101,6 +118,8 @@ def constantSyntax : (kind : SyntaxNodeKind) → Json →
     | .num (JsonNumber.mk mantissa exponent) =>
         if isPythonFloat then
           floatNumToStx mantissa exponent isScientific
+        else if exponent == 0 && stampedFloat json then
+          intAsFloatStx mantissa
         else
           numToStx mantissa exponent
     | .str s => return Syntax.mkStrLit s

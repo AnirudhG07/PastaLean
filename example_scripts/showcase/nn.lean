@@ -65,12 +65,12 @@ noncomputable def main' :=
       -- hidden layer is what makes this learnable.
       let mut xs :=
         [[(0.0 : Rat), (0.0 : Rat)], [(0.0 : Rat), (1.0 : Rat)], [(1.0 : Rat), (0.0 : Rat)], [(1.0 : Rat), (1.0 : Rat)]]
-      let mut ys := [(0.0 : Rat), (1.0 : Rat), (1.0 : Rat), (0.0 : Rat)]
+      let mut ys := ([(0.0 : Rat), (1.0 : Rat), (1.0 : Rat), (0.0 : Rat)] : List Rat)
       -- Fixed initial weights so the run is reproducible (no RNG needed).
       let mut w1 := [[(0.5 : Real), -(0.4 : Real)], [(0.9 : Real), (1.0 : Real)]]
-      let mut b1 := [(0.1 : Real), -(0.2 : Real)]
+      let mut b1 := ([(0.1 : Real), -(0.2 : Real)] : List Real)
       let mut w2 := [[(0.7 : Real), -(0.8 : Real)]]
-      let mut b2 := [(0.3 : Real)]
+      let mut b2 := ([(0.3 : Real)] : List Real)
       let mut lr := (0.5 : Rat)
       let mut epochs : Int := (4000 : Int)
       let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg "=== Training a neural net on XOR (NumPy + math) ==="]
@@ -82,7 +82,7 @@ noncomputable def main' :=
           -- Forward pass, keeping the hidden activations for backprop.
           let mut h0 := sigmoid (Libraries.numpy.pyNumpyDot x w1⦋(0 : Int)⦌ +ₚ b1⦋(0 : Int)⦌)
           let mut h1 := sigmoid (Libraries.numpy.pyNumpyDot x w1⦋(1 : Int)⦌ +ₚ b1⦋(1 : Int)⦌)
-          let mut hidden := [h0, h1]
+          let mut hidden := ([h0, h1] : List Real)
           let mut out := sigmoid (Libraries.numpy.pyNumpyDot hidden w2⦋(0 : Int)⦌ +ₚ b2⦋(0 : Int)⦌)
           -- Backward pass: gradients of 1/2 the squared error.
           let mut d_out := (out -ₚ y) *ₚ out *ₚ ((1.0 : Real) -ₚ out)
@@ -92,7 +92,7 @@ noncomputable def main' :=
           w2 :=
             PastaLean.pySetItem w2 (0 : Int)
               [w2⦋(0 : Int)⦌⦋(0 : Int)⦌ -ₚ lr *ₚ d_out *ₚ h0, w2⦋(0 : Int)⦌⦋(1 : Int)⦌ -ₚ lr *ₚ d_out *ₚ h1]
-          b2 := [b2⦋(0 : Int)⦌ -ₚ lr *ₚ d_out]
+          b2 := ([b2⦋(0 : Int)⦌ -ₚ lr *ₚ d_out] : List Real)
           w1 :=
             PastaLean.pySetItem w1 (0 : Int)
               [w1⦋(0 : Int)⦌⦋(0 : Int)⦌ -ₚ lr *ₚ d_h0 *ₚ x⦋(0 : Int)⦌,
@@ -101,7 +101,7 @@ noncomputable def main' :=
             PastaLean.pySetItem w1 (1 : Int)
               [w1⦋(1 : Int)⦌⦋(0 : Int)⦌ -ₚ lr *ₚ d_h1 *ₚ x⦋(0 : Int)⦌,
                 w1⦋(1 : Int)⦌⦋(1 : Int)⦌ -ₚ lr *ₚ d_h1 *ₚ x⦋(1 : Int)⦌]
-          b1 := [b1⦋(0 : Int)⦌ -ₚ lr *ₚ d_h0, b1⦋(1 : Int)⦌ -ₚ lr *ₚ d_h1]
+          b1 := ([b1⦋(0 : Int)⦌ -ₚ lr *ₚ d_h0, b1⦋(1 : Int)⦌ -ₚ lr *ₚ d_h1] : List Real)
         if h_1 : (epoch +ₚ (1 : Int)) %ₚ (1000 : Int) = (0 : Int) then 
           let _ ←
             PastaLean.ProofMode.pyPrintProof
@@ -126,12 +126,12 @@ def main''rn :=
       let mut xs :=
         [[(0.0 : Float), (0.0 : Float)], [(0.0 : Float), (1.0 : Float)], [(1.0 : Float), (0.0 : Float)],
           [(1.0 : Float), (1.0 : Float)]]
-      let mut ys := [(0.0 : Float), (1.0 : Float), (1.0 : Float), (0.0 : Float)]
+      let mut ys := ([(0.0 : Float), (1.0 : Float), (1.0 : Float), (0.0 : Float)] : List Float)
       -- Fixed initial weights so the run is reproducible (no RNG needed).
       let mut w1 := [[(0.5 : Float), -(0.4 : Float)], [(0.9 : Float), (1.0 : Float)]]
-      let mut b1 := [(0.1 : Float), -(0.2 : Float)]
+      let mut b1 := ([(0.1 : Float), -(0.2 : Float)] : List Float)
       let mut w2 := [[(0.7 : Float), -(0.8 : Float)]]
-      let mut b2 := [(0.3 : Float)]
+      let mut b2 := ([(0.3 : Float)] : List Float)
       let mut lr := (0.5 : Float)
       let mut epochs : Int := (4000 : Int)
       let _ ← pyPrintIO [pyPrintArg "=== Training a neural net on XOR (NumPy + math) ==="]
@@ -143,7 +143,7 @@ def main''rn :=
           -- Forward pass, keeping the hidden activations for backprop.
           let mut h0 := sigmoid'rn (Libraries.numpy.pyNumpyDot x w1⦋(0 : Int)⦌ +ₚ b1⦋(0 : Int)⦌)
           let mut h1 := sigmoid'rn (Libraries.numpy.pyNumpyDot x w1⦋(1 : Int)⦌ +ₚ b1⦋(1 : Int)⦌)
-          let mut hidden := [h0, h1]
+          let mut hidden := ([h0, h1] : List Float)
           let mut out := sigmoid'rn (Libraries.numpy.pyNumpyDot hidden w2⦋(0 : Int)⦌ +ₚ b2⦋(0 : Int)⦌)
           -- Backward pass: gradients of 1/2 the squared error.
           let mut d_out := (out -ₚ y) *ₚ out *ₚ ((1.0 : Float) -ₚ out)
@@ -153,7 +153,7 @@ def main''rn :=
           w2 :=
             PastaLean.pySetItem w2 (0 : Int)
               [w2⦋(0 : Int)⦌⦋(0 : Int)⦌ -ₚ lr *ₚ d_out *ₚ h0, w2⦋(0 : Int)⦌⦋(1 : Int)⦌ -ₚ lr *ₚ d_out *ₚ h1]
-          b2 := [b2⦋(0 : Int)⦌ -ₚ lr *ₚ d_out]
+          b2 := ([b2⦋(0 : Int)⦌ -ₚ lr *ₚ d_out] : List Float)
           w1 :=
             PastaLean.pySetItem w1 (0 : Int)
               [w1⦋(0 : Int)⦌⦋(0 : Int)⦌ -ₚ lr *ₚ d_h0 *ₚ x⦋(0 : Int)⦌,
@@ -162,7 +162,7 @@ def main''rn :=
             PastaLean.pySetItem w1 (1 : Int)
               [w1⦋(1 : Int)⦌⦋(0 : Int)⦌ -ₚ lr *ₚ d_h1 *ₚ x⦋(0 : Int)⦌,
                 w1⦋(1 : Int)⦌⦋(1 : Int)⦌ -ₚ lr *ₚ d_h1 *ₚ x⦋(1 : Int)⦌]
-          b1 := [b1⦋(0 : Int)⦌ -ₚ lr *ₚ d_h0, b1⦋(1 : Int)⦌ -ₚ lr *ₚ d_h1]
+          b1 := ([b1⦋(0 : Int)⦌ -ₚ lr *ₚ d_h0, b1⦋(1 : Int)⦌ -ₚ lr *ₚ d_h1] : List Float)
         if h_1 : (epoch +ₚ (1 : Int)) %ₚ (1000 : Int) == (0 : Int) then 
           let _ ←
             pyPrintIO [pyPrintArg s!"epoch {(epoch +ₚ (1 : Int))}: loss = {mean_squared_error'rn xs ys w1 b1 w2 b2}"]

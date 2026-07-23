@@ -40,7 +40,8 @@ def variance'rn := fun (xs : List Float) ↦
 noncomputable def main' :=
   ((do
       let mut data :=
-        [(2.0 : Rat), (4.0 : Rat), (4.0 : Rat), (4.0 : Rat), (5.0 : Rat), (5.0 : Rat), (7.0 : Rat), (9.0 : Rat)]
+        ([(2.0 : Rat), (4.0 : Rat), (4.0 : Rat), (4.0 : Rat), (5.0 : Rat), (5.0 : Rat), (7.0 : Rat), (9.0 : Rat)] :
+          List Rat)
       let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg "=== scipy.special ==="]
       let _ ←
         PastaLean.ProofMode.pyPrintProof
@@ -78,8 +79,9 @@ attribute [simp] main'
 def main''rn :=
   ((do
       let mut data :=
-        [(2.0 : Float), (4.0 : Float), (4.0 : Float), (4.0 : Float), (5.0 : Float), (5.0 : Float), (7.0 : Float),
-          (9.0 : Float)]
+        ([(2.0 : Float), (4.0 : Float), (4.0 : Float), (4.0 : Float), (5.0 : Float), (5.0 : Float), (7.0 : Float),
+            (9.0 : Float)] :
+          List Float)
       let _ ← pyPrintIO [pyPrintArg "=== scipy.special ==="]
       let _ ← pyPrintIO [pyPrintArg "5!        =", pyPrintArg (Libraries.scipy.pyScipyFactorial (5 : Int))]
       let _ ← pyPrintIO [pyPrintArg "C(8,3)    =", pyPrintArg (Libraries.scipy.pyScipyComb (8 : Int) (3 : Int))]

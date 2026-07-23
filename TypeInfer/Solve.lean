@@ -466,6 +466,36 @@ def nestedParamHints (sigs : Sigs) (env : Env) (fn : Json) (roots : Array Json) 
           hints := hints.insert params[i]! (((hints.get? params[i]!).getD .unknown).join t)
   return hints
 
+/-- Stamp an int-literal `Constant` with `_ty = float` (so codegen emits `(0 : ℚ)`). -/
+private def stampIfIntConst (e : Json) : Json :=
+  if nodeTypeOf e == some "Constant" && (getField e "_ty").isNone
+     && e.getObjValAs? String "python_literal_kind" != .ok "float"
+     && (match (e.getObjVal? "value").toOption with | some (.num ⟨_, 0⟩) => true | _ => false) then
+    match toAnnotation? .float with | some ann => e.setObjVal! "_ty" ann | none => e
+  else e
+
+/-- A list/set literal or a `[x] * n` repeat — a value whose element type an ascription can fix. -/
+private def isListLitOrRepeat (v : Json) : Bool :=
+  match nodeTypeOf v with
+  | some "List" | some "Set" => true
+  | some "BinOp" => (v.getObjValAs? String "op").toOption == some "mul"
+      && ((getField v "left").any (fun l => nodeTypeOf l == some "List")
+          || (getField v "right").any (fun r => nodeTypeOf r == some "List"))
+  | _ => false
+
+/-- For a float-typed container assigned `value`, coerce its int-literal ELEMENTS to float:
+`[0, 1]`, `[0] * n`. Descends the list literal and the `[x] * n` repeat. -/
+private partial def stampFloatListElems (value : Json) : Json :=
+  match nodeTypeOf value with
+  | some "List" | some "Set" =>
+      match value.getObjValAs? (Array Json) "elts" with
+      | .ok elts => value.setObjVal! "elts" (Json.arr (elts.map stampIfIntConst))
+      | _ => value
+  | some "BinOp" =>
+      let value := (getField value "left").elim value (fun l => value.setObjVal! "left" (stampFloatListElems l))
+      (getField value "right").elim value (fun r => value.setObjVal! "right" (stampFloatListElems r))
+  | _ => value
+
 mutual
 
 /-- Infer types for `fn` (seeded by `outer` captures and `hints` for unannotated params, resolving
@@ -550,6 +580,19 @@ partial def stampStmt (sigs : Sigs) (env : Env) (roots : Array Json) (s : Json) 
              && typeOfExpr sigs env value == .int then
             if let some ann := toAnnotation? .float then
               s := s.setObjVal! "value" (value.setObjVal! "_ty" ann)
+          -- `f = [0]*n` / `f = [inf]*n` where `f` is a float-typed container that later holds floats:
+          -- coerce int-literal elements to float, and ascribe a list-literal/`[x]*n` value to the
+          -- float container so a polymorphic element (`inf`) adapts to the mode float — otherwise
+          -- `[inf]*n` binds `List ℚ` and a run-twin `dp[0] = 0` (`(0 : Float)`) clashes.
+          else if let some ct := (nameId? target).bind (env.get? ·) then
+            match ct with
+            | .list .float | .set .float =>
+                let value := stampFloatListElems value
+                let value := if isListLitOrRepeat value && (getField value "_ty").isNone then
+                    (toAnnotation? ct).elim value (value.setObjVal! "_ty" ·)
+                  else value
+                s := s.setObjVal! "value" value
+            | _ => pure ()
       | _, _ => pure ()
     -- A tuple target unpacked from a *list* value (not a tuple) uses list indexing, not `Prod`:
     -- `for a, b in edges` with `edges : list[list[int]]`, or `a, b = np.shape(x)` (returns a list).
