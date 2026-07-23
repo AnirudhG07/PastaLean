@@ -734,3 +734,26 @@ only when you ask to just run. And every function is lowered to the least-powerf
 live in — pure term, then `Id.run do`, then `Except`, then `IO` — because each rung up the ladder
 is a rung down in what you can prove, and the whole point was to keep as much of the program
 provable as the program will allow.
+
+## Future thought: argument-indexed return types (a `PyAny` alternative, deferred)
+
+For a function that returns different types by branch (`def classify(n): return "pos" if n>0 else 0`)
+the default is `PyAny` — a self-describing tagged union. An alternative, strictly *more* precise, is a
+**dependent return type**: a type-level function of the arguments,
+`classifyType (n:Int) : Type := if 0<n then String else Int`, with `classify (n) : classifyType n`.
+It reduces to the exact type at literal call sites and makes proofs type-driven.
+
+Decided **against it as the default**, for the transpiler:
+- The discriminant is usually **not** a function of the arguments — real multi-return branches on
+  locals/loops/data, which can't be lifted to a closed-form `fType(args)` without re-executing the
+  body in the type. Intractable in general.
+- **Values can't flow freely.** A `classifyType n` value needs `n` in scope to know its type; Python
+  routinely moves values into `[a,b,c]`, returns/captures/stores them far from the discriminant.
+  `PyAny` flows anywhere because the tag rides with the value. This is the decisive blocker.
+- At runtime call sites it degrades to `PyAny`-with-extra-steps: every op needs a family instance
+  matching the discriminant (combinatorial), vs one instance set for `PyAny`.
+- Proving gain over `PyAny` + the `pyany_cases` split tactic is marginal (both case-split the branch).
+
+**Keep in pocket** as an opt-in `@overload`-style optimisation for the narrow sweet spot: return type
+a decidable function of a *literal/enum* argument (`make(kind: Literal[...])`) called with constants.
+Measure corpus demand before investing.

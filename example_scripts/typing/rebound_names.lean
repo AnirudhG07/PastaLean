@@ -24,7 +24,7 @@ value, code after sees the new.
 def letter_sum := fun (s : String) ↦
   Id.run
     (do
-      let mut total : Int := (0 : Int)
+      let mut total : PyAny := (0 : Int)
       for __py_loop_1 in (PastaLean.pyIter s)do
         let ch := __py_loop_1
         let mut ch := PastaLean.pyOrd ch -ₚ PastaLean.pyOrd "a"
@@ -36,7 +36,7 @@ attribute [simp, taste_ingr] letter_sum
 def letter_sum'rn := fun (s : String) ↦
   Id.run
     (do
-      let mut total : Int := (0 : Int)
+      let mut total : PyAny := (0 : Int)
       for __py_loop_1 in (PastaLean.pyIter s)do
         let ch := __py_loop_1
         let mut ch := PastaLean.pyOrd ch -ₚ PastaLean.pyOrd "a"
@@ -82,7 +82,7 @@ def appeal'rn := fun (s : String) ↦
 def shifted := fun (words : List String) ↦
   Id.run
     (do
-      let mut total : Int := (0 : Int)
+      let mut total : PyAny := (0 : Int)
       for __py_loop_1 in (PastaLean.pyIter words)do
         let w := __py_loop_1
         let mut w := PastaLean.pyLen w
@@ -95,7 +95,7 @@ attribute [simp, taste_ingr] shifted
 def shifted'rn := fun (words : List String) ↦
   Id.run
     (do
-      let mut total : Int := (0 : Int)
+      let mut total : PyAny := (0 : Int)
       for __py_loop_1 in (PastaLean.pyIter words)do
         let w := __py_loop_1
         let mut w := PastaLean.pyLen w

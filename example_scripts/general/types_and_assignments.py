@@ -56,3 +56,11 @@ def inf_dp(cost: List[int]) -> int:
     for i in range(1, n + 1):
         dp[i] = min(dp[i - 1] + cost[i - 1], dp[i])
     return dp[n]
+
+
+def heterogeneous_pyany():
+    # `[1, "hi", 3]` is `List PyAny`; arithmetic on a boxed element (`* 2`, `+`) dispatches on the tag.
+    xs = [1, "hi", 3]
+    total = 0
+    total = total + xs[0] * 2
+    return total

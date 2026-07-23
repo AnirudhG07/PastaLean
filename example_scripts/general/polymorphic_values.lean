@@ -22,31 +22,33 @@ def classify'rn := fun (n : Int) ↦ (if decide (n > (0 : Int)) then "positive" 
 
 -- A parameter/local rebound to a different type mid-function, with operations on each type.
 def reassigned :=
-  let x := (1 : Int)
-  let x := x +ₚ (5 : Int)
-  let x := "hi"
-  let x := x +ₚ "world"
-  let y := (3 : Int)
-  let y := x
-  x +ₚ y
+  (let x := (1 : Int)
+    let x := x +ₚ (5 : Int)
+    let x := "hi"
+    let x := x +ₚ "world"
+    let y := (3 : Int)
+    let y := x
+    x +ₚ y :
+    PastaLean.PyAny)
 
-attribute [simp, taste_ingr] reassigned
+attribute [simp] reassigned
 
 def reassigned'rn :=
-  let x := (1 : Int)
-  let x := x +ₚ (5 : Int)
-  let x := "hi"
-  let x := x +ₚ "world"
-  let y := (3 : Int)
-  let y := x
-  x +ₚ y
+  (let x := (1 : Int)
+    let x := x +ₚ (5 : Int)
+    let x := "hi"
+    let x := x +ₚ "world"
+    let y := (3 : Int)
+    let y := x
+    x +ₚ y :
+    PastaLean.PyAny)
 
 -- One `add` used at both int and str (the flagship polymorphic case).
-def add := fun (a : PyAny) ↦ fun (b : PyAny) ↦ a +ₚ b
+def add := fun (a : PyAny) ↦ fun (b : PyAny) ↦ (a +ₚ b : PastaLean.PyAny)
 
-attribute [simp, taste_ingr] add
+attribute [simp] add
 
-def add'rn := fun (a : PyAny) ↦ fun (b : PyAny) ↦ a +ₚ b
+def add'rn := fun (a : PyAny) ↦ fun (b : PyAny) ↦ (a +ₚ b : PastaLean.PyAny)
 
 @[taste_ingr]
 theorem add_thm : ∀ a, ∀ b, a +ₚ b +ₚ b = a +ₚ (b +ₚ b) := by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals

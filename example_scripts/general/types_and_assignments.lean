@@ -152,3 +152,21 @@ def inf_dp'rn := fun (cost : List Int) ↦
         dp := PastaLean.pySetItem dp i (PastaLean.pyMin [dp⦋i -ₚ (1 : Int)⦌ +ₚ cost⦋i -ₚ (1 : Int)⦌, dp⦋i⦌] : Float)
       let __py_ret_1 := dp⦋n⦌
       return __py_ret_1)
+
+def heterogeneous_pyany :=
+  (let __PastaLean_comment_6 := ()
+    let xs := ([(1 : Int), "hi", (3 : Int)] : List PyAny)
+    let total := (0 : Int)
+    let total := total +ₚ xs⦋(0 : Int)⦌ *ₚ (2 : Int)
+    total :
+    PastaLean.PyAny)
+
+attribute [simp] heterogeneous_pyany
+
+def heterogeneous_pyany'rn :=
+  (let __PastaLean_comment_6 := ()
+    let xs := ([(1 : Int), "hi", (3 : Int)] : List PyAny)
+    let total := (0 : Int)
+    let total := total +ₚ xs⦋(0 : Int)⦌ *ₚ (2 : Int)
+    total :
+    PastaLean.PyAny)
