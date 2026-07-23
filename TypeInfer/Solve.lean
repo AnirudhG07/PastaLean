@@ -247,10 +247,13 @@ enclosing captures > annotations > call-site hints > body-usage. -/
 partial def inferFunction (sigs : Sigs) (outer hints : Env) (fn : Json) : Env := Id.run do
   let body := (fn.getObjValAs? (Array Json) "body").toOption.getD #[]
   let stmts := flatStmts body.toList
-  -- body-usage is the weakest seed; call-site hints, then annotations, then captures override it.
-  let seed := (paramSeed fn).fold (fun m k v => m.insert k v)
-    (hints.fold (fun m k v => m.insert k v) (paramUsageSeed fn))
-  let mut env := outer.fold (fun m k v => m.insert k v) seed
+  -- Weakest → strongest: body-usage, enclosing captures, call-site hints, annotations. Hints and
+  -- annotations override captures because a parameter shadows an outer name of the same name (a
+  -- nested `def dfs(root)` inside a scope with its own `root` must use its call-site type).
+  let mut env := paramUsageSeed fn
+  env := outer.fold (fun m k v => m.insert k v) env
+  env := hints.fold (fun m k v => m.insert k v) env
+  env := (paramSeed fn).fold (fun m k v => m.insert k v) env
   let bodyJson := Json.arr body
   -- Reflow until stable. The lattice climbs, so a small cap is a sound floor, not a correctness risk.
   for _ in [0:8] do
@@ -434,6 +437,35 @@ partial def markOptAttrs (sigs : Sigs) (env : Env) (json : Json) : Json :=
     | .obj fs => Json.mkObj (fs.toList.map (fun (k, v) => (k, markOptAttrs sigs env v)))
     | _ => json
 
+/-- Every positional argument list of a call `name(...)` anywhere in `json`. -/
+partial def collectCallArgLists (name : String) (json : Json) : Array (Array Json) :=
+  let here := if nodeTypeOf json == some "Call" && (getField json "func").bind nameId? == some name
+    then #[(json.getObjValAs? (Array Json) "args").toOption.getD #[]] else #[]
+  let rest := match json with
+    | .arr xs => xs.foldl (fun acc e => acc ++ collectCallArgLists name e) #[]
+    | .obj fs => fs.toList.foldl (fun acc (_, v) => acc ++ collectCallArgLists name v) #[]
+    | _ => #[]
+  here ++ rest
+
+/-- Param-type hints for a nested def `fn` from the arg types at every call to it in `roots`. Two
+passes so a recursive arg (`dfs(node.left)`) is re-typed once its param is seeded from the first,
+non-recursive call (`dfs(root)`) — the join is what makes a tree `dfs` param `Optional[TreeNode]`. -/
+def nestedParamHints (sigs : Sigs) (env : Env) (fn : Json) (roots : Array Json) : Env := Id.run do
+  let name := (fn.getObjValAs? String "name").toOption.getD ""
+  let params := paramNames fn
+  if name == "" || params.isEmpty then return {}
+  let callLists := roots.foldl (fun acc r => acc ++ collectCallArgLists name r) #[]
+  if callLists.isEmpty then return {}
+  let mut hints : Env := {}
+  for _ in [0:2] do
+    let env2 := hints.fold (fun m k v => m.insert k v) env
+    for args in callLists do
+      for i in [0:min params.size args.size] do
+        let t := typeOfExpr sigs env2 args[i]!
+        if t != .unknown then
+          hints := hints.insert params[i]! (((hints.get? params[i]!).getD .unknown).join t)
+  return hints
+
 mutual
 
 /-- Infer types for `fn` (seeded by `outer` captures and `hints` for unannotated params, resolving
@@ -478,13 +510,14 @@ partial def stampFunction (sigs : Sigs) (outer hints : Env) (fn : Json) : Json :
     | _ => fn
   match fn.getObjValAs? (Array Json) "body" with
   | .ok body => fn.setObjVal! "body"
-      (Json.arr (((body.map (stampStmt sigs env)).map (markTuples env)).map (markOptAttrs sigs env)))
+      (Json.arr (((body.map (stampStmt sigs env body)).map (markTuples env)).map (markOptAttrs sigs env)))
   | _ => fn
 
 /-- Stamp one statement: its target, its nested blocks, and any nested def. -/
-partial def stampStmt (sigs : Sigs) (env : Env) (s : Json) : Json :=
-  -- A nested def's params come from its own annotations or captured `outer`, not call-site hints.
-  if nodeTypeOf s == some "FunctionDef" then stampFunction sigs env {} s
+partial def stampStmt (sigs : Sigs) (env : Env) (roots : Array Json) (s : Json) : Json :=
+  if nodeTypeOf s == some "FunctionDef" then
+    let ownBody := (s.getObjValAs? (Array Json) "body").toOption.getD #[]
+    stampFunction sigs env (nestedParamHints sigs env s (roots ++ ownBody)) s
   else Id.run do
     let mut s := s
     match nodeTypeOf s with
@@ -534,11 +567,11 @@ partial def stampStmt (sigs : Sigs) (env : Env) (s : Json) : Json :=
       | _, _ => pure ()
     for f in #["body", "orelse", "finalbody"] do
       if let .ok elems := s.getObjValAs? (Array Json) f then
-        s := s.setObjVal! f (Json.arr (elems.map (stampStmt sigs env)))
+        s := s.setObjVal! f (Json.arr (elems.map (stampStmt sigs env roots)))
     if let .ok handlers := s.getObjValAs? (Array Json) "handlers" then
       let handlers := handlers.map fun h =>
         match h.getObjValAs? (Array Json) "body" with
-        | .ok elems => h.setObjVal! "body" (Json.arr (elems.map (stampStmt sigs env)))
+        | .ok elems => h.setObjVal! "body" (Json.arr (elems.map (stampStmt sigs env roots)))
         | _ => h
       s := s.setObjVal! "handlers" (Json.arr handlers)
     return s

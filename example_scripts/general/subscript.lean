@@ -18,24 +18,20 @@ def result :=
   arr⦋(0 : Int)⦌
 
 def foo :=
-  Id.run
-    (do
-      let mut x : String := "hi"
-      let mut y : String := x⦋(0 : Int)⦌
-      y := y *ₚ (10 : Int)
-      let mut z : String := PastaLean.pySlice y (some (2 : Int)) (some (-(3 : Int))) none
-      return z)
+  let x := ("hi" : String)
+  let y := (x⦋(0 : Int)⦌ : String)
+  let y := (y *ₚ (10 : Int) : String)
+  let z := (PastaLean.pySlice y (some (2 : Int)) (some (-(3 : Int))) none : String)
+  z
 
 attribute [simp, taste_ingr] foo
 
 def foo'rn :=
-  Id.run
-    (do
-      let mut x : String := "hi"
-      let mut y : String := x⦋(0 : Int)⦌
-      y := y *ₚ (10 : Int)
-      let mut z : String := PastaLean.pySlice y (some (2 : Int)) (some (-(3 : Int))) none
-      return z)
+  let x := ("hi" : String)
+  let y := (x⦋(0 : Int)⦌ : String)
+  let y := (y *ₚ (10 : Int) : String)
+  let z := (PastaLean.pySlice y (some (2 : Int)) (some (-(3 : Int))) none : String)
+  z
 
 def bar :=
   let x := ("hi" : String)

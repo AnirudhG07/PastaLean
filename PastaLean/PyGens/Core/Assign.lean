@@ -66,15 +66,17 @@ def unpackAccessTerm (isTuple : Bool) (sourceIdent : TSyntax `ident) (idx n : Na
     `($getIdent $sourceIdent $idxStx)
 
 /-- Pure-term binding of one tuple-target element to `acc`, recursing into nested tuple targets
-(`(a, b), c = …`). Emits `let … := acc` in front of `tail`. -/
-partial def pureUnpackBinding (elt : Json) (acc tail : TSyntax `term) : PygenM (TSyntax `term) := do
+(`(a, b), c = …`). `isTuple` (the RHS shape) is inherited by nested levels: all-`Prod` for a tuple
+literal / threaded call, all-`List` for a `list[list[...]]`. -/
+partial def pureUnpackBinding (isTuple : Bool) (elt : Json) (acc tail : TSyntax `term) :
+    PygenM (TSyntax `term) := do
   match jsonNodeType? elt with
   | some "Tuple" | some "List" =>
     let subElts := (elt.getObjValAs? (Array Json) "elts").toOption.getD #[]
     let tmp := mkIdent (← freshName `__unpack_pair)
     let mut body := tail
     for i in (List.range subElts.size).reverse do
-      body ← pureUnpackBinding subElts[i]! (← unpackAccessTerm false tmp i subElts.size) body
+      body ← pureUnpackBinding isTuple subElts[i]! (← unpackAccessTerm isTuple tmp i subElts.size) body
     `(let $tmp := $acc
       $body)
   | _ =>
@@ -217,19 +219,19 @@ partial def nestedSubscriptSetDoElem? (target : Json) (value : TSyntax `term) :
 /-- Assign one element of a tuple target from `acc`, which reads it out of the already-evaluated
 RHS temp. `Subscript` elements rebuild their container, so the swap `a[i], a[j] = a[j], a[i]`
 works: the temp is evaluated before any write-back. -/
-partial def tupleElementAssignDoElem (elt : Json) (acc : TSyntax `term) : PygenM (TSyntax `doElem) := do
+partial def tupleElementAssignDoElem (isTuple : Bool) (elt : Json) (acc : TSyntax `term) :
+    PygenM (TSyntax `doElem) := do
   match ← nestedSubscriptSetDoElem? elt acc with
   | some setStx => pure setStx
   | none =>
     match jsonNodeType? elt with
     | some "Name" => bindOrAssignLocal (← getCode elt `ident) acc
     | some "Tuple" | some "List" =>
-      -- Nested target `(a, b), … = …`: bind the sub-tuple, then unpack it (a `Prod`).
       let subElts := (elt.getObjValAs? (Array Json) "elts").toOption.getD #[]
       let tmp := mkIdent (← freshName `__unpack_nested)
       let mut binds := #[← `(doElem| let $tmp:ident := $acc)]
       for i in [0:subElts.size] do
-        binds := binds.push (← tupleElementAssignDoElem subElts[i]! (← unpackAccessTerm false tmp i subElts.size))
+        binds := binds.push (← tupleElementAssignDoElem isTuple subElts[i]! (← unpackAccessTerm isTuple tmp i subElts.size))
       pure ⟨mkNullNode (binds.map TSyntax.raw)⟩
     | _ =>
       throwError s!"Unsupported tuple-assignment target element (only `Name`, nested tuple, and \
@@ -337,7 +339,7 @@ def assignSyntax : (kind : SyntaxNodeKind) → Json →
               let mut binds : Array (TSyntax `doElem) := #[bindValueTmp, update]
               for i in List.range n do
                 let acc ← unpackAccessTerm true valueTmpIdent i n
-                binds := binds.push (← tupleElementAssignDoElem elts[i]! acc)
+                binds := binds.push (← tupleElementAssignDoElem true elts[i]! acc)
               return ⟨mkNullNode (binds.map TSyntax.raw)⟩
             let valueStx ← getCode value `term
             let valueTmpIdent := mkIdent (← freshName `__unpack_value)
@@ -361,7 +363,7 @@ def assignSyntax : (kind : SyntaxNodeKind) → Json →
             let mut binds : Array (TSyntax `doElem) := #[bindValueTmp, bindUnpackTmp]
             for i in List.range n do
               let acc ← unpackAccessTerm isTuple unpackTmpIdent i n
-              binds := binds.push (← tupleElementAssignDoElem elts[i]! acc)
+              binds := binds.push (← tupleElementAssignDoElem isTuple elts[i]! acc)
             -- Return the bindings as siblings (a flattened null-node), NOT wrapped in a
             -- nested `do` — wrapping would scope the unpacked names away from following
             -- statements. Consumers flatten via `appendDoElems`.

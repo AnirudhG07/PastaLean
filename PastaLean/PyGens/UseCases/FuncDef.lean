@@ -907,7 +907,7 @@ def assignHeadSyntax : (kind : SyntaxNodeKind) → Json →
             let isTuple := jsonNodeType? value == some "Tuple" || jsonNodeType? value == some "Call"
             let mut result := tailCode
             for i in (List.range n).reverse do
-              result ← pureUnpackBinding elts[i]! (← unpackAccessTerm isTuple unpackTmpIdent i n) result
+              result ← pureUnpackBinding isTuple elts[i]! (← unpackAccessTerm isTuple unpackTmpIdent i n) result
             `(let $unpackTmpIdent := $valueStx
               $result)
         | none => do
@@ -958,6 +958,20 @@ def annAssignHeadSyntax : (kind : SyntaxNodeKind) → Json →
             let json := targetJson.mergeObj json
             assignHeadSyntax `term json
     | _, _ => throwError s!"Unsupported syntax category for Head_AnnAssign node"
+
+@[pygen "Head_AugAssign"]
+def augAssignHeadSyntax : (kind : SyntaxNodeKind) → Json →
+    PygenM (TSyntax kind)
+    | `term, json => do
+        let .ok target := json.getObjVal? "target" | throwError s!"Head_AugAssign missing 'target': {json}"
+        let .ok op := json.getObjValAs? String "op" | throwError s!"Head_AugAssign missing 'op': {json}"
+        let .ok value := json.getObjVal? "value" | throwError s!"Head_AugAssign missing 'value': {json}"
+        let binOp := match op with | "and" => "bitand" | "or" => "bitor" | "xor" => "bitxor" | o => o
+        let binValue := Json.mkObj [("node_type", .str "BinOp"), ("op", .str binOp),
+          ("left", target), ("right", value)]
+        let asAssign := (json.setObjVal! "node_type" (.str "Head_Assign")).setObjVal! "value" binValue
+        assignHeadSyntax `term asAssign
+    | _, _ => throwError s!"Unsupported syntax category for Head_AugAssign node"
 
 @[pygen "Head_Pass"]
 def passHeadSyntax : (kind : SyntaxNodeKind) → Json →

@@ -92,12 +92,8 @@ def count_components'rn := fun (n : Int) ↦ fun (adj : List (List Int)) ↦
 -- A bare LIST comprehension whose element mutates captured `total` (via a helper that returns the
 -- running value): the accumulator loop threads `total` correctly.
 private def _running'step := fun (x : Int) ↦ fun (total : Int) ↦
-  Id.run
-    (do
-      let mut total := total
-      total := total +ₚ x
-      let __py_ret_1 := (total, total)
-      return __py_ret_1)
+  let total := (total +ₚ x : Int)
+  (total, total)
 
 attribute [simp, taste_ingr] _running'step
 
@@ -117,12 +113,8 @@ def running := fun (xs : List Int) ↦
 attribute [simp, taste_ingr] running
 
 private def _running'step'rn := fun (x : Int) ↦ fun (total : Int) ↦
-  Id.run
-    (do
-      let mut total := total
-      total := total +ₚ x
-      let __py_ret_1 := (total, total)
-      return __py_ret_1)
+  let total := (total +ₚ x : Int)
+  (total, total)
 
 def running'rn := fun (xs : List Int) ↦
   Id.run
