@@ -21,7 +21,7 @@ namespace PastaBench.leetcode.CountSubarraysWithScoreLessThanK
 def countSubarrays := fun (nums : List Int) ↦ fun (k : Int) ↦
   Id.run
     (do
-      let mut s := PastaLean.pyList (Libraries.itertools.pyAccumulate nums (some (0 : Int)))
+      let mut s : List Int := PastaLean.pyList (Libraries.itertools.pyAccumulate nums (some (0 : Int)))
       let mut ans : Int := (0 : Int)
       for i in (PastaLean.pyRange (PastaLean.pyLen s) (1 : Int))do
         let __unpack_value_1 := ((0 : Int), i)
@@ -29,6 +29,10 @@ def countSubarrays := fun (nums : List Int) ↦ fun (k : Int) ↦
         let mut left := Prod.fst __unpack_pair_1
         let mut right := Prod.snd __unpack_pair_1
         while (left < right) do
+          let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ left))
+          let _ := Libraries.passta.pyPassInvariant (decide (left ≤ right))
+          let _ := Libraries.passta.pyPassInvariant (decide (right ≤ i))
+          let _ := Libraries.passta.pyPassDecreases (right -ₚ left)
           let mut mid := PastaLean.pyShiftRight (left +ₚ right +ₚ (1 : Int)) (1 : Int)
           if h_1 : (s⦋i⦌ -ₚ s⦋i -ₚ mid⦌) *ₚ mid < k then 
             left := mid
@@ -42,7 +46,7 @@ attribute [simp, taste_ingr] countSubarrays
 def countSubarrays'rn := fun (nums : List Int) ↦ fun (k : Int) ↦
   Id.run
     (do
-      let mut s := PastaLean.pyList (Libraries.itertools.pyAccumulate nums (some (0 : Int)))
+      let mut s : List Int := PastaLean.pyList (Libraries.itertools.pyAccumulate nums (some (0 : Int)))
       let mut ans : Int := (0 : Int)
       for i in (PastaLean.pyRange (PastaLean.pyLen s) (1 : Int))do
         let __unpack_value_1 := ((0 : Int), i)
@@ -50,6 +54,10 @@ def countSubarrays'rn := fun (nums : List Int) ↦ fun (k : Int) ↦
         let mut left := Prod.fst __unpack_pair_1
         let mut right := Prod.snd __unpack_pair_1
         while (left < right) do
+          let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ left))
+          let _ := Libraries.passta.pyPassInvariant (decide (left ≤ right))
+          let _ := Libraries.passta.pyPassInvariant (decide (right ≤ i))
+          let _ := Libraries.passta.pyPassDecreases (right -ₚ left)
           let mut mid := PastaLean.pyShiftRight (left +ₚ right +ₚ (1 : Int)) (1 : Int)
           if h_1 : (s⦋i⦌ -ₚ s⦋i -ₚ mid⦌) *ₚ mid < k then 
             left := mid

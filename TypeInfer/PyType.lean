@@ -16,7 +16,7 @@ and Shed Skin.
 
 namespace TypeInfer
 
-/-- What PastaLean knows about a Python value. -/
+/-- Inductive type for representing all supported Python Types in PastaLean -/
 inductive PyType where
   /-- Nothing known yet — the lattice bottom. -/
   | unknown
@@ -111,6 +111,9 @@ partial def needsAscription : PyType → Bool
   -- A tuple of concrete scalars is unambiguous too (`t = []; t.append((i, j))` → `list[(int,int)]`),
   -- and without it a captured list-of-pairs is lifted untyped.
   | .tuple es => !es.isEmpty && es.all needsAscription
+  -- The known-dynamic top type materialises as `PyAny`, which Lean cannot infer from a heterogeneous
+  -- literal's first element — so a container wrapping it (`list[any]` → `List PyAny`) must be ascribed.
+  | .any => true
   | _ => false
 
 /-- Least upper bound.

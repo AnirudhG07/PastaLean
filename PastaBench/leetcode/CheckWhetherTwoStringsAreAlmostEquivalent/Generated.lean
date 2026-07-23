@@ -21,7 +21,7 @@ namespace PastaBench.leetcode.CheckWhetherTwoStringsAreAlmostEquivalent
 def checkAlmostEquivalent := fun (word1 : String) ↦ fun (word2 : String) ↦
   Id.run
     (do
-      let mut cnt := Libraries.collections.pyCounter word1
+      let mut cnt : Libraries.collections.PyDefaultDict String Int := Libraries.collections.pyCounter word1
       for c in (PastaLean.pyIter word2)do
         cnt := PastaLean.pySetItem cnt c (cnt⦋c⦌ -ₚ (1 : Int))
       let __py_ret_1 :=
@@ -33,7 +33,7 @@ attribute [simp, taste_ingr] checkAlmostEquivalent
 def checkAlmostEquivalent'rn := fun (word1 : String) ↦ fun (word2 : String) ↦
   Id.run
     (do
-      let mut cnt := Libraries.collections.pyCounter word1
+      let mut cnt : Libraries.collections.PyDefaultDict String Int := Libraries.collections.pyCounter word1
       for c in (PastaLean.pyIter word2)do
         cnt := PastaLean.pySetItem cnt c (cnt⦋c⦌ -ₚ (1 : Int))
       let __py_ret_1 :=

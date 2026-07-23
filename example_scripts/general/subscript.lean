@@ -38,13 +38,13 @@ def foo'rn :=
       return z)
 
 def bar :=
-  let x := "hi"
-  let y := PastaLean.pySlice x (some (100 : Int)) (some (-(2000 : Int))) none
+  let x := ("hi" : String)
+  let y := (PastaLean.pySlice x (some (100 : Int)) (some (-(2000 : Int))) none : String)
   y
 
 attribute [simp, taste_ingr] bar
 
 def bar'rn :=
-  let x := "hi"
-  let y := PastaLean.pySlice x (some (100 : Int)) (some (-(2000 : Int))) none
+  let x := ("hi" : String)
+  let y := (PastaLean.pySlice x (some (100 : Int)) (some (-(2000 : Int))) none : String)
   y

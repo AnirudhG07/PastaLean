@@ -54,17 +54,17 @@ def basic_types'rn :=
     let mut tup2 := (g, h)
 
 def fstring :=
-  let s1 := "Hello"
-  let s2 := "World"
-  let s3 := s1 +ₚ ", " +ₚ s2 +ₚ "!"
+  let s1 := ("Hello" : String)
+  let s2 := ("World" : String)
+  let s3 := (s1 +ₚ ", " +ₚ s2 +ₚ "!" : String)
   s! "This is a string: {s3} and this is a number: {(1 : Int) +ₚ (2 : Int)}"
 
 attribute [simp, taste_ingr] fstring
 
 def fstring'rn :=
-  let s1 := "Hello"
-  let s2 := "World"
-  let s3 := s1 +ₚ ", " +ₚ s2 +ₚ "!"
+  let s1 := ("Hello" : String)
+  let s2 := ("World" : String)
+  let s3 := (s1 +ₚ ", " +ₚ s2 +ₚ "!" : String)
   s! "This is a string: {s3} and this is a number: {(1 : Int) +ₚ (2 : Int)}"
 
 def annotated_vars :=

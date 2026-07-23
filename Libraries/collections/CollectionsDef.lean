@@ -34,6 +34,18 @@ def PyDefaultDict.toPairs (d : PyDefaultDict κ ν) : List (κ × ν) :=
 def PyDefaultDict.ofIterable {α : Type} [PyIterable α κ] (xs : α) : PyDefaultDict κ Int :=
   (pyIter xs).foldl (fun d k => d.insert k (d.map.getD k 0 + 1)) (PyDefaultDict.empty 0)
 
+/-- `Counter.most_common(n)`: the `(key, count)` pairs from highest count down, keeping the first `n`
+(all of them when `n` is negative, the default the codegen passes for the no-argument `most_common()`).
+`mergeSort` is stable, so ties keep insertion order — matching CPython 3.7+. -/
+def pyMostCommon (c : PyDefaultDict κ Int) (n : Int := -1) : List (κ × Int) :=
+  let sorted := c.toPairs.mergeSort (fun a b => decide (a.2 ≥ b.2))
+  if n < 0 then sorted else sorted.take n.toNat
+
+/-- `Counter.elements()`: each key repeated `count` times, in insertion order (counts ≤ 0 contribute
+nothing, as in CPython). -/
+def pyElements (c : PyDefaultDict κ Int) : List κ :=
+  c.toPairs.flatMap (fun (k, cnt) => List.replicate cnt.toNat k)
+
 /-- `collections.defaultdict(list)`. -/
 def pyDefaultDictList : PyDefaultDict κ (List ν) := PyDefaultDict.empty []
 

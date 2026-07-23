@@ -12,6 +12,7 @@ dependencies = [
     "bs4>=0.0.2",
     "datasets>=4.8.5",
     "lxml>=6.1.0",
+    "matplotlib>=3.11.1",
     "numpy>=2.4.5",
     "online-judge-tools>=11.5.1",
     "openai>=2.44.0",

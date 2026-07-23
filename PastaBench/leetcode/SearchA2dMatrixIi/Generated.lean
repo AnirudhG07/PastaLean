@@ -24,6 +24,7 @@ def searchMatrix := fun (matrix : List (List Int)) ↦ fun (target : Int) ↦
       for row in (PastaLean.pyIter matrix)do
         let mut j := Libraries.bisect.pyBisectLeft row target
         if h_1 : j < PastaLean.pyLen matrix⦋(0 : Int)⦌ ∧ row⦋j⦌ = target then 
+          let _ := Libraries.passta.pyPassAssert (PastaLean.pyContains row target)
           return Bool.true
         else
           let _ := ()
@@ -37,6 +38,7 @@ def searchMatrix'rn := fun (matrix : List (List Int)) ↦ fun (target : Int) ↦
       for row in (PastaLean.pyIter matrix)do
         let mut j := Libraries.bisect.pyBisectLeft row target
         if h_1 : decide (j < PastaLean.pyLen matrix⦋(0 : Int)⦌) && row⦋j⦌ == target then 
+          let _ := Libraries.passta.pyPassAssert (PastaLean.pyContains row target)
           return Bool.true
         else
           let _ := ()

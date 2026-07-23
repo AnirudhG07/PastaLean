@@ -664,6 +664,20 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
     for argJson in argsArray do
       allArgJsons := allArgJsons.push argJson
 
+    -- A 0-arg call `f()` where `f` is a *local* callable (a loop/param/let-bound value holding one of
+    -- the `fun () ↦ …` thunks our lambdas lower to) applies it to `Unit`, so emit `f ()`. A
+    -- 0-parameter top-level `def foo := …` is a value (not a thunk), a class constructor is `C.new`,
+    -- and a builtin has its own lowering — none of those take the `()`, so they stay bare.
+    if argsArray.isEmpty && keyWordsMap.isEmpty then
+      match funcJson.getObjValAs? String "node_type", funcJson.getObjValAs? String "id" with
+      | .ok "Name", .ok nm =>
+          let isCtor := (json.getObjValAs? String "_class_ctor").toOption.isSome
+                        || (← constructorClassOfName? nm).isSome
+          let isUserFn := (← userNamesRef.get).contains nm
+          let isBuiltin := (← builtinMappedName? nm).isSome
+          if !isCtor && !isUserFn && !isBuiltin then allArgs := allArgs.push (← `(()))
+      | _, _ => pure ()
+
     let buildApplied : Array (TSyntax `term) → PygenM (TSyntax `term) := fun resolvedArgs => do
       let mut t ← `($funcIdent $resolvedArgs*)
       for (kwName, kwValueJson) in keyWordsMap.toList do
@@ -984,6 +998,20 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
       allArgs := allArgs.push argCode
     for argJson in argsArray do
       allArgJsons := allArgJsons.push argJson
+
+    -- A 0-arg call `f()` where `f` is a *local* callable (a loop/param/let-bound value holding one of
+    -- the `fun () ↦ …` thunks our lambdas lower to) applies it to `Unit`, so emit `f ()`. A
+    -- 0-parameter top-level `def foo := …` is a value (not a thunk), a class constructor is `C.new`,
+    -- and a builtin has its own lowering — none of those take the `()`, so they stay bare.
+    if argsArray.isEmpty && keyWordsMap.isEmpty then
+      match funcJson.getObjValAs? String "node_type", funcJson.getObjValAs? String "id" with
+      | .ok "Name", .ok nm =>
+          let isCtor := (json.getObjValAs? String "_class_ctor").toOption.isSome
+                        || (← constructorClassOfName? nm).isSome
+          let isUserFn := (← userNamesRef.get).contains nm
+          let isBuiltin := (← builtinMappedName? nm).isSome
+          if !isCtor && !isUserFn && !isBuiltin then allArgs := allArgs.push (← `(()))
+      | _, _ => pure ()
 
     let buildApplied : Array (TSyntax `term) → PygenM (TSyntax `term) := fun resolvedArgs => do
       let mut t ← `($funcIdent $resolvedArgs*)

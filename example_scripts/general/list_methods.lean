@@ -46,25 +46,25 @@ def list_append_twice'rn :=
       return xs)
 
 def list_len :=
-  let xs := [(10 : Int), (20 : Int), (30 : Int), (40 : Int)]
+  let xs := ([(10 : Int), (20 : Int), (30 : Int), (40 : Int)] : List Int)
   PastaLean.pyLen xs
 
 attribute [simp, taste_ingr] list_len
 
 def list_len'rn :=
-  let xs := [(10 : Int), (20 : Int), (30 : Int), (40 : Int)]
+  let xs := ([(10 : Int), (20 : Int), (30 : Int), (40 : Int)] : List Int)
   PastaLean.pyLen xs
 
 def list_membership :=
-  let xs := [(1 : Int), (2 : Int), (3 : Int)]
-  let present := PastaLean.pyContains xs (2 : Int)
-  let missing := PastaLean.pyContains xs (9 : Int)
+  let xs := ([(1 : Int), (2 : Int), (3 : Int)] : List Int)
+  let present := (PastaLean.pyContains xs (2 : Int) : Bool)
+  let missing := (PastaLean.pyContains xs (9 : Int) : Bool)
   (present, missing)
 
 attribute [simp, taste_ingr] list_membership
 
 def list_membership'rn :=
-  let xs := [(1 : Int), (2 : Int), (3 : Int)]
-  let present := PastaLean.pyContains xs (2 : Int)
-  let missing := PastaLean.pyContains xs (9 : Int)
+  let xs := ([(1 : Int), (2 : Int), (3 : Int)] : List Int)
+  let present := (PastaLean.pyContains xs (2 : Int) : Bool)
+  let missing := (PastaLean.pyContains xs (9 : Int) : Bool)
   (present, missing)

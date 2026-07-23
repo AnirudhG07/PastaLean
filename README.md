@@ -178,6 +178,22 @@ Moreover, if the input types are not given, we can infer them using the `TypeInf
 
 </details>
 
+<details><summary>Two twins — one to prove, one to run</summary>
+
+Every function is emitted twice: a **provable** version (exact `ℚ` for floats, `ℝ` for transcendentals, `noncomputable` where needed) and a **runnable** `'rn` twin (`Float`, fast). This is why Python's `/` — which is *always* float division — shows up as `ℚ` in the prove twin and `Float` in the run twin.
+
+```python
+7 / 2     # prove twin: (7 : ℚ) /ₚ 2 = 7/2 exactly;   run twin: 3.5 : Float
+```
+
+</details>
+
+<details><summary>`PyAny` can't be proved - `pyany_cases` tactic</summary>
+
+`PyAny` makes us *total* (everything runs), but it is **not** a commutative ring, so `ring`/`nlinarith`/`taste?` die on it — a boxed function can't be proved. That's why boxing is a *last resort*: infer a concrete type wherever possible, box only the residue, and in prove mode a linter warns at every `PyAny` binder ("annotate the type to prove"). Provability is the whole point of the project, so we protect it.
+
+</details>
+
 <details><summary>Object Oriented Programming</summary>
 
 OOP is handled like namespaces. The `__init__` function is used to create the structure of the class, and the methods are added as functions under the namespace of the class. For example, a class `A` with a method `foo` will be modelled as a structure `A` with a function `foo` under the namespace of `A`. The methods can be called using the dot notation, like `A.foo()`.
@@ -200,19 +216,16 @@ def describe(x):
 
 </details>
 
-<details><summary>Two twins — one to prove, one to run</summary>
+<details><summary>Python Decorators</summary>
 
-Every function is emitted twice: a **provable** version (exact `ℚ` for floats, `ℝ` for transcendentals, `noncomputable` where needed) and a **runnable** `'rn` twin (`Float`, fast). This is why Python's `/` — which is *always* float division — shows up as `ℚ` in the prove twin and `Float` in the run twin.
+Python has decorators which are functions that modify the behavior of other functions. We support decorators in PastaLean by translating them to Lean functions that take a function as an argument and return a new function like a wrapper OR do syntax changes/noops since every decorator in Python hasn't been well translated. For example:
 
 ```python
-7 / 2     # prove twin: (7 : ℚ) /ₚ 2 = 7/2 exactly;   run twin: 3.5 : Float
+
 ```
 
-</details>
-
-<details><summary>The catch — a boxed slot can't be proved</summary>
-
-`PyAny` makes us *total* (everything runs), but it is **not** a commutative ring, so `ring`/`nlinarith`/`taste?` die on it — a boxed function can't be proved. That's why boxing is a *last resort*: infer a concrete type wherever possible, box only the residue, and in prove mode a linter warns at every `PyAny` binder ("annotate the type to prove"). Provability is the whole point of the project, so we protect it.
+Multiple decorators can be applied to a function, and they are applied in the order they are listed.
+You can declare your own decorators in Python or use commonly supported OOP/library decorators like `@staticmethod`, `@classmethod`, `@property`, etc. We support a few of them, and you can add more by writing Lean definitions for them and adding them.
 
 </details>
 

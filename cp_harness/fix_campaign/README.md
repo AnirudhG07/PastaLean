@@ -58,3 +58,16 @@ re-running their problems should now pass. Fold survivors into their theme.
 ## Progress log
 
 _(newest first; one line per theme closed)_
+
+- **T4 genexp-rebind-state — partial (10/19 convert-clean).** A nested state-threading function
+  called inside a comprehension is rewritten to its explicit accumulator loop, where the mutated
+  state threads across iterations (`ClosureConvert.expandThreadedComprehension?` +
+  `hoistThreadedComprs`). Covers `AGG(f(…) for …)` for sum/max/min/any/all/list/set/sorted/…, bare
+  `[…]`/`{…}`/`{k:v …}` comprehensions, and comprehensions nested in a larger expression
+  (`1 + sum(dfs(j) for j)`). Verified correct vs CPython (`number-of-connected-components`;
+  regression `example_scripts/general/threaded_comprehension.py`). Remaining 9 need conditional
+  threading (`c or dfs(…)`, `and not dfs(…)`, while-test) — short-circuit-preserving, harder — and
+  the grid ones additionally hit a separate homogeneous-tuple-as-iterable bug
+  (`dirs = (-1,0,1,0,-1)` + `pairwise`).
+- **T9 functools-cache — done.** `@cache`/`@lru_cache` transparent; `cache_clear`/`cache_info` →
+  functools no-op. Folded into the decorator framework (commit 32d3da9).

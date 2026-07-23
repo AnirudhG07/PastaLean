@@ -201,14 +201,23 @@ partial def nestedSubscriptSetDoElem? (target : Json) (value : TSyntax `term) :
 /-- Assign one element of a tuple target from `acc`, which reads it out of the already-evaluated
 RHS temp. `Subscript` elements rebuild their container, so the swap `a[i], a[j] = a[j], a[i]`
 works: the temp is evaluated before any write-back. -/
-def tupleElementAssignDoElem (elt : Json) (acc : TSyntax `term) : PygenM (TSyntax `doElem) := do
+partial def tupleElementAssignDoElem (elt : Json) (acc : TSyntax `term) : PygenM (TSyntax `doElem) := do
   match ← nestedSubscriptSetDoElem? elt acc with
   | some setStx => pure setStx
   | none =>
-    unless jsonNodeType? elt == some "Name" do
-      throwError s!"Unsupported tuple-assignment target element (only `Name` and subscript \
-        `a[i]` targets are supported): {elt}"
-    bindOrAssignLocal (← getCode elt `ident) acc
+    match jsonNodeType? elt with
+    | some "Name" => bindOrAssignLocal (← getCode elt `ident) acc
+    | some "Tuple" | some "List" =>
+      -- Nested target `(a, b), … = …`: bind the sub-tuple, then unpack it (a `Prod`).
+      let subElts := (elt.getObjValAs? (Array Json) "elts").toOption.getD #[]
+      let tmp := mkIdent (← freshName `__unpack_nested)
+      let mut binds := #[← `(doElem| let $tmp:ident := $acc)]
+      for i in [0:subElts.size] do
+        binds := binds.push (← tupleElementAssignDoElem subElts[i]! (← unpackAccessTerm true tmp i subElts.size))
+      pure ⟨mkNullNode (binds.map TSyntax.raw)⟩
+    | _ =>
+      throwError s!"Unsupported tuple-assignment target element (only `Name`, nested tuple, and \
+        subscript `a[i]` targets are supported): {elt}"
 
 /-- Lower an optional slice bound expression to a `some _`/`none` `Option Int` term. -/
 def sliceBoundOptTerm (boundJson? : Option Json) : PygenM (TSyntax `term) := do

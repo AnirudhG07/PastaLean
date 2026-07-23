@@ -339,6 +339,16 @@ partial def usedInPyAnyPosition (name : String) (json : Json) : Bool :=
       | some "Call" =>
           (getField json "func").bind nameId? == some "len" &&
             ((json.getObjValAs? (Array Json) "args").toOption.getD #[]).any (fun a => nameId? a == some name)
+      -- `x is None` / `x is not None` on an otherwise-unknown `x`: box it so `pyIsNone x` resolves
+      -- (`PyIsNone PyAny`) instead of leaving `x` an untyped binder that forces `Option _`.
+      | some "Compare" =>
+          let op := (json.getObjValAs? String "op").toOption
+          let isNoneJson : Option Json → Bool := fun
+            | some j => nodeTypeOf j == some "Constant" && (j.getObjVal? "value").toOption == some Json.null
+            | none => false
+          (op == some "is" || op == some "isnot") &&
+            ((isName "left" && isNoneJson (getField json "right")) ||
+             (isName "right" && isNoneJson (getField json "left")))
       | _ => false
     hitHere || (match json with
       | .arr xs => xs.any (usedInPyAnyPosition name)
@@ -383,9 +393,10 @@ private def stampParams (env : Env) (fn : Json) : Json :=
       | _ => fn
   | _ => fn
 
-/-- Mark every `t[k]` where `t` is a pair-typed name (`tuple[a, b]`) with `_PastaLean_pair`, so the
-subscript codegen projects `.1`/`.2` instead of `pyGetItem` (which has no instance for a
-heterogeneous product). Does not descend into a nested `def` (separate scope, its own env). -/
+/-- Mark every `t[k]` where `t` is a tuple-typed name (`tuple[a, b, …]`) with its arity
+(`_PastaLean_tuple_arity`), so the subscript codegen static-projects the exact slot instead of
+`pyGetItem` (which has no instance for a heterogeneous product). Does not descend into a nested `def`
+(separate scope, its own env). -/
 partial def markTuples (env : Env) (json : Json) : Json :=
   if nodeTypeOf json == some "FunctionDef" then json
   else
@@ -395,8 +406,8 @@ partial def markTuples (env : Env) (json : Json) : Json :=
         | some v =>
             match (nameId? v).bind (env.get? ·) with
             | some (.tuple es) =>
-                if es.length == 2 then json.setObjVal! "value" (v.setObjVal! "_PastaLean_pair" (Json.bool true))
-                else json
+                json.setObjVal! "value"
+                  (v.setObjVal! "_PastaLean_tuple_arity" (Json.num (JsonNumber.mk (Int.ofNat es.length) 0)))
             | _ => json
         | none => json
       else json

@@ -426,11 +426,22 @@ def compareApplyTerm (op : String) (leftJson : Json) (leftCode rightCode : TSynt
     | "ge" => return ← call ``PastaLean.pySetSubset rightCode leftCode
     | "gt" => return ← call ``PastaLean.pySetProperSubset rightCode leftCode
     | _ => pure ()   -- `in`/`is`/`notin` fall through to the normal membership handling
-  -- `x is None` / `x is not None`: lower to `Option.isNone`/`Option.isSome` rather than
-  -- `== none`/`!= none`. Works with unresolved `Option` element types (e.g., `[None] * n`).
-  if (op == "is" || op == "isnot") && (rightJson.any isNoneConstantJson) then
-    if op == "is" then return ← `($(mkIdent ``Option.isNone) $leftCode)
-    else return ← `($(mkIdent ``Option.isSome) $leftCode)
+  -- `x is None` / `x == None` (and their negations) dispatch through `pyIsNone`, which is total over
+  -- every type: an `Option` answers by its tag, the `None` value (`Unit`) is `true`, and any other
+  -- type (`Int`, `String`, …) is `false` — so `y is not None` on a known `int` no longer type-errors
+  -- against `Option.isSome`. When BOTH sides are the literal `None`, the result is a compile-time
+  -- constant (`None is None` → `true`). `is`/`eq` test equality-to-`None`; `isnot`/`ne` negate it.
+  let noneTest := op == "is" || op == "isnot" || op == "eq" || op == "ne"
+  let leftIsNone := isNoneConstantJson leftJson
+  let rightIsNone := rightJson.any isNoneConstantJson
+  if noneTest && (leftIsNone || rightIsNone) then
+    let equalsNone := op == "is" || op == "eq"
+    if leftIsNone && rightIsNone then
+      -- `None is None` / `None == None` are `true`; `None is not None` / `None != None` are `false`.
+      return ← if equalsNone then `(true) else `(false)
+    let operand := if leftIsNone then rightCode else leftCode
+    let test ← `($(mkIdent ``PastaLean.pyIsNone) $operand)
+    return ← if equalsNone then pure test else `(! $test)
   -- *Condition position* (`prop`): comparison yields `Prop` (e.g., `a < b`, `a = b` in exact mode).
   -- *Value position* (`!prop`): comparison yields `Bool` (e.g., `decide (a < b)`, `a == b`).
   let prop ← getPropCondition

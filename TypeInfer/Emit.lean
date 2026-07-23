@@ -46,11 +46,15 @@ partial def toTypeSyntax? [Monad m] [MonadQuotation m]
       for e in es do
         let some part ← toTypeSyntax? floatTy e | return none
         parts := parts.push part
-      -- `tuple[]` has no Lean counterpart; `tuple[a]` in Python is just `a`.
+      -- `tuple[]` has no Lean counterpart; `tuple[a]` in Python is just `a`. Right-nest to match
+      -- Lean's right-associative `×` and the value `(a, b, c)` = `(a, (b, c))` the codegen emits — a
+      -- left-nested `((a × b) × c)` would not unify with that value.
       match parts.toList with
       | [] => return none
       | [only] => return some only
-      | first :: rest => return some (← rest.foldlM (fun acc p => `($acc × $p)) first)
+      | ps =>
+          let init := ps.getLast!
+          return some (← ps.dropLast.foldrM (fun p acc => `($p × $acc)) init)
   -- `Callable[[A, B], R]` → `A → B → R`.
   | .fn as r => do
       let some ret ← toTypeSyntax? floatTy r | return none

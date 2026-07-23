@@ -918,7 +918,30 @@ def assignHeadSyntax : (kind : SyntaxNodeKind) → Json →
         | none => do
             let nameIdent ← getCode target `ident
             let valueStx ← getCode value `term
-            `(let $nameIdent := $valueStx
+            -- Ascribe the inferred type when TypeInfer stamped one — the pure `let` mirror of the
+            -- `let mut x : T` the monadic path emits. This is what lets a heterogeneous literal
+            -- (`[1, "hi", [2]]` → `List PyAny`) box its elements instead of Lean pinning `List Int`
+            -- from the first element. A bare numeric literal is re-emitted in the target type
+            -- (`(0 : Float)`), since `((0 : Int) : Float)` has no coercion. A *bare* `PyAny` stamp is
+            -- skipped: it marks a reassignment-conflict slot, which the pure path already handles by
+            -- let-shadowing (each `let` re-infers), so forcing `PyAny` would break its per-binding
+            -- monomorphic arithmetic — exactly the shadow guard the monadic path uses.
+            let tyStx? ←
+              match jsonFieldOption target "_ty" with
+              | some ann =>
+                  if ann.getObjValAs? String "id" == .ok "PyAny" then pure none
+                  else stampedTypeSyntax? target
+              | none => pure none
+            let rhs ← match tyStx? with
+              | some tyStx =>
+                  match jsonNodeType? value, value.getObjValAs? Int "value" with
+                  | some "Constant", .ok i =>
+                      let n := Syntax.mkNumLit (toString i.natAbs)
+                      let lit : TSyntax `term ← if i < 0 then `(- $n:num) else pure ⟨n⟩
+                      `(($lit : $tyStx))
+                  | _, _ => `(($valueStx : $tyStx))
+              | none => pure valueStx
+            `(let $nameIdent := $rhs
               $tailCode)
     | _, _ => throwError s!"Unsupported syntax category for Head_Assign node"
 

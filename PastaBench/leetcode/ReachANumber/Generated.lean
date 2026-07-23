@@ -26,8 +26,13 @@ def reachNumber := fun (target : Int) ↦
       let mut __chain_1 := (0 : Int)
       let mut s := __chain_1
       let mut k := __chain_1
-      while (PastaLean.pyTruthy (1 : Int)) do
+      while (Bool.true) do
+        let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ k))
+        let _ := Libraries.passta.pyPassInvariant (decide (s ≥ (0 : Int)))
+        let _ := Libraries.passta.pyPassInvariant ((2 : Int) *ₚ s == k *ₚ (k +ₚ (1 : Int)))
         if h_1 : s ≥ target ∧ (s -ₚ target) %ₚ (2 : Int) = (0 : Int) then 
+          let _ := Libraries.passta.pyPassAssert (decide (s ≥ target))
+          let _ := Libraries.passta.pyPassAssert ((s -ₚ target) %ₚ (2 : Int) == (0 : Int))
           return k
         else
           let _ := ()
@@ -45,8 +50,13 @@ def reachNumber'rn := fun (target : Int) ↦
       let mut __chain_1 := (0 : Int)
       let mut s := __chain_1
       let mut k := __chain_1
-      while (PastaLean.pyTruthy (1 : Int)) do
+      while (Bool.true) do
+        let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ k))
+        let _ := Libraries.passta.pyPassInvariant (decide (s ≥ (0 : Int)))
+        let _ := Libraries.passta.pyPassInvariant ((2 : Int) *ₚ s == k *ₚ (k +ₚ (1 : Int)))
         if h_1 : decide (s ≥ target) && (s -ₚ target) %ₚ (2 : Int) == (0 : Int) then 
+          let _ := Libraries.passta.pyPassAssert (decide (s ≥ target))
+          let _ := Libraries.passta.pyPassAssert ((s -ₚ target) %ₚ (2 : Int) == (0 : Int))
           return k
         else
           let _ := ()

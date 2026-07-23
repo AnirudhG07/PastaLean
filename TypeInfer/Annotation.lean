@@ -117,9 +117,12 @@ private def subscriptAnn (container : String) (args : List Json) : Json :=
 
 /-- Write a `PyType` back as an annotation node. `none` when the type is not fully known, since
 an unknown annotation is worse than no annotation — it would name a type that does not exist. -/
-partial def toAnnotation? (t : PyType) : Option Json := do
+def toAnnotation? (t : PyType) : Option Json := do
   match t with
-  | .unknown | .any => none
+  -- `.unknown` is "no information" → no annotation (let Lean infer). `.any` is the *known*-dynamic
+  -- top type — a genuine union like `[1, "hi", [2]]` should be inferred to `List PyAny`
+  | .unknown => none
+  | .any => nameAnn "PyAny"
   | .int => nameAnn "int"
   | .bool => nameAnn "bool"
   | .str => nameAnn "str"

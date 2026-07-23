@@ -103,10 +103,21 @@ instance [PyPrintable α] : PyPrintable (List α) where
   pyStringify xs :=
     "[" ++ pyJoinPrinted (xs.map pyStringify) ++ "]"
 
-/-- Pairs print as Python tuples. Larger tuples still show as nested pairs for now. -/
-instance [PyPrintable α] [PyPrintable β] : PyPrintable (α × β) where
-  pyStringify p :=
-    "(" ++ pyStringify p.1 ++ ", " ++ pyStringify p.2 ++ ")"
+/-- The comma-joined inside of a tuple (no surrounding parens), flattening the right-nested product an
+n-tuple `(a, b, c)` = `(a, (b, c))` is. A genuine 2-tuple-of-a-pair `(a, (b, c))` is the same product
+at runtime, so it flattens too — flat n-tuples are far more common, so this is the better default. -/
+class PyTupleBody (α : Type) where
+  body : α → String
+
+instance (priority := 1100) [PyPrintable α] [PyTupleBody β] : PyTupleBody (α × β) where
+  body p := pyStringify p.1 ++ ", " ++ PyTupleBody.body p.2
+
+instance [PyPrintable α] : PyTupleBody α where
+  body a := pyStringify a
+
+/-- Tuples print as Python tuples, flattening the nesting so `(25, 9, 1)` is not `(25, (9, 1))`. -/
+instance [PyPrintable α] [PyTupleBody β] : PyPrintable (α × β) where
+  pyStringify p := "(" ++ pyStringify p.1 ++ ", " ++ PyTupleBody.body p.2 ++ ")"
 
 /--
 Hash maps print as Python-style dictionaries.

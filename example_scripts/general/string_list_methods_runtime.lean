@@ -12,21 +12,21 @@ set_option mvcgen.warning false
 set_option maxHeartbeats 0
 
 def string_pipeline :=
-  let s := "  Py Ast Lean  "
-  let trimmed := PastaLean.pyStringStrip s
-  let lowered := PastaLean.pyStringLower trimmed
-  let parts := PastaLean.pyStringSplit lowered
-  let glued := PastaLean.pyStringJoin "-" parts
+  let s := ("  Py Ast Lean  " : String)
+  let trimmed := (PastaLean.pyStringStrip s : String)
+  let lowered := (PastaLean.pyStringLower trimmed : String)
+  let parts := (PastaLean.pyStringSplit lowered : List String)
+  let glued := (PastaLean.pyStringJoin "-" parts : String)
   glued
 
 attribute [simp, taste_ingr] string_pipeline
 
 def string_pipeline'rn :=
-  let s := "  Py Ast Lean  "
-  let trimmed := PastaLean.pyStringStrip s
-  let lowered := PastaLean.pyStringLower trimmed
-  let parts := PastaLean.pyStringSplit lowered
-  let glued := PastaLean.pyStringJoin "-" parts
+  let s := ("  Py Ast Lean  " : String)
+  let trimmed := (PastaLean.pyStringStrip s : String)
+  let lowered := (PastaLean.pyStringLower trimmed : String)
+  let parts := (PastaLean.pyStringSplit lowered : List String)
+  let glued := (PastaLean.pyStringJoin "-" parts : String)
   glued
 
 def list_pipeline :=

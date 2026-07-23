@@ -4,6 +4,7 @@ import PastaLean.PyAPI.CommonProtocols.GetItem
 import PastaLean.PyAPI.CommonProtocols.SetItem
 import PastaLean.PyAPI.CommonProtocols.Length
 import PastaLean.PyAPI.CommonProtocols.Iterable
+import PastaLean.PyAPI.CommonProtocols.IsNone
 import PastaLean.PyAPI.Operators
 
 /-!
@@ -154,6 +155,8 @@ instance : PyIterable PyAny PyAny where
     | _ => []
 
 instance : PyPrintable PyAny where pyStringify := PyAny.toStr false
+/-- A `PyAny` is `None` exactly when it carries the `none` tag. -/
+instance : PyIsNone PyAny where isNoneVal | .none => true | _ => false
 instance : PyTruthy PyAny where
   truthy
     | .int n => n != 0

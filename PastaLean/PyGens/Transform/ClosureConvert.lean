@@ -266,6 +266,7 @@ private def assignNode (target value : Json) : Json :=
 private def returnNode (value : Option Json) : Json :=
   Json.mkObj [("node_type", Json.str "Return"), ("value", value.getD Json.null)]
 
+
 /-- The `Nonlocal` names declared anywhere in `json`. -/
 partial def nonlocalNames (json : Json) : Array String :=
   let here := if jsonNodeType? json == some "Nonlocal" then
@@ -370,6 +371,162 @@ partial def usedAsValue (old : String) (json : Json) : Bool :=
       else fields.toList.any (fun (_, value) => usedAsValue old value)
   | _ => false
 
+private def emptyListNode : Json := Json.mkObj [("node_type", Json.str "List"), ("elts", Json.arr #[])]
+private def emptyDictNode : Json :=
+  Json.mkObj [("node_type", Json.str "Dict"), ("keys", Json.arr #[]), ("values", Json.arr #[])]
+
+private def attrNode (value : Json) (attr : String) : Json :=
+  Json.mkObj [("node_type", Json.str "Attribute"), ("value", value), ("attr", Json.str attr)]
+
+private def callNode (func : Json) (args : Array Json) : Json :=
+  Json.mkObj [("node_type", Json.str "Call"), ("func", func), ("args", Json.arr args),
+    ("keywords", Json.mkObj [])]
+
+private def exprStmt (value : Json) : Json :=
+  Json.mkObj [("node_type", Json.str "Expr"), ("value", value)]
+
+private def forNode (target iter : Json) (body : Array Json) : Json :=
+  Json.mkObj [("node_type", Json.str "For"), ("target", target), ("iter", iter),
+    ("body", Json.arr body), ("orelse", Json.arr #[])]
+
+private def ifNode (test : Json) (body : Array Json) : Json :=
+  Json.mkObj [("node_type", Json.str "If"), ("test", test), ("body", Json.arr body),
+    ("orelse", Json.arr #[])]
+
+private def subscriptNode (value slice : Json) : Json :=
+  Json.mkObj [("node_type", Json.str "Subscript"), ("value", value), ("slice", slice)]
+
+/-- Builtins that fully consume a generator, so `f(x for …)` equals `f([x for …])` — building the
+list first is semantics-preserving. -/
+private def genConsumers : List String :=
+  ["sum", "max", "min", "any", "all", "prod", "list", "set", "tuple", "sorted"]
+
+/-- The comprehension a `return`/assign value is (once its consuming call, if any, is peeled): the
+element expression(s) that must be evaluated per item, the generators, how to seed the accumulator,
+how to append one item, and how to turn the finished accumulator into the result value. -/
+private structure ComprShape where
+  elts    : Array Json                 -- expressions evaluated per item (elt, or key+value)
+  gens    : Array Json
+  init    : Json                       -- `items = <empty collection>`
+  body    : Json → Json                -- `items.append(elt)` / `items[k] = v`, given the items name
+  result  : Json → Json                -- final value from the items name
+
+/-- Recognise the comprehension a value denotes: a bare `[…]`/`{…}`/`{k:v …}`, or one wrapped in a
+generator-consuming builtin (`sum`/`list`/`sorted`/…). -/
+private def comprShapeOf? (value : Json) : Option ComprShape :=
+  let listy (elt : Json) (gens : Array Json) (result : Json → Json) : ComprShape :=
+    { elts := #[elt], gens, init := emptyListNode,
+      body := fun items => exprStmt (callNode (attrNode items "append") #[elt]), result }
+  match jsonNodeType? value with
+  | some "ListComp" => do
+      let elt ← (value.getObjVal? "elt").toOption
+      some (listy elt ((value.getObjValAs? (Array Json) "generators").toOption.getD #[]) id)
+  | some "SetComp" => do
+      let elt ← (value.getObjVal? "elt").toOption
+      some (listy elt ((value.getObjValAs? (Array Json) "generators").toOption.getD #[])
+        (fun items => callNode (nameNode "set") #[items]))
+  | some "DictComp" => do
+      let key ← (value.getObjVal? "key").toOption
+      let v ← (value.getObjVal? "value").toOption
+      some { elts := #[key, v],
+             gens := (value.getObjValAs? (Array Json) "generators").toOption.getD #[],
+             init := emptyDictNode,
+             body := fun items => assignNode (subscriptNode items key) v,
+             result := id }
+  | some "GeneratorExp" => do
+      let elt ← (value.getObjVal? "elt").toOption
+      some (listy elt ((value.getObjValAs? (Array Json) "generators").toOption.getD #[]) id)
+  | some "Call" => do
+      let func ← (value.getObjVal? "func").toOption
+      guard (jsonNodeType? func == some "Name")
+      let name ← (func.getObjValAs? String "id").toOption
+      guard (genConsumers.contains name)
+      let args := (value.getObjValAs? (Array Json) "args").toOption.getD #[]
+      guard (args.size == 1 && jsonNodeType? args[0]! == some "GeneratorExp")
+      let elt ← (args[0]!.getObjVal? "elt").toOption
+      some (listy elt ((args[0]!.getObjValAs? (Array Json) "generators").toOption.getD #[])
+        (fun items => callNode func #[items]))
+  | _ => none
+
+/-- `<return/assign> <comprehension>` whose per-item expression calls the threaded helper `old` →
+rewrite the comprehension to its explicit accumulator loop, so the threaded call lands in statement
+position where the existing hoist/thread machinery carries the mutated state across iterations. A
+comprehension is exactly this loop by definition, so the rewrite is semantics-preserving.
+
+Applied only when `old`'s call is UNCONDITIONAL (no `and`/`or`/`if-else` around it) and no generator
+filter calls `old` — otherwise the loop would change *when* the mutation runs, so the original
+(rejecting) path is left. -/
+private def expandThreadedComprehension? (old : String) (counter : IO.Ref Nat) (stmt : Json) :
+    IO (Option (Array Json)) := do
+  let rebuild? : Option ((Json → Json) × Json) :=
+    match jsonNodeType? stmt with
+    | some "Return" => ((stmt.getObjVal? "value").toOption).map fun v => ((returnNode ∘ some), v)
+    | some "Assign" => do
+        let v ← (stmt.getObjVal? "value").toOption
+        let t ← (stmt.getObjVal? "target").toOption
+        some ((assignNode t ·), v)
+    | _ => none
+  let some (rebuild, value) := rebuild? | return none
+  let some shape := comprShapeOf? value | return none
+  unless shape.elts.any (containsCallTo old) do return none
+  if shape.elts.any (jsonContainsNodeType · ["BoolOp", "IfExp"]) then return none
+  if shape.gens.any (fun g =>
+      ((g.getObjValAs? (Array Json) "ifs").toOption.getD #[]).any (containsCallTo old)) then
+    return none
+  let n ← counter.modifyGet (fun n => (n, n + 1))
+  let items := nameNode s!"__cc{n + 1}"
+  let loop := shape.gens.foldr (fun g inner =>
+    let target := (g.getObjVal? "target").toOption.getD (nameNode "_")
+    let iter := (g.getObjVal? "iter").toOption.getD emptyListNode
+    let ifs := (g.getObjValAs? (Array Json) "ifs").toOption.getD #[]
+    let guarded := ifs.foldr (fun cond acc => #[ifNode cond acc]) inner
+    #[forNode target iter guarded]) #[shape.body items]
+  return some (#[assignNode items shape.init] ++ loop ++ #[rebuild (shape.result items)])
+
+/-- Whether a comprehension `value` may be hoisted for `old`: its per-item expression calls `old`
+unconditionally and no generator filter does. -/
+private def hoistableCompr (old : String) (shape : ComprShape) : Bool :=
+  shape.elts.any (containsCallTo old)
+    && !shape.elts.any (jsonContainsNodeType · ["BoolOp", "IfExp"])
+    && !shape.gens.any (fun g =>
+        ((g.getObjValAs? (Array Json) "ifs").toOption.getD #[]).any (containsCallTo old))
+
+/-- Replace every comprehension sub-expression of `expr` that calls the threaded helper `old` with a
+fresh temporary, returning the accumulator-loop statements that must run first — the nested version
+of `expandThreadedComprehension?` (`return 1 + sum(dfs(j) for j)`, `x = a + max(dfs(…) for …)`). Does
+NOT descend into `and`/`or`/`if-else`, so a short-circuited comprehension is left for the (rejecting)
+path — hoisting it would run the mutation unconditionally. -/
+private partial def hoistThreadedComprs (old : String) (counter : IO.Ref Nat) (expr : Json) :
+    IO (Json × Array Json) := do
+  if jsonNodeType? expr == some "BoolOp" || jsonNodeType? expr == some "IfExp" then
+    return (expr, #[])
+  if let some shape := comprShapeOf? expr then
+    if hoistableCompr old shape then
+      let n ← counter.modifyGet (fun n => (n, n + 1))
+      let items := nameNode s!"__cc{n + 1}"
+      let tmp := nameNode s!"__cv{n + 1}"
+      let loop := shape.gens.foldr (fun g inner =>
+        let target := (g.getObjVal? "target").toOption.getD (nameNode "_")
+        let iter := (g.getObjVal? "iter").toOption.getD emptyListNode
+        let ifs := (g.getObjValAs? (Array Json) "ifs").toOption.getD #[]
+        let guarded := ifs.foldr (fun cond acc => #[ifNode cond acc]) inner
+        #[forNode target iter guarded]) #[shape.body items]
+      return (tmp, #[assignNode items shape.init] ++ loop ++ #[assignNode tmp (shape.result items)])
+  match expr with
+  | .arr xs =>
+      let mut out := #[]; let mut pre := #[]
+      for x in xs do
+        let (x', p) ← hoistThreadedComprs old counter x
+        out := out.push x'; pre := pre ++ p
+      return (Json.arr out, pre)
+  | .obj fs =>
+      let mut rewritten := []; let mut pre := #[]
+      for (k, v) in fs.toList do
+        let (v', p) ← hoistThreadedComprs old counter v
+        pre := pre ++ p; rewritten := rewritten ++ [(k, v')]
+      return (Json.mkObj rewritten, pre)
+  | _ => return (expr, #[])
+
 mutual
 
 /-- Replace each threaded call inside an expression with a temporary, returning the assignments
@@ -418,6 +575,22 @@ partial def rewriteThreadedStmts (old new : String) (captures threaded : Array S
     unless containsCallTo old stmt do
       out := out.push stmt
       continue
+    -- A state-threading call inside a comprehension (`return sum(dfs(…) for …)`, `xs = [f(i) for i]`,
+    -- …): expand the comprehension to its accumulator loop so the call lands in statement position,
+    -- then thread the expansion.
+    if let some expanded ← expandThreadedComprehension? old counter stmt then
+      out := out ++ (← rewriteThreadedStmts old new captures threaded hasValue counter expanded)
+      continue
+    -- The comprehension nested inside a larger expression (`return 1 + sum(dfs(j) for j)`): hoist it
+    -- to a temporary, threading the accumulator loop, then process the simplified statement.
+    if ["Return", "Assign", "AugAssign", "Expr"].contains ((jsonNodeType? stmt).getD "") then
+      if let .ok value := stmt.getObjVal? "value" then
+        let (value', prelude) ← hoistThreadedComprs old counter value
+        if !prelude.isEmpty then
+          let stmt := stmt.setObjVal! "value" value'
+          out := out ++ (← rewriteThreadedStmts old new captures threaded hasValue counter
+            (prelude ++ #[stmt]))
+          continue
     if jsonNodeType? stmt == some "While" then
       if (stmt.getObjVal? "test").toOption.any (containsCallTo old) then
         throwError s!"call to '{old}' in a `while` test cannot rebind the threaded state."

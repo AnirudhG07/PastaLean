@@ -18,8 +18,8 @@ set_option maxHeartbeats 0
 
 namespace PastaBench.leetcode.VerifyPreorderSequenceInBinarySearchTree
 
-def inf :=
-  PastaLean.pyRatNonFinite "inf"
+def inf {α : Type} [PastaLean.PyNonFinite α] : α :=
+  PastaLean.pyNonFinite "inf"
 
 def verifyPreorder := fun (preorder : List Int) ↦
   Id.run
@@ -31,6 +31,7 @@ def verifyPreorder := fun (preorder : List Int) ↦
           return Bool.false
         else
           let _ := ()
+        let _ := Libraries.passta.pyPassAssert (decide (x ≥ last))
         while (PastaLean.pyTruthy stk = true ∧ stk⦋(-1 : Int)⦌ < x) do
           last := PastaLean.pyPopValue stk
           stk := PastaLean.pyPopRest stk
@@ -49,6 +50,7 @@ def verifyPreorder'rn := fun (preorder : List Int) ↦
           return Bool.false
         else
           let _ := ()
+        let _ := Libraries.passta.pyPassAssert (decide (x ≥ last))
         while (PastaLean.pyTruthy stk && decide (stk⦋(-1 : Int)⦌ < x)) do
           last := PastaLean.pyPopValue stk
           stk := PastaLean.pyPopRest stk

@@ -32,7 +32,7 @@ private partial def _solve'go : Int → Int → List Int → Int := fun (i : Int
   if decide (i ≥ n) then (0 : Int) else grid⦋i⦌ +ₚ _solve'go (i +ₚ (1 : Int)) n grid
 
 def solve := fun (n : Int) ↦
-  let grid := PastaLean.pyListRepeat [(0 : Int)] n
+  let grid := (PastaLean.pyListRepeat [(0 : Int)] n : List Int)
   _solve'go (0 : Int) n grid
 
 attribute [simp, taste_ingr] solve
@@ -41,7 +41,7 @@ private partial def _solve'go'rn : Int → Int → List Int → Int := fun (i : 
   fun (grid : List Int) ↦ if decide (i ≥ n) then (0 : Int) else grid⦋i⦌ +ₚ _solve'go'rn (i +ₚ (1 : Int)) n grid
 
 def solve'rn := fun (n : Int) ↦
-  let grid := PastaLean.pyListRepeat [(0 : Int)] n
+  let grid := (PastaLean.pyListRepeat [(0 : Int)] n : List Int)
   _solve'go'rn (0 : Int) n grid
 
 def main' :=

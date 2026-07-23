@@ -58,6 +58,10 @@ def pythonMethodMap? (attr : String) : Option Lean.Name :=
   | "items"      => some ``pyItems
   | "keys"       => some ``pyKeys
   | "values"     => some ``pyAnys
+  -- Counter (a `Libraries.collections.PyDefaultDict`). Single-backtick Name literals: the runtime
+  -- lives in `Libraries`, which `PastaLean` cannot import, but the generated file `open`s it.
+  | "most_common" => some `Libraries.collections.pyMostCommon
+  | "elements"    => some `Libraries.collections.pyElements
   -- Int only
   | "bit_length" => some ``pyBitLength
   | "bit_count"  => some ``pyBitCount

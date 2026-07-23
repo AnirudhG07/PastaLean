@@ -218,7 +218,14 @@ partial def builtinReturn (sigs : Sigs) (env : Env) (name : String) (args : List
             | some "int" | some "float" => .int
             | _ => .unknown
           .dict .unknown vt
-      | "abs" | "min" | "max" | "sum" =>
+      -- `min(a, b, …)` / `max(a, b, …)` return the join of all their arguments — a float sentinel
+      -- and an int accumulator (`ans = max(ans, cur - inf)`) make the result `float`, which then
+      -- flows back to the accumulator. The single-argument container form uses the element type.
+      | "min" | "max" =>
+          if args.length == 1 then
+            if arg0.elemType != .unknown then arg0.elemType else arg0
+          else PyType.joinAll (args.map (typeOfExpr sigs env))
+      | "abs" | "sum" =>
           -- element for the container forms, else the argument itself.
           if args.length == 1 && arg0.elemType != .unknown then arg0.elemType else arg0
       -- `zip(a, b, …)` → list of tuples of the element types; `enumerate(a)` → list[(int, elem)].
@@ -236,10 +243,14 @@ partial def methodReturn (sigs : Sigs) (env : Env) (attr : String) (recv : Optio
       | "keys" => .list (match recvT with | .dict k _ => k | _ => .unknown)
       | "values" => .list (match recvT with | .dict _ v => v | _ => .unknown)
       | "items" => .list (match recvT with | .dict k v => .tuple [k, v] | _ => .unknown)
-      -- The DEFAULT argument also types the result: `counts.get(w, 0)` is an `int` even while the
-      -- dict itself is still `dict[str, unknown]`, which is what breaks the `d[k] = d.get(k,0)+1`
-      -- fixpoint out of `unknown`.
-      | "get" | "pop" | "setdefault" =>
+      -- `d.get(k)` gives `Optional[V]`; `d.get(k, default)` uses the default to type the result.
+      | "get" =>
+          let fromRecv := match recvT with | .dict _ v => v | _ => recvT.elemType
+          match args[1]? with
+          | some d => fromRecv.join (typeOfExpr sigs env d)
+          | none => .opt fromRecv
+      -- `d.pop(k)`/`d.setdefault(k)` return `V`; return `xs.pop()`/`q.popleft()`/`q.popright()`
+      | "pop" | "popleft" | "popright" | "setdefault" =>
           let fromRecv := match recvT with | .dict _ v => v | _ => recvT.elemType
           fromRecv.join (args[1]?.elim .unknown (typeOfExpr sigs env))
       | "copy" => recvT

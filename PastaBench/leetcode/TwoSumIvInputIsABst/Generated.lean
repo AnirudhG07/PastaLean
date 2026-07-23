@@ -38,26 +38,29 @@ def TreeNode'rn.new (val : _ := (0 : Int)) (left : Option TreeNode'rn := Option.
     (right : Option TreeNode'rn := Option.none) : TreeNode'rn :=
   ({ val := val, left := left, right := right } : TreeNode'rn)
 
-private partial def _findTarget_dfs := fun (root : Option TreeNode) ↦ fun (k : Int) ↦ fun vis ↦
+private partial def _findTarget_dfs := fun (node : Option TreeNode) ↦ fun (k : Int) ↦ fun vis ↦
   Id.run
     (do
       let mut vis := vis
-      if h_1 : Option.isNone root then 
+      if h_1 : Option.isNone node then 
         let __py_ret_1 := (Bool.false, vis)
         return __py_ret_1
       else
         let _ := ()
-      if h_2 : PastaLean.pyContains vis (k -ₚ ((root).getD default).val) then 
+      -- If we've seen a value that pairs with node.val to sum to k, we succeed.
+      if h_2 : PastaLean.pyContains vis (k -ₚ ((node).getD default).val) then 
+        let _ := Libraries.passta.pyPassAssert (PastaLean.pyContains vis (k -ₚ ((node).getD default).val))
         let __py_ret_1 := (Bool.true, vis)
         return __py_ret_1
       else
         let _ := ()
-      vis := PastaLean.pySetAdd vis ((root).getD default).val
-      let __unpack_value_1 := _findTarget_dfs ((root).getD default).left k vis
+      vis := PastaLean.pySetAdd vis ((node).getD default).val
+      -- Recurse left or right looking for a match
+      let __unpack_value_1 := _findTarget_dfs ((node).getD default).left k vis
       let __unpack_pair_1 := __unpack_value_1
       let mut __thread_t1 := Prod.fst __unpack_pair_1
       vis := Prod.snd __unpack_pair_1
-      let __unpack_value_2 := _findTarget_dfs ((root).getD default).right k vis
+      let __unpack_value_2 := _findTarget_dfs ((node).getD default).right k vis
       let __unpack_pair_2 := __unpack_value_2
       let mut __thread_t2 := Prod.fst __unpack_pair_2
       vis := Prod.snd __unpack_pair_2
@@ -65,6 +68,7 @@ private partial def _findTarget_dfs := fun (root : Option TreeNode) ↦ fun (k :
       return __py_ret_1)
 
 def findTarget := fun (root : Option TreeNode) ↦ fun (k : Int) ↦
+  -- No precondition on root (it may be None) and k can be any int.
   let vis := PastaLean.pySetFromList []
   let __unpack_pair_1 := _findTarget_dfs root k vis
   let __thread_t3 := Prod.fst __unpack_pair_1
@@ -73,26 +77,29 @@ def findTarget := fun (root : Option TreeNode) ↦ fun (k : Int) ↦
 
 attribute [simp, taste_ingr] findTarget
 
-private partial def _findTarget_dfs'rn := fun (root : Option TreeNode) ↦ fun (k : Int) ↦ fun vis ↦
+private partial def _findTarget_dfs'rn := fun (node : Option TreeNode) ↦ fun (k : Int) ↦ fun vis ↦
   Id.run
     (do
       let mut vis := vis
-      if h_1 : Option.isNone root then 
+      if h_1 : Option.isNone node then 
         let __py_ret_1 := (Bool.false, vis)
         return __py_ret_1
       else
         let _ := ()
-      if h_2 : PastaLean.pyContains vis (k -ₚ ((root).getD default).val) then 
+      -- If we've seen a value that pairs with node.val to sum to k, we succeed.
+      if h_2 : PastaLean.pyContains vis (k -ₚ ((node).getD default).val) then 
+        let _ := Libraries.passta.pyPassAssert (PastaLean.pyContains vis (k -ₚ ((node).getD default).val))
         let __py_ret_1 := (Bool.true, vis)
         return __py_ret_1
       else
         let _ := ()
-      vis := PastaLean.pySetAdd vis ((root).getD default).val
-      let __unpack_value_1 := _findTarget_dfs'rn ((root).getD default).left k vis
+      vis := PastaLean.pySetAdd vis ((node).getD default).val
+      -- Recurse left or right looking for a match
+      let __unpack_value_1 := _findTarget_dfs'rn ((node).getD default).left k vis
       let __unpack_pair_1 := __unpack_value_1
       let mut __thread_t1 := Prod.fst __unpack_pair_1
       vis := Prod.snd __unpack_pair_1
-      let __unpack_value_2 := _findTarget_dfs'rn ((root).getD default).right k vis
+      let __unpack_value_2 := _findTarget_dfs'rn ((node).getD default).right k vis
       let __unpack_pair_2 := __unpack_value_2
       let mut __thread_t2 := Prod.fst __unpack_pair_2
       vis := Prod.snd __unpack_pair_2
@@ -100,6 +107,7 @@ private partial def _findTarget_dfs'rn := fun (root : Option TreeNode) ↦ fun (
       return __py_ret_1)
 
 def findTarget'rn := fun (root : Option TreeNode) ↦ fun (k : Int) ↦
+  -- No precondition on root (it may be None) and k can be any int.
   let vis := PastaLean.pySetFromList []
   let __unpack_pair_1 := _findTarget_dfs'rn root k vis
   let __thread_t3 := Prod.fst __unpack_pair_1
