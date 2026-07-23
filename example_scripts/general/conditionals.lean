@@ -112,3 +112,13 @@ def cond_none'rn := fun (x : PyAny) ↦
       else
         let _ := ()
       return s)
+
+def value_or_default := fun xs ↦
+  -- `a or b` in a VALUE position returns the deciding operand, not a Bool: `xs or [0]` is the list.
+  PastaLean.pyMax (if PastaLean.pyTruthy xs then xs else [(0 : Int)])
+
+attribute [simp, taste_ingr] value_or_default
+
+def value_or_default'rn := fun xs ↦
+  -- `a or b` in a VALUE position returns the deciding operand, not a Bool: `xs or [0]` is the list.
+  PastaLean.pyMax (if PastaLean.pyTruthy xs then xs else [(0 : Int)])

@@ -557,6 +557,14 @@ def boolOpSyntax : (kind : SyntaxNodeKind) → Json →
       s!"BoolOp node does not have a 'values' field or it is not a JSON value: {json}"
     -- In exact `Prop` positions, `and`/`or` become `∧`/`∨`; otherwise lower to `Bool`.
     let opProp := (← getPropCondition) && (← numericModeIsExact)
+    -- `a or b` / `a and b` on NON-boolean operands returns the deciding *operand*, not a `Bool`
+    -- (`[…] or [0]` yields the list, `x or 0` the number). Only an all-boolean (or exact-`Prop`)
+    -- form is a real connective; otherwise take the value form.
+    let allBool := match valuesJson with
+      | .arr arr => arr.all conditionIsBoolean
+      | _ => false
+    if !opProp && !allBool then
+      return ← boolOpValueTerm json
     -- Each `and`/`or` operand is a truthiness context, so non-booleans must be coerced with `pyTruthy`.
     let lowerOperand (valueJson : Json) : PygenM (TSyntax `term) := do
       let code ← withPropCondition opProp (getCode valueJson `term)

@@ -222,3 +222,25 @@ def untyped_param_compare_and_div'rn := fun (nums : PyAny) ↦
           let _ := ()
       let __py_ret_1 := PastaLean.pyFloat best /ₚ (2 : Int)
       return __py_ret_1)
+
+def untyped_param_bitwise := fun (nums : PyAny) ↦
+  Id.run
+    (do
+      -- Bitwise (`| & `), floor-div (`//`) and shift on boxed (`PyAny`) values.
+      let mut r : PyAny := (0 : Int)
+      for x in (PastaLean.pyIter nums)do
+        r := PastaLean.pyBitOr r (PastaLean.pyBitAnd x (1 : Int)) +ₚ PastaLean.pyFloorDiv x (2 : Int)
+      let __py_ret_1 := PastaLean.pyShiftLeft r (1 : Int)
+      return __py_ret_1)
+
+attribute [simp, taste_ingr] untyped_param_bitwise
+
+def untyped_param_bitwise'rn := fun (nums : PyAny) ↦
+  Id.run
+    (do
+      -- Bitwise (`| & `), floor-div (`//`) and shift on boxed (`PyAny`) values.
+      let mut r : PyAny := (0 : Int)
+      for x in (PastaLean.pyIter nums)do
+        r := PastaLean.pyBitOr r (PastaLean.pyBitAnd x (1 : Int)) +ₚ PastaLean.pyFloorDiv x (2 : Int)
+      let __py_ret_1 := PastaLean.pyShiftLeft r (1 : Int)
+      return __py_ret_1)

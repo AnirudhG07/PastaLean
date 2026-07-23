@@ -83,3 +83,11 @@ def untyped_param_compare_and_div(nums):
         if x > best:
             best = x + x % 3
     return best / 2
+
+
+def untyped_param_bitwise(nums):
+    # Bitwise (`| & `), floor-div (`//`) and shift on boxed (`PyAny`) values.
+    r = 0
+    for x in nums:
+        r = (r | (x & 1)) + x // 2
+    return r << 1

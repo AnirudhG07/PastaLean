@@ -401,11 +401,12 @@ instance (priority := low) {α β γ} [j : PyNumJoin α β γ] [Div γ] : PyHDiv
 
 
 /-- Python-style floor division: `a // b` truncates toward negative infinity. -/
-def pyFloorDiv (a b : Int) : Int :=
-  if b == 0 then
-    panic! "ZeroDivisionError: integer division or modulo by zero"
-  else
-    Int.fdiv a b
+class PyFloorDiv (α β : Type) (γ : outParam Type) where floorDiv : α → β → γ
+/-- Python `a // b`. -/
+def pyFloorDiv {α β γ : Type} [PyFloorDiv α β γ] (a : α) (b : β) : γ := PyFloorDiv.floorDiv a b
+
+instance : PyFloorDiv Int Int Int where
+  floorDiv a b := if b == 0 then panic! "ZeroDivisionError: integer division or modulo by zero" else Int.fdiv a b
 
 /-!
 Python-style integer bitwise operators, modelling Python's infinite two's-complement (`-1 & 15 = 15`,
@@ -445,11 +446,15 @@ instance : PyBitAnd Int Int Int where bitAnd := pyTwosComp Nat.land
 instance : PyBitOr Int Int Int where bitOr := pyTwosComp Nat.lor
 instance : PyBitXor Int Int Int where bitXor := pyTwosComp Nat.xor
 
+class PyShiftLeft (α β : Type) (γ : outParam Type) where shiftLeft : α → β → γ
+class PyShiftRight (α β : Type) (γ : outParam Type) where shiftRight : α → β → γ
 /-- Python `a << b`. -/
-def pyShiftLeft (a b : Int) : Int := a * (2 ^ b.toNat)
-
+def pyShiftLeft {α β γ : Type} [PyShiftLeft α β γ] (a : α) (b : β) : γ := PyShiftLeft.shiftLeft a b
 /-- Python `a >> b` (floor division by `2 ^ b`). -/
-def pyShiftRight (a b : Int) : Int := Int.fdiv a (2 ^ b.toNat)
+def pyShiftRight {α β γ : Type} [PyShiftRight α β γ] (a : α) (b : β) : γ := PyShiftRight.shiftRight a b
+
+instance : PyShiftLeft Int Int Int where shiftLeft a b := a * (2 ^ b.toNat)
+instance : PyShiftRight Int Int Int where shiftRight a b := Int.fdiv a (2 ^ b.toNat)
 
 /-!
 ## Reduction lemmas — `simp` rewrites the Python operators to the standard ones

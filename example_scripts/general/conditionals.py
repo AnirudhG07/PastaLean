@@ -54,3 +54,8 @@ def cond_none(x):
     if (None is not None) or (None != None):
         s += "None is not None"
     return s
+
+
+def value_or_default(xs: list):
+    # `a or b` in a VALUE position returns the deciding operand, not a Bool: `xs or [0]` is the list.
+    return max(xs or [0])

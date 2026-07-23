@@ -150,6 +150,17 @@ def pow (a b : PyAny) : PyAny :=
   | some x, some (.inl y) => .float ((toRat x) ^ y)
   | _, _ => .none
 
+/-- The integer value of a boxed `int`/`bool`, for the integer-only bitwise/shift operators. -/
+def asInt : PyAny → Option Int
+  | .int n => some n
+  | .bool b => some (if b then 1 else 0)
+  | _ => Option.none
+
+def bitOp (f : Int → Int → Int) (a b : PyAny) : PyAny :=
+  match asInt a, asInt b with | some x, some y => .int (f x y) | _, _ => .none
+def shl (a b : PyAny) : PyAny := match asInt a, asInt b with | some x, some y => .int (pyShiftLeft x y) | _, _ => .none
+def shr (a b : PyAny) : PyAny := match asInt a, asInt b with | some x, some y => .int (pyShiftRight x y) | _, _ => .none
+
 /-- Numeric/string comparison, `none` when the operands are incomparable (as Python raises). -/
 def cmp (a b : PyAny) : Option Ordering :=
   match a, b with
@@ -205,6 +216,25 @@ instance : LT PyAny := ⟨fun a b => PyAny.blt a b = true⟩
 instance : LE PyAny := ⟨fun a b => PyAny.ble a b = true⟩
 instance (a b : PyAny) : Decidable (a < b) := inferInstanceAs (Decidable (PyAny.blt a b = true))
 instance (a b : PyAny) : Decidable (a ≤ b) := inferInstanceAs (Decidable (PyAny.ble a b = true))
+
+instance : PyFloorDiv PyAny PyAny PyAny where floorDiv := PyAny.floordiv
+instance : PyBitAnd PyAny PyAny PyAny where bitAnd := PyAny.bitOp (fun x y => pyBitAnd x y)
+instance : PyBitOr PyAny PyAny PyAny where bitOr := PyAny.bitOp (fun x y => pyBitOr x y)
+instance : PyBitXor PyAny PyAny PyAny where bitXor := PyAny.bitOp (fun x y => pyBitXor x y)
+instance : PyShiftLeft PyAny PyAny PyAny where shiftLeft := PyAny.shl
+instance : PyShiftRight PyAny PyAny PyAny where shiftRight := PyAny.shr
+instance (priority := low) {α} [PyToValue α] : PyFloorDiv PyAny α PyAny where floorDiv a b := PyAny.floordiv a (PyToValue.toValue b)
+instance (priority := low) {α} [PyToValue α] : PyFloorDiv α PyAny PyAny where floorDiv a b := PyAny.floordiv (PyToValue.toValue a) b
+instance (priority := low) {α} [PyToValue α] : PyBitAnd PyAny α PyAny where bitAnd a b := PyAny.bitOp (fun x y => pyBitAnd x y) a (PyToValue.toValue b)
+instance (priority := low) {α} [PyToValue α] : PyBitAnd α PyAny PyAny where bitAnd a b := PyAny.bitOp (fun x y => pyBitAnd x y) (PyToValue.toValue a) b
+instance (priority := low) {α} [PyToValue α] : PyBitOr PyAny α PyAny where bitOr a b := PyAny.bitOp (fun x y => pyBitOr x y) a (PyToValue.toValue b)
+instance (priority := low) {α} [PyToValue α] : PyBitOr α PyAny PyAny where bitOr a b := PyAny.bitOp (fun x y => pyBitOr x y) (PyToValue.toValue a) b
+instance (priority := low) {α} [PyToValue α] : PyBitXor PyAny α PyAny where bitXor a b := PyAny.bitOp (fun x y => pyBitXor x y) a (PyToValue.toValue b)
+instance (priority := low) {α} [PyToValue α] : PyBitXor α PyAny PyAny where bitXor a b := PyAny.bitOp (fun x y => pyBitXor x y) (PyToValue.toValue a) b
+instance (priority := low) {α} [PyToValue α] : PyShiftLeft PyAny α PyAny where shiftLeft a b := PyAny.shl a (PyToValue.toValue b)
+instance (priority := low) {α} [PyToValue α] : PyShiftLeft α PyAny PyAny where shiftLeft a b := PyAny.shl (PyToValue.toValue a) b
+instance (priority := low) {α} [PyToValue α] : PyShiftRight PyAny α PyAny where shiftRight a b := PyAny.shr a (PyToValue.toValue b)
+instance (priority := low) {α} [PyToValue α] : PyShiftRight α PyAny PyAny where shiftRight a b := PyAny.shr (PyToValue.toValue a) b
 
 /-- `float(x)` / the `/`-in-run-twin cast on a boxed value: read its numeric tag as a `Float`. -/
 instance : PyFloatCast PyAny where
