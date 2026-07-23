@@ -6,6 +6,7 @@ import PastaLean.PyAPI.CommonProtocols.Length
 import PastaLean.PyAPI.CommonProtocols.Iterable
 import PastaLean.PyAPI.CommonProtocols.IsNone
 import PastaLean.PyAPI.Operators
+import PastaLean.PyAPI.Builtins.Casting
 
 /-!
 # `PyAny` — the dynamic-value fallback
@@ -30,7 +31,7 @@ inductive PyAny where
   | float (q : Rat)
   | list  (xs : List PyAny)
   | none
-  deriving Inhabited, Repr, BEq
+  deriving Inhabited, Repr
 
 namespace PyAny
 
@@ -117,6 +118,60 @@ def mul : PyAny → PyAny → PyAny
   | .int n, .str a => .str (String.join (List.replicate n.toNat a))
   | a, b => (numBinop (· * ·) (· * ·) a b).getD .none
 
+private def toRat : Sum Int Rat → Rat := fun | .inl n => (n : Rat) | .inr q => q
+
+/-- Python `/` is always true division → `float`. -/
+def div (a b : PyAny) : PyAny :=
+  match asNum a, asNum b with
+  | some x, some y => let d := toRat y; if d == 0 then .none else .float (toRat x / d)
+  | _, _ => .none
+
+/-- Python `//`: `int//int` stays `int` (floored), else a floored `float`. -/
+def floordiv (a b : PyAny) : PyAny :=
+  match asNum a, asNum b with
+  | some (.inl x), some (.inl y) => if y == 0 then .none else .int (pyFloorDiv x y)
+  | some x, some y => let d := toRat y; if d == 0 then .none else .float ((Rat.floor (toRat x / d) : Int) : Rat)
+  | _, _ => .none
+
+/-- Python `%`: `int%int` stays `int`, else float modulo `a - b*⌊a/b⌋`. -/
+def mod (a b : PyAny) : PyAny :=
+  match asNum a, asNum b with
+  | some (.inl x), some (.inl y) => if y == 0 then .none else .int (pyMod x y)
+  | some x, some y =>
+      let xr := toRat x; let yr := toRat y
+      if yr == 0 then .none else .float (xr - yr * ((Rat.floor (xr / yr) : Int) : Rat))
+  | _, _ => .none
+
+/-- Python `**`: `int**(≥0)` stays `int`; an integer exponent otherwise gives a `float`; a fractional
+exponent is transcendental (soft-`none`). -/
+def pow (a b : PyAny) : PyAny :=
+  match asNum a, asNum b with
+  | some (.inl x), some (.inl y) => if y ≥ 0 then .int (x ^ y.toNat) else .float ((toRat (.inl x)) ^ y)
+  | some x, some (.inl y) => .float ((toRat x) ^ y)
+  | _, _ => .none
+
+/-- Numeric/string comparison, `none` when the operands are incomparable (as Python raises). -/
+def cmp (a b : PyAny) : Option Ordering :=
+  match a, b with
+  | .str x, .str y => some (compare x y)
+  | .list x, .list y => some (compare (x.map (·.toStr false)) (y.map (·.toStr false)))
+  | _, _ => match asNum a, asNum b with
+      | some x, some y => some (compare (toRat x) (toRat y))
+      | _, _ => Option.none
+
+def blt (a b : PyAny) : Bool := a.cmp b == some .lt
+def ble (a b : PyAny) : Bool := a.cmp b == some .lt || a.cmp b == some .eq
+
+/-- Python `==`: numeric across the tower (`5 == 5.0`), else structural (`5 == "5"` is `False`). -/
+partial def beq (a b : PyAny) : Bool :=
+  match asNum a, asNum b with
+  | some x, some y => toRat x == toRat y
+  | _, _ => match a, b with
+      | .str x, .str y => x == y
+      | .none, .none => true
+      | .list x, .list y => x.length == y.length && (x.zip y).all fun (p, q) => beq p q
+      | _, _ => false
+
 end PyAny
 
 instance : PyHAdd PyAny PyAny PyAny where hAdd := PyAny.add
@@ -132,6 +187,31 @@ instance (priority := low) {α} [PyToValue α] : PyHSub PyAny α PyAny where hSu
 instance (priority := low) {α} [PyToValue α] : PyHSub α PyAny PyAny where hSub a b := PyAny.sub (PyToValue.toValue a) b
 instance (priority := low) {α} [PyToValue α] : PyHMul PyAny α PyAny where hMul a b := PyAny.mul a (PyToValue.toValue b)
 instance (priority := low) {α} [PyToValue α] : PyHMul α PyAny PyAny where hMul a b := PyAny.mul (PyToValue.toValue a) b
+
+instance : PyHDiv PyAny PyAny PyAny where hDiv := PyAny.div
+instance : PyModulo PyAny PyAny PyAny where hMod := PyAny.mod
+instance : PyHPow PyAny PyAny PyAny where hPow := PyAny.pow
+instance (priority := low) {α} [PyToValue α] : PyHDiv PyAny α PyAny where hDiv a b := PyAny.div a (PyToValue.toValue b)
+instance (priority := low) {α} [PyToValue α] : PyHDiv α PyAny PyAny where hDiv a b := PyAny.div (PyToValue.toValue a) b
+instance (priority := low) {α} [PyToValue α] : PyModulo PyAny α PyAny where hMod a b := PyAny.mod a (PyToValue.toValue b)
+instance (priority := low) {α} [PyToValue α] : PyModulo α PyAny PyAny where hMod a b := PyAny.mod (PyToValue.toValue a) b
+instance (priority := low) {α} [PyToValue α] : PyHPow PyAny α PyAny where hPow a b := PyAny.pow a (PyToValue.toValue b)
+instance (priority := low) {α} [PyToValue α] : PyHPow α PyAny PyAny where hPow a b := PyAny.pow (PyToValue.toValue a) b
+
+/-- `==` on `PyAny` is numeric across the tower (`5 == 5.0`), replacing the structural derived `BEq`. -/
+instance : BEq PyAny := ⟨PyAny.beq⟩
+
+instance : LT PyAny := ⟨fun a b => PyAny.blt a b = true⟩
+instance : LE PyAny := ⟨fun a b => PyAny.ble a b = true⟩
+instance (a b : PyAny) : Decidable (a < b) := inferInstanceAs (Decidable (PyAny.blt a b = true))
+instance (a b : PyAny) : Decidable (a ≤ b) := inferInstanceAs (Decidable (PyAny.ble a b = true))
+
+/-- `float(x)` / the `/`-in-run-twin cast on a boxed value: read its numeric tag as a `Float`. -/
+instance : PyFloatCast PyAny where
+  pyFloat v := match PyAny.asNum v with
+    | some (.inl n) => Float.ofInt n
+    | some (.inr q) => q.toFloat
+    | Option.none => 0.0
 
 /-! ### Container protocols — delegate to the boxed value's own instance
 

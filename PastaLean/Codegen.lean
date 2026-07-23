@@ -91,6 +91,9 @@ structure State where
   operation). Set comparisons (`==`, `<=`, …) are order-independent, unlike the list-backed `==`/`≤`
   the same `List` value would otherwise use — see the `Compare` lowering. -/
   setVars : HashSet Name := HashSet.emptyWithCapacity 16
+  /-- Variables bound with `let mut` (reassignable in place). An immutable `let` loop var that a body
+  reassigns to a different type is shadowed instead; a `let mut` (incl. a `PyAny` slot) is not. -/
+  mutVars : HashSet Name := HashSet.emptyWithCapacity 32
   checkExr : Bool := true
   useArrow : Bool := false
   /-- When the innermost enclosing loop has a Python `else` clause, this holds the name of the
@@ -189,7 +192,8 @@ def withRealIfMarked {α : Type} (json : Lean.Json) (x : PygenM α) : PygenM α 
 
 def withFixedVariables {α : Type} (x : PygenM α) : PygenM α := do
   withPygenStateField (·.varNames) (fun st varNames => { st with varNames := varNames }) (← get).varNames <|
-    withPygenStateField (·.setVars) (fun st setVars => { st with setVars := setVars }) (← get).setVars x
+    withPygenStateField (·.setVars) (fun st setVars => { st with setVars := setVars }) (← get).setVars <|
+      withPygenStateField (·.mutVars) (fun st mutVars => { st with mutVars := mutVars }) (← get).mutVars x
 
 /-- Run `x` with the current loop's break-flag set to `flag?`. A loop body always overrides the
 flag (to its own `else` flag, or `none`) so a `break` binds to the innermost loop only. -/
@@ -210,6 +214,13 @@ def hasVar (usedName : Name) : PygenM Bool := do
 
 def addVar (usedName : Name) : PygenM Unit := do
   modify fun st => { st with varNames := st.varNames.insert usedName }
+
+/-- Whether `name` was bound with `let mut` (so it can be reassigned rather than shadowed). -/
+def isMutVar (name : Name) : PygenM Bool := do
+  return (← get).mutVars.contains name
+
+def setMutVar (name : Name) : PygenM Unit := do
+  modify fun st => { st with mutVars := st.mutVars.insert name }
 
 def isSetVar (name : Name) : PygenM Bool := do
   return (← get).setVars.contains name

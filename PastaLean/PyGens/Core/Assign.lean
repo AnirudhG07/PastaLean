@@ -93,6 +93,7 @@ def bindOrAssignLocal (nameIdent : TSyntax `ident) (rhs : TSyntax `term)
   -- code before the rebind saw the old value and code after sees the new. Its type comes from the
   -- RHS, NOT from the `PyAny` stamp: a single binding never has to hold both types.
   if rebindShadow then
+    setMutVar nameIdent.getId
     return ← `(doElem| let mut $nameIdent:ident := $rhs)
   if ← hasVar nameIdent.getId then
     `(doElem| $nameIdent:ident := $rhs)
@@ -101,6 +102,7 @@ def bindOrAssignLocal (nameIdent : TSyntax `ident) (rhs : TSyntax `term)
       | some ty => `(doElem| let mut $nameIdent:ident : $ty := $rhs)
       | none => `(doElem| let mut $nameIdent:ident := $rhs)
     addVar nameIdent.getId
+    setMutVar nameIdent.getId
     pure stx
 
 /-- Normalize Python-style two-target unpacking through the iterable protocol. -/
@@ -427,11 +429,13 @@ def assignSyntax : (kind : SyntaxNodeKind) → Json →
                 pure setStx
             | none =>
                 let nameIdent ← getCode target `ident
-                -- `_ty` of `PyAny` on an already-bound name = the inference saw two incompatible
-                -- types for it, i.e. a rebind: shadow rather than reassign.
+                -- A cross-type rebind (`_ty` = `PyAny`) of an immutable `let` (a loop var, `for ch in
+                -- s: ch = ord(ch)`) is shadowed with a fresh `let mut`. But a `let mut` slot — incl. a
+                -- `let mut x : PyAny` from a first binding — is just reassigned (a `let mut` cannot be
+                -- shadowed, and a `PyAny` slot coerces the new value in).
                 let conflicting := (jsonFieldOption target "_ty").any
                   (fun t => t.getObjValAs? String "id" == .ok "PyAny")
-                let shadow := conflicting && (← hasVar nameIdent.getId)
+                let shadow := conflicting && (← hasVar nameIdent.getId) && !(← isMutVar nameIdent.getId)
                 let ty? ← if shadow then pure none else stampedTypeSyntax? target
                 let bound ← bindOrAssignLocal nameIdent rhs ty? shadow
                 -- Track whether this name now holds a set, so later `==`/`<=` on it use set semantics

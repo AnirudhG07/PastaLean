@@ -192,3 +192,33 @@ def untyped_param_arithmetic'rn := fun (nums : PyAny) ↦
       for x in (PastaLean.pyIter nums)do
         total := total +ₚ x *ₚ (2 : Int)
       return total)
+
+def untyped_param_compare_and_div := fun (nums : PyAny) ↦
+  Id.run
+    (do
+      -- Comparison, `%` and `/` on boxed (`PyAny`) values; `best` is a `let mut PyAny` slot reassigned
+      -- across the loop (not shadowed).
+      let mut best : PyAny := (0 : Int)
+      for x in (PastaLean.pyIter nums)do
+        if h_1 : x > best then 
+          best := x +ₚ x %ₚ (3 : Int)
+        else
+          let _ := ()
+      let __py_ret_1 := best /ₚ (2 : Int)
+      return __py_ret_1)
+
+attribute [simp, taste_ingr] untyped_param_compare_and_div
+
+def untyped_param_compare_and_div'rn := fun (nums : PyAny) ↦
+  Id.run
+    (do
+      -- Comparison, `%` and `/` on boxed (`PyAny`) values; `best` is a `let mut PyAny` slot reassigned
+      -- across the loop (not shadowed).
+      let mut best : PyAny := (0 : Int)
+      for x in (PastaLean.pyIter nums)do
+        if h_1 : x > best then 
+          best := x +ₚ x %ₚ (3 : Int)
+        else
+          let _ := ()
+      let __py_ret_1 := PastaLean.pyFloat best /ₚ (2 : Int)
+      return __py_ret_1)

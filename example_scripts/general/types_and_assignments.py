@@ -73,3 +73,13 @@ def untyped_param_arithmetic(nums):
     for x in nums:
         total += x * 2
     return total
+
+
+def untyped_param_compare_and_div(nums):
+    # Comparison, `%` and `/` on boxed (`PyAny`) values; `best` is a `let mut PyAny` slot reassigned
+    # across the loop (not shadowed).
+    best = 0
+    for x in nums:
+        if x > best:
+            best = x + x % 3
+    return best / 2

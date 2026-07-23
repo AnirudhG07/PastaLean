@@ -74,10 +74,14 @@ _(newest first; one line per theme closed)_
   (4) nested for-target `for i,(a,b) in enumerate(zip(...))` — `flattenAssign` stamps `_tuple_unpack`
   so the desugared `a,b = __t` unpacks a `Prod`, not list-indexing (regression in `tuple_iteration.py`).
   Confirmed non-issue: int-**expression** → float-scalar already coerces at the reassignment (Lean
-  inserts `Int→ℚ`). (5) untyped-param→PyAny arithmetic: two-pass infer/seed/re-infer propagates PyAny
-  to the accumulator (`for x in nums: total += x*2` → `total : PyAny`), plus mixed `PyAny×scalar`
-  operators + `.any` propagation (regression `untyped_param_arithmetic`/`heterogeneous_pyany`).
-  Remaining T1: assorted per-problem buckets (synth-fail, tuple/zip element typing) not one root cause.
+  inserts `Int→ℚ`). (5) untyped-param→PyAny arithmetic: **two-pass** infer/seed/re-infer propagates
+  PyAny to the accumulator (`for x in nums: total += x*2` → `total : PyAny`); plus a completed
+  **PyAny op-set** — mixed `PyAny×scalar` `+ - * / % **`, comparisons (`< <= > >=`), numeric-aware
+  `==` (`5 == 5.0`), `.any` propagation (`arith`/`elemType`), `PyFloatCast PyAny`; plus **mutVars**
+  tracking so a `let mut PyAny` slot is reassigned (not shadowed) across a loop. Regressions:
+  `untyped_param_arithmetic`, `untyped_param_compare_and_div`, `heterogeneous_pyany`.
+  Remaining PyAny gaps: bitwise / floor-div / string-methods on `PyAny` (rarer). Remaining T1: a
+  genuine long tail (nested-`dfs`, `list or [0]`, per-problem synth-fails) — no single root cause.
 
 - **T2 let-mut-rebind — partial (this session).** ✔ basic-calculator-iii, ✔ flipping-an-image.
   Fix: `bodyReassignsName` now counts in-place mutation (`ts.sort()`, `ts.append()`, `ts[i]=v`) as a
