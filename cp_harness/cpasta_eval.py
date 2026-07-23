@@ -1292,7 +1292,11 @@ class CPastaEval:
         rest = "\n".join(l for l in lines if not l.startswith("import "))
         rest = rest.replace("def main : IO Unit", "def run : IO Unit", 1)
         ns = f"CpHarness.H{hid}"
-        return "\n".join(imports) + f"\nnamespace {ns}\n" + rest + f"\nend {ns}\n"
+        # The embedded `_cases` list literal is one `List.cons` deep per test case, so a
+        # many-case problem would exceed the default `maxRecDepth` (512) and be miscounted as a
+        # solution compile_fail. Raise both guards (finite, so a pathological compile still ends).
+        opts = "set_option maxRecDepth 10000\nset_option maxHeartbeats 4000000\n"
+        return "\n".join(imports) + f"\n{opts}namespace {ns}\n" + rest + f"\nend {ns}\n"
 
     def _lake_build(self, target):
         """`lake build <target>`, pinned to `self.jobs` CPUs. This Lake has no `-j`, so the cap is
@@ -1372,10 +1376,15 @@ class CPastaEval:
         ok_ids = [i for i in ids if (olean_dir / f"H{i}.olean").exists()]
         bad_ids = set(ids) - set(ok_ids)
 
-        # Phase 2: link the dispatcher over the harnesses that compiled.
+        # Phase 2: link the dispatcher over the harnesses that compiled. The match has one arm per
+        # harness, so at corpus scale it blows the elaborator's recursion depth (default 512) and
+        # then the LCNF compiler's heartbeat budget — both are a function of harness COUNT, not
+        # content, so both guards are lifted here rather than per-harness.
         (native_dir / "CpHarness.lean").write_text(
             "\n".join(f"import CpHarness.H{i}" for i in ok_ids) + "\n")
-        dispatch = (["import CpHarness", "", "def main (args : List String) : IO UInt32 := do",
+        dispatch = (["import CpHarness", "",
+                     "set_option maxRecDepth 1000000", "set_option maxHeartbeats 0", "",
+                     "def main (args : List String) : IO UInt32 := do",
                      "  match args.head? with"]
                     + [f'  | some "{i}" => CpHarness.H{i}.run' for i in ok_ids]
                     + ["  | _ => pure ()", "  return 0"])
@@ -1385,8 +1394,15 @@ class CPastaEval:
         print(f"[*] compile finished in {time.time() - t0:.0f}s — {len(ok_ids)} ok, "
               f"{len(bad_ids)} compile_fail (rc={proc.returncode})", flush=True)
         if proc.returncode != 0:
-            print("[!] dispatcher link FAILED:\n" + (proc.stderr or proc.stdout)[-2000:], flush=True)
-            restore_idle()
+            # Surface the actual `error:` lines (head of stderr), not the tail — the tail is Lake's
+            # "targets logged failures" list, which hides the real cause (a maxRecDepth/heartbeat
+            # blow-up on the giant match, say). Keep the modules in place so the dispatcher can be
+            # rebuilt in seconds after a fix, instead of re-running the whole phase-1 compile.
+            out = proc.stderr or proc.stdout or ""
+            errs = [l for l in out.splitlines() if "error:" in l and "logged failures" not in l]
+            print("[!] dispatcher build FAILED:\n" + ("\n".join(errs[:20]) or out[:2000]), flush=True)
+            print("[i] harness modules left in cp_harness/.native for a fast dispatcher rebuild.",
+                  flush=True)
             return {"_summary": agg}
 
         binary = str(Path(REPO_ROOT) / ".lake" / "build" / "bin" / "cpharness_run")
