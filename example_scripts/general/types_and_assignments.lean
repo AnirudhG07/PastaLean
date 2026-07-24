@@ -197,8 +197,50 @@ def inf_dp'rn := fun (cost : List Int) ↦
       let __py_ret_1 := dp⦋n⦌
       return __py_ret_1)
 
+def grid_inf_dp := fun (houses : List Int) ↦
+  Id.run
+    (do
+      -- A 2-D `[[inf]*k for _ in …]` DP: the comprehension is a nested list-container seeded by the
+      -- polymorphic `inf`, so it must be ascribed the twin's float type (`List (List ℚ)` / `Float`) —
+      -- otherwise `inf` defaults to ℚ while the run twin's values are `Float` (a `PySetItem (List ℚ) ℤ
+      -- Float` clash). Mirrors the allocate-mailboxes shape.
+      let mut n : Int := PastaLean.pyLen houses
+      let mut f :=
+        ((PastaLean.pyRange n).map fun _ => PastaLean.pyListRepeat [inf] (n +ₚ (1 : Int)) : List (List Rat))
+      for i in (PastaLean.pyRange n)do
+        f := PastaLean.pySetItem f i (PastaLean.pySetItem f⦋i⦌ (1 : Int) (houses⦋i⦌ : Rat))
+        for j in (PastaLean.pyRange (i +ₚ (2 : Int)) (2 : Int))do
+          for p in (PastaLean.pyRange i)do
+            f :=
+              PastaLean.pySetItem f i
+                (PastaLean.pySetItem f⦋i⦌ j (PastaLean.pyMin [f⦋i⦌⦋j⦌, f⦋p⦌⦋j -ₚ (1 : Int)⦌ +ₚ houses⦋i⦌] : Rat))
+      let __py_ret_1 := f⦋n -ₚ (1 : Int)⦌⦋n⦌
+      return __py_ret_1)
+
+attribute [simp, taste_ingr] grid_inf_dp
+
+def grid_inf_dp'rn := fun (houses : List Int) ↦
+  Id.run
+    (do
+      -- A 2-D `[[inf]*k for _ in …]` DP: the comprehension is a nested list-container seeded by the
+      -- polymorphic `inf`, so it must be ascribed the twin's float type (`List (List ℚ)` / `Float`) —
+      -- otherwise `inf` defaults to ℚ while the run twin's values are `Float` (a `PySetItem (List ℚ) ℤ
+      -- Float` clash). Mirrors the allocate-mailboxes shape.
+      let mut n : Int := PastaLean.pyLen houses
+      let mut f :=
+        ((PastaLean.pyRange n).map fun _ => PastaLean.pyListRepeat [inf] (n +ₚ (1 : Int)) : List (List Float))
+      for i in (PastaLean.pyRange n)do
+        f := PastaLean.pySetItem f i (PastaLean.pySetItem f⦋i⦌ (1 : Int) (houses⦋i⦌ : Float))
+        for j in (PastaLean.pyRange (i +ₚ (2 : Int)) (2 : Int))do
+          for p in (PastaLean.pyRange i)do
+            f :=
+              PastaLean.pySetItem f i
+                (PastaLean.pySetItem f⦋i⦌ j (PastaLean.pyMin [f⦋i⦌⦋j⦌, f⦋p⦌⦋j -ₚ (1 : Int)⦌ +ₚ houses⦋i⦌] : Float))
+      let __py_ret_1 := f⦋n -ₚ (1 : Int)⦌⦋n⦌
+      return __py_ret_1)
+
 def heterogeneous_pyany :=
-  (let __PastaLean_comment_8 := ()
+  (let __PastaLean_comment_12 := ()
     let xs := ([(1 : Int), "hi", (3 : Int)] : List PyAny)
     let total := (0 : Int)
     let total := total +ₚ xs⦋(0 : Int)⦌ *ₚ (2 : Int)
@@ -208,7 +250,7 @@ def heterogeneous_pyany :=
 attribute [simp] heterogeneous_pyany
 
 def heterogeneous_pyany'rn :=
-  (let __PastaLean_comment_8 := ()
+  (let __PastaLean_comment_12 := ()
     let xs := ([(1 : Int), "hi", (3 : Int)] : List PyAny)
     let total := (0 : Int)
     let total := total +ₚ xs⦋(0 : Int)⦌ *ₚ (2 : Int)
@@ -294,7 +336,7 @@ def grid_float_dp := fun (m : Int) ↦ fun (n : Int) ↦
     (do
       -- 2D grid DP initialised int (`[[0]*n ...]`) that becomes float via `/ 2` — the nested
       -- `f[i][j] = ...` teaches `f : list[list[float]]`, coercing the innermost `0`.
-      let mut f := (PastaLean.pyRange m).map fun _ => PastaLean.pyListRepeat [(0 : Rat)] n
+      let mut f := ((PastaLean.pyRange m).map fun _ => PastaLean.pyListRepeat [(0 : Rat)] n : List (List Rat))
       f := PastaLean.pySetItem f (0 : Int) (PastaLean.pySetItem f⦋(0 : Int)⦌ (0 : Int) (1 : Rat))
       for i in (PastaLean.pyRange m)do
         for j in (PastaLean.pyRange n)do
@@ -312,7 +354,7 @@ def grid_float_dp'rn := fun (m : Int) ↦ fun (n : Int) ↦
     (do
       -- 2D grid DP initialised int (`[[0]*n ...]`) that becomes float via `/ 2` — the nested
       -- `f[i][j] = ...` teaches `f : list[list[float]]`, coercing the innermost `0`.
-      let mut f := (PastaLean.pyRange m).map fun _ => PastaLean.pyListRepeat [(0 : Float)] n
+      let mut f := ((PastaLean.pyRange m).map fun _ => PastaLean.pyListRepeat [(0 : Float)] n : List (List Float))
       f := PastaLean.pySetItem f (0 : Int) (PastaLean.pySetItem f⦋(0 : Int)⦌ (0 : Int) (1 : Float))
       for i in (PastaLean.pyRange m)do
         for j in (PastaLean.pyRange n)do

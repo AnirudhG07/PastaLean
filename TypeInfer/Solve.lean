@@ -593,13 +593,19 @@ private partial def deepFloatContainer : PyType → Bool
   | .list e | .set e => deepFloatContainer e
   | _ => false
 
-/-- A list/set literal or a `[x] * n` repeat — a value whose element type an ascription can fix. -/
-private def isListLitOrRepeat (v : Json) : Bool :=
+/-- A list/set literal or a `[x] * n` repeat — a value whose element type an ascription can fix.
+Also a comprehension whose ELEMENT is itself such a container (`[[inf]*m for …]`), so the outer
+float container is ascribed and the polymorphic `inf` seed pins to the mode float. A comprehension
+of scalars (`[pow(a-b, 2) for …]`) is deliberately NOT matched: ascribing it would force the int
+subexpressions inside each element to ℚ (`PyHSub ℤ ℤ ℚ`). -/
+private partial def isListLitOrRepeat (v : Json) : Bool :=
   match nodeTypeOf v with
   | some "List" | some "Set" => true
   | some "BinOp" => (v.getObjValAs? String "op").toOption == some "mul"
       && ((getField v "left").any (fun l => nodeTypeOf l == some "List")
           || (getField v "right").any (fun r => nodeTypeOf r == some "List"))
+  | some "ListComp" | some "GeneratorExp" | some "SetComp" =>
+      (getField v "elt").any isListLitOrRepeat
   | _ => false
 
 /-- For a float-typed container assigned `value`, coerce its int-literal ELEMENTS to float. Descends

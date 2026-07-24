@@ -67,6 +67,21 @@ def inf_dp(cost: List[int]) -> int:
     return dp[n]
 
 
+def grid_inf_dp(houses: List[int]) -> int:
+    # A 2-D `[[inf]*k for _ in …]` DP: the comprehension is a nested list-container seeded by the
+    # polymorphic `inf`, so it must be ascribed the twin's float type (`List (List ℚ)` / `Float`) —
+    # otherwise `inf` defaults to ℚ while the run twin's values are `Float` (a `PySetItem (List ℚ) ℤ
+    # Float` clash). Mirrors the allocate-mailboxes shape.
+    n = len(houses)
+    f = [[inf] * (n + 1) for _ in range(n)]
+    for i in range(n):
+        f[i][1] = houses[i]
+        for j in range(2, i + 2):
+            for p in range(i):
+                f[i][j] = min(f[i][j], f[p][j - 1] + houses[i])
+    return f[n - 1][n]
+
+
 def heterogeneous_pyany():
     # `[1, "hi", 3]` is `List PyAny`; arithmetic on a boxed element (`* 2`, `+`) dispatches on the tag.
     xs = [1, "hi", 3]
