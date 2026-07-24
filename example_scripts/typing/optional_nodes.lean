@@ -56,7 +56,7 @@ def ListNode'rn.new (val : _ := (0 : Int)) (next : Option ListNode'rn := Option.
 
 -- Field read straight off an `Option` receiver.
 partial def depth : Option TreeNode → Int := fun (root : Option TreeNode) ↦
-  if !PastaLean.pyTruthy root then (0 : Int)
+  if ¬PastaLean.pyTruthy root = true then (0 : Int)
   else (1 : Int) +ₚ PastaLean.pyMax [depth ((root).getD default).left, depth ((root).getD default).right]
 
 partial def depth'rn : Option TreeNode → Int := fun (root : Option TreeNode) ↦

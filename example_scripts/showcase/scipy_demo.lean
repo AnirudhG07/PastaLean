@@ -66,7 +66,7 @@ noncomputable def main' :=
         PastaLean.ProofMode.pyPrintProof [pyPrintArg "hmean     =", pyPrintArg (Libraries.scipy.pyScipyHmean data)]
       let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg "variance  =", pyPrintArg (variance data)]
       let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg "=== scipy.linalg ==="]
-      let mut matrix := [[(4.0 : Rat), (3.0 : Rat)], [(6.0 : Rat), (3.0 : Rat)]]
+      let mut matrix := ([[(4.0 : Rat), (3.0 : Rat)], [(6.0 : Rat), (3.0 : Rat)]] : List (List Rat))
       let _ ←
         PastaLean.ProofMode.pyPrintProof [pyPrintArg "det       =", pyPrintArg (Libraries.scipy.pyScipyDet matrix)]
       let _ ←
@@ -96,7 +96,7 @@ def main''rn :=
       let _ ← pyPrintIO [pyPrintArg "hmean     =", pyPrintArg (Libraries.scipy.pyScipyHmean data)]
       let _ ← pyPrintIO [pyPrintArg "variance  =", pyPrintArg (variance'rn data)]
       let _ ← pyPrintIO [pyPrintArg "=== scipy.linalg ==="]
-      let mut matrix := [[(4.0 : Float), (3.0 : Float)], [(6.0 : Float), (3.0 : Float)]]
+      let mut matrix := ([[(4.0 : Float), (3.0 : Float)], [(6.0 : Float), (3.0 : Float)]] : List (List Float))
       let _ ← pyPrintIO [pyPrintArg "det       =", pyPrintArg (Libraries.scipy.pyScipyDet matrix)]
       let _ ←
         pyPrintIO [pyPrintArg "norm[3,4] =", pyPrintArg (Libraries.scipy.pyScipyNorm [(3.0 : Float), (4.0 : Float)])]) :

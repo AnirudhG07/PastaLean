@@ -4,7 +4,6 @@ Pipeline order (see `driver.translate_to_json`):
 
     annotate_python   type/scope annotations, run as a subprocess over the original file
     node_visitor      Python AST → JSON IR
-    normalize_loops   canonical counting `while` → `for i in range(...)`
     driver            library-import, effect, real-flow and top-level-state annotations
     toplevel_state    entry-point + state-threading annotations
 

@@ -67,7 +67,11 @@ targets are stamped `_tuple_unpack` — a nested for-target (`for i, (a, b) in e
 unpacks a `Prod`, so codegen must use `Prod.fst`/`Prod.snd`, not list indexing. -/
 partial def flattenAssign (target value : Json) : DesugarM (Array Json) := do
   unless isTupleTarget target do return #[assignStmt target value]
-  let tupleUnpack (t : Json) : Json := t.setObjVal! "_tuple_unpack" (Json.bool true)
+  -- Default a flattened nested target to `Prod` access, but NOT when TypeInfer already marked it
+  -- `_list_unpack` (`for k, (l, r) in enumerate(rows)` — the inner `(l, r)` unpacks a list row).
+  let tupleUnpack (t : Json) : Json :=
+    if t.getObjValAs? Bool "_list_unpack" == .ok true then t
+    else t.setObjVal! "_tuple_unpack" (Json.bool true)
   let elts := (target.getObjValAs? (Array Json) "elts").toOption.getD #[]
   unless elts.any isTupleTarget do return #[assignStmt (tupleUnpack target) value]
   let mut flatElts := #[]

@@ -25,7 +25,7 @@ def neighbours := fun (i : Int) ↦ fun (j : Int) ↦
   Id.run
     (do
       let mut dirs : Int × Int × Int × Int × Int := (-(1 : Int), ((0 : Int), ((1 : Int), ((0 : Int), -(1 : Int)))))
-      let mut out := []
+      let mut out : List (Int × Int) := []
       for _pair_1 in (PastaLean.pyIter (Libraries.itertools.pyPairwise dirs))do
         let a := Prod.fst _pair_1
         let b := Prod.snd _pair_1
@@ -38,7 +38,7 @@ def neighbours'rn := fun (i : Int) ↦ fun (j : Int) ↦
   Id.run
     (do
       let mut dirs : Int × Int × Int × Int × Int := (-(1 : Int), ((0 : Int), ((1 : Int), ((0 : Int), -(1 : Int)))))
-      let mut out := []
+      let mut out : List (Int × Int) := []
       for _pair_1 in (PastaLean.pyIter (Libraries.itertools.pyPairwise dirs))do
         let a := Prod.fst _pair_1
         let b := Prod.snd _pair_1

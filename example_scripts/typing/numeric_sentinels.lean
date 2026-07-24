@@ -25,7 +25,7 @@ def inf {α : Type} [PastaLean.PyNonFinite α] : α :=
 -- The sentinel flows through an int-annotated recursive DP.
 private partial def _best_pair'dfs : Int → Int → List Int → Int := fun (i : Int) ↦ fun (j : Int) ↦
   fun (rods : List Int) ↦
-  if decide (i ≥ PastaLean.pyLen rods) then if j == (0 : Int) then (0 : Int) else -inf
+  if i ≥ PastaLean.pyLen rods then if j = (0 : Int) then (0 : Int) else -inf
   else
     let ans :=
       PastaLean.pyMax [_best_pair'dfs (i +ₚ (1 : Int)) j rods, _best_pair'dfs (i +ₚ (1 : Int)) (j +ₚ rods⦋i⦌) rods]
@@ -38,7 +38,7 @@ attribute [simp, taste_ingr] best_pair
 
 private partial def _best_pair'dfs'rn : Int → Int → List Int → Int := fun (i : Int) ↦ fun (j : Int) ↦
   fun (rods : List Int) ↦
-  if decide (i ≥ PastaLean.pyLen rods) then if j == (0 : Int) then (0 : Int) else -inf
+  if i ≥ PastaLean.pyLen rods then if j == (0 : Int) then (0 : Int) else -inf
   else
     let ans :=
       PastaLean.pyMax

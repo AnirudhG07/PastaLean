@@ -1029,7 +1029,9 @@ def ifHeadSyntax : (kind : SyntaxNodeKind) → Json →
         if !rest.isEmpty && !statementListDefinitelyReturns bodyElems.toList then
           throwError
             "If body falls through into later statements; requires monadic lowering."
-        let testStx ← getCode testJson `term
+        -- A boolean context like every other `if`: `pyTruthy`-wrap a bare non-Bool test (`if s & 1:`)
+        -- and force a `BoolOp` to the `Bool` connective, not the value-form.
+        let testStx ← truthyConditionTerm testJson (← withPropCondition true (getCode testJson `term))
         let thenBranch ← withoutCheck do
           let splitThen ← splitList (bodyElems.toList ++ rest)
           getCode splitThen `term

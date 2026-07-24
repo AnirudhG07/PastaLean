@@ -20,7 +20,7 @@ def simple_lc'rn :=
   (PastaLean.pyRange (10 : Int)).map fun x => x
 
 def lc_with_condition :=
-  (List.filter (fun x => x %ₚ (2 : Int) == (0 : Int)) (PastaLean.pyRange (10 : Int))).map fun x => x
+  (List.filter (fun x => x %ₚ (2 : Int) = (0 : Int)) (PastaLean.pyRange (10 : Int))).map fun x => x
 
 attribute [simp, taste_ingr] lc_with_condition
 
@@ -74,8 +74,7 @@ def lc_with_function_call'rn :=
   a
 
 def lc_with_multiple_conditions :=
-  (List.filter (fun x => x %ₚ (2 : Int) == (0 : Int) && x %ₚ (3 : Int) == (0 : Int))
-        (PastaLean.pyRange (20 : Int))).map
+  (List.filter (fun x => x %ₚ (2 : Int) = (0 : Int) ∧ x %ₚ (3 : Int) = (0 : Int)) (PastaLean.pyRange (20 : Int))).map
     fun x => x
 
 attribute [simp, taste_ingr] lc_with_multiple_conditions
@@ -93,7 +92,7 @@ def lc_with_tuple_unpacking :=
             (fun _pair_3 =>
               let num := Prod.fst _pair_3;
               let char := Prod.snd _pair_3;
-              num %ₚ (2 : Int) == (0 : Int))
+              num %ₚ (2 : Int) = (0 : Int))
             (PastaLean.pyIter another_pairs)).map
         fun _pair_2 =>
         let num := Prod.fst _pair_2;
@@ -130,7 +129,7 @@ def lc_with_tuple_unpacking'rn :=
     s! "{num }:{char}"
 
 def lc_with_nested_conditions :=
-  (List.filter (fun x => x %ₚ (2 : Int) == (0 : Int) && x %ₚ (3 : Int) == (0 : Int) || x %ₚ (5 : Int) == (0 : Int))
+  (List.filter (fun x => x %ₚ (2 : Int) = (0 : Int) ∧ x %ₚ (3 : Int) = (0 : Int) ∨ x %ₚ (5 : Int) = (0 : Int))
         (PastaLean.pyRange (20 : Int))).map
     fun x => x
 
@@ -171,7 +170,7 @@ def lc_with_generator_expression'rn :=
 
 def lc_with_if_else :=
   let a := ((PastaLean.pyRange (10 : Int)).map fun x => x : List Int)
-  (PastaLean.pyRange (10 : Int)).map fun x => if x %ₚ (2 : Int) == (0 : Int) then x else -x
+  (PastaLean.pyRange (10 : Int)).map fun x => if x %ₚ (2 : Int) = (0 : Int) then x else -x
 
 attribute [simp, taste_ingr] lc_with_if_else
 

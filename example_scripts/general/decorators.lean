@@ -90,11 +90,10 @@ def add'rn :=
   checked'rn add'undecorated'rn
 
 -- `@cache` is transparent — emitted unchanged, recursion still resolves.
-partial def fib : Int → Int := fun (n : Int) ↦
-  if decide (n < (2 : Int)) then n else fib (n -ₚ (1 : Int)) +ₚ fib (n -ₚ (2 : Int))
+partial def fib : Int → Int := fun (n : Int) ↦ if n < (2 : Int) then n else fib (n -ₚ (1 : Int)) +ₚ fib (n -ₚ (2 : Int))
 
 partial def fib'rn : Int → Int := fun (n : Int) ↦
-  if decide (n < (2 : Int)) then n else fib'rn (n -ₚ (1 : Int)) +ₚ fib'rn (n -ₚ (2 : Int))
+  if n < (2 : Int) then n else fib'rn (n -ₚ (1 : Int)) +ₚ fib'rn (n -ₚ (2 : Int))
 
 -- OOP: the method-binding markers. `@staticmethod` drops `self`; `@property` reads as an attribute;
 -- `@classmethod` drops `cls`.

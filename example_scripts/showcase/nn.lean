@@ -64,12 +64,14 @@ noncomputable def main' :=
       -- XOR is not linearly separable, so a single layer cannot solve it -- the
       -- hidden layer is what makes this learnable.
       let mut xs :=
-        [[(0.0 : Rat), (0.0 : Rat)], [(0.0 : Rat), (1.0 : Rat)], [(1.0 : Rat), (0.0 : Rat)], [(1.0 : Rat), (1.0 : Rat)]]
+        ([[(0.0 : Rat), (0.0 : Rat)], [(0.0 : Rat), (1.0 : Rat)], [(1.0 : Rat), (0.0 : Rat)],
+            [(1.0 : Rat), (1.0 : Rat)]] :
+          List (List Rat))
       let mut ys := ([(0.0 : Rat), (1.0 : Rat), (1.0 : Rat), (0.0 : Rat)] : List Rat)
       -- Fixed initial weights so the run is reproducible (no RNG needed).
-      let mut w1 := [[(0.5 : Real), -(0.4 : Real)], [(0.9 : Real), (1.0 : Real)]]
+      let mut w1 := ([[(0.5 : Real), -(0.4 : Real)], [(0.9 : Real), (1.0 : Real)]] : List (List Real))
       let mut b1 := ([(0.1 : Real), -(0.2 : Real)] : List Real)
-      let mut w2 := [[(0.7 : Real), -(0.8 : Real)]]
+      let mut w2 := ([[(0.7 : Real), -(0.8 : Real)]] : List (List Real))
       let mut b2 := ([(0.3 : Real)] : List Real)
       let mut lr := (0.5 : Rat)
       let mut epochs : Int := (4000 : Int)
@@ -111,7 +113,7 @@ noncomputable def main' :=
       let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg "learned predictions:"]
       for i in (PastaLean.pyRange (PastaLean.pyLen xs))do
         let mut p := predict xs⦋i⦌ w1 b1 w2 b2
-        let mut label : Int := if decide (p > (0.5 : Real)) then (1 : Int) else (0 : Int)
+        let mut label : Int := if p > (0.5 : Real) then (1 : Int) else (0 : Int)
         let _ ←
           PastaLean.ProofMode.pyPrintProof
               [pyPrintArg s! "  {xs⦋i⦌} -> {p }  (class {label }, target {PastaLean.pyInt ys⦋i⦌})"]) :
@@ -124,13 +126,14 @@ def main''rn :=
       -- XOR is not linearly separable, so a single layer cannot solve it -- the
       -- hidden layer is what makes this learnable.
       let mut xs :=
-        [[(0.0 : Float), (0.0 : Float)], [(0.0 : Float), (1.0 : Float)], [(1.0 : Float), (0.0 : Float)],
-          [(1.0 : Float), (1.0 : Float)]]
+        ([[(0.0 : Float), (0.0 : Float)], [(0.0 : Float), (1.0 : Float)], [(1.0 : Float), (0.0 : Float)],
+            [(1.0 : Float), (1.0 : Float)]] :
+          List (List Float))
       let mut ys := ([(0.0 : Float), (1.0 : Float), (1.0 : Float), (0.0 : Float)] : List Float)
       -- Fixed initial weights so the run is reproducible (no RNG needed).
-      let mut w1 := [[(0.5 : Float), -(0.4 : Float)], [(0.9 : Float), (1.0 : Float)]]
+      let mut w1 := ([[(0.5 : Float), -(0.4 : Float)], [(0.9 : Float), (1.0 : Float)]] : List (List Float))
       let mut b1 := ([(0.1 : Float), -(0.2 : Float)] : List Float)
-      let mut w2 := [[(0.7 : Float), -(0.8 : Float)]]
+      let mut w2 := ([[(0.7 : Float), -(0.8 : Float)]] : List (List Float))
       let mut b2 := ([(0.3 : Float)] : List Float)
       let mut lr := (0.5 : Float)
       let mut epochs : Int := (4000 : Int)
@@ -171,7 +174,7 @@ def main''rn :=
       let _ ← pyPrintIO [pyPrintArg "learned predictions:"]
       for i in (PastaLean.pyRange (PastaLean.pyLen xs))do
         let mut p := predict'rn xs⦋i⦌ w1 b1 w2 b2
-        let mut label : Int := if decide (p > (0.5 : Float)) then (1 : Int) else (0 : Int)
+        let mut label : Int := if p > (0.5 : Float) then (1 : Int) else (0 : Int)
         let _ ← pyPrintIO [pyPrintArg s! "  {xs⦋i⦌} -> {p }  (class {label }, target {PastaLean.pyInt ys⦋i⦌})"]) :
     IO _)
 

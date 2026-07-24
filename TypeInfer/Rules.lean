@@ -230,9 +230,11 @@ partial def builtinReturn (sigs : Sigs) (env : Env) (name : String) (args : List
       | "abs" | "sum" =>
           -- element for the container forms, else the argument itself.
           if args.length == 1 && arg0.elemType != .unknown then arg0.elemType else arg0
-      -- `zip(a, b, …)` → list of tuples of the element types; `enumerate(a)` → list[(int, elem)].
+      -- `zip(a, b, …)` → list of tuples of the element types; `enumerate(a)` → list[(int, elem)];
+      -- `pairwise(a)` → list of consecutive (elem, elem) pairs.
       | "zip" => .list (.tuple (args.map (fun a => (typeOfExpr sigs env a).elemType)))
       | "enumerate" => .list (.tuple [.int, arg0.elemType])
+      | "pairwise" => .list (.tuple [arg0.elemType, arg0.elemType])
       | _ => .unknown
 
 /-- Return type of `recv.attr(args)`. -/

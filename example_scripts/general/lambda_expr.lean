@@ -17,7 +17,7 @@ attribute [simp, taste_ingr] lmbda_expr
 
 def lmbda_expr'rn := fun x ↦ x +ₚ (1 : Int)
 
-def lmbda_with_condition := fun x ↦ if x %ₚ (2 : Int) == (0 : Int) then x +ₚ (1 : Int) else x -ₚ (1 : Int)
+def lmbda_with_condition := fun x ↦ if x %ₚ (2 : Int) = (0 : Int) then x +ₚ (1 : Int) else x -ₚ (1 : Int)
 
 attribute [simp, taste_ingr] lmbda_with_condition
 
@@ -72,7 +72,7 @@ attribute [simp, taste_ingr] lmbda_ds
 def lmbda_ds'rn := fun x ↦ [x, x *ₚ (2 : Int), x *ₚ (3 : Int)]
 
 def lmbda_with_nested_conditions := fun x ↦
-  if x %ₚ (2 : Int) == (0 : Int) && x %ₚ (3 : Int) == (0 : Int) || x %ₚ (5 : Int) == (0 : Int) then x +ₚ (1 : Int)
+  if x %ₚ (2 : Int) = (0 : Int) ∧ x %ₚ (3 : Int) = (0 : Int) ∨ x %ₚ (5 : Int) = (0 : Int) then x +ₚ (1 : Int)
   else x -ₚ (1 : Int)
 
 attribute [simp, taste_ingr] lmbda_with_nested_conditions

@@ -555,15 +555,18 @@ def boolOpSyntax : (kind : SyntaxNodeKind) → Json →
       s!"BoolOp node does not have an 'op' field or it is not a string: {json}"
     let .ok valuesJson := json.getObjValAs? Json "values" | throwError
       s!"BoolOp node does not have a 'values' field or it is not a JSON value: {json}"
+    -- A test position (`while`/`if`/assert) sets this; there `and`/`or` must stay a `Bool`
+    -- connective in every twin, never the value form (a `while` cond needs `Bool`, not `Int`).
+    let inCondition ← getPropCondition
     -- In exact `Prop` positions, `and`/`or` become `∧`/`∨`; otherwise lower to `Bool`.
-    let opProp := (← getPropCondition) && (← numericModeIsExact)
+    let opProp := inCondition && (← numericModeIsExact)
     -- `a or b` / `a and b` on NON-boolean operands returns the deciding *operand*, not a `Bool`
-    -- (`[…] or [0]` yields the list, `x or 0` the number). Only an all-boolean (or exact-`Prop`)
-    -- form is a real connective; otherwise take the value form.
+    -- (`[…] or [0]` yields the list, `x or 0` the number) — but only in a VALUE position; a
+    -- condition keeps the `Bool` connective. Only all-boolean operands are a real connective.
     let allBool := match valuesJson with
       | .arr arr => arr.all conditionIsBoolean
       | _ => false
-    if !opProp && !allBool then
+    if !inCondition && !allBool then
       return ← boolOpValueTerm json
     -- Each `and`/`or` operand is a truthiness context, so non-booleans must be coerced with `pyTruthy`.
     let lowerOperand (valueJson : Json) : PygenM (TSyntax `term) := do
@@ -611,7 +614,9 @@ def ifExpSyntax : (kind : SyntaxNodeKind) → Json →
       s!"IfExp node does not have a 'body' field or it is not a JSON value: {json}"
     let .ok orelseJson := json.getObjValAs? Json "orelse" | throwError
       s!"IfExp node does not have an 'orelse' field or it is not a JSON value: {json}"
-    let testCode ← truthyConditionTerm testJson (← getCode testJson `term)
+    -- The ternary test is a boolean context (like `if`/`while`): a `BoolOp` here must lower to the
+    -- `Bool` connective, not the value-form (`x or y` where the operands have different types).
+    let testCode ← truthyConditionTerm testJson (← withPropCondition true (getCode testJson `term))
     let bodyIsNone := isNoneConstantJson bodyJson
     let orelseIsNone := isNoneConstantJson orelseJson
     if bodyIsNone && orelseIsNone then

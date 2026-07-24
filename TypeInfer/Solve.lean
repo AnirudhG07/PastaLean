@@ -129,9 +129,12 @@ def applyStmt (sigs : Sigs) (env : Env) (s : Json) : Env :=
                 match (getField target "value").bind nameId? with
                 | some cname =>
                     let vt := typeOfExpr sigs env value
+                    -- A SLICE target (`t[a:b] = xs`) replaces a run with a LIST, so `t` and the RHS
+                    -- share a type; an INDEX target (`t[i] = v`) makes `t` a list OF `v`'s type.
+                    let isSlice := (getField target "slice").any (nodeTypeOf · == some "Slice")
                     let learned := match env.get? cname |>.getD .unknown with
                       | .dict _ _ => .dict ((getField target "slice").elim .unknown (typeOfExpr sigs env)) vt
-                      | _ => .list vt
+                      | _ => if isSlice then vt else .list vt
                     learn env cname learned
                 -- Nested `f[h][i][j] = v` teaches `f : list[list[list[<v>]]]` (grid/tensor DP).
                 | none => match subscriptBaseDepth target with
@@ -151,9 +154,10 @@ def applyStmt (sigs : Sigs) (env : Env) (s : Json) : Env :=
                 match (getField target "value").bind nameId? with
                 | some cname =>
                     let vt := typeOfExpr sigs env value
+                    let isSlice := (getField target "slice").any (nodeTypeOf · == some "Slice")
                     let learned := match env.get? cname |>.getD .unknown with
                       | .dict _ v => .dict ((getField target "slice").elim .unknown (typeOfExpr sigs env)) (arith v vt)
-                      | _ => .list vt
+                      | _ => if isSlice then vt else .list vt
                     learn env cname learned
                 -- Nested `f[h][i][j] += v` widens the deep element (`join` at that depth).
                 | none => match subscriptBaseDepth target with
@@ -175,15 +179,33 @@ def applyStmt (sigs : Sigs) (env : Env) (s : Json) : Env :=
       | none => env
   | _ => env
 
+/-- Bind a comprehension target's names, but ONLY where the name is not already bound in `outer` — a
+comprehension target that shadows an outer variable owns a separate (Python-3) scope, so it must not
+overwrite the outer type. Fresh names are bound (harmless, and lets a call inside the comprehension
+hint the callee); shadowing names are left as the outer binding. -/
+private partial def bindCompTargetFresh (outer : Env) (env : Env) (target : Json) (t : PyType) : Env :=
+  match nodeTypeOf target with
+  | some "Name" =>
+      match nameId? target with
+      | some n => if outer.contains n || t == .unknown then env else env.insert n t
+      | none => env
+  | some "Tuple" | some "List" =>
+      let elts := (target.getObjValAs? (Array Json) "elts").toOption.getD #[]
+      match t with
+      | .tuple es => (Array.range elts.size).foldl (fun e i => bindCompTargetFresh outer e elts[i]! (es[i]?.getD .unknown)) env
+      | _ => elts.foldl (fun e elt => bindCompTargetFresh outer e elt t.elemType) env
+  | _ => env
+
 /-- Bind every comprehension target in `json` (`[… for x in xs]`, `for a,b in zip(...)`) from its
-iterable's element type, so a call inside the comprehension sees the target typed. -/
+iterable's element type, so a call inside the comprehension sees the target typed. Fresh names only:
+a target shadowing an outer variable keeps the outer binding (see `bindCompTargetFresh`). -/
 partial def compBindings (sigs : Sigs) (env : Env) (json : Json) : Env :=
   let env :=
     if ["ListComp", "SetComp", "DictComp", "GeneratorExp"].contains (nodeTypeOf json |>.getD "") then
       let gens := (json.getObjValAs? (Array Json) "generators").toOption.getD #[]
       gens.foldl (fun e gen =>
         match getField gen "target", getField gen "iter" with
-        | some target, some iter => bindTargetType e target (typeOfExpr sigs e iter).elemType
+        | some target, some iter => bindCompTargetFresh env e target (typeOfExpr sigs e iter).elemType
         | _, _ => e) env
     else env
   match json with
@@ -276,6 +298,11 @@ partial def inferFunction (sigs : Sigs) (outer hints : Env) (fn : Json) : Env :=
   let bodyJson := Json.arr body
   -- Reflow until stable. The lattice climbs, so a small cap is a sound floor, not a correctness risk.
   for _ in [0:8] do
+    -- `compBindings` types comprehension targets so a call inside a comprehension can hint the callee
+    -- (`[f(point) for point in data]`). It binds only FRESH names — a comprehension target that
+    -- shadows an outer variable owns a separate scope (Python-3), so clobbering the outer type (a
+    -- loop `v : int` vs a comprehension `v : list[int]` → `any`) would poison it. Fresh-only respects
+    -- that: never downgrade an outer binding.
     let next := compBindings sigs (stmts.foldl (applyStmt sigs) env) bodyJson
     if next.size == env.size && next.fold (fun ok k v => ok && (env.get? k |>.getD .unknown) == v) true then
       env := next
@@ -587,6 +614,29 @@ partial def stampFunction (sigs : Sigs) (outer hints : Env) (fn : Json) : Json :
       (Json.arr (((body.map (stampStmt sigs env body)).map (markTuples env)).map (markOptAttrs sigs env)))
   | _ => fn
 
+/-- Stamp a (possibly nested) tuple-unpack target with the list-vs-`Prod` access mode at EVERY level,
+driven by the type `ty` of the value it unpacks. `for k, (l, r) in enumerate(queries)` unpacks a
+`(int, list[int])`: the outer level is a `Prod` but the inner `(l, r)` unpacks a `list[int]`, so it
+must be indexed, not projected. A flat marker on the outer target alone misses the inner level. -/
+partial def stampUnpackShape (target : Json) (ty : PyType) : Json :=
+  if nodeTypeOf target == some "Tuple" then
+    match target.getObjValAs? (Array Json) "elts" with
+    | .ok elts => Id.run do
+        let childTy : Nat → PyType := fun i => match ty with
+          | .list e => e
+          | .tuple ts => ts.getD i .unknown
+          | _ => .unknown
+        let mut newElts := #[]
+        for i in [0:elts.size] do
+          newElts := newElts.push (stampUnpackShape elts[i]! (childTy i))
+        let t := target.setObjVal! "elts" (Json.arr newElts)
+        match ty with
+        | .list _ => return t.setObjVal! "_list_unpack" (Json.bool true)
+        | .tuple _ => return t.setObjVal! "_tuple_unpack" (Json.bool true)
+        | _ => return t
+    | _ => target
+  else target
+
 /-- Stamp one statement: its target, its nested blocks, and any nested def. -/
 partial def stampStmt (sigs : Sigs) (env : Env) (roots : Array Json) (s : Json) : Json :=
   if nodeTypeOf s == some "FunctionDef" then
@@ -639,24 +689,20 @@ partial def stampStmt (sigs : Sigs) (env : Env) (roots : Array Json) (s : Json) 
     -- A tuple target unpacked from a *list* value (not a tuple) uses list indexing, not `Prod`:
     -- `for a, b in edges` with `edges : list[list[int]]`, or `a, b = np.shape(x)` (returns a list).
     -- Mark the target so codegen can tell.
+    -- `for a, b in edges` (`edges : list[list[int]]`) indexes; `for k, (l, r) in enumerate(queries)`
+    -- is a `Prod` outer with a list inner — stampUnpackShape marks each level from the element type.
     if nodeTypeOf s == some "For" then
       match getField s "target", getField s "iter" with
       | some target, some iter =>
           if nodeTypeOf target == some "Tuple" then
-            match (typeOfExpr sigs env iter).elemType with
-            | .list _ => s := s.setObjVal! "target" (target.setObjVal! "_list_unpack" (Json.bool true))
-            | _ => pure ()
+            s := s.setObjVal! "target" (stampUnpackShape target (typeOfExpr sigs env iter).elemType)
       | _, _ => pure ()
+    -- `a, b = t[k]` (`t : list[(int,int)]`) reads a `Prod`; `a, b = np.shape(x)` reads a list.
     if nodeTypeOf s == some "Assign" then
       match getField s "target", getField s "value" with
       | some target, some value =>
           if nodeTypeOf target == some "Tuple" then
-            match typeOfExpr sigs env value with
-            | .list _ => s := s.setObjVal! "target" (target.setObjVal! "_list_unpack" (Json.bool true))
-            -- Conversely a tuple-typed RHS that is neither a literal nor a call (`i, j = t[k]` with
-            -- `t : list[(int,int)]`) must be read as a `Prod`, which the shape heuristic misses.
-            | .tuple _ => s := s.setObjVal! "target" (target.setObjVal! "_tuple_unpack" (Json.bool true))
-            | _ => pure ()
+            s := s.setObjVal! "target" (stampUnpackShape target (typeOfExpr sigs env value))
       | _, _ => pure ()
     for f in #["body", "orelse", "finalbody"] do
       if let .ok elems := s.getObjValAs? (Array Json) f then

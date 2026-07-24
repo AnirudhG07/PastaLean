@@ -14,11 +14,11 @@ set_option maxHeartbeats 800000
 -- Multiple return types and per-variable type mutation, both handled by inference boxing the slot to
 -- PyAny (the dynamic fallback) and dispatching operations on the runtime tag.
 -- A function whose branches return different types (str vs int) → its result is PyAny.
-def classify := fun (n : Int) ↦ (if decide (n > (0 : Int)) then "positive" else (0 : Int) : PastaLean.PyAny)
+def classify := fun (n : Int) ↦ (if n > (0 : Int) then "positive" else (0 : Int) : PastaLean.PyAny)
 
 attribute [simp] classify
 
-def classify'rn := fun (n : Int) ↦ (if decide (n > (0 : Int)) then "positive" else (0 : Int) : PastaLean.PyAny)
+def classify'rn := fun (n : Int) ↦ (if n > (0 : Int) then "positive" else (0 : Int) : PastaLean.PyAny)
 
 -- A parameter/local rebound to a different type mid-function, with operations on each type.
 def reassigned :=
