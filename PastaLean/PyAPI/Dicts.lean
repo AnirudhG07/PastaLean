@@ -37,6 +37,13 @@ def pyDictPop [BEq α] [Hashable α] (m : Std.HashMap α β) (key : α) (default
 def pyDictUpdate [BEq α] [Hashable α] (m : Std.HashMap α β) (updates : List (α × β)) : Std.HashMap α β :=
   updates.foldl (fun acc (k, v) => acc.insert k v) m
 
+/-- The map after `d.setdefault(key, default)`: inserts `default` only when `key` is absent. The
+value it returns (`d[key]` or `default`) is `pyGetD`, so codegen pairs this rest with that value. -/
+def pyDictSetdefaultRest [BEq α] [Hashable α] (m : Std.HashMap α β) (key : α) (default : β) : Std.HashMap α β :=
+  match m.get? key with
+  | some _ => m
+  | none => m.insert key default
+
 /-- Public runtime surface for Python `update()`. -/
 def pyUpdate [BEq α] [Hashable α] (m : Std.HashMap α β) (updates : List (α × β)) : Std.HashMap α β :=
   pyDictUpdate m updates

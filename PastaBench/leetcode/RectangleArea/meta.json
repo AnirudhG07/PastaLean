@@ -1,0 +1,19 @@
+{
+  "problem": "rectangle-area",
+  "module": "RectangleArea",
+  "method": "computeArea",
+  "params": [
+    "ax1",
+    "ay1",
+    "ax2",
+    "ay2",
+    "bx1",
+    "by1",
+    "bx2",
+    "by2"
+  ],
+  "difficulty": "Medium",
+  "bucket": "term",
+  "feature": "term",
+  "n_tests": 76
+}

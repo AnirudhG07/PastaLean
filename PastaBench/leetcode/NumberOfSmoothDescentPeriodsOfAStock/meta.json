@@ -1,0 +1,12 @@
+{
+  "problem": "number-of-smooth-descent-periods-of-a-stock",
+  "module": "NumberOfSmoothDescentPeriodsOfAStock",
+  "method": "getDescentPeriods",
+  "params": [
+    "prices"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 116
+}

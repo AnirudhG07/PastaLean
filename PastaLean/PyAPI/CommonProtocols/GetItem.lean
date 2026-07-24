@@ -1,5 +1,6 @@
 import Mathlib
 import PastaLean.PyAPI.Core
+import PastaLean.PyAPI.CommonProtocols.Iterable
 
 namespace PastaLean
 
@@ -30,6 +31,14 @@ notation:max c "⦋" i "⦌" => pyGetItem c i
 /-- Lists index by `Int` with Python negative-index semantics (reusing `pyListGetItem`). -/
 instance {β : Type} [Inhabited β] : PyGetItem (List β) Int β where
   getItem xs i := pyListGetItem xs i
+
+/-- A homogeneous tuple `(a, b, c, …)` (a nested product all of one type) supports Python-style
+indexing `t[i]` by flattening to a `List α` and indexing that, so both constant and variable indices
+work (`t[2]`, `t[i]`). It reuses the recursive `PyIterable (α × β) α` flatten. A heterogeneous tuple
+has no such `PyIterable`, so its element types differ per slot — that case is handled by static
+projection in the subscript codegen, which knows the constant index at compile time. -/
+instance {α β : Type} [PyIterable (α × β) α] [Inhabited α] : PyGetItem (α × β) Int α where
+  getItem p i := pyListGetItem (pyIter p) i
 
 /-- A string indexed by `Int` yields the one-character string at that position (negative indices
 count from the end), since Python has no separate character type — `s[i]` is a length-1 `str`.

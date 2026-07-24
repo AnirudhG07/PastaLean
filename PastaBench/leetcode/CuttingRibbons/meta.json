@@ -1,0 +1,13 @@
+{
+  "problem": "cutting-ribbons",
+  "module": "CuttingRibbons",
+  "method": "maxLength",
+  "params": [
+    "ribbons",
+    "k"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 100
+}

@@ -1,0 +1,13 @@
+{
+  "problem": "find-the-kth-smallest-sum-of-a-matrix-with-sorted-rows",
+  "module": "FindTheKthSmallestSumOfAMatrixWithSortedRows",
+  "method": "kthSmallest",
+  "params": [
+    "mat",
+    "k"
+  ],
+  "difficulty": "Hard",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 85
+}

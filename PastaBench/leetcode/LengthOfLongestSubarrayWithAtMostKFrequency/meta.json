@@ -1,0 +1,13 @@
+{
+  "problem": "length-of-longest-subarray-with-at-most-k-frequency",
+  "module": "LengthOfLongestSubarrayWithAtMostKFrequency",
+  "method": "maxSubarrayLength",
+  "params": [
+    "nums",
+    "k"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 107
+}

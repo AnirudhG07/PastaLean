@@ -1,0 +1,13 @@
+{
+  "problem": "broken-calculator",
+  "module": "BrokenCalculator",
+  "method": "brokenCalc",
+  "params": [
+    "startValue",
+    "target"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 96
+}

@@ -1,4 +1,5 @@
 import PastaLean.PyGens.Core.Utils
+import PastaLean.PyGens.Calls.CallShared
 
 open Lean Meta Elab Term Qq Std
 
@@ -296,8 +297,16 @@ def trySyntax : (kind : SyntaxNodeKind) → Json →
         let mut hoistDecls : Array (TSyntax `doElem) := #[]
         for nm in assignedNames do
           unless (← hasVar nm.toName) do
-            hoistDecls := hoistDecls.push (← `(doElem| let mut $(mkIdent nm.toName):ident := default))
+            let tyStx? ← match (jsonFieldOption json "try_assigned_types").bind
+                (·.getObjVal? nm |>.toOption) with
+              | some ann => stampedTypeSyntax? (Json.mkObj [("_ty", ann)])
+              | none => pure none
+            let decl ← match tyStx? with
+              | some tyStx => `(doElem| let mut $(mkIdent nm.toName):ident : $tyStx := default)
+              | none => `(doElem| let mut $(mkIdent nm.toName):ident := default)
+            hoistDecls := hoistDecls.push decl
             addVar nm.toName
+            setMutVar nm.toName
         let bodyAndElse ← tryBranchBodySyntax (bodyElems ++ orelseElems)
         -- Splice body statements straight into `captureIOErrors (do …)` (no nested `do (do …)`).
         let noopElem ← noopDoElemSyntax

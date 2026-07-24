@@ -1,0 +1,12 @@
+{
+  "problem": "longest-nice-subarray",
+  "module": "LongestNiceSubarray",
+  "method": "longestNiceSubarray",
+  "params": [
+    "nums"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 116
+}

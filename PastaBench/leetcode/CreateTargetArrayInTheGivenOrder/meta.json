@@ -1,0 +1,13 @@
+{
+  "problem": "create-target-array-in-the-given-order",
+  "module": "CreateTargetArrayInTheGivenOrder",
+  "method": "createTargetArray",
+  "params": [
+    "nums",
+    "index"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 115
+}

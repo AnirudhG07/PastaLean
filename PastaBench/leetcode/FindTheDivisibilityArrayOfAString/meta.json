@@ -1,0 +1,13 @@
+{
+  "problem": "find-the-divisibility-array-of-a-string",
+  "module": "FindTheDivisibilityArrayOfAString",
+  "method": "divisibilityArray",
+  "params": [
+    "word",
+    "m"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 138
+}

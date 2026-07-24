@@ -1,0 +1,12 @@
+{
+  "problem": "encode-number",
+  "module": "EncodeNumber",
+  "method": "encode",
+  "params": [
+    "num"
+  ],
+  "difficulty": "Medium",
+  "bucket": "term",
+  "feature": "term",
+  "n_tests": 138
+}

@@ -96,6 +96,20 @@ def functionParamNames (fnJson : Json) : Array String := Id.run do
     | .ok name => acc.push name
     | _ => acc) #[]
 
+/-- Each parameter of a `FunctionDef` with the type we can give it: its explicit annotation, else
+the `_ty` the inference pass stamped. `none` where neither exists. -/
+def functionParamTypedNames (fnJson : Json) : Array (String × Option Json) := Id.run do
+  let .ok args := fnJson.getObjVal? "args" | return #[]
+  let .ok argsArray := args.getObjValAs? (Array Json) "args" | return #[]
+  return argsArray.foldl (fun acc arg =>
+    match arg.getObjValAs? String "arg" with
+    | .ok name =>
+        let ann? := match (arg.getObjVal? "annotation").toOption with
+          | some a => if a.isNull then jsonFieldOption arg "_ty" else some a
+          | none => jsonFieldOption arg "_ty"
+        acc.push (name, ann?)
+    | _ => acc) #[]
+
 /-- `param name → annotation` for a `FunctionDef`, so a lifted capture keeps its type. -/
 def functionParamAnnotations (fnJson : Json) : Std.HashMap String Json := Id.run do
   let .ok args := fnJson.getObjVal? "args" | return {}
@@ -103,9 +117,13 @@ def functionParamAnnotations (fnJson : Json) : Std.HashMap String Json := Id.run
   let mut m : Std.HashMap String Json := {}
   for arg in argsArray do
     if let .ok name := arg.getObjValAs? String "arg" then
-      if let .ok annotation := arg.getObjVal? "annotation" then
-        unless annotation.isNull do
-          m := m.insert name annotation
+      -- Prefer the explicit annotation; fall back to the `_ty` TypeInfer stamped (an inferred
+      -- function-typed param, say), so a lifted capture keeps that type too.
+      let ann? := match arg.getObjVal? "annotation" with
+        | .ok a => if a.isNull then jsonFieldOption arg "_ty" else some a
+        | .error _ => jsonFieldOption arg "_ty"
+      if let some annotation := ann? then
+        m := m.insert name annotation
   return m
 
 /-- Annotations inferred for the enclosing function's locals, from their first assignment. Without
@@ -181,34 +199,72 @@ private def argNode (name : String) (annotation : Option Json) : Json :=
   Json.mkObj [("node_type", Json.str "arg"), ("arg", Json.str name),
               ("annotation", annotation.getD Json.null)]
 
-/-- Rewrite every call `old(args…)` into `new(args…, captures…)`.
+/-- The `PyAny` type annotation node — the total fallback for a param we cannot otherwise type. -/
+private def pyAnyAnnotation : Json := Json.mkObj [("node_type", Json.str "Name"), ("id", Json.str "PyAny")]
 
-A bare reference to `old` outside call position (passing the helper as a value) would need a
-partially-applied closure over the captures; reject it instead of emitting something wrong. -/
-partial def rewriteHelperCalls (old new : String) (captures : Array String) (json : Json) :
+/-- Stamp `_ty = PyAny` on every parameter of `fn` that has neither an annotation nor an inferred
+`_ty`. Used when a read-only helper ESCAPES as a value: its wrapper `fun (p : T) ↦ new p caps` needs
+each `T`, so an un-inferred one falls back to `PyAny` (total) rather than blocking the whole closure. -/
+private def stampUnannotatedParamsPyAny (fn : Json) : Json :=
+  match fn.getObjVal? "args" with
+  | .ok argsObj =>
+      match argsObj.getObjValAs? (Array Json) "args" with
+      | .ok argsArr =>
+          let argsArr := argsArr.map fun a =>
+            let typed := (match a.getObjVal? "annotation" with | .ok x => !x.isNull | _ => false)
+              || (jsonFieldOption a "_ty").isSome
+            if typed then a else a.setObjVal! "_ty" pyAnyAnnotation
+          fn.setObjVal! "args" (argsObj.setObjVal! "args" (Json.arr argsArr))
+      | _ => fn
+  | _ => fn
+
+/-- The value form of a CAPTURING helper passed as a value (`sort(key=helper)`): a `Lambda`
+`fun params ↦ new(params…, caps…)`, partially applying the captured args (which come after the
+helper's own params). -/
+private def captureWrapperLambda (new : String) (origParams : Array (String × Option Json))
+    (captures : Array String) : Json :=
+  -- An un-inferred wrapper param falls back to `PyAny` (the sibling is stamped `PyAny` to match).
+  let paramArgs := origParams.map (fun (n, ann?) => argNode n (ann?.orElse (fun _ => some pyAnyAnnotation)))
+  let callArgs := (origParams.map (·.1) ++ captures).map nameNode
+  let call := Json.mkObj [("node_type", Json.str "Call"), ("func", nameNode new),
+                          ("args", Json.arr callArgs), ("keywords", Json.mkObj [])]
+  Json.mkObj [("node_type", Json.str "Lambda"),
+              ("args", Json.mkObj [("node_type", Json.str "arguments"), ("args", Json.arr paramArgs)]),
+              ("body", call)]
+
+/-- Rewrite every call `old(args…)` into `new(args…, captures…)`. A bare reference to `old` outside
+call position (`sort(key=old)`) becomes a partial-application `fun p ↦ new p captures` when it
+captures; a capture-free helper is just `new`. `origParams` are `old`'s own parameter names. -/
+partial def rewriteHelperCalls (old new : String) (origParams : Array (String × Option Json))
+    (captures : Array String) (json : Json) :
     PygenM Json := do
   match json with
-  | .arr elems => return Json.arr (← elems.mapM (rewriteHelperCalls old new captures))
+  | .arr elems => return Json.arr (← elems.mapM (rewriteHelperCalls old new origParams captures))
   | .obj fields =>
       if jsonNodeType? json == some "Call" then
         if let .ok func := json.getObjVal? "func" then
           if jsonNodeType? func == some "Name" && func.getObjValAs? String "id" == .ok old then
             let args := (json.getObjValAs? (Array Json) "args").toOption.getD #[]
-            let args ← args.mapM (rewriteHelperCalls old new captures)
+            let args ← args.mapM (rewriteHelperCalls old new origParams captures)
             let args := args ++ captures.map nameNode
             let keywords ← match json.getObjVal? "keywords" with
-              | .ok kw => rewriteHelperCalls old new captures kw
+              | .ok kw => rewriteHelperCalls old new origParams captures kw
               | _ => pure (Json.mkObj [])
             return (json.setObjVal! "func" (nameNode new)).setObjVal! "args" (Json.arr args)
               |>.setObjVal! "keywords" keywords
-      -- `old` as a VALUE (`sort(key=old)`): a capture-free helper is a real top-level def → just `new`.
-      -- A capturing one can't be a bare value (captures come after its params), so reject it.
+      -- `old` as a VALUE (`sort(key=old)`, `return old`): capture-free → the lifted name; a capturing
+      -- one becomes `fun p ↦ new p caps` (`captureWrapperLambda`). This needs each wrapper param typed:
+      -- a RETURNED closure's un-inferred params were stamped `PyAny` in `liftHelper` (so `origParams`
+      -- carries them); a closure passed to a FOREIGN numeric callback (`odeint(system, …)`) was left
+      -- un-stamped on purpose — `PyAny` would wreck its numeric/provable semantics — so it still errors.
       if jsonNodeType? json == some "Name" && json.getObjValAs? String "id" == .ok old then
         if captures.isEmpty then return nameNode new
-        else throwError s!"nested function '{old}' captures variables and is used as a value; \
-          only direct calls are supported."
+        else if origParams.all (·.2.isSome) then
+          return captureWrapperLambda new origParams captures
+        else throwError s!"nested function '{old}' captures variables and is used as a value, and \
+          its parameters have no inferred types to give the wrapper; only direct calls are supported."
       let rewritten ← fields.toList.mapM fun (k, v) => do
-        return (k, ← rewriteHelperCalls old new captures v)
+        return (k, ← rewriteHelperCalls old new origParams captures v)
       return Json.mkObj rewritten
   | _ => return json
 
@@ -230,6 +286,7 @@ private def assignNode (target value : Json) : Json :=
 
 private def returnNode (value : Option Json) : Json :=
   Json.mkObj [("node_type", Json.str "Return"), ("value", value.getD Json.null)]
+
 
 /-- The `Nonlocal` names declared anywhere in `json`. -/
 partial def nonlocalNames (json : Json) : Array String :=
@@ -335,6 +392,174 @@ partial def usedAsValue (old : String) (json : Json) : Bool :=
       else fields.toList.any (fun (_, value) => usedAsValue old value)
   | _ => false
 
+/-- Is `old` RETURNED as a value (`return old`, `return (old, …)`)? Distinguished from being passed to
+another call (`odeint(old, …)`): only a returned closure gets the `PyAny`-param fallback — a closure
+handed to a foreign numeric callback keeps its (possibly-degrading) typed treatment. -/
+partial def returnedAsValue (old : String) (json : Json) : Bool :=
+  match json with
+  | .arr elems => elems.any (returnedAsValue old)
+  | .obj fields =>
+      if jsonNodeType? json == some "Return" then
+        (json.getObjVal? "value").toOption.any (usedAsValue old)
+      else fields.toList.any (fun (_, value) => returnedAsValue old value)
+  | _ => false
+
+private def emptyListNode : Json := Json.mkObj [("node_type", Json.str "List"), ("elts", Json.arr #[])]
+private def emptyDictNode : Json :=
+  Json.mkObj [("node_type", Json.str "Dict"), ("keys", Json.arr #[]), ("values", Json.arr #[])]
+
+private def attrNode (value : Json) (attr : String) : Json :=
+  Json.mkObj [("node_type", Json.str "Attribute"), ("value", value), ("attr", Json.str attr)]
+
+private def callNode (func : Json) (args : Array Json) : Json :=
+  Json.mkObj [("node_type", Json.str "Call"), ("func", func), ("args", Json.arr args),
+    ("keywords", Json.mkObj [])]
+
+private def exprStmt (value : Json) : Json :=
+  Json.mkObj [("node_type", Json.str "Expr"), ("value", value)]
+
+private def forNode (target iter : Json) (body : Array Json) : Json :=
+  Json.mkObj [("node_type", Json.str "For"), ("target", target), ("iter", iter),
+    ("body", Json.arr body), ("orelse", Json.arr #[])]
+
+private def ifNode (test : Json) (body : Array Json) : Json :=
+  Json.mkObj [("node_type", Json.str "If"), ("test", test), ("body", Json.arr body),
+    ("orelse", Json.arr #[])]
+
+private def subscriptNode (value slice : Json) : Json :=
+  Json.mkObj [("node_type", Json.str "Subscript"), ("value", value), ("slice", slice)]
+
+/-- Builtins that fully consume a generator, so `f(x for …)` equals `f([x for …])` — building the
+list first is semantics-preserving. -/
+private def genConsumers : List String :=
+  ["sum", "max", "min", "any", "all", "prod", "list", "set", "tuple", "sorted"]
+
+/-- The comprehension a `return`/assign value is (once its consuming call, if any, is peeled): the
+element expression(s) that must be evaluated per item, the generators, how to seed the accumulator,
+how to append one item, and how to turn the finished accumulator into the result value. -/
+private structure ComprShape where
+  elts    : Array Json                 -- expressions evaluated per item (elt, or key+value)
+  gens    : Array Json
+  init    : Json                       -- `items = <empty collection>`
+  body    : Json → Json                -- `items.append(elt)` / `items[k] = v`, given the items name
+  result  : Json → Json                -- final value from the items name
+
+/-- Recognise the comprehension a value denotes: a bare `[…]`/`{…}`/`{k:v …}`, or one wrapped in a
+generator-consuming builtin (`sum`/`list`/`sorted`/…). -/
+private def comprShapeOf? (value : Json) : Option ComprShape :=
+  let listy (elt : Json) (gens : Array Json) (result : Json → Json) : ComprShape :=
+    { elts := #[elt], gens, init := emptyListNode,
+      body := fun items => exprStmt (callNode (attrNode items "append") #[elt]), result }
+  match jsonNodeType? value with
+  | some "ListComp" => do
+      let elt ← (value.getObjVal? "elt").toOption
+      some (listy elt ((value.getObjValAs? (Array Json) "generators").toOption.getD #[]) id)
+  | some "SetComp" => do
+      let elt ← (value.getObjVal? "elt").toOption
+      some (listy elt ((value.getObjValAs? (Array Json) "generators").toOption.getD #[])
+        (fun items => callNode (nameNode "set") #[items]))
+  | some "DictComp" => do
+      let key ← (value.getObjVal? "key").toOption
+      let v ← (value.getObjVal? "value").toOption
+      some { elts := #[key, v],
+             gens := (value.getObjValAs? (Array Json) "generators").toOption.getD #[],
+             init := emptyDictNode,
+             body := fun items => assignNode (subscriptNode items key) v,
+             result := id }
+  | some "GeneratorExp" => do
+      let elt ← (value.getObjVal? "elt").toOption
+      some (listy elt ((value.getObjValAs? (Array Json) "generators").toOption.getD #[]) id)
+  | some "Call" => do
+      let func ← (value.getObjVal? "func").toOption
+      guard (jsonNodeType? func == some "Name")
+      let name ← (func.getObjValAs? String "id").toOption
+      guard (genConsumers.contains name)
+      let args := (value.getObjValAs? (Array Json) "args").toOption.getD #[]
+      guard (args.size == 1 && jsonNodeType? args[0]! == some "GeneratorExp")
+      let elt ← (args[0]!.getObjVal? "elt").toOption
+      some (listy elt ((args[0]!.getObjValAs? (Array Json) "generators").toOption.getD #[])
+        (fun items => callNode func #[items]))
+  | _ => none
+
+/-- `<return/assign> <comprehension>` whose per-item expression calls the threaded helper `old` →
+rewrite the comprehension to its explicit accumulator loop, so the threaded call lands in statement
+position where the existing hoist/thread machinery carries the mutated state across iterations. A
+comprehension is exactly this loop by definition, so the rewrite is semantics-preserving.
+
+Applied only when `old`'s call is UNCONDITIONAL (no `and`/`or`/`if-else` around it) and no generator
+filter calls `old` — otherwise the loop would change *when* the mutation runs, so the original
+(rejecting) path is left. -/
+private def expandThreadedComprehension? (old : String) (counter : IO.Ref Nat) (stmt : Json) :
+    IO (Option (Array Json)) := do
+  let rebuild? : Option ((Json → Json) × Json) :=
+    match jsonNodeType? stmt with
+    | some "Return" => ((stmt.getObjVal? "value").toOption).map fun v => ((returnNode ∘ some), v)
+    | some "Assign" => do
+        let v ← (stmt.getObjVal? "value").toOption
+        let t ← (stmt.getObjVal? "target").toOption
+        some ((assignNode t ·), v)
+    | _ => none
+  let some (rebuild, value) := rebuild? | return none
+  let some shape := comprShapeOf? value | return none
+  unless shape.elts.any (containsCallTo old) do return none
+  if shape.elts.any (jsonContainsNodeType · ["BoolOp", "IfExp"]) then return none
+  if shape.gens.any (fun g =>
+      ((g.getObjValAs? (Array Json) "ifs").toOption.getD #[]).any (containsCallTo old)) then
+    return none
+  let n ← counter.modifyGet (fun n => (n, n + 1))
+  let items := nameNode s!"__cc{n + 1}"
+  let loop := shape.gens.foldr (fun g inner =>
+    let target := (g.getObjVal? "target").toOption.getD (nameNode "_")
+    let iter := (g.getObjVal? "iter").toOption.getD emptyListNode
+    let ifs := (g.getObjValAs? (Array Json) "ifs").toOption.getD #[]
+    let guarded := ifs.foldr (fun cond acc => #[ifNode cond acc]) inner
+    #[forNode target iter guarded]) #[shape.body items]
+  return some (#[assignNode items shape.init] ++ loop ++ #[rebuild (shape.result items)])
+
+/-- Whether a comprehension `value` may be hoisted for `old`: its per-item expression calls `old`
+unconditionally and no generator filter does. -/
+private def hoistableCompr (old : String) (shape : ComprShape) : Bool :=
+  shape.elts.any (containsCallTo old)
+    && !shape.elts.any (jsonContainsNodeType · ["BoolOp", "IfExp"])
+    && !shape.gens.any (fun g =>
+        ((g.getObjValAs? (Array Json) "ifs").toOption.getD #[]).any (containsCallTo old))
+
+/-- Replace every comprehension sub-expression of `expr` that calls the threaded helper `old` with a
+fresh temporary, returning the accumulator-loop statements that must run first — the nested version
+of `expandThreadedComprehension?` (`return 1 + sum(dfs(j) for j)`, `x = a + max(dfs(…) for …)`). Does
+NOT descend into `and`/`or`/`if-else`, so a short-circuited comprehension is left for the (rejecting)
+path — hoisting it would run the mutation unconditionally. -/
+private partial def hoistThreadedComprs (old : String) (counter : IO.Ref Nat) (expr : Json) :
+    IO (Json × Array Json) := do
+  if jsonNodeType? expr == some "BoolOp" || jsonNodeType? expr == some "IfExp" then
+    return (expr, #[])
+  if let some shape := comprShapeOf? expr then
+    if hoistableCompr old shape then
+      let n ← counter.modifyGet (fun n => (n, n + 1))
+      let items := nameNode s!"__cc{n + 1}"
+      let tmp := nameNode s!"__cv{n + 1}"
+      let loop := shape.gens.foldr (fun g inner =>
+        let target := (g.getObjVal? "target").toOption.getD (nameNode "_")
+        let iter := (g.getObjVal? "iter").toOption.getD emptyListNode
+        let ifs := (g.getObjValAs? (Array Json) "ifs").toOption.getD #[]
+        let guarded := ifs.foldr (fun cond acc => #[ifNode cond acc]) inner
+        #[forNode target iter guarded]) #[shape.body items]
+      return (tmp, #[assignNode items shape.init] ++ loop ++ #[assignNode tmp (shape.result items)])
+  match expr with
+  | .arr xs =>
+      let mut out := #[]; let mut pre := #[]
+      for x in xs do
+        let (x', p) ← hoistThreadedComprs old counter x
+        out := out.push x'; pre := pre ++ p
+      return (Json.arr out, pre)
+  | .obj fs =>
+      let mut rewritten := []; let mut pre := #[]
+      for (k, v) in fs.toList do
+        let (v', p) ← hoistThreadedComprs old counter v
+        pre := pre ++ p; rewritten := rewritten ++ [(k, v')]
+      return (Json.mkObj rewritten, pre)
+  | _ => return (expr, #[])
+
 mutual
 
 /-- Replace each threaded call inside an expression with a temporary, returning the assignments
@@ -383,6 +608,22 @@ partial def rewriteThreadedStmts (old new : String) (captures threaded : Array S
     unless containsCallTo old stmt do
       out := out.push stmt
       continue
+    -- A state-threading call inside a comprehension (`return sum(dfs(…) for …)`, `xs = [f(i) for i]`,
+    -- …): expand the comprehension to its accumulator loop so the call lands in statement position,
+    -- then thread the expansion.
+    if let some expanded ← expandThreadedComprehension? old counter stmt then
+      out := out ++ (← rewriteThreadedStmts old new captures threaded hasValue counter expanded)
+      continue
+    -- The comprehension nested inside a larger expression (`return 1 + sum(dfs(j) for j)`): hoist it
+    -- to a temporary, threading the accumulator loop, then process the simplified statement.
+    if ["Return", "Assign", "AugAssign", "Expr"].contains ((jsonNodeType? stmt).getD "") then
+      if let .ok value := stmt.getObjVal? "value" then
+        let (value', prelude) ← hoistThreadedComprs old counter value
+        if !prelude.isEmpty then
+          let stmt := stmt.setObjVal! "value" value'
+          out := out ++ (← rewriteThreadedStmts old new captures threaded hasValue counter
+            (prelude ++ #[stmt]))
+          continue
     if jsonNodeType? stmt == some "While" then
       if (stmt.getObjVal? "test").toOption.any (containsCallTo old) then
         throwError s!"call to '{old}' in a `while` test cannot rebind the threaded state."
@@ -413,7 +654,10 @@ partial def rewriteThreadedStmts (old new : String) (captures threaded : Array S
           let .ok target := stmt.getObjVal? "target" | throwError "Assign is missing a 'target'"
           let args := (value.getObjValAs? (Array Json) "args").toOption.getD #[]
           let call := retargetCall new captures value args
-          out := out.push (assignNode (tupleNode (#[target] ++ threadedNodes)) call)
+          -- The threaded return is a fully-`Prod` tuple, so a nested target (`(ls, ln), ans`) unpacks
+          -- with `Prod` at every level; `_thread_unpack` tells codegen to use `Prod`, not list access.
+          let tgt := (tupleNode (#[target] ++ threadedNodes)).setObjVal! "_thread_unpack" (Json.bool true)
+          out := out.push (assignNode tgt call)
           continue
 
     -- Anywhere else the call sits inside an expression: hoist it to a temporary first.
@@ -466,10 +710,17 @@ private def liftHelper (outerName : String) (outerJson innerJson : Json) :
   let readOnly := captures.filter fun c => !threaded.contains c
   let ordered := readOnly ++ threaded
 
-  -- A capture-free helper used as a value (`sort(key=f)`) is fine — lifted to a plain reference. A
-  -- capturing one can't be (captures come after its params), so reject that case.
-  if (usedAsValue innerName inner || usedAsValue innerName (Json.arr outerBody)) && !captures.isEmpty then
-    throwError s!"nested function '{innerName}' captures variables and is used as a value; unsupported."
+  -- A helper used as a value (`sort(key=f)`): capture-free → a plain reference; read-only captures →
+  -- a `fun p ↦ new p caps` wrapper (in `rewriteHelperCalls`). Only a THREADED (mutated) capture used
+  -- as a value is genuinely unsupported — a value lambda can't rebind the threaded state.
+  let escapesAsValue := usedAsValue innerName inner || usedAsValue innerName (Json.arr outerBody)
+  if escapesAsValue && !threaded.isEmpty then
+    throwError s!"nested function '{innerName}' mutates a captured variable and is used as a value; unsupported."
+  -- A read-only closure RETURNED as a value gets a typed wrapper `fun (p : T) ↦ new p caps`; default
+  -- any un-inferred param to `PyAny` on the SIBLING here so it matches the wrapper. Only for RETURNED
+  -- closures — one passed to a foreign numeric callback (`odeint`) must keep concrete types or degrade.
+  let inner := if returnedAsValue innerName (Json.arr outerBody) then stampUnannotatedParamsPyAny inner
+               else inner
 
   let hasValue := hasValuedReturn (Json.arr innerBody)
   unless threaded.isEmpty do
@@ -482,7 +733,7 @@ private def liftHelper (outerName : String) (outerJson innerJson : Json) :
       throwError s!"nested function '{innerName}' can fall off the end while threading state; \
         give it an explicit `return`."
 
-  let helperName := s!"_{outerName}_{innerName}"
+  let helperName := s!"_{outerName}'{innerName}"
   -- References to a user function are suffixed in the `'rn` twin; the helper is a user function too.
   userNamesRef.modify (helperName :: ·)
 
@@ -499,11 +750,12 @@ private def liftHelper (outerName : String) (outerJson innerJson : Json) :
     !(jsonNodeType? stmt == some "FunctionDef"
       && stmt.getObjValAs? String "name" == .ok innerName)
 
+  let origParams := functionParamTypedNames inner
   let counter ← IO.mkRef 0
   let (helperBody, rewrittenOuter) ←
     if threaded.isEmpty then do
-      let body ← rewriteHelperCalls innerName helperName ordered (Json.arr innerBody)
-      let outer ← rewriteHelperCalls innerName helperName ordered (Json.arr remaining)
+      let body ← rewriteHelperCalls innerName helperName origParams ordered (Json.arr innerBody)
+      let outer ← rewriteHelperCalls innerName helperName origParams ordered (Json.arr remaining)
       pure (body, outer)
     else do
       let body ← rewriteThreadedStmts innerName helperName ordered threaded hasValue counter innerBody
@@ -590,7 +842,7 @@ private def liftMutualGroup (outerName : String) (outerJson : Json) (members : A
   let annotations := (localAnnotations outerBody).fold
     (fun m k v => if m.contains k then m else m.insert k v) (functionParamAnnotations outerJson)
   let extraArgs := shared.map fun c => argNode c (annotations[c]?)
-  let helperNameOf := fun (nm : String) => s!"_{outerName}_{nm}"
+  let helperNameOf := fun (nm : String) => s!"_{outerName}'{nm}"
   for nm in memberNames do
     userNamesRef.modify (helperNameOf nm :: ·)
 
@@ -603,7 +855,8 @@ private def liftMutualGroup (outerName : String) (outerJson : Json) (members : A
     -- Rewrite every call to any sibling (self included) to the lifted name + shared captures.
     let mut body := (m.getObjVal? "body").toOption.getD (Json.arr #[])
     for sibName in memberNames do
-      body ← rewriteHelperCalls sibName (helperNameOf sibName) shared body
+      let sibParams := (members.find? (·.getObjValAs? String "name" == .ok sibName)).elim #[] functionParamTypedNames
+      body ← rewriteHelperCalls sibName (helperNameOf sibName) sibParams shared body
     let helper := ((m.setObjVal! "name" (Json.str (helperNameOf mName))).setObjVal! "args" mArgs)
       |>.setObjVal! "body" body
     helpers := helpers.push helper
@@ -613,7 +866,8 @@ private def liftMutualGroup (outerName : String) (outerJson : Json) (members : A
       && memberNames.contains ((stmt.getObjValAs? String "name").toOption.getD ""))
   let mut outerBodyJson := Json.arr remaining
   for sibName in memberNames do
-    outerBodyJson ← rewriteHelperCalls sibName (helperNameOf sibName) shared outerBodyJson
+    let sibParams := (members.find? (·.getObjValAs? String "name" == .ok sibName)).elim #[] functionParamTypedNames
+    outerBodyJson ← rewriteHelperCalls sibName (helperNameOf sibName) sibParams shared outerBodyJson
   return (helpers, outerJson.setObjVal! "body" outerBodyJson)
 
 /-- Lift every nested `def` out of `fnJson`, outermost-first. Returns helper **groups** (each a lone

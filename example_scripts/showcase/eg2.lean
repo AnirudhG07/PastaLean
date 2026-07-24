@@ -30,7 +30,7 @@ def process_data := fun (data : List (List Rat)) ↦ fun (weights : List (List R
           let e := caught
           let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg s! "Processing failed: {e}"]
           -- Fallback to a zero matrix if dimensions fail
-          let __py_ret_1 := Libraries.numpy.pyNumpyZeros ((2 : Int), (2 : Int))
+          let __py_ret_1 := Libraries.numpy.pyNumpyZerosRat ((2 : Int), (2 : Int))
           return __py_ret_1
         else
           throw caught) :
@@ -57,7 +57,7 @@ def process_data'rn : List (List Float) → List (List Float) → PastaLean.PyEx
       let e := caught
       let _ ← pyPrintIO [pyPrintArg s! "Processing failed: {e}"]
       -- Fallback to a zero matrix if dimensions fail
-      let __py_ret_1 := Libraries.numpy.pyNumpyZeros ((2 : Int), (2 : Int))
+      let __py_ret_1 := Libraries.numpy.pyNumpyZerosFloat ((2 : Int), (2 : Int))
       return __py_ret_1
     else
       throw caught
@@ -65,8 +65,8 @@ def process_data'rn : List (List Float) → List (List Float) → PastaLean.PyEx
 def run_example :=
   ((do
       -- Define a 2x2 dataset and a 2x2 weight matrix
-      let mut dataset := [[(1.0 : Rat), (2.0 : Rat)], [(3.0 : Rat), (4.0 : Rat)]]
-      let mut weights := [[(0.5 : Rat), (0.5 : Rat)], [(1.0 : Rat), (2.0 : Rat)]]
+      let mut dataset := ([[(1.0 : Rat), (2.0 : Rat)], [(3.0 : Rat), (4.0 : Rat)]] : List (List Rat))
+      let mut weights := ([[(0.5 : Rat), (0.5 : Rat)], [(1.0 : Rat), (2.0 : Rat)]] : List (List Rat))
       let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg "=== PastaLean NumPy Showcase ==="]
       let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg s! "Input Data: {dataset}"]
       let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg s! "Weight Matrix: {weights}"]
@@ -78,7 +78,7 @@ def run_example :=
       let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg "\n[2] Structural Operations:"]
       let _ ←
         PastaLean.ProofMode.pyPrintProof
-            [pyPrintArg s! "Identity Matrix (2x2):\n{Libraries.numpy.pyNumpyEye (2 : Int)}"]
+            [pyPrintArg s! "Identity Matrix (2x2):\n{Libraries.numpy.pyNumpyEyeRat (2 : Int)}"]
       let _ ←
         PastaLean.ProofMode.pyPrintProof [pyPrintArg s! "Flattened Weights: {Libraries.numpy.pyNumpyFlatten weights}"]
       -- 3. Shape Info
@@ -90,7 +90,7 @@ def run_example :=
       let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg s! "Dataset Shape: {rows }x{cols}"]
       -- 4. Error Handling Simulation
       let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg "\n[3] Exception Handling (Mismatched Dimensions):"]
-      let mut invalid_data := [[(1.0 : Rat), (2.0 : Rat), (3.0 : Rat)]]
+      let mut invalid_data := ([[(1.0 : Rat), (2.0 : Rat), (3.0 : Rat)]] : List (List Rat))
       -- This should trigger the ValueError in np.matmul(1x3, 2x2)
       let _ ← process_data invalid_data weights) :
     PastaLean.ProofMode.PyProofM _)
@@ -100,8 +100,8 @@ attribute [simp] run_example
 def run_example'rn :=
   ((do
       -- Define a 2x2 dataset and a 2x2 weight matrix
-      let mut dataset := [[(1.0 : Float), (2.0 : Float)], [(3.0 : Float), (4.0 : Float)]]
-      let mut weights := [[(0.5 : Float), (0.5 : Float)], [(1.0 : Float), (2.0 : Float)]]
+      let mut dataset := ([[(1.0 : Float), (2.0 : Float)], [(3.0 : Float), (4.0 : Float)]] : List (List Float))
+      let mut weights := ([[(0.5 : Float), (0.5 : Float)], [(1.0 : Float), (2.0 : Float)]] : List (List Float))
       let _ ← pyPrintIO [pyPrintArg "=== PastaLean NumPy Showcase ==="]
       let _ ← pyPrintIO [pyPrintArg s! "Input Data: {dataset}"]
       let _ ← pyPrintIO [pyPrintArg s! "Weight Matrix: {weights}"]
@@ -111,7 +111,7 @@ def run_example'rn :=
       let _ ← pyPrintIO [pyPrintArg s! "Final Result:\n{output}"]
       -- 2. Utility Operations
       let _ ← pyPrintIO [pyPrintArg "\n[2] Structural Operations:"]
-      let _ ← pyPrintIO [pyPrintArg s! "Identity Matrix (2x2):\n{Libraries.numpy.pyNumpyEye (2 : Int)}"]
+      let _ ← pyPrintIO [pyPrintArg s! "Identity Matrix (2x2):\n{Libraries.numpy.pyNumpyEyeFloat (2 : Int)}"]
       let _ ← pyPrintIO [pyPrintArg s! "Flattened Weights: {Libraries.numpy.pyNumpyFlatten weights}"]
       -- 3. Shape Info
       -- Note: np.shape returns (rows, cols)
@@ -122,7 +122,7 @@ def run_example'rn :=
       let _ ← pyPrintIO [pyPrintArg s! "Dataset Shape: {rows }x{cols}"]
       -- 4. Error Handling Simulation
       let _ ← pyPrintIO [pyPrintArg "\n[3] Exception Handling (Mismatched Dimensions):"]
-      let mut invalid_data := [[(1.0 : Float), (2.0 : Float), (3.0 : Float)]]
+      let mut invalid_data := ([[(1.0 : Float), (2.0 : Float), (3.0 : Float)]] : List (List Float))
       -- This should trigger the ValueError in np.matmul(1x3, 2x2)
       let _ ← process_data'rn invalid_data weights) :
     PastaLean.PyExcept _)

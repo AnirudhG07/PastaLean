@@ -20,6 +20,10 @@ def pythonMethodMap? (attr : String) : Option Lean.Name :=
   | "join"       => some ``pyStringJoin
   | "replace"    => some ``pyStringReplace
   | "strip"      => some ``pyStringStrip
+  | "lstrip"     => some ``pyStringLstrip
+  | "rstrip"     => some ``pyStringRstrip
+  | "rfind"      => some ``pyStringRfind
+  | "zfill"      => some ``pyStringZfill
   | "startswith" => some ``pyStringStartswith
   | "endswith"   => some ``pyStringEndswith
   | "lower"      => some ``pyStringLower
@@ -36,16 +40,37 @@ def pythonMethodMap? (attr : String) : Option Lean.Name :=
   | "isspace"    => some ``pyIsWhitespace
   | "partition"  => some ``pyPartition
   | "capitalize" => some ``pyStringCapitalize
+  | "title"        => some ``pyStringTitle
+  | "swapcase"     => some ``pyStringSwapcase
+  | "casefold"     => some ``pyStringCasefold
+  | "removeprefix" => some ``pyStringRemovePrefix
+  | "removesuffix" => some ``pyStringRemoveSuffix
+  | "rjust"        => some ``pyStringRjust
+  | "ljust"        => some ``pyStringLjust
+  | "center"       => some ``pyStringCenter
   -- List Only
   | "append"     => some ``pyAppend
   | "appendleft" => some ``pyAppendLeft
   | "extend"     => some ``pyExtend
   | "reverse"    => some ``pyReverse
   | "copy"       => some ``pyCopy
+  -- Set Only (pure, non-mutating — return a new set / Bool; the `&`/`|`/`-`/`^` operators lower
+  -- to the same runtime functions).
+  | "union"                => some ``pySetUnion
+  | "intersection"         => some ``pySetIntersection
+  | "difference"           => some ``pySetDifference
+  | "symmetric_difference" => some ``pySetSymmetricDifference
+  | "issubset"             => some ``pySetSubset
+  | "issuperset"           => some ``pySetSuperset
+  | "isdisjoint"           => some ``pySetIsDisjoint
   -- Dict Only
   | "items"      => some ``pyItems
   | "keys"       => some ``pyKeys
   | "values"     => some ``pyAnys
+  -- Counter (a `Libraries.collections.PyDefaultDict`). Single-backtick Name literals: the runtime
+  -- lives in `Libraries`, which `PastaLean` cannot import, but the generated file `open`s it.
+  | "most_common" => some `Libraries.collections.pyMostCommon
+  | "elements"    => some `Libraries.collections.pyElements
   -- Int only
   | "bit_length" => some ``pyBitLength
   | "bit_count"  => some ``pyBitCount

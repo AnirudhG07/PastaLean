@@ -1,0 +1,12 @@
+{
+  "problem": "find-minimum-in-rotated-sorted-array-ii",
+  "module": "FindMinimumInRotatedSortedArrayIi",
+  "method": "findMin",
+  "params": [
+    "nums"
+  ],
+  "difficulty": "Hard",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 120
+}

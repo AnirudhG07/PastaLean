@@ -1,0 +1,13 @@
+{
+  "problem": "validate-stack-sequences",
+  "module": "ValidateStackSequences",
+  "method": "validateStackSequences",
+  "params": [
+    "pushed",
+    "popped"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 101
+}

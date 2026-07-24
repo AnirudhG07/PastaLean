@@ -49,12 +49,29 @@ partial def markPairSubscripts (json : Json) (argName : String) : Json :=
 def lambdaStx : (kind : SyntaxNodeKind) → Json →
     PygenM (TSyntax kind)
     | `term, json => do
-        let .ok _ := json.getObjValAs? Json "args" | throwError
+        let .ok argsJson := json.getObjValAs? Json "args" | throwError
           s!"Lambda node does not have an 'args' field or it is not a JSON value: {json}"
         let .ok body := json.getObjValAs? Json "body" | throwError
           s!"Lambda node does not have a 'body' field or it is not a JSON value: {json}"
         let argInfos ← functionArgInfos json
         let bodyStx ← getCode body `term
+        -- `lambda i=i: …` — every parameter has a default. This is the early-binding capture idiom
+        -- (`for i in …: fs.append(lambda i=i: …)`), and such closures are called with no args
+        -- (`func()`), so lower them to a 0-arg thunk that binds each parameter to its default at
+        -- creation time. That keeps the closures a *homogeneous* `Unit → _` list (a `fun i ↦ …` would
+        -- not sit alongside the arg-less `fun () ↦ …` thunks) and captures the default eagerly.
+        let argsArr := (argsJson.getObjValAs? (Array Json) "args").toOption.getD #[]
+        let defaults := (argsJson.getObjValAs? (Array Json) "defaults").toOption.getD #[]
+        if !argsArr.isEmpty && defaults.size == argsArr.size then
+          let mut b := bodyStx
+          for (arg, dflt) in (argsArr.zip defaults).reverse do
+            let .ok argName := arg.getObjValAs? String "arg" | throwError
+              s!"Lambda default-arg is missing its 'arg' name: {arg}"
+            let argIdent := mkIdent argName.toName
+            let dfltStx ← getCode dflt `term
+            b ← `(let $argIdent := $dfltStx
+                  $b)
+          return ← `(fun () ↦ $b)
         if argInfos.isEmpty then
           `(fun () ↦ $bodyStx)
         else if argInfos.size == 1 then

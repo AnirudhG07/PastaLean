@@ -17,8 +17,10 @@ def factorial := fun (n : Int) ↦
   Id.run
     (do
       let mut result : Int := (1 : Int)
-      for i in (PastaLean.pyRange (n +ₚ (1 : Int)) (1 : Int))do
+      let mut i : Int := (1 : Int)
+      while (i ≤ n) do
         result := result *ₚ i
+        i := i +ₚ (1 : Int)
       return result)
 
 attribute [simp, taste_ingr] factorial
@@ -27,6 +29,8 @@ def factorial'rn := fun (n : Int) ↦
   Id.run
     (do
       let mut result : Int := (1 : Int)
-      for i in (PastaLean.pyRange (n +ₚ (1 : Int)) (1 : Int))do
+      let mut i : Int := (1 : Int)
+      while (i ≤ n) do
         result := result *ₚ i
+        i := i +ₚ (1 : Int)
       return result)

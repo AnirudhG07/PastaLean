@@ -11,6 +11,7 @@ import PastaLean.PyVerify.AssertTactic
 import PastaLean.PyVerify.Contracts
 import PastaLean.PyGens.Transform.ClosureConvert
 import PastaLean.PyGens.Transform.Desugar
+import PastaLean.PyGens.Transform.Decorators
 
 open Lean Meta Elab Term Qq Std
 
@@ -68,7 +69,8 @@ partial def functionArgTypeSyntax? (annotationJson : Json) : PygenM (Option (TSy
           match ← functionArgTypeSyntax? sliceJson with
           | some elemTy => return some (← `(List $elemTy))
           | none => return none
-      | "dict" =>
+      -- `defaultdict`/`Counter` are backed by `PyDefaultDict`, not `Std.HashMap`.
+      | "dict" | "defaultdict" =>
           match sliceJson.getObjValAs? String "node_type" with
           | .ok "Tuple" =>
               let .ok elts := sliceJson.getObjValAs? (Array Json) "elts" | throwError
@@ -76,10 +78,29 @@ partial def functionArgTypeSyntax? (annotationJson : Json) : PygenM (Option (TSy
               match elts[0]?, elts[1]? with
               | some keyJson, some valJson =>
                   match ← functionArgTypeSyntax? keyJson, ← functionArgTypeSyntax? valJson with
-                  | some keyTy, some valTy => return some (← `(Std.HashMap $keyTy $valTy))
+                  | some keyTy, some valTy =>
+                      if container == "defaultdict" then
+                        return some (← `(Libraries.collections.PyDefaultDict $keyTy $valTy))
+                      else return some (← `(Std.HashMap $keyTy $valTy))
                   | _, _ => return none
               | _, _ => return none
           | _ => return none
+      -- `Callable[[A, B], R]` → the Lean arrow `A → B → R`. A function-typed parameter (a decorator's
+      -- wrapped function, a `key=`/comparator arg) needs this so its applications elaborate.
+      | "Callable" =>
+          match sliceJson.getObjValAs? String "node_type", sliceJson.getObjValAs? (Array Json) "elts" with
+          | .ok "Tuple", .ok elts =>
+              match elts[0]?, elts[1]? with
+              | some argsJson, some retJson =>
+                  let some retTy ← functionArgTypeSyntax? retJson | return none
+                  let argAnns := (argsJson.getObjValAs? (Array Json) "elts").toOption.getD #[]
+                  let mut ty := retTy
+                  for a in argAnns.reverse do
+                    let some aTy ← functionArgTypeSyntax? a | return none
+                    ty ← `($aTy → $ty)
+                  return some ty
+              | _, _ => return none
+          | _, _ => return none
       -- `Optional[T]` and other containers this reader misses fall back to `TypeInfer`.
       | _ => pyTypeSyntax? (TypeInfer.ofAnnotation annotationJson)
   -- `X | None` (`Optional`) and forward-ref strings: `TypeInfer` handles them.
@@ -153,6 +174,11 @@ def functionReturnTypeSyntax? (json : Json) : PygenM (Option (TSyntax `term)) :=
   -- A boxed function (returns disagree in type) returns `PyAny` regardless of any union annotation.
   if json.getObjValAs? Bool "_box_return" == .ok true then
     return some (mkIdent ``PastaLean.PyAny)
+  -- A `_ret_float` body mixes `int` and `float` returns (`return 0` / `return ans` where `ans` is
+  -- `float` from a `-inf` seed): its codomain is the mode float, overriding an `int` annotation, so
+  -- both branches coerce (`(0 : ℚ)` and the float `ans`).
+  if json.getObjValAs? Bool "_ret_float" == .ok true then
+    return some (if (← getNumericMode) == .exact then mkIdent ``Rat else mkIdent ``Float)
   -- The explicit `returns` annotation wins; else the type inferred by `TypeInfer` (`_ret_ty`).
   match (jsonFieldOption json "returns").orElse (fun _ => jsonFieldOption json "_ret_ty") with
   | some returnJson =>
@@ -627,7 +653,7 @@ self-recursive case in `funcDefSyntax`). -/
 def mutualMemberDef (json : Json) : PygenM (TSyntax `command) := do
   let .ok name := json.getObjValAs? String "name" | throwError
     s!"FuncDef node does not have a 'name' field: {json}"
-  let nameIdent := mkIdent name.toName
+  let nameIdent := mkIdent (← withRunSuffix name).toName
   let argInfos ← functionArgInfos json
   let bodyElems ← functionBodyElems json
   let valueStx ← functionValueSyntax argInfos bodyElems
@@ -642,6 +668,13 @@ def mutualMemberDef (json : Json) : PygenM (TSyntax `command) := do
 cluster (≥ 2 members that reference each other) as one `mutual … end` block of `partial def`s. -/
 def emitHelperGroup (group : Array Json) : PygenM (TSyntax `command) := do
   if group.size ≥ 2 then
+    -- A `mutual` block needs an explicit signature on each member; untyped params give none, and
+    -- the block then fails to elaborate. Throw so best-effort degrades the function instead.
+    for j in group do
+      let some retTy ← functionReturnTypeSyntax? j
+        | throwError "mutually-recursive nested functions need type annotations for a `mutual` block"
+      let some _ ← functionArrowTypeSyntax? (← functionArgInfos j) retTy
+        | throwError "mutually-recursive nested functions need type annotations for a `mutual` block"
     let defs ← group.mapM fun j => withFreshVariables do mutualMemberDef j
     `(command| mutual $defs:command* end)
   else if let some j := group[0]? then
@@ -652,6 +685,31 @@ def emitHelperGroup (group : Array Json) : PygenM (TSyntax `command) := do
 def funcDefSyntax : (kind : SyntaxNodeKind) → Json →
     PygenM (TSyntax kind)
     | `command, json => do
+        -- A genuine (non-transparent) decorator `@d` means `f = d(f)`. Emit the raw function under a
+        -- private name and bind the decorated name to the application `d1 (d2 raw)` (bottom-up: the
+        -- decorator nearest the `def` applies first). Both twins line up: the raw def and its
+        -- reference share this pass's run-suffix, and decorator names get the user-name suffix.
+        -- Transparent decorators (`@cache`, `@staticmethod`, …) are left for the normal path below.
+        let applied := Decorators.appliedDecorators json
+        if !applied.isEmpty then
+          let .ok decoName := json.getObjValAs? String "name" | throwError
+            s!"decorated FuncDef has no 'name': {json}"
+          let rawBase := decoName ++ "'undecorated"
+          let rawJson := (json.setObjVal! "name" (Json.str rawBase)).setObjVal!
+            "decorator_list" (Json.arr #[])
+          let rawCmd ← getCode rawJson `command
+          let bindName ← withRunSuffix decoName
+          let rawRef ← withRunSuffix rawBase
+          let mut acc : TSyntax `term ← `($(mkIdent rawRef.toName))
+          for d in applied.reverse do
+            let dRef ← suffixIfUserName d
+            acc ← `($(mkIdent dRef.toName) $acc)
+          let bindCmd ← `(command| def $(mkIdent bindName.toName) := $acc)
+          -- Flatten: the raw def's own emission is a null-node (`def` + `attribute`), so append
+          -- through `appendCommandSyntax` rather than nesting null-nodes (which won't elaborate).
+          let mut cmds := appendCommandSyntax #[] rawCmd
+          cmds := appendCommandSyntax cmds bindCmd
+          return ⟨mkNullNode (cmds.map TSyntax.raw)⟩
         -- A nested `def` becomes a sibling `partial def` emitted just before this one, with its
         -- captured variables as extra parameters (`Transform/ClosureConvert.lean`). Mutually-recursive
         -- siblings are emitted together in one `mutual` block. The rewritten function has no nested
@@ -846,26 +904,45 @@ def assignHeadSyntax : (kind : SyntaxNodeKind) → Json →
         let splitRest ← splitList rest
         let tailCode ← withoutCheck do
           getCode splitRest `term
-        match ← tupleAssignTargetNames? target with
-        | some idents => do
-            let n := idents.size
+        match ← tupleTargetElts? target with
+        | some elts => do
+            let n := elts.size
             let valueStx ← getCode value `term
             let unpackTmpIdent := mkIdent (← freshName `__unpack_pair)
-            -- A `Tuple` literal or a tuple-returning function call both produce a `Prod` (use
-            -- `Prod.fst`/`Prod.snd`); list-returning RHSs are pre-split into subscripts and never
-            -- reach native unpacking (see Core/Assign.lean for the same reasoning).
             let isTuple := jsonNodeType? value == some "Tuple" || jsonNodeType? value == some "Call"
+            let nestedIsTuple := target.getObjValAs? Bool "_thread_unpack" == .ok true
             let mut result := tailCode
             for i in (List.range n).reverse do
-              let acc ← unpackAccessTerm isTuple unpackTmpIdent i n
-              result ← `(let $(idents[i]!) := $acc
-                $result)
+              result ← pureUnpackBinding nestedIsTuple elts[i]! (← unpackAccessTerm isTuple unpackTmpIdent i n) result
             `(let $unpackTmpIdent := $valueStx
               $result)
         | none => do
             let nameIdent ← getCode target `ident
             let valueStx ← getCode value `term
-            `(let $nameIdent := $valueStx
+            -- Ascribe the inferred type when TypeInfer stamped one — the pure `let` mirror of the
+            -- `let mut x : T` the monadic path emits. This is what lets a heterogeneous literal
+            -- (`[1, "hi", [2]]` → `List PyAny`) box its elements instead of Lean pinning `List Int`
+            -- from the first element. A bare numeric literal is re-emitted in the target type
+            -- (`(0 : Float)`), since `((0 : Int) : Float)` has no coercion. A *bare* `PyAny` stamp is
+            -- skipped: it marks a reassignment-conflict slot, which the pure path already handles by
+            -- let-shadowing (each `let` re-infers), so forcing `PyAny` would break its per-binding
+            -- monomorphic arithmetic — exactly the shadow guard the monadic path uses.
+            let tyStx? ←
+              match jsonFieldOption target "_ty" with
+              | some ann =>
+                  if ann.getObjValAs? String "id" == .ok "PyAny" then pure none
+                  else stampedTypeSyntax? target
+              | none => pure none
+            let rhs ← match tyStx? with
+              | some tyStx =>
+                  match jsonNodeType? value, value.getObjValAs? Int "value" with
+                  | some "Constant", .ok i =>
+                      let n := Syntax.mkNumLit (toString i.natAbs)
+                      let lit : TSyntax `term ← if i < 0 then `(- $n:num) else pure ⟨n⟩
+                      `(($lit : $tyStx))
+                  | _, _ => `(($valueStx : $tyStx))
+              | none => pure valueStx
+            `(let $nameIdent := $rhs
               $tailCode)
     | _, _ => throwError s!"Unsupported syntax category for Head_Assign node"
 
@@ -887,6 +964,20 @@ def annAssignHeadSyntax : (kind : SyntaxNodeKind) → Json →
             let json := targetJson.mergeObj json
             assignHeadSyntax `term json
     | _, _ => throwError s!"Unsupported syntax category for Head_AnnAssign node"
+
+@[pygen "Head_AugAssign"]
+def augAssignHeadSyntax : (kind : SyntaxNodeKind) → Json →
+    PygenM (TSyntax kind)
+    | `term, json => do
+        let .ok target := json.getObjVal? "target" | throwError s!"Head_AugAssign missing 'target': {json}"
+        let .ok op := json.getObjValAs? String "op" | throwError s!"Head_AugAssign missing 'op': {json}"
+        let .ok value := json.getObjVal? "value" | throwError s!"Head_AugAssign missing 'value': {json}"
+        let binOp := match op with | "and" => "bitand" | "or" => "bitor" | "xor" => "bitxor" | o => o
+        let binValue := Json.mkObj [("node_type", .str "BinOp"), ("op", .str binOp),
+          ("left", target), ("right", value)]
+        let asAssign := (json.setObjVal! "node_type" (.str "Head_Assign")).setObjVal! "value" binValue
+        assignHeadSyntax `term asAssign
+    | _, _ => throwError s!"Unsupported syntax category for Head_AugAssign node"
 
 @[pygen "Head_Pass"]
 def passHeadSyntax : (kind : SyntaxNodeKind) → Json →
@@ -938,7 +1029,9 @@ def ifHeadSyntax : (kind : SyntaxNodeKind) → Json →
         if !rest.isEmpty && !statementListDefinitelyReturns bodyElems.toList then
           throwError
             "If body falls through into later statements; requires monadic lowering."
-        let testStx ← getCode testJson `term
+        -- A boolean context like every other `if`: `pyTruthy`-wrap a bare non-Bool test (`if s & 1:`)
+        -- and force a `BoolOp` to the `Bool` connective, not the value-form.
+        let testStx ← truthyConditionTerm testJson (← withPropCondition true (getCode testJson `term))
         let thenBranch ← withoutCheck do
           let splitThen ← splitList (bodyElems.toList ++ rest)
           getCode splitThen `term
@@ -969,6 +1062,9 @@ def returnHeadSyntax : (kind : SyntaxNodeKind) → Json →
     | `term, json => do
         let .ok value := json.getObjVal? "value" | throwError
           s!"Return node does not have a 'value' field or it is not a JSON value: {json}"
+        -- `return a or b` returns the deciding *value* (`x or '0'` → the string), not a `Bool`.
+        if jsonNodeType? value == some "BoolOp" then
+          return ← withoutCheck do boolOpValueTerm value
         let valueStx ← withoutCheck do
           getCode value `term
         return valueStx

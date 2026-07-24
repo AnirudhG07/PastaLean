@@ -24,17 +24,17 @@ namespace Libraries.numpy
 
 /-- info: [[0.000000, 0.000000, 0.000000], [0.000000, 0.000000, 0.000000]] -/
 #guard_msgs in
-#eval pyNumpyZeros (2, 3)
+#eval pyNumpyZeros (γ := Float) (2, 3)
 
 /-- info: [[1.000000, 1.000000], [1.000000, 1.000000]] -/
 #guard_msgs in
-#eval pyNumpyOnes (2, 2)
+#eval pyNumpyOnes (γ := Float) (2, 2)
 
 /--
 info: [[1.000000, 0.000000, 0.000000], [0.000000, 1.000000, 0.000000], [0.000000, 0.000000, 1.000000]]
 -/
 #guard_msgs in
-#eval pyNumpyEye 3
+#eval pyNumpyEye (γ := Float) 3
 
 /-- info: [[1.000000, 3.000000], [2.000000, 4.000000]] -/
 #guard_msgs in

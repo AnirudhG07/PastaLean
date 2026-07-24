@@ -1,0 +1,12 @@
+{
+  "problem": "peak-index-in-a-mountain-array",
+  "module": "PeakIndexInAMountainArray",
+  "method": "peakIndexInMountainArray",
+  "params": [
+    "arr"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 87
+}

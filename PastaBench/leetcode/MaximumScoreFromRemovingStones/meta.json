@@ -1,0 +1,14 @@
+{
+  "problem": "maximum-score-from-removing-stones",
+  "module": "MaximumScoreFromRemovingStones",
+  "method": "maximumScore",
+  "params": [
+    "a",
+    "b",
+    "c"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 88
+}

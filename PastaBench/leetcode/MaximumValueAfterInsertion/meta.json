@@ -1,0 +1,13 @@
+{
+  "problem": "maximum-value-after-insertion",
+  "module": "MaximumValueAfterInsertion",
+  "method": "maxValue",
+  "params": [
+    "n",
+    "x"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 133
+}

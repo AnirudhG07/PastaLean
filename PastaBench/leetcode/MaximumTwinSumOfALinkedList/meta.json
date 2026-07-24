@@ -1,0 +1,12 @@
+{
+  "problem": "maximum-twin-sum-of-a-linked-list",
+  "module": "MaximumTwinSumOfALinkedList",
+  "method": "pairSum",
+  "params": [
+    "head"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "class",
+  "n_tests": 89
+}

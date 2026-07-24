@@ -1,0 +1,13 @@
+{
+  "problem": "find-the-maximum-achievable-number",
+  "module": "FindTheMaximumAchievableNumber",
+  "method": "theMaximumAchievableX",
+  "params": [
+    "num",
+    "t"
+  ],
+  "difficulty": "Easy",
+  "bucket": "term",
+  "feature": "term",
+  "n_tests": 82
+}

@@ -1,0 +1,13 @@
+{
+  "problem": "number-of-subarrays-with-gcd-equal-to-k",
+  "module": "NumberOfSubarraysWithGcdEqualToK",
+  "method": "subarrayGCD",
+  "params": [
+    "nums",
+    "k"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 124
+}

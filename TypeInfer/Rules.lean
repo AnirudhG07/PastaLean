@@ -45,6 +45,8 @@ def literalIndex? (slice : Json) : Option Nat :=
 def arith : PyType → PyType → PyType
   | .str, .str => .str
   | .list a, .list b => .list (a.join b)
+  -- Arithmetic on a boxed value stays boxed (`PyAny + int` dispatches on the tag → `PyAny`).
+  | .any, _ | _, .any => .any
   | a, b =>
       if a.isNumeric && b.isNumeric then
         if a == .float || b == .float then .float else .int
@@ -61,7 +63,10 @@ private def constReturnMethods : List (String × PyType) :=
   [ ("split", .list .str), ("rsplit", .list .str), ("splitlines", .list .str),
     ("join", .str), ("strip", .str), ("lstrip", .str), ("rstrip", .str),
     ("lower", .str), ("upper", .str), ("replace", .str), ("format", .str),
+    ("title", .str), ("swapcase", .str), ("casefold", .str), ("center", .str),
+    ("removeprefix", .str), ("removesuffix", .str), ("rjust", .str), ("ljust", .str),
     ("count", .int), ("find", .int), ("rfind", .int), ("index", .int),
+    ("lstrip", .str), ("rstrip", .str),
     ("startswith", .bool), ("endswith", .bool), ("isdigit", .bool), ("isalpha", .bool) ]
 
 mutual
@@ -124,6 +129,16 @@ partial def typeOfExpr (sigs : Sigs) (env : Env) (e : Json) : PyType :=
           | _ => ct.elemType
       | none => .unknown
   | some "Call" => typeOfCall sigs env e
+  -- `x.attr`: the field's declared type, looked up as `"Class.field"` in `sigs` (populated from each
+  -- `ClassDef`). Without this a chained access like `root.left.val` cannot see that `root.left` is
+  -- itself `Option TreeNode`, so the unwrap would only fire on the outermost receiver.
+  | some "Attribute" =>
+      match field e "value", (e.getObjValAs? String "attr").toOption with
+      | some recv, some attr =>
+          match (typeOfExpr sigs env recv).classNameOf? with
+          | some c => (sigs.get? s!"{c}.{attr}").getD .unknown
+          | none => .unknown
+      | _, _ => .unknown
   -- Comprehensions: bind each generator target from its iterable's element type, then type the
   -- element/key/value in that extended env (so `[[float('inf')]*k for _ in range(n)]` is
   -- `list[list[float]]`, not `list[Any]`).
@@ -159,14 +174,23 @@ partial def typeOfCall (sigs : Sigs) (env : Env) (e : Json) : PyType :=
           -- A supported library call (`np.dot`, `math.pow`) resolves via the single library entry
           -- point in `Libraries/Registry.lean` (which knows each library's return types); anything
           -- else is a method on the receiver. TypeInfer never names a specific library.
+          -- `collections.Counter()` / `collections.defaultdict(list)`: a module-qualified collection
+          -- constructor resolves exactly like its bare (star-imported) form. Used when the library
+          -- registry has no type for the member, which is the case for the `collections` shims.
+          let fallback : PyType :=
+            match (func.getObjValAs? String "attr").toOption with
+            | some attr =>
+                if ["Counter", "defaultdict", "OrderedDict", "deque"].contains attr then
+                  builtinReturn sigs env attr args
+                else methodReturn sigs env attr (field func "value") args
+            | none => .unknown
           match (func.getObjValAs? String "library_module").toOption,
                 (func.getObjValAs? String "library_member").toOption with
           | some m, some mem =>
-              (Libraries.libraryMemberReturn? m mem (args.head?.elim .unknown (typeOfExpr sigs env))).getD .unknown
-          | _, _ =>
-              match (func.getObjValAs? String "attr").toOption with
-              | some attr => methodReturn sigs env attr (field func "value") args
-              | none => .unknown
+              match Libraries.libraryMemberReturn? m mem (args.head?.elim .unknown (typeOfExpr sigs env)) with
+              | some t => t
+              | none => fallback
+          | _, _ => fallback
       | _ => .unknown
   | none => .unknown
 
@@ -182,16 +206,39 @@ partial def builtinReturn (sigs : Sigs) (env : Env) (name : String) (args : List
       | "set" | "frozenset" => .set arg0.elemType
       | "tuple" => .list arg0.elemType
       | "dict" => arg0
-      | "abs" | "min" | "max" | "sum" =>
+      -- collections/itertools constructors, so a captured `graph = defaultdict(list)` etc. is typed
+      -- (an untyped closure-captured binder is the biggest `stuck`/`Unknown identifier` cascade).
+      | "Counter" => .dict arg0.elemType .int
+      | "OrderedDict" => arg0
+      | "deque" => .list arg0.elemType
+      | "accumulate" => .list arg0.elemType
+      | "defaultdict" =>
+          let vt := match args.head?.bind (·.getObjValAs? String "id" |>.toOption) with
+            | some "list" => .list .unknown
+            | some "set" => .set .unknown
+            | some "dict" => .dict .unknown .unknown
+            | some "int" | some "float" => .int
+            | _ => .unknown
+          .dict .unknown vt
+      -- `min(a, b, …)` / `max(a, b, …)` return the join of all their arguments — a float sentinel
+      -- and an int accumulator (`ans = max(ans, cur - inf)`) make the result `float`, which then
+      -- flows back to the accumulator. The single-argument container form uses the element type.
+      | "min" | "max" =>
+          if args.length == 1 then
+            if arg0.elemType != .unknown then arg0.elemType else arg0
+          else PyType.joinAll (args.map (typeOfExpr sigs env))
+      | "abs" | "sum" =>
           -- element for the container forms, else the argument itself.
           if args.length == 1 && arg0.elemType != .unknown then arg0.elemType else arg0
-      -- `zip(a, b, …)` → list of tuples of the element types; `enumerate(a)` → list[(int, elem)].
+      -- `zip(a, b, …)` → list of tuples of the element types; `enumerate(a)` → list[(int, elem)];
+      -- `pairwise(a)` → list of consecutive (elem, elem) pairs.
       | "zip" => .list (.tuple (args.map (fun a => (typeOfExpr sigs env a).elemType)))
       | "enumerate" => .list (.tuple [.int, arg0.elemType])
+      | "pairwise" => .list (.tuple [arg0.elemType, arg0.elemType])
       | _ => .unknown
 
 /-- Return type of `recv.attr(args)`. -/
-partial def methodReturn (sigs : Sigs) (env : Env) (attr : String) (recv : Option Json) (_args : List Json) : PyType :=
+partial def methodReturn (sigs : Sigs) (env : Env) (attr : String) (recv : Option Json) (args : List Json) : PyType :=
   match constReturnMethods.lookup attr with
   | some t => t
   | none =>
@@ -200,8 +247,16 @@ partial def methodReturn (sigs : Sigs) (env : Env) (attr : String) (recv : Optio
       | "keys" => .list (match recvT with | .dict k _ => k | _ => .unknown)
       | "values" => .list (match recvT with | .dict _ v => v | _ => .unknown)
       | "items" => .list (match recvT with | .dict k v => .tuple [k, v] | _ => .unknown)
-      | "get" | "pop" | "setdefault" =>
-          match recvT with | .dict _ v => v | _ => recvT.elemType
+      -- `d.get(k)` gives `Optional[V]`; `d.get(k, default)` uses the default to type the result.
+      | "get" =>
+          let fromRecv := match recvT with | .dict _ v => v | _ => recvT.elemType
+          match args[1]? with
+          | some d => fromRecv.join (typeOfExpr sigs env d)
+          | none => .opt fromRecv
+      -- `d.pop(k)`/`d.setdefault(k)` return `V`; return `xs.pop()`/`q.popleft()`/`q.popright()`
+      | "pop" | "popleft" | "popright" | "setdefault" =>
+          let fromRecv := match recvT with | .dict _ v => v | _ => recvT.elemType
+          fromRecv.join (args[1]?.elim .unknown (typeOfExpr sigs env))
       | "copy" => recvT
       | _ => .unknown
 

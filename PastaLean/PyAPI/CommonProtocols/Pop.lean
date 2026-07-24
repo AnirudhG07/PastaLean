@@ -69,4 +69,16 @@ def pyPopRest (xs : List α) (idx : Int := -1) : List α :=
 instance [BEq α] [Hashable α] : PyPop (Std.HashMap α β) α β where
   pyPop m key default := pyDictPop m key default
 
+/-! Dict `d.pop(key, default)` splits like the list pop: `pyDictPopValue` is `d[key]` (or the
+default when absent), `pyDictPopRest` is the map without that key. Value form takes the default,
+rest form only the key. -/
+
+/-- The value `d.pop(key, default)` returns: `d[key]` if present, else `default`. -/
+def pyDictPopValue [BEq α] [Hashable α] (m : Std.HashMap α β) (key : α) (default : β) : β :=
+  (m.get? key).getD default
+
+/-- The map after `d.pop(key, ...)` removes `key`. -/
+def pyDictPopRest [BEq α] [Hashable α] (m : Std.HashMap α β) (key : α) : Std.HashMap α β :=
+  m.erase key
+
 end PastaLean

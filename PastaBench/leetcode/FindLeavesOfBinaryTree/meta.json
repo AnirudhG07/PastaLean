@@ -1,0 +1,12 @@
+{
+  "problem": "find-leaves-of-binary-tree",
+  "module": "FindLeavesOfBinaryTree",
+  "method": "findLeaves",
+  "params": [
+    "root"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "class",
+  "n_tests": 92
+}

@@ -1,0 +1,12 @@
+{
+  "problem": "number-of-1-bits",
+  "module": "NumberOf1Bits",
+  "method": "hammingWeight",
+  "params": [
+    "n"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 139
+}

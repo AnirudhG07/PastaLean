@@ -1,0 +1,13 @@
+{
+  "problem": "water-bottles-ii",
+  "module": "WaterBottlesIi",
+  "method": "maxBottlesDrunk",
+  "params": [
+    "numBottles",
+    "numExchange"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 86
+}

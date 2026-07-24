@@ -94,3 +94,31 @@ open PastaLean
 /-- info: "lo" -/
 #guard_msgs in
 #eval pyStringSlice "hello" (some 3) none
+
+/-- info: "Hello World'S Foo" -/
+#guard_msgs in
+#eval pyStringTitle "hello world's foo"
+
+/-- info: "hELLO wORLD" -/
+#guard_msgs in
+#eval pyStringSwapcase "Hello World"
+
+/-- info: "Hook" -/
+#guard_msgs in
+#eval pyStringRemovePrefix "TestHook" "Test"
+
+/-- info: "Test" -/
+#guard_msgs in
+#eval pyStringRemoveSuffix "TestHook" "Hook"
+
+/-- info: "   42" -/
+#guard_msgs in
+#eval pyStringRjust "42" 5
+
+/-- info: "42   " -/
+#guard_msgs in
+#eval pyStringLjust "42" 5
+
+/-- info: "*42**" -/
+#guard_msgs in
+#eval pyStringCenter "42" 5 "*"

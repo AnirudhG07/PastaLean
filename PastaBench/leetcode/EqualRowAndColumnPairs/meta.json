@@ -1,0 +1,12 @@
+{
+  "problem": "equal-row-and-column-pairs",
+  "module": "EqualRowAndColumnPairs",
+  "method": "equalPairs",
+  "params": [
+    "grid"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 77
+}

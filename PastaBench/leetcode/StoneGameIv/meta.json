@@ -1,0 +1,12 @@
+{
+  "problem": "stone-game-iv",
+  "module": "StoneGameIv",
+  "method": "winnerSquareGame",
+  "params": [
+    "n"
+  ],
+  "difficulty": "Hard",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 66
+}

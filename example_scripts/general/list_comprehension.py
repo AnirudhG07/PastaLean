@@ -36,6 +36,14 @@ def lc_with_tuple_unpacking():
 def lc_with_nested_conditions():
     return [x for x in range(20) if (x % 2 == 0 and x % 3 == 0) or x % 5 == 0]
 
+def lc_with_nested_tuple_unpacking():
+    triples = [(1, (2, 3)), (4, (5, 6)), (7, (8, 9))]
+    return [a + b + c for a, (b, c) in triples]
+
+def dc_with_nested_tuple_unpacking():
+    triples = [(1, (2, 3)), (4, (5, 6))]
+    return {a: b * c for a, (b, c) in triples}
+
 def lc_with_side_effects():
     result= []
     for x in range(5):

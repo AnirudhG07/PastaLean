@@ -1,0 +1,12 @@
+{
+  "problem": "number-of-steps-to-reduce-a-number-to-zero",
+  "module": "NumberOfStepsToReduceANumberToZero",
+  "method": "numberOfSteps",
+  "params": [
+    "num"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 59
+}

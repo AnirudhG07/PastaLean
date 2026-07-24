@@ -1,0 +1,12 @@
+{
+  "problem": "number-of-valid-subarrays",
+  "module": "NumberOfValidSubarrays",
+  "method": "validSubarrays",
+  "params": [
+    "nums"
+  ],
+  "difficulty": "Hard",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 138
+}

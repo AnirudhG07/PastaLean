@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import argparse
 import ast
+import concurrent.futures
 import json
 import multiprocessing as mp
 import os
@@ -37,8 +38,10 @@ import queue
 import random
 import re
 import subprocess
+import shutil
 import sys
 import threading
+import warnings
 import time
 from pathlib import Path
 
@@ -356,38 +359,94 @@ def py_lit_to_lean(v):
     return None
 
 
-def build_test_harness(converted_lean, fn_name, cases):
-    """Append a `main` that runs the computable `fn'rn` twin over the cases, printing `PASSED p/t` and
-    a `FAIL <idx>: got <value>` line per failing case. Cases with an unrenderable argument or expected
-    value are skipped. Returns (source, runnable_indices).
+def _lean_type_of(values):
+    """Infer ONE Lean type covering all concrete Python `values` at a given argument position, or
+    None if they are unrenderable/mixed (dict, object, list-mixed-with-scalar). Empty lists default
+    their element type to `Int`. Used to give the runtime JSON decoder a target type per field."""
+    seen, elems = set(), []
+    for v in values:
+        if isinstance(v, bool):
+            seen.add("bool")
+        elif isinstance(v, int):
+            seen.add("int")
+        elif isinstance(v, float):
+            seen.add("float")
+        elif isinstance(v, str):
+            seen.add("str")
+        elif isinstance(v, (list, tuple)):
+            seen.add("list"); elems.extend(v)
+        else:
+            return None
+    if "list" in seen:
+        if seen != {"list"}:
+            return None
+        inner = _lean_type_of(elems)
+        return None if inner is None else f"(List {inner})"
+    if "str" in seen:
+        return None if seen != {"str"} else "String"
+    if "float" in seen:
+        return "Float"
+    if seen == {"bool"}:
+        return "Bool"
+    return "Int"  # int (or int+bool, which coerces), or no information at all
 
-    The cases are emitted as ONE runtime data list iterated by a loop — not unrolled into one
-    statement per case — so the `fn'rn` application is elaborated once instead of N times. On a
-    100-case problem this turns ~35 s of typechecking into ~5 s (the elaboration cost was per
-    unrolled statement, not the execution), which is what was blowing the harness timeout."""
+
+def build_test_harness(converted_lean, fn_name, cases, data_path):
+    """Append a `main` that runs the computable `fn'rn` twin over the cases, printing `PASSED p/t`
+    and a `FAIL <idx>: got <value>` line per failing case. Cases with an unrenderable argument or
+    expected value are skipped. Returns (source, runnable_indices, data_json).
+
+    The cases are NOT compiled into the binary — that made a big-dataset problem embed a multi-MB
+    Lean literal, whose elaboration/C-codegen took 30 GB / hours and wedged the single native build.
+    Instead the data is written (by the caller) to `data_path` as JSON and READ AT RUNTIME: the
+    binary carries only the solution, a small per-field `Lean.fromJson?` decoder, and the check
+    loop. The decoder's target types are inferred from the concrete case values."""
     rn = f"{fn_name}'rn"
-    tuples, runnable, arity = [], [], 0
+    # Renderable cases (same skip rule as before: any None/dict/object value drops the case).
+    renderable = []
     for idx, (args, expected) in enumerate(cases):
-        arg_lits = [py_lit_to_lean(a) for a in args]
-        exp_lit = py_lit_to_lean(expected)
-        if exp_lit is None or any(a is None for a in arg_lits):
+        if py_lit_to_lean(expected) is None or any(py_lit_to_lean(a) is None for a in args):
             continue
-        # Each case carries its ORIGINAL index so a `FAIL <idx>` still maps back to `cases[idx]`.
-        elems = [f"({idx} : Nat)"] + [f"({a})" for a in arg_lits] + [f"({exp_lit})"]
-        tuples.append("(" + ", ".join(elems) + ")")
-        runnable.append(idx)
-        arity = len(arg_lits)
-    if not tuples:
+        renderable.append((idx, list(args), expected))
+    arity = len(renderable[0][1]) if renderable else 0
+    kept = [r for r in renderable if len(r[1]) == arity]
+    arg_types = [_lean_type_of([r[1][i] for r in kept]) for i in range(arity)]
+    exp_type = _lean_type_of([r[2] for r in kept])
+
+    if not kept or exp_type is None or any(t is None for t in arg_types):
         body = "\n".join([converted_lean.rstrip(), "",
                           'def main : IO Unit := IO.println "PASSED 0/0"', ""])
-        return body, runnable
-    arg_names = [f"a{i}" for i in range(arity)]
-    pat = "(" + ", ".join(["idx"] + arg_names + ["e"]) + ")"
-    call = rn + (" " + " ".join(arg_names) if arg_names else "")
+        return body, [], "[]"
+
+    runnable = [idx for (idx, _a, _e) in kept]
+    data_json = json.dumps([[idx] + args + [expected] for (idx, args, expected) in kept])
+
+    names = ["idx"] + [f"a{i}" for i in range(arity)] + ["e"]
+    field_types = ["Nat"] + arg_types + [exp_type]
+    disc = ", ".join(f"Lean.fromJson? (α := {t}) (f.getD {k} .null)"
+                     for k, t in enumerate(field_types))
+    ok_pat = ", ".join(f".ok {n}" for n in names)
+    wild = ", ".join("_" for _ in field_types)
+    tuple_ty = " × ".join(field_types)
+    pat = "(" + ", ".join(names) + ")"
+    call = rn + ((" " + " ".join(f"a{i}" for i in range(arity))) if arity else "")
+    path_lit = str(data_path).replace("\\", "\\\\").replace('"', '\\"')
     body = "\n".join([
+        "import Lean.Data.Json",
         converted_lean.rstrip(), "",
-        "def _cases := [\n    " + ",\n    ".join(tuples) + "\n  ]", "",
+        f"private def _decodeCase' (j : Lean.Json) : Option ({tuple_ty}) :=",
+        "  match j.getArr? with",
+        "  | .error _ => none",
+        "  | .ok f =>",
+        f"    match {disc} with",
+        f"    | {ok_pat} => some ({', '.join(names)})",
+        f"    | {wild} => none", "",
         "def main : IO Unit := do",
+        "  let _out ← IO.getStdout",
+        f'  let _raw ← IO.FS.readFile "{path_lit}"',
+        "  let _cases := match Lean.Json.parse _raw with",
+        "    | .ok j => ((j.getArr?).toOption.getD #[]).toList.filterMap _decodeCase'",
+        "    | .error _ => []",
         "  let mut _p := 0",
         "  let mut _t := 0",
         f"  for {pat} in _cases do",
@@ -395,15 +454,22 @@ def build_test_harness(converted_lean, fn_name, cases):
         # `repr` prints what Lean computed so a failure is debuggable without a rerun.
         f"    if ({call}) == e then _p := _p + 1",
         f'    else IO.println s!"FAIL {{idx}}: got {{repr ({call})}}"',
+        # Flush a running count each case so a native run that times out still reports partials
+        # (how many passed / attempted before it hung) instead of a bare 0/N.
+        '    _out.putStr s!"PROG {_t} {_p}\\n"; _out.flush',
         '  IO.println s!"PASSED {_p}/{_t}"', ""])
-    return body, runnable
+    return body, runnable, data_json
 
 
 def load_callable(fn_src, method):
     """Exec `fn_src` (with the star-import prelude) and return the `method` callable, or None."""
     ns = {}
     try:
-        exec(_PRELUDE + fn_src, ns)  # noqa: S102
+        # Dataset sources are third-party text; their SyntaxWarnings (`'\/'` in a regex, …) say
+        # nothing about the transpiler and would otherwise pepper the run log.
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            exec(_PRELUDE + fn_src, ns)  # noqa: S102
     except Exception:  # noqa: BLE001
         return None
     fn = ns.get(method)
@@ -436,6 +502,16 @@ def _ref_stream_worker(conn, fn, arg_list, start, mem_bytes):
         resource.setrlimit(resource.RLIMIT_AS, (mem_bytes, mem_bytes))
     except (ValueError, OSError, ImportError):
         pass  # platform without RLIMIT_AS — the parent's per-case timeout is still a backstop
+    # The child talks only over the pipe, so its stdio is pure noise in the run log. Solutions that
+    # print, or that spawn their own threads (a "web crawler" solution whose threads raise past our
+    # try/except and hit `threading.excepthook`), would otherwise spew into the parent's stderr.
+    try:
+        devnull = open(os.devnull, "w")
+        os.dup2(devnull.fileno(), 1)
+        os.dup2(devnull.fileno(), 2)
+        threading.excepthook = lambda _args: None
+    except Exception:  # noqa: BLE001
+        pass
     for offset, args in enumerate(arg_list):
         idx = start + offset
         try:
@@ -450,6 +526,9 @@ def _ref_stream_worker(conn, fn, arg_list, start, mem_bytes):
             except Exception:  # noqa: BLE001
                 break
     conn.close()
+    # Hard-exit: a solution may have left non-daemon threads running, which would otherwise keep
+    # this child alive until the parent's timeout terminates it.
+    os._exit(0)
 
 
 def guarded_ref_batch(fn, arg_list, *, mem_bytes=_REF_MEM_LIMIT, timeout=_REF_CASE_TIMEOUT):
@@ -525,6 +604,14 @@ class WarmLeanEval:
     problem costs one re-boot, not the whole run."""
 
     READY, BEGIN, END = "===PACEVAL-READY===", "===PACEVAL-BEGIN===", "===PACEVAL-END==="
+    # Boots are serialized across all workers (concurrent Mathlib imports crash) — class-wide lock.
+    _boot_lock = threading.Lock()
+
+    # Proactively reboot after this many evals: a long-lived backend accumulates heartbeat budget
+    # and memory, and past ~1950 translations it hits an all-fail cliff (heartbeat poisoning). A
+    # scheduled reboot (~10 s Mathlib load) keeps it fresh and is far cheaper than a run of spurious
+    # timeouts. 0 disables.
+    REBOOT_EVERY = 400
 
     def __init__(self, timeout=15, boot_timeout=300, verbose=True):
         self.timeout = timeout
@@ -533,6 +620,7 @@ class WarmLeanEval:
         self.proc = None
         self._q = None       # lines from the backend's stdout, fed by a reader thread
         self._boots = 0
+        self._evals = 0      # evals since the current boot; triggers a proactive reboot
 
     def _log(self, msg):
         if self.verbose:
@@ -550,26 +638,29 @@ class WarmLeanEval:
         q.put(None)
 
     def _start(self):
-        self._boots += 1
-        self._log(f"booting palc eval backend (boot #{self._boots}; Mathlib load ~10s)…")
-        # stderr → DEVNULL so a crash (broken pipe / OOM 'resource vanished') can't pollute stdout.
-        self.proc = subprocess.Popen(
-            ["lake", "exe", "palc", "eval"], cwd=REPO_ROOT,
-            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True,
-            preexec_fn=_backend_mem_limit_preexec)
-        self._q = queue.Queue()
-        threading.Thread(target=self._read_lines, args=(self.proc, self._q), daemon=True).start()
-        deadline = time.time() + self.boot_timeout
-        while True:
-            try:
-                line = self._q.get(timeout=max(0.0, deadline - time.time()))
-            except queue.Empty:
-                self._kill(); raise TimeoutError("palc eval boot timed out")
-            if line is None:
-                self._kill(); raise RuntimeError("palc eval died during boot")
-            if line.strip() == self.READY:
-                self._log("ready")
-                return
+        # Serialize boots across workers: concurrent `lake exe` launches contend on the Lake lock and
+        # the Mathlib-import I/O/memory spike, which crashes some ("died during boot"). One at a time.
+        with WarmLeanEval._boot_lock:
+            self._boots += 1
+            self._log(f"booting palc eval backend (boot #{self._boots}; Mathlib load ~10s)…")
+            # stderr → DEVNULL so a crash (broken pipe / OOM 'resource vanished') can't pollute stdout.
+            self.proc = subprocess.Popen(
+                ["lake", "exe", "palc", "eval"], cwd=REPO_ROOT,
+                stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True,
+                preexec_fn=_backend_mem_limit_preexec)
+            self._q = queue.Queue()
+            threading.Thread(target=self._read_lines, args=(self.proc, self._q), daemon=True).start()
+            deadline = time.time() + self.boot_timeout
+            while True:
+                try:
+                    line = self._q.get(timeout=max(0.0, deadline - time.time()))
+                except queue.Empty:
+                    self._kill(); raise TimeoutError("palc eval boot timed out")
+                if line is None:
+                    self._kill(); raise RuntimeError("palc eval died during boot")
+                if line.strip() == self.READY:
+                    self._log("ready")
+                    return
 
     def _kill(self):
         if self.proc:
@@ -581,6 +672,11 @@ class WarmLeanEval:
         self.proc, self._q = None, None
 
     def eval(self, path):
+        # Proactive reboot before the poisoning cliff — cheaper than a run of spurious timeouts.
+        if self.REBOOT_EVERY and self._evals and self._evals % self.REBOOT_EVERY == 0:
+            self._log(f"proactive reboot after {self._evals} evals (avoid heartbeat poisoning)")
+            self._kill()
+        self._evals += 1
         # (Re)boot if the backend is down; a boot failure returns an error rather than crashing the run.
         if self.proc is None or self.proc.poll() is not None:
             try:
@@ -629,10 +725,20 @@ class CPastaEval:
 
     def __init__(self, dataset, *, source=None, timeout=15, max_tests=0, skip_python=False,
                  random_n=None, seed=0, problems=None, max_solutions=3, split="test",
+                 workers=None, interpret=False, jobs=None,
                  exclude_file="cp_harness/excluded_problems.txt"):
         self.dataset = Path(dataset)
         self.source = source
         self.timeout = timeout
+        # Default eval path COMPILES every harness in one build (Mathlib loaded once) then runs the
+        # native binaries — instant execution, no timeouts, no per-timeout Mathlib reboot.
+        # `--interpret` falls back to the warm interpreter pool.
+        self.interpret = interpret
+        # Parallel workers: interpret-mode warm backends (~1.5 GB each), or native run concurrency.
+        self.workers = workers or max(1, min(16, (os.cpu_count() or 4) // 4))
+        # `lake build` parallelism. Lake defaults to *every* core, which starves the rest of the
+        # machine; leave headroom (~3/4 of cores, hard-capped) unless `--jobs` says otherwise.
+        self.jobs = jobs or max(1, min(48, ((os.cpu_count() or 4) * 3) // 4))
         self.max_tests = max_tests
         self.skip_python = skip_python
         self.random_n = random_n
@@ -679,6 +785,23 @@ class CPastaEval:
         d = self.dataset / ".tmp"
         d.mkdir(parents=True, exist_ok=True)
         return d
+
+    def _prepare_tmp(self):
+        """Clear leftover `.tmp` scratch and warn on low disk — the overnight run died of a full disk
+        (harness files never cleaned), which also causes spurious I/O timeouts."""
+        import shutil
+        d = self.dataset / ".tmp"
+        if d.is_dir():
+            n = sum(1 for _ in d.iterdir())
+            if n:
+                shutil.rmtree(d, ignore_errors=True)
+                print(f"[*] Cleared {n} stale files from {d}", flush=True)
+        d.mkdir(parents=True, exist_ok=True)
+        free_gb = shutil.disk_usage(self.dataset).free / 2**30
+        if free_gb < 10:
+            print(f"[!] WARNING: only {free_gb:.1f} GB free on the eval disk — a full corpus run may "
+                  f"exhaust it (that crashed the last overnight run). Free space before proceeding.",
+                  flush=True)
 
     # -- selection ---------------------------------------------------------------------
 
@@ -857,7 +980,9 @@ class CPastaEval:
 
     def compile_check(self, lean_path):
         """Elaborate a generated Lean file; return (ok, error_text)."""
-        proc = subprocess.run(["lake", "env", "lean", str(lean_path)],
+        # Resolve to absolute: the command runs with cwd=REPO_ROOT but `lean_path` is relative to the
+        # dataset, so a relative `--dataset` yields a spurious "no such file" compile_fail otherwise.
+        proc = subprocess.run(["lake", "env", "lean", str(Path(lean_path).resolve())],
                               cwd=REPO_ROOT, capture_output=True, text=True)
         return (True, "") if proc.returncode == 0 else (False, proc.stderr or proc.stdout)
 
@@ -904,6 +1029,7 @@ class CPastaEval:
 
     def convert(self):
         """Translate + compile-check every selected problem. Writes `convert_summary.json`."""
+        self._prepare_tmp()
         problems, totals, histogram = {}, {"ok": 0, "convert_fail": 0, "compile_fail": 0}, {}
         for prob_dir in self.problems():
             sols_dir = prob_dir / "solutions"
@@ -1014,12 +1140,18 @@ class CPastaEval:
                                      input_text, cwd=REPO_ROOT)
         return (strip_lean_diagnostics(out), None) if err is None else (None, err)
 
-    def run_lean_harness(self, harness_src, tmp_path):
-        """Run a function-model harness through the warm `palc eval` backend (Mathlib booted once).
+    def run_lean_harness(self, harness_src, tmp_path, warm=None):
+        """Run a function-model harness through a warm `palc eval` backend (Mathlib booted once).
         Returns `(counts, failures, error)` where `counts` is `(passed, total)` or None, and
-        `failures` maps a failing case index to what Lean computed."""
+        `failures` maps a failing case index to what Lean computed. `warm` picks the pool backend
+        (parallel evaluate); defaults to the shared one."""
         tmp_path.write_text(harness_src)
-        out, err = self.warm.eval(tmp_path)
+        try:
+            out, err = (warm or self.warm).eval(tmp_path)
+        finally:
+            # Delete the harness immediately — over a full corpus these accumulate in `.tmp` and were
+            # what filled the disk (the `failures` dict below holds the debug info instead).
+            tmp_path.unlink(missing_ok=True)
         if err is not None:
             return None, {}, err
         failures = {int(i): got.strip() for i, got in _FAIL_RE.findall(out)}
@@ -1050,7 +1182,7 @@ class CPastaEval:
         results = guarded_ref_batch(fn, parsed)
         return [(args, value) for args, (ok, value) in zip(parsed, results) if ok]
 
-    def _evaluate_function_problem(self, prob_dir, lean_dir):
+    def _evaluate_function_problem(self, prob_dir, lean_dir, warm=None):
         meta = json.loads((prob_dir / "meta.json").read_text())
         method, params = meta["method"], meta["params"]
         cases = self.load_function_cases(prob_dir, params, method)
@@ -1067,12 +1199,14 @@ class CPastaEval:
             if status_path.read_text().strip() != "ok":
                 continue
             name = status_path.stem
-            harness, runnable = build_test_harness(
-                (lean_dir / f"{name}.lean").read_text(), method, cases)
+            harness_path = self.tmp_dir / f"{prob_dir.name}_{name}_harness.lean"
+            data_path = harness_path.with_suffix(".data.json").resolve()
+            harness, runnable, data_json = build_test_harness(
+                (lean_dir / f"{name}.lean").read_text(), method, cases, str(data_path))
+            data_path.write_text(data_json)
             n = len(runnable)
             print(f"[*] {prob_dir.name}/{name} (function) over {n} renderable test(s)...", flush=True)
-            harness_path = self.tmp_dir / f"{prob_dir.name}_{name}_harness.lean"
-            res, got_by_idx, err = self.run_lean_harness(harness, harness_path)
+            res, got_by_idx, err = self.run_lean_harness(harness, harness_path, warm)
             lean_pass, lean_total = res if res else (0, n)
 
             py_pass = py_total = 0
@@ -1206,30 +1340,240 @@ class CPastaEval:
             deltas["solutions"] += 1
         return report, deltas, divergences
 
+    def _native_module(self, harness_src, hid):
+        """Turn one test harness into a namespaced module `CpHarness.H<id>` with `def run`, so many
+        harnesses coexist in one binary. Imports stay at the top (Lean forbids them inside a
+        namespace); everything else is wrapped and the test `main` becomes `run`."""
+        lines = harness_src.split("\n")
+        imports = [l for l in lines if l.startswith("import ")]
+        rest = "\n".join(l for l in lines if not l.startswith("import "))
+        rest = rest.replace("def main : IO Unit", "def run : IO Unit", 1)
+        ns = f"CpHarness.H{hid}"
+        # The dataset is read from a JSON sidecar at runtime, not compiled in, so the module elaborates
+        # cheaply regardless of case count/size. `maxHeartbeats` is a per-file backstop: a runaway
+        # elaboration (heavy solution) trips it in bounded time and just loses its `.olean` (excluded
+        # from `ok_ids`) instead of wedging the single build. `maxRecDepth` covers deep decoders.
+        opts = "set_option maxRecDepth 10000\nset_option maxHeartbeats 800000\n"
+        return "\n".join(imports) + f"\n{opts}namespace {ns}\n" + rest + f"\nend {ns}\n"
+
+    def _lake_build(self, target):
+        """`lake build <target>`, pinned to `self.jobs` CPUs. This Lake has no `-j`, so the cap is
+        enforced by CPU affinity (`taskset`) — otherwise a build saturates every core and the rest
+        of the machine stalls. Falls back to a plain command where `taskset` is unavailable."""
+        cmd = ["lake", "build", target]
+        if self.jobs < (os.cpu_count() or self.jobs) and shutil.which("taskset"):
+            return ["taskset", "-c", f"0-{self.jobs - 1}"] + cmd
+        return cmd
+
+    def _lake_env(self):
+        """Environment for a lake build: also cap Lean's own task-manager threads."""
+        env = dict(os.environ)
+        env["LEAN_NUM_THREADS"] = str(self.jobs)
+        return env
+
+    def _evaluate_native(self, all_probs):
+        """Compile EVERY function-model harness in ONE `lake build` (Mathlib loaded once), then run
+        each native binary invocation — instant execution, no per-timeout Mathlib reboot."""
+        import shutil
+        native_dir = Path(REPO_ROOT) / "cp_harness" / ".native"
+        ns_dir = native_dir / "CpHarness"
+
+        def restore_idle():
+            # Leave valid placeholders so a plain `lake build` (which builds cpharness_run) still works.
+            shutil.rmtree(ns_dir, ignore_errors=True)
+            ns_dir.mkdir(parents=True, exist_ok=True)
+            (native_dir / "CpHarness.lean").write_text("-- Idle placeholder (eval driver regenerates).\n")
+            (native_dir / "CpHarnessMain.lean").write_text(
+                "import CpHarness\n\ndef main (_ : List String) : IO UInt32 := return 0\n")
+
+        restore_idle()
+
+        entries = []
+        for prob_dir in all_probs:
+            if self.kind_of(prob_dir) != KIND_FUNCTION:
+                continue
+            try:
+                meta = json.loads((prob_dir / "meta.json").read_text())
+            except Exception:  # noqa: BLE001
+                continue
+            method, params = meta["method"], meta["params"]
+            cases = self.load_function_cases(prob_dir, params, method)
+            if self.max_tests:
+                cases = cases[: self.max_tests]
+            if not cases:
+                continue
+            for status_path in sorted((prob_dir / "lean").glob("sol_*.status")):
+                if status_path.read_text().strip() != "ok":
+                    continue
+                name = status_path.stem
+                code = (prob_dir / "lean" / f"{name}.lean").read_text()
+                hid = len(entries)
+                data_path = (ns_dir / f"H{hid}.data.json").resolve()
+                harness, _, data_json = build_test_harness(code, method, cases, str(data_path))
+                data_path.write_text(data_json)
+                (ns_dir / f"H{hid}.lean").write_text(self._native_module(harness, hid))
+                entries.append(dict(id=hid, prob_dir=prob_dir, name=name, method=method, cases=cases))
+
+        agg = {"lean_pass": 0, "lean_total": 0, "py_pass": 0, "py_total": 0, "solutions": 0}
+        if not entries:
+            print("[*] no ok solutions to evaluate", flush=True)
+            return {"_summary": agg}
+
+        ids = [e["id"] for e in entries]
+        olean_dir = Path(REPO_ROOT) / ".lake" / "build" / "lib" / "lean" / "CpHarness"
+        shutil.rmtree(olean_dir, ignore_errors=True)  # drop stale oleans so "built" is unambiguous
+
+        # Phase 1: build every harness MODULE. Lake isolates per-module failures (one harness whose
+        # embedded test literals don't typecheck won't sink the batch), so we keep only those whose
+        # olean was produced.
+        print(f"[*] Native: compiling {len(entries)} harness(es) in ONE build "
+              f"(Mathlib once, -j{self.jobs})…", flush=True)
+        (native_dir / "CpHarness.lean").write_text(
+            "\n".join(f"import CpHarness.H{i}" for i in ids) + "\n")
+        t0 = time.time()
+        subprocess.run(self._lake_build("CpHarness"), cwd=REPO_ROOT,
+                       capture_output=True, text=True, env=self._lake_env())
+        ok_ids = [i for i in ids if (olean_dir / f"H{i}.olean").exists()]
+        bad_ids = set(ids) - set(ok_ids)
+
+        # Phase 2: link the dispatcher over the harnesses that compiled. The match has one arm per
+        # harness, so at corpus scale it blows the elaborator's recursion depth (default 512) and
+        # then the LCNF compiler's heartbeat budget — both are a function of harness COUNT, not
+        # content, so both guards are lifted here rather than per-harness.
+        (native_dir / "CpHarness.lean").write_text(
+            "\n".join(f"import CpHarness.H{i}" for i in ok_ids) + "\n")
+        dispatch = (["import CpHarness", "",
+                     "set_option maxRecDepth 1000000", "set_option maxHeartbeats 0", "",
+                     "def main (args : List String) : IO UInt32 := do",
+                     "  match args.head? with"]
+                    + [f'  | some "{i}" => CpHarness.H{i}.run' for i in ok_ids]
+                    + ["  | _ => pure ()", "  return 0"])
+        (native_dir / "CpHarnessMain.lean").write_text("\n".join(dispatch) + "\n")
+        proc = subprocess.run(self._lake_build("cpharness_run"), cwd=REPO_ROOT,
+                              capture_output=True, text=True, env=self._lake_env())
+        print(f"[*] compile finished in {time.time() - t0:.0f}s — {len(ok_ids)} ok, "
+              f"{len(bad_ids)} compile_fail (rc={proc.returncode})", flush=True)
+        if proc.returncode != 0:
+            # Surface the actual `error:` lines (head of stderr), not the tail — the tail is Lake's
+            # "targets logged failures" list, which hides the real cause (a maxRecDepth/heartbeat
+            # blow-up on the giant match, say). Keep the modules in place so the dispatcher can be
+            # rebuilt in seconds after a fix, instead of re-running the whole phase-1 compile.
+            out = proc.stderr or proc.stdout or ""
+            errs = [l for l in out.splitlines() if "error:" in l and "logged failures" not in l]
+            print("[!] dispatcher build FAILED:\n" + ("\n".join(errs[:20]) or out[:2000]), flush=True)
+            print("[i] harness modules left in cp_harness/.native for a fast dispatcher rebuild.",
+                  flush=True)
+            return {"_summary": agg}
+
+        binary = str(Path(REPO_ROOT) / ".lake" / "build" / "bin" / "cpharness_run")
+        report, lock, done, total = {}, threading.Lock(), [0], len(entries)
+
+        def run_one(e):
+            n, out, timed_out = len(e["cases"]), "", False
+            if e["id"] in bad_ids:
+                return e, 0, n, "compile_fail", {}
+            try:
+                r = subprocess.run([binary, str(e["id"])], capture_output=True, text=True,
+                                   timeout=self.timeout)
+                out = r.stdout
+            except subprocess.TimeoutExpired as ex:
+                timed_out = True
+                out = (ex.stdout.decode() if isinstance(ex.stdout, bytes) else ex.stdout) or ""
+            failures = {int(i): got.strip() for i, got in _FAIL_RE.findall(out)}
+            m = _PASSED_RE.search(out)
+            if m:
+                return e, int(m.group(1)), int(m.group(2)), None, failures
+            progs = re.findall(r"PROG (\d+) (\d+)", out)
+            if progs:  # partial: passed-so-far of the full total, with the case it hung on
+                return e, int(progs[-1][1]), n, (f"timeout@{progs[-1][0]}/{n}" if timed_out
+                                                 else "no PASSED"), failures
+            return e, 0, n, ("timeout" if timed_out else (out.strip()[:120] or "no output")), failures
+
+        print(f"[*] running {total} native harness(es) across {self.workers} process(es)…", flush=True)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max(4, self.workers)) as ex:
+            for fut in concurrent.futures.as_completed([ex.submit(run_one, e) for e in entries]):
+                e, lp, lt, err, failures = fut.result()
+                cases = e["cases"]
+                eval_dir = e["prob_dir"] / "eval"; eval_dir.mkdir(exist_ok=True)
+                fail_list = [{"index": i, "args": cases[i][0], "expected": cases[i][1], "lean_got": g}
+                             for i, g in sorted(failures.items()) if i < len(cases)]
+                (eval_dir / f"{e['name']}.json").write_text(json.dumps({
+                    "model": "function", "method": e["method"],
+                    "lean": {"passed": lp, "total": lt, "error": err},
+                    "failures": fail_list}, indent=2, default=str))
+                with lock:
+                    done[0] += 1
+                    tag = "" if err is None else f" [{err}]"
+                    print(f"[{done[0]}/{total}] {e['prob_dir'].name}/{e['name']}: {lp}/{lt}{tag}",
+                          flush=True)
+                    report[e["prob_dir"].name] = {e["name"]: {"lean": f"{lp}/{lt}"}}
+                    agg["lean_pass"] += lp; agg["lean_total"] += lt; agg["solutions"] += 1
+
+        report["_summary"] = agg
+        (self.dataset / "eval_report.json").write_text(json.dumps(report, indent=2))
+        restore_idle()  # drop the generated modules; keep valid placeholders for `lake build`
+        try:
+            (Path(REPO_ROOT) / ".lake" / "build" / "bin" / "cpharness_run").unlink()
+        except OSError:
+            pass
+        return report
+
     def evaluate(self):
         """Run Lean (and CPython) on the test cases. Writes `eval_report.json` + divergences."""
+        self._prepare_tmp()
         report = {}
         agg = {"lean_pass": 0, "lean_total": 0, "py_pass": 0, "py_total": 0, "solutions": 0}
         divergences = []
 
-        all_probs = list(self.problems())
+        all_probs = [p for p in self.problems() if (p / "lean").is_dir() and (p / "tests").is_dir()]
         total = len(all_probs)
-        print(f"[*] Evaluating {total} problem(s) through the warm backend "
+        if not self.interpret:
+            report = self._evaluate_native(all_probs)
+            agg = report.get("_summary", agg)
+            self._print_eval_summary(agg, [])
+            return report
+        n_workers = max(1, min(self.workers, total))
+        print(f"[*] Evaluating {total} problem(s) across {n_workers} warm backend(s) "
               f"(per-harness timeout {self.timeout}s)…", flush=True)
-        for idx, prob_dir in enumerate(all_probs, 1):
-            lean_dir, tests_dir = prob_dir / "lean", prob_dir / "tests"
-            if not (lean_dir.is_dir() and tests_dir.is_dir()):
-                continue
-            print(f"[{idx}/{total}] {prob_dir.name}", flush=True)
-            if self.kind_of(prob_dir) == KIND_FUNCTION:
-                prob_report, deltas, diffs = self._evaluate_function_problem(prob_dir, lean_dir)
-            else:
-                prob_report, deltas, diffs = self._evaluate_stdio_problem(prob_dir, lean_dir, tests_dir)
-            if prob_report:
-                report[prob_dir.name] = prob_report
-                for k, v in deltas.items():
-                    agg[k] += v
-            divergences.extend(diffs)
+
+        # One warm backend per worker, checked out via a queue so each is used by a single thread at
+        # a time. They boot lazily on first use (staggered), not all at once.
+        pool = queue.Queue()
+        for _ in range(n_workers):
+            pool.put(WarmLeanEval(timeout=self.timeout, verbose=False))
+        lock = threading.Lock()
+        done = [0]
+
+        def work(prob_dir):
+            warm = pool.get()
+            try:
+                lean_dir, tests_dir = prob_dir / "lean", prob_dir / "tests"
+                if self.kind_of(prob_dir) == KIND_FUNCTION:
+                    return prob_dir.name, self._evaluate_function_problem(prob_dir, lean_dir, warm)
+                return prob_dir.name, self._evaluate_stdio_problem(prob_dir, lean_dir, tests_dir)
+            except Exception as e:  # noqa: BLE001 — one bad problem must not sink the run
+                return prob_dir.name, ({}, {}, [{"error": f"{type(e).__name__}: {e}"}])
+            finally:
+                pool.put(warm)
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=n_workers) as ex:
+            futures = [ex.submit(work, p) for p in all_probs]
+            for fut in concurrent.futures.as_completed(futures):
+                name, (prob_report, deltas, diffs) = fut.result()
+                with lock:
+                    done[0] += 1
+                    print(f"[{done[0]}/{total}] {name}", flush=True)
+                    if prob_report:
+                        report[name] = prob_report
+                        for k, v in deltas.items():
+                            agg[k] = agg.get(k, 0) + v
+                    divergences.extend(diffs)
+
+        while not pool.empty():
+            try:
+                pool.get_nowait().close()
+            except queue.Empty:
+                break
 
         report["_summary"] = agg
         (self.dataset / "eval_report.json").write_text(json.dumps(report, indent=2))
@@ -1398,6 +1742,13 @@ def _add_common(p, *, dataset_default="cp_harness/dataset"):
 
 def _add_eval_opts(p):
     p.add_argument("--timeout", type=int, default=15, help="Per-run timeout (seconds)")
+    p.add_argument("--workers", type=int, default=None,
+                   help="Parallel eval backends/runs (default: min(16, cores/4))")
+    p.add_argument("--jobs", "-j", type=int, default=None,
+                   help="lake build parallelism (default: min(48, 3/4 of cores) — leaves the "
+                        "machine usable; lake alone would take every core)")
+    p.add_argument("--interpret", action="store_true",
+                   help="Use the warm interpreter pool instead of compiling all harnesses natively")
     p.add_argument("--max-tests", type=parse_max_tests, default=0,
                    help="Cap tests per solution (0 or 'max'/'all' = all)")
     p.add_argument("--skip-python", action="store_true", help="Skip the Python baseline run")
@@ -1415,6 +1766,9 @@ def _harness(args):
         problems=args.problems,
         max_solutions=getattr(args, "max_solutions", 3),
         split=getattr(args, "split", "test"),
+        workers=getattr(args, "workers", None),
+        interpret=getattr(args, "interpret", False),
+        jobs=getattr(args, "jobs", None),
     )
 
 

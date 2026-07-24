@@ -1,0 +1,12 @@
+{
+  "problem": "find-the-original-array-of-prefix-xor",
+  "module": "FindTheOriginalArrayOfPrefixXor",
+  "method": "findArray",
+  "params": [
+    "pref"
+  ],
+  "difficulty": "Medium",
+  "bucket": "term",
+  "feature": "term",
+  "n_tests": 108
+}

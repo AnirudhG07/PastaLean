@@ -1,0 +1,12 @@
+{
+  "problem": "minimum-numbers-of-function-calls-to-make-target-array",
+  "module": "MinimumNumbersOfFunctionCallsToMakeTargetArray",
+  "method": "minOperations",
+  "params": [
+    "nums"
+  ],
+  "difficulty": "Medium",
+  "bucket": "term",
+  "feature": "term",
+  "n_tests": 98
+}

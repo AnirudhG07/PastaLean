@@ -1,0 +1,12 @@
+{
+  "problem": "count-number-of-bad-pairs",
+  "module": "CountNumberOfBadPairs",
+  "method": "countBadPairs",
+  "params": [
+    "nums"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 132
+}

@@ -1,0 +1,12 @@
+{
+  "problem": "count-tested-devices-after-test-operations",
+  "module": "CountTestedDevicesAfterTestOperations",
+  "method": "countTestedDevices",
+  "params": [
+    "batteryPercentages"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 107
+}

@@ -78,14 +78,14 @@ def calculate_sum'rn :=
       return total)
 
 def not_sure :=
-  if answer == (42 : Int) then "The answer to the Ultimate Question of Life, The Universe, and Everything."
-  else if decide (answer < (42 : Int)) then "The sky is the limit." else "I don't know the answer."
+  if answer = (42 : Int) then "The answer to the Ultimate Question of Life, The Universe, and Everything."
+  else if answer < (42 : Int) then "The sky is the limit." else "I don't know the answer."
 
 attribute [simp, taste_ingr] not_sure
 
 def not_sure'rn :=
   if answer == (42 : Int) then "The answer to the Ultimate Question of Life, The Universe, and Everything."
-  else if decide (answer < (42 : Int)) then "The sky is the limit." else "I don't know the answer."
+  else if answer < (42 : Int) then "The sky is the limit." else "I don't know the answer."
 
 def main : IO Unit := do
   let inputText ← IO.getStdin >>= fun h => h.readToEnd

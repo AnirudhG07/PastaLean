@@ -1,0 +1,12 @@
+{
+  "problem": "maximize-greatness-of-an-array",
+  "module": "MaximizeGreatnessOfAnArray",
+  "method": "maximizeGreatness",
+  "params": [
+    "nums"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 86
+}

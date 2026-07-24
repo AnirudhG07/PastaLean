@@ -1,0 +1,13 @@
+{
+  "problem": "hamming-distance",
+  "module": "HammingDistance",
+  "method": "hammingDistance",
+  "params": [
+    "x",
+    "y"
+  ],
+  "difficulty": "Easy",
+  "bucket": "term",
+  "feature": "term",
+  "n_tests": 88
+}

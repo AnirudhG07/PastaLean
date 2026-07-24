@@ -1,0 +1,12 @@
+{
+  "problem": "magical-string",
+  "module": "MagicalString",
+  "method": "magicalString",
+  "params": [
+    "n"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 41
+}

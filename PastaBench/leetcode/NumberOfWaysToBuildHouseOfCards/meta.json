@@ -1,0 +1,12 @@
+{
+  "problem": "number-of-ways-to-build-house-of-cards",
+  "module": "NumberOfWaysToBuildHouseOfCards",
+  "method": "houseOfCards",
+  "params": [
+    "n"
+  ],
+  "difficulty": "Medium",
+  "bucket": "term",
+  "feature": "term",
+  "n_tests": 89
+}

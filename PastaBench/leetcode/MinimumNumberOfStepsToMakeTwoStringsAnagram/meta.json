@@ -1,0 +1,13 @@
+{
+  "problem": "minimum-number-of-steps-to-make-two-strings-anagram",
+  "module": "MinimumNumberOfStepsToMakeTwoStringsAnagram",
+  "method": "minSteps",
+  "params": [
+    "s",
+    "t"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 113
+}

@@ -7,6 +7,15 @@ import Libraries.numpy.NumpyDef
 
 namespace Libraries.numpy
 
+/-- Exact-mode overrides: the constructors, whose field cannot be inferred from an argument, are
+`ℚ`-valued so numpy results compose with the surrounding provable code. -/
+def pythonNumpyMemberMapExact? (member : String) : Option Lean.Name :=
+  match member with
+  | "zeros" => some ``pyNumpyZerosRat
+  | "ones" => some ``pyNumpyOnesRat
+  | "eye" | "identity" => some ``pyNumpyEyeRat
+  | _ => none
+
 /-- Library-local registry for NumPy-style helpers. -/
 def pythonNumpyMemberMap? (member : String) : Option Lean.Name :=
   match member with
@@ -19,10 +28,10 @@ def pythonNumpyMemberMap? (member : String) : Option Lean.Name :=
   | "linspace" => some ``pyNumpyLinspace
   | "logspace" => some ``pyNumpyLogspace
   | "meshgrid" => some ``pyNumpyMeshgrid
-  | "zeros" => some ``pyNumpyZeros
-  | "ones" => some ``pyNumpyOnes
-  | "eye" => some ``pyNumpyEye
-  | "identity" => some ``pyNumpyEye
+  | "zeros" => some ``pyNumpyZerosFloat
+  | "ones" => some ``pyNumpyOnesFloat
+  | "eye" => some ``pyNumpyEyeFloat
+  | "identity" => some ``pyNumpyEyeFloat
   | "reshape" => some ``pyNumpyReshape
   | "transpose" => some ``pyNumpyTranspose
   | "expand_dims" => some ``pyNumpyExpandDims

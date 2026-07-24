@@ -1,0 +1,12 @@
+{
+  "problem": "factorial-trailing-zeroes",
+  "module": "FactorialTrailingZeroes",
+  "method": "trailingZeroes",
+  "params": [
+    "n"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 71
+}

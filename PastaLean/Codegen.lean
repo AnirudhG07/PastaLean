@@ -87,6 +87,13 @@ namespace PyGen
 
 structure State where
   varNames : HashSet Name := HashSet.emptyWithCapacity 100
+  /-- Variables known to hold a Python `set` (assigned from `set(...)`, a `{…}` literal, or a set
+  operation). Set comparisons (`==`, `<=`, …) are order-independent, unlike the list-backed `==`/`≤`
+  the same `List` value would otherwise use — see the `Compare` lowering. -/
+  setVars : HashSet Name := HashSet.emptyWithCapacity 16
+  /-- Variables bound with `let mut` (reassignable in place). An immutable `let` loop var that a body
+  reassigns to a different type is shadowed instead; a `let mut` (incl. a `PyAny` slot) is not. -/
+  mutVars : HashSet Name := HashSet.emptyWithCapacity 32
   checkExr : Bool := true
   useArrow : Bool := false
   /-- When the innermost enclosing loop has a Python `else` clause, this holds the name of the
@@ -184,7 +191,9 @@ def withRealIfMarked {α : Type} (json : Lean.Json) (x : PygenM α) : PygenM α 
     x
 
 def withFixedVariables {α : Type} (x : PygenM α) : PygenM α := do
-  withPygenStateField (·.varNames) (fun st varNames => { st with varNames := varNames }) (← get).varNames x
+  withPygenStateField (·.varNames) (fun st varNames => { st with varNames := varNames }) (← get).varNames <|
+    withPygenStateField (·.setVars) (fun st setVars => { st with setVars := setVars }) (← get).setVars <|
+      withPygenStateField (·.mutVars) (fun st mutVars => { st with mutVars := mutVars }) (← get).mutVars x
 
 /-- Run `x` with the current loop's break-flag set to `flag?`. A loop body always overrides the
 flag (to its own `else` flag, or `none`) so a `break` binds to the innermost loop only. -/
@@ -205,6 +214,42 @@ def hasVar (usedName : Name) : PygenM Bool := do
 
 def addVar (usedName : Name) : PygenM Unit := do
   modify fun st => { st with varNames := st.varNames.insert usedName }
+
+/-- Whether `name` was bound with `let mut` (so it can be reassigned rather than shadowed). -/
+def isMutVar (name : Name) : PygenM Bool := do
+  return (← get).mutVars.contains name
+
+def setMutVar (name : Name) : PygenM Unit := do
+  modify fun st => { st with mutVars := st.mutVars.insert name }
+
+def isSetVar (name : Name) : PygenM Bool := do
+  return (← get).setVars.contains name
+
+/-- Mark (`isSet := true`) or unmark a variable as holding a Python `set`. -/
+def setSetVar (name : Name) (isSet : Bool) : PygenM Unit := do
+  modify fun st => { st with setVars := if isSet then st.setVars.insert name else st.setVars.erase name }
+
+/-- Whether `json` denotes a Python `set`: a `set(...)` call, a `{…}` literal / set comprehension, a
+set operation (`&`/`|`/`^`/`-` on a set operand), or a `Name` already known to hold a set. Routes set
+comparisons (`==`, `<=`, …) to their order-independent runtime rather than the list-backed ones. -/
+partial def jsonIsSetExpr (json : Lean.Json) : PygenM Bool := do
+  match (json.getObjValAs? String "node_type").toOption with
+  | some "Name" => match json.getObjValAs? String "id" with
+                   | .ok id => isSetVar id.toName
+                   | _ => pure false
+  | some "Set" | some "SetComp" => pure true
+  | some "Call" => match json.getObjVal? "func" with
+                   | .ok f => pure ((f.getObjValAs? String "node_type") == .ok "Name"
+                                    && f.getObjValAs? String "id" == .ok "set")
+                   | _ => pure false
+  | some "BinOp" =>
+      let op := (json.getObjValAs? String "op").toOption.getD ""
+      if op == "bitand" || op == "bitor" || op == "bitxor" || op == "sub" then do
+        let l ← match json.getObjVal? "left" with | .ok l => jsonIsSetExpr l | _ => pure false
+        if l then pure true
+        else match json.getObjVal? "right" with | .ok r => jsonIsSetExpr r | _ => pure false
+      else pure false
+  | _ => pure false
 
 /-- Run `x` while lowering the body of `class name` (with mutator set `mutators`), so `self.m(..)`
 calls inside dispatch to `name.m` and reassign `self` when `m` mutates. Restored on exit. -/

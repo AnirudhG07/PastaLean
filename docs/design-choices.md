@@ -561,7 +561,66 @@ This is a documented, load-bearing convention: new runtime types extend a protoc
 instance*, not by touching codegen, and the `outParam` shape is what keeps that extension from
 poisoning type inference.
 
-## 21. Elaboration-order-driven lowering (comprehensions, subscripts, strings)
+## 21. Iteration is a strict `List` — and unbounded iterators are unrolled, not represented
+
+**The choice.** Python's `for` is defined over the *iterator protocol*: `iter(x)` hands back
+something with a `__next__`, and the loop pulls one element at a time until `StopIteration`. It is
+lazy, single-pass, and possibly infinite. We model none of that. `PyIterable` (§20) answers the only
+question generated code actually asks — *what are the elements?* — and answers it **strictly, as a
+`List`**:
+
+```lean
+class PyIterable (α : Type) (β : outParam Type) where
+  toPyList : α → List β
+```
+
+**Why.** A `List` is a finite inductive value, so a lowered loop is ordinary data — `#eval`-able,
+decidable, and above all *provable*, with induction principles and Mathlib lemmas already in place.
+A lazy coinductive stream has none of that, and every proof about a loop would have to carry a
+separate termination argument. This is the same trade as §10: give up the faithful *mechanism* to
+keep the observable *result*, and buy provability with the difference.
+
+**What it costs**, precisely three things: laziness (every element is materialised before the body
+runs); single-pass semantics (`itertools.tee` becomes a trivial `List.replicate`, and re-iterating a
+consumed generator "works" where Python would yield nothing); and — the one that actually bites —
+**infinite iterators have no value at all**. There is no `List` for `count()`.
+
+**So they are unrolled instead.** Note *how* such an iterator is used in practice: essentially always
+directly in a `for` header, with a `break` supplying the real bound. That loop is not really
+consuming a stream; it is a `while` loop with an induction variable spelled awkwardly, so we rewrite
+it into exactly that (`Desugar.unrollInfiniteIter`):
+
+```python
+for k in count(1):          #  k = 1 - 1
+    if k * k >= n:          #  while True:
+        return k            #      k += 1        ← advance FIRST
+                            #      if k * k >= n: return k
+```
+
+Three details are load-bearing. **The advance is a prologue, not an epilogue** — Python's `for`
+always advances, even when the body hits `continue`, so a trailing bump would be jumped over and the
+loop would spin forever; hence the seed sits one step *below* `start`. **The shape is declared by the
+library, not by the desugaring** — `Libraries.libraryInfiniteIter?` maps a member to one of three
+shapes (`counter`, `cyclic`, `constant`), exactly as `libraryMutator?` declares in-place mutation
+(§5): the pass knows the shapes, not the word `itertools`. And **arity can decide** — `repeat(x)` is
+unbounded, `repeat(x, n)` is finite and keeps its ordinary lowering.
+
+**The boundary is kept honest.** Unrolling needs a `for` to unroll *into*, so an unbounded iterator
+used as a **value** — `islice(count(), 5)` — keeps its "unsupported member" error rather than
+silently producing a wrong finite list. Degrading loudly beats guessing (§24).
+
+**Where `yield` fits, when we get to it.** Generators are currently unsupported (generator
+*expressions* work, because they lower as strict comprehensions — the same list, built eagerly). The
+model above already picks the design, and it splits along the same seam: a **finite** generator
+compiles to the function that returns the list it would have yielded — accumulate at each `yield`
+instead of suspending — which plugs into `pyIter` with no new protocol and stays provable; an
+**unbounded** one (`while True: yield …`) is a user-defined `count`, so the only sound lowering is
+the unroll above, with the shape read off the generator body instead of a registry (the hard part
+being state carried across multiple `yield` sites). What we deliberately do *not* plan is a lazy
+coinductive `Stream` with a real `__next__`: it would make `PyIterable` non-strict and spend the
+provability that motivated the strict list, to buy laziness this subset of Python does not use.
+
+## 22. Elaboration-order-driven lowering (comprehensions, subscripts, strings)
 
 A recurring, non-obvious theme: **we choose the emitted syntax so that Lean's elaborator resolves
 types in the order that recovers Python's meaning.**
@@ -586,7 +645,7 @@ types in the order that recovers Python's meaning.**
 The unifying principle: codegen decides *syntax*, and the syntax is chosen to steer the elaborator,
 because the runtime instances (not the generator) hold the type knowledge.
 
-## 22. Proof search: `taste?` / Pastafolio, and splicing the proof back
+## 23. Proof search: `taste?` / Pastafolio, and splicing the proof back
 
 **The choice.** Pure asserts and specs are discharged by `taste?`, a portfolio tactic built on a
 reusable engine (`PyVerify/Pastafolio/`). The engine is deliberately **domain-agnostic**: it
@@ -613,7 +672,7 @@ results as reusable ingredients — leaf-first lemma reuse — without the searc
 one. Tagging is best-effort: a lemma with no usable shape is skipped, so a bad pattern never breaks
 the build.
 
-## 23. Contracts as library calls, in three tracks
+## 24. Contracts as library calls, in three tracks
 
 **The choice.** Specifications are written as *calls* to markers from a `passta` library —
 `Requires(...)`, `Ensures(...)`, `Invariant(...)`, `Decreases(...)`, `Assert(...)`, `Result()` —
@@ -629,7 +688,7 @@ A comment is unstructured text the pipeline would have to re-parse by hand and c
 Contracts-as-code means the spec is a first-class part of the program the same machinery already
 understands.
 
-## 24. Best-effort by default, with a linter
+## 25. Best-effort by default, with a linter
 
 **The choice.** When the transpiler hits something it can't translate (a foreign library, an
 unsupported construct), it emits a `pyUnsupported("<original source>")` placeholder and *keeps
@@ -644,7 +703,7 @@ a guarantee that *nothing* was degraded (e.g. in the test harness). Crucially, t
 *loud*, not silent: it prints its original source and raises a warning at every use, so a
 degradation can't hide.
 
-## 25. Printing: a Python-flavoured `PyPrintable`
+## 26. Printing: a Python-flavoured `PyPrintable`
 
 **The choice.** Values are printed through a `PyPrintable` typeclass, kept intentionally separate
 from Lean's `ToString`/`Repr` so runtime values render the *Python* way: `True`/`False` (not
@@ -675,3 +734,26 @@ only when you ask to just run. And every function is lowered to the least-powerf
 live in — pure term, then `Id.run do`, then `Except`, then `IO` — because each rung up the ladder
 is a rung down in what you can prove, and the whole point was to keep as much of the program
 provable as the program will allow.
+
+## Future thought: argument-indexed return types (a `PyAny` alternative, deferred)
+
+For a function that returns different types by branch (`def classify(n): return "pos" if n>0 else 0`)
+the default is `PyAny` — a self-describing tagged union. An alternative, strictly *more* precise, is a
+**dependent return type**: a type-level function of the arguments,
+`classifyType (n:Int) : Type := if 0<n then String else Int`, with `classify (n) : classifyType n`.
+It reduces to the exact type at literal call sites and makes proofs type-driven.
+
+Decided **against it as the default**, for the transpiler:
+- The discriminant is usually **not** a function of the arguments — real multi-return branches on
+  locals/loops/data, which can't be lifted to a closed-form `fType(args)` without re-executing the
+  body in the type. Intractable in general.
+- **Values can't flow freely.** A `classifyType n` value needs `n` in scope to know its type; Python
+  routinely moves values into `[a,b,c]`, returns/captures/stores them far from the discriminant.
+  `PyAny` flows anywhere because the tag rides with the value. This is the decisive blocker.
+- At runtime call sites it degrades to `PyAny`-with-extra-steps: every op needs a family instance
+  matching the discriminant (combinatorial), vs one instance set for `PyAny`.
+- Proving gain over `PyAny` + the `pyany_cases` split tactic is marginal (both case-split the branch).
+
+**Keep in pocket** as an opt-in `@overload`-style optimisation for the narrow sweet spot: return type
+a decidable function of a *literal/enum* argument (`make(kind: Literal[...])`) called with constants.
+Measure corpus demand before investing.

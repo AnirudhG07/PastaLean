@@ -14,7 +14,7 @@ set_option maxHeartbeats 0
 -- Test: IO exception handling (EOFError from input)
 def main' :=
   ((do
-      let mut x := default
+      let mut x : String := default
       try
         x := (← PastaLean.ProofMode.pyInputProof "")
       catch caught =>
@@ -29,7 +29,7 @@ attribute [simp] main'
 
 def main''rn :=
   ((do
-      let mut x := default
+      let mut x : String := default
       try
         x := (← PastaLean.PyExcept.captureIOErrors (PastaLean.pyInputIO ""))
       catch caught =>

@@ -38,6 +38,9 @@ private def containerOf (name : String) (args : List PyType) : Option PyType :=
   | "list", [e] => some (.list e)
   | "set", [e] | "frozenset", [e] => some (.set e)
   | "dict", [k, v] => some (.dict k v)
+  -- A `defaultdict`/`Counter` behaves as a dict for inference; only its EMITTED Lean type
+  -- differs (`PyDefaultDict`, not `Std.HashMap`), which the codegen annotation reader handles.
+  | "defaultdict", [k, v] => some (.dict k v)
   | "tuple", es => some (.tuple es)
   | "Optional", [e] => some (.opt e)
   | "Union", es => some (PyType.joinAll es)
@@ -77,15 +80,30 @@ partial def ofAnnotation (json : Json) : PyType :=
             | some "Attribute" => (v.getObjValAs? String "attr").toOption
             | _ => none
         | _ => none
-      let args := match json.getObjVal? "slice" with
+      -- `Callable[[A, B], R]`: slice is a `Tuple` whose first element is the `List` of argument
+      -- annotations and whose second is the return annotation.
+      if name == some "Callable" then
+        match json.getObjVal? "slice" with
         | .ok slice =>
             if nodeType? slice == some "Tuple" then
-              ((slice.getObjValAs? (Array Json) "elts").toOption.getD #[]).toList.map ofAnnotation
-            else [ofAnnotation slice]
-        | _ => []
-      match name with
-      | some n => (containerOf (canonical n) args).getD .unknown
-      | none => .unknown
+              let elts := (slice.getObjValAs? (Array Json) "elts").toOption.getD #[]
+              match elts[0]?, elts[1]? with
+              | some argsJson, some retJson =>
+                  let argAnns := (argsJson.getObjValAs? (Array Json) "elts").toOption.getD #[]
+                  .fn (argAnns.toList.map ofAnnotation) (ofAnnotation retJson)
+              | _, _ => .unknown
+            else .unknown
+        | _ => .unknown
+      else
+        let args := match json.getObjVal? "slice" with
+          | .ok slice =>
+              if nodeType? slice == some "Tuple" then
+                ((slice.getObjValAs? (Array Json) "elts").toOption.getD #[]).toList.map ofAnnotation
+              else [ofAnnotation slice]
+          | _ => []
+        match name with
+        | some n => (containerOf (canonical n) args).getD .unknown
+        | none => .unknown
   | _ => .unknown
 
 private def nameAnn (id : String) : Json :=
@@ -99,9 +117,12 @@ private def subscriptAnn (container : String) (args : List Json) : Json :=
 
 /-- Write a `PyType` back as an annotation node. `none` when the type is not fully known, since
 an unknown annotation is worse than no annotation — it would name a type that does not exist. -/
-partial def toAnnotation? (t : PyType) : Option Json := do
+def toAnnotation? (t : PyType) : Option Json := do
   match t with
-  | .unknown | .any => none
+  -- `.unknown` is "no information" → no annotation (let Lean infer). `.any` is the *known*-dynamic
+  -- top type — a genuine union like `[1, "hi", [2]]` should be inferred to `List PyAny`
+  | .unknown => none
+  | .any => nameAnn "PyAny"
   | .int => nameAnn "int"
   | .bool => nameAnn "bool"
   | .str => nameAnn "str"
@@ -113,5 +134,9 @@ partial def toAnnotation? (t : PyType) : Option Json := do
   | .opt e => subscriptAnn "Optional" [← toAnnotation? e]
   | .dict k v => subscriptAnn "dict" [← toAnnotation? k, ← toAnnotation? v]
   | .tuple es => subscriptAnn "tuple" (← es.mapM toAnnotation?)
+  | .fn as r =>
+      let argList := Json.mkObj [("node_type", .str "List"),
+        ("elts", Json.arr (← as.mapM toAnnotation?).toArray)]
+      subscriptAnn "Callable" [argList, ← toAnnotation? r]
 
 end TypeInfer

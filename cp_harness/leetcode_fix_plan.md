@@ -127,10 +127,35 @@ in `taste?`. Committed: `0badbcf`, `db64ae7`, `9f41087`, and this session's unco
 These are the "half-running" and "0/N" cases — **real correctness bugs**, the hardest to catch (no
 compiler signal). Read `<prob>/eval/sol_0.json → failures` for `{args, expected, lean_got}`.
 
+**Data-driven bucketing done** (script over every `eval/sol_*.json`): of 53 wrong-answer problems —
+20 numeric, 13 len-diff, 9 string, 5 bool, 4 list-value, 1 reorder. Root causes fixed this session:
+
+- **[DONE] `float('inf')` sentinel** (10 of 20 numeric) — `pyRatNonFinite` returned the stub `-1`, so
+  the top-level shared `inf = float('inf')` (ℚ, used by both twins) made `-inf = 1`, breaking every
+  `ans = -inf; max(ans, …)` / `best = inf; min(best, …)` initializer. Now a large ℚ sentinel `10^30`
+  (+sign/nan). `maximize-the-beauty-of-the-garden` went 112/126 → **126/126**. Also fixes grid-game
+  (`got=-1`), jump-game-vi, maximum-sum-circular-subarray, etc.
+- **[DONE] `str.format` specs + `str.zfill`** — `pyStrFormat` only split on bare `{}`; now a real
+  placeholder parser (`{}`/`{n}`/`{:spec}`, fill/align/zero-pad/width, `{{`/`}}`). `binary-watch`
+  (`'{:d}:{:02d}'.format(...)`) now renders `0:01…8:00`. Added `pyStringZfill` (+`zfill` method map).
+
+**REMAINING (needs infra, deferred):** the **set-comparison cluster** (keyboard-row `s <= s1` subset,
+determine-if-two-strings-are-close `set==set`, intersection/find-the-difference ordering). Sets are
+`List α`-backed, so `set <= set` lowers to List `≤` (lexicographic, NOT subset) and `set == set` to
+List `BEq` (ordered, NOT order-independent) — both wrong. Fixing needs the Compare codegen to know an
+operand is a set, but TypeInfer stamps `_ty` only on *binders*, not on Compare-operand `Name` nodes.
+So: extend TypeInfer to stamp expression types (or thread a scope type-map into codegen), add runtime
+`pySetEq`/`pySetSubset`, dispatch in `compareApplyTerm`. Set *iteration order* (CPython-exact) is
+separately hard — defer.
+
 Suspected common culprits (verify by sampling `failures`):
-1. **`list.pop()` / stack semantics** — `clear-digits` returns `"abcde"` for exp `""`: the pop that
-   removes the element *before* the digit isn't applied. Audit `pyPop`/`pyPopLeft` value+rest lowering
-   in *statement* position (discarded return) vs the receiver actually being rebuilt.
+1. **[DONE] `list.pop()` / stack semantics** — `clear-digits` returned `"abcde"` for exp `""`: a bare
+   `stk.pop()` statement lowered to `let _ := pyPop stk` (value computed, discarded, receiver never
+   rebuilt). Fixed by a **unified in-place-mutator statement handler** (`statementMutatorRebuild?` in
+   `CallExpr.lean`): one table + one branch replaces the old scattered `append`/`setMutatorName?`/
+   `popleft`/`inPlaceMutatorArity?` branches, and now covers `pop`/`pop(i)`/`insert` too. Any mutating
+   method used as a statement rebuilds its receiver (`stk := pyPopRest stk`), including subscript
+   receivers (`g[i].pop()`). Verified: clear-digits `"a1b2c"→"c"`, pop/insert/reverse/extend/add.
 2. **negative-number / bitwise** — `convert_to_hex(-1)` → `""`: two's-complement (`num & 0xffffffff`,
    `num += 1<<32`) mis-evaluates. Audit `pyBitAnd`/shift on negative `Int`, and `//`/`%` sign
    (Python floors toward −∞; Lean `Int.ediv`/`emod` vs `tdiv`/`tmod`).
@@ -143,12 +168,27 @@ Suspected common culprits (verify by sampling `failures`):
 Method: build a script that reads every `eval/*.json`, buckets `failures` by (return-type,
 first-diverging-input-shape), and rank. That turns 200 opaque wrong-answers into ~5 root causes.
 
-## §5 · EVAL INFRA — not correctness (121 timeout + 10 boot)
+## §5 · EVAL INFRA — timeouts DOMINATE all missed cases (11.9k of 16.8k)
 
-1. **`[timeout]`** — per-case / heartbeat budget on big inputs. The data-driven harness already cut
-   per-case elaboration; remaining timeouts are genuine slow *execution* (`ℚ` arithmetic on large
-   inputs, or `'rn` Float on huge lists). Options: raise the per-case wall-clock; or detect and skip
-   pathological inputs. See `[[cp-harness-oom-killed]]` `[[backend-heartbeat-poisoning]]`.
+**Re-ranked by MISSED CASES, not problem count** (`total - passed` per eval json, all-N for errors):
+of **16,767** missed cases across the corpus, **`[timeout]` = 11,916 (71%)**, boot = 1,017, the rest
+(app-mismatch 467 / recursion 163 / type-mismatch 119 / died 103) small. Timeouts are THE lever.
+
+**Diagnosed root cause (not just budget):** sequences are `List α`-backed, so `pyListAppend = lst ++
+[elem]` is **O(n)** per append and `xs⦋i⦌` is O(i). A Python O(1) `for…: xs.append(v)` / index loop
+becomes **O(n²)** in Lean. Compounded by the harness running `lean --run` (bytecode *interpreter*,
+~50–100× slower than native). Together, array-heavy problems (two-pointer, prefix-sum, array DP) blow
+the 15 s budget on large inputs — measured: a trivial append+index loop at n=3000 already runs seconds.
+
+Fix paths (both substantial — scope with the user before committing):
+1. **Array-backed sequences** — the real fix: back lists with `Array` (O(1) amortized append, O(1)
+   index), removing the O(n²). Large runtime+codegen refactor (container type, all `CommonProtocols`
+   instances, all list codegen). Biggest single lever; removes ~most timeouts regardless of interpreter.
+2. **Native harness compile** — replace `lean --run` with a compiled binary. ~50–100× constant speedup,
+   BUT Mathlib linking per-harness is heavy (why `--run` was chosen); only worth it if the Mathlib dep
+   can be slimmed for eval harnesses. Helps O(n) / small-O(n²) cases; O(n²) still blows up at large n.
+   Interim: raise the per-case wall-clock; detect+skip pathological inputs.
+   See `[[cp-harness-oom-killed]]` `[[backend-heartbeat-poisoning]]`.
 2. **`[backend boot failed: palc eval boot timed out]`** (10) — Mathlib boot > 10 s under load
    (these clustered near the disk-full crash). Raise the boot timeout; ensure disk headroom.
 3. **whole-run `Killed` / disk-full** — the run died at 1979 on `No space left on device`; `.tmp`

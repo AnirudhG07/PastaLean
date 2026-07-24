@@ -1,0 +1,13 @@
+{
+  "problem": "constrained-subsequence-sum",
+  "module": "ConstrainedSubsequenceSum",
+  "method": "constrainedSubsetSum",
+  "params": [
+    "nums",
+    "k"
+  ],
+  "difficulty": "Hard",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 115
+}

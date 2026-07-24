@@ -1,0 +1,13 @@
+{
+  "problem": "find-the-most-competitive-subsequence",
+  "module": "FindTheMostCompetitiveSubsequence",
+  "method": "mostCompetitive",
+  "params": [
+    "nums",
+    "k"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 106
+}

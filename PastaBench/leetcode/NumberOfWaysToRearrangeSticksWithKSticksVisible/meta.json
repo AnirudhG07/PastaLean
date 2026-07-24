@@ -1,0 +1,13 @@
+{
+  "problem": "number-of-ways-to-rearrange-sticks-with-k-sticks-visible",
+  "module": "NumberOfWaysToRearrangeSticksWithKSticksVisible",
+  "method": "rearrangeSticks",
+  "params": [
+    "n",
+    "k"
+  ],
+  "difficulty": "Hard",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 57
+}

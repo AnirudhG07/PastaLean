@@ -1,0 +1,12 @@
+{
+  "problem": "h-index",
+  "module": "HIndex",
+  "method": "hIndex",
+  "params": [
+    "citations"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 79
+}

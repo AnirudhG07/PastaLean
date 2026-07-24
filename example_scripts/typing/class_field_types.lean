@@ -1,0 +1,150 @@
+import PastaLean
+import Libraries
+import Std.Tactic.Do
+
+open PastaLean
+open Libraries
+open Std.Do
+
+set_option linter.all false
+set_option mvcgen.warning false
+
+set_option maxHeartbeats 0
+
+-- !/usr/bin/env python3
+/-
+Class fields whose type comes from what `__init__` assigns, plus self-recursive methods.
+
+An unannotated field used to fall back to `Int` unless its initialiser was a bare literal, so
+`self.p = list(range(n))` produced `p : Int` and every later `self.p[x]` failed to resolve. A method
+that calls itself (path compression) also has no termination proof, so it must be emitted `partial`.
+-/
+structure UnionFind where
+  p : List Int
+  size : List Int
+  count : Int
+  deriving Inhabited, Repr, BEq
+
+def UnionFind.new := fun n ↦
+  ({ p := PastaLean.pyList (PastaLean.pyRange n), size := PastaLean.pyListRepeat [(1 : Int)] n, count := n } :
+    UnionFind)
+
+partial def UnionFind.find := fun (self : UnionFind) ↦ fun x ↦
+  Id.run
+    (do
+      let mut self := self
+      if h_1 : self.p⦋x⦌ ≠ x then 
+        self := { self with p := PastaLean.pySetItem self.p x (UnionFind.find self self.p⦋x⦌) }
+      else
+        let _ := ()
+      let __py_ret_1 := self.p⦋x⦌
+      return __py_ret_1)
+
+def UnionFind.union := fun (self : UnionFind) ↦ fun a ↦ fun b ↦
+  Id.run
+    (do
+      let mut self := self
+      let __unpack_value_1 := (UnionFind.find self a, UnionFind.find self b)
+      let __unpack_pair_1 := __unpack_value_1
+      let mut ra := Prod.fst __unpack_pair_1
+      let mut rb := Prod.snd __unpack_pair_1
+      if h_1 : ra ≠ rb then 
+        self := { self with p := PastaLean.pySetItem self.p ra rb }
+        self := { self with count := self.count -ₚ (1 : Int) }
+      else
+        let _ := ()
+      return self)
+
+attribute [simp, taste_ingr] UnionFind.union
+
+structure UnionFind'rn where
+  p : List Int
+  size : List Int
+  count : Int
+  deriving Inhabited, Repr, BEq
+
+def UnionFind'rn.new := fun n ↦
+  ({ p := PastaLean.pyList (PastaLean.pyRange n), size := PastaLean.pyListRepeat [(1 : Int)] n, count := n } :
+    UnionFind'rn)
+
+partial def UnionFind'rn.find := fun (self : UnionFind'rn) ↦ fun x ↦
+  Id.run
+    (do
+      let mut self := self
+      if h_1 : self.p⦋x⦌ != x then 
+        self := { self with p := PastaLean.pySetItem self.p x (UnionFind'rn.find self self.p⦋x⦌) }
+      else
+        let _ := ()
+      let __py_ret_1 := self.p⦋x⦌
+      return __py_ret_1)
+
+def UnionFind'rn.union := fun (self : UnionFind'rn) ↦ fun a ↦ fun b ↦
+  Id.run
+    (do
+      let mut self := self
+      let __unpack_value_1 := (UnionFind'rn.find self a, UnionFind'rn.find self b)
+      let __unpack_pair_1 := __unpack_value_1
+      let mut ra := Prod.fst __unpack_pair_1
+      let mut rb := Prod.snd __unpack_pair_1
+      if h_1 : ra != rb then 
+        self := { self with p := PastaLean.pySetItem self.p ra rb }
+        self := { self with count := self.count -ₚ (1 : Int) }
+      else
+        let _ := ()
+      return self)
+
+structure Bag where
+  words : List String
+  n : Int
+  deriving Inhabited, Repr, BEq
+
+def Bag.new : List String → Bag := fun (words : List String) ↦
+  ({ words := PastaLean.pySort words, n := PastaLean.pyLen words } : Bag)
+
+def Bag.first := fun (self : Bag) ↦ self.words⦋(0 : Int)⦌
+
+attribute [simp, taste_ingr] Bag.first
+
+structure Bag'rn where
+  words : List String
+  n : Int
+  deriving Inhabited, Repr, BEq
+
+def Bag'rn.new : List String → Bag'rn := fun (words : List String) ↦
+  ({ words := PastaLean.pySort words, n := PastaLean.pyLen words } : Bag'rn)
+
+def Bag'rn.first := fun (self : Bag'rn) ↦ self.words⦋(0 : Int)⦌
+
+def main' :=
+  ((do
+      let mut uf := UnionFind.new (6 : Int)
+      uf := UnionFind.union uf (0 : Int) (1 : Int)
+      uf := UnionFind.union uf (1 : Int) (2 : Int)
+      let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg (UnionFind.find uf (0 : Int) == UnionFind.find uf (2 : Int))]
+      let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg (UnionFind.find uf (0 : Int) == UnionFind.find uf (5 : Int))]
+      let mut b := Bag.new ["pear", "apple"]
+      let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg (Bag.first b)]
+      let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg b.n]) :
+    PastaLean.ProofMode.PyProofM _)
+
+attribute [simp] main'
+
+def main''rn :=
+  ((do
+      let mut uf := UnionFind'rn.new (6 : Int)
+      uf := UnionFind'rn.union uf (0 : Int) (1 : Int)
+      uf := UnionFind'rn.union uf (1 : Int) (2 : Int)
+      let _ ← pyPrintIO [pyPrintArg (UnionFind'rn.find uf (0 : Int) == UnionFind'rn.find uf (2 : Int))]
+      let _ ← pyPrintIO [pyPrintArg (UnionFind'rn.find uf (0 : Int) == UnionFind'rn.find uf (5 : Int))]
+      let mut b := Bag'rn.new ["pear", "apple"]
+      let _ ← pyPrintIO [pyPrintArg (Bag'rn.first b)]
+      let _ ← pyPrintIO [pyPrintArg b.n]) :
+    IO _)
+
+def main : IO Unit := do
+  let _ := main'
+  pure ()
+
+def main'rn : IO Unit := do
+  let _ := main''rn
+  pure ()

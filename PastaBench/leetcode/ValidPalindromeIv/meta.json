@@ -1,0 +1,12 @@
+{
+  "problem": "valid-palindrome-iv",
+  "module": "ValidPalindromeIv",
+  "method": "makePalindrome",
+  "params": [
+    "s"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 141
+}

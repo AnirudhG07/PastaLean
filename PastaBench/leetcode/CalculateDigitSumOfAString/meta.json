@@ -1,0 +1,13 @@
+{
+  "problem": "calculate-digit-sum-of-a-string",
+  "module": "CalculateDigitSumOfAString",
+  "method": "digitSum",
+  "params": [
+    "s",
+    "k"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 112
+}

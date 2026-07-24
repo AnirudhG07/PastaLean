@@ -1,0 +1,12 @@
+{
+  "problem": "find-peak-element",
+  "module": "FindPeakElement",
+  "method": "findPeakElement",
+  "params": [
+    "nums"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 92
+}

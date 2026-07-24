@@ -1,0 +1,12 @@
+{
+  "problem": "minimum-suffix-flips",
+  "module": "MinimumSuffixFlips",
+  "method": "minFlips",
+  "params": [
+    "target"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 117
+}

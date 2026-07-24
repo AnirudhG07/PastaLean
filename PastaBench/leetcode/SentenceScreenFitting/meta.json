@@ -1,0 +1,14 @@
+{
+  "problem": "sentence-screen-fitting",
+  "module": "SentenceScreenFitting",
+  "method": "wordsTyping",
+  "params": [
+    "sentence",
+    "rows",
+    "cols"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 113
+}

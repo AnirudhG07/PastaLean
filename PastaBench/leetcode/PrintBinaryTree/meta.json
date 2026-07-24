@@ -1,0 +1,12 @@
+{
+  "problem": "print-binary-tree",
+  "module": "PrintBinaryTree",
+  "method": "printTree",
+  "params": [
+    "root"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "class",
+  "n_tests": 63
+}

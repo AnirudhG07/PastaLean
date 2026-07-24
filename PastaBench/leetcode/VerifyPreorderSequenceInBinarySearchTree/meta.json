@@ -1,0 +1,12 @@
+{
+  "problem": "verify-preorder-sequence-in-binary-search-tree",
+  "module": "VerifyPreorderSequenceInBinarySearchTree",
+  "method": "verifyPreorder",
+  "params": [
+    "preorder"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 97
+}

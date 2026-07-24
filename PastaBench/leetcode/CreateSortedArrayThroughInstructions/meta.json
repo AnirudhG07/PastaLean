@@ -1,0 +1,12 @@
+{
+  "problem": "create-sorted-array-through-instructions",
+  "module": "CreateSortedArrayThroughInstructions",
+  "method": "createSortedArray",
+  "params": [
+    "instructions"
+  ],
+  "difficulty": "Hard",
+  "bucket": "loop",
+  "feature": "class",
+  "n_tests": 113
+}

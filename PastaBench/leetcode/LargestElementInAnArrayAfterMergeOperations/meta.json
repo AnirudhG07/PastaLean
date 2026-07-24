@@ -1,0 +1,12 @@
+{
+  "problem": "largest-element-in-an-array-after-merge-operations",
+  "module": "LargestElementInAnArrayAfterMergeOperations",
+  "method": "maxArrayValue",
+  "params": [
+    "nums"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 124
+}

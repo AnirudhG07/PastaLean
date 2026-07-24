@@ -1,0 +1,12 @@
+{
+  "problem": "count-substrings-without-repeating-character",
+  "module": "CountSubstringsWithoutRepeatingCharacter",
+  "method": "numberOfSpecialSubstrings",
+  "params": [
+    "s"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 133
+}

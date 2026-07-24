@@ -41,18 +41,29 @@ private def pyEnumerateFrom (start : Int) : List α → List (Int × α)
 def pyEnumerate {α β : Type} [inst : PyIterable α β] (xs : α) (start : Int := 0) : List (Int × β) :=
   pyEnumerateFrom start (pyIter xs)
 
-/-- Python-style `sum`, folding with the runtime addition operator and optional start value. -/
-def pySum {α β : Type} [inst : PyIterable α β] [OfNat β 0]
-    [PyHAdd β β β] (xs : α) (start : β := 0) : β :=
-  (pyIter xs).foldl (fun acc x => acc +ₚ x) start
+/-- The summand type of a `sum(...)` element: `Bool → Int` (Python's `sum` of bools counts the
+`True`s), everything numeric maps to itself. The `outParam` result forces the accumulator/result
+type, so `sum(x != y for …)` yields `Int` rather than folding `Bool +ₚ Bool` (Mathlib gives `Bool` a
+ring, so plain inference would wrongly pick `Bool`). -/
+class PySummand (β : Type) (γ : outParam Type) where toSummand : β → γ
+instance : PySummand Bool Int  := ⟨pyBoolToInt⟩
+instance : PySummand Int Int   := ⟨id⟩
+instance : PySummand Nat Nat   := ⟨id⟩
+instance : PySummand Rat Rat   := ⟨id⟩
+instance : PySummand Float Float := ⟨id⟩
+noncomputable instance : PySummand Real Real := ⟨id⟩
+
+def pySum {α β γ : Type} [inst : PyIterable α β] [PySummand β γ] [OfNat γ 0]
+    [PyHAdd γ γ γ] (xs : α) (start : γ := 0) : γ :=
+  (pyIter xs).foldl (fun acc x => acc +ₚ PySummand.toSummand x) start
 
 
-theorem pySum_nil {α β : Type} [inst : PyIterable α β] [OfNat β 0] [PyHAdd β β β] (start : β := 0) (x : α) (h : pyIter x = []) :
+theorem pySum_nil {α β γ : Type} [inst : PyIterable α β] [PySummand β γ] [OfNat γ 0] [PyHAdd γ γ γ] (start : γ := 0) (x : α) (h : pyIter x = []) :
   pySum x start = start := by
     grind [pySum]
 
-theorem pySum_Singleton {α β : Type} [inst : PyIterable α β] [OfNat β 0] [PyHAdd β β β] (start : β := 0) (x : α)
-    : ∀ y , pyIter x = [y] → pySum x start = start +ₚ y := by
+theorem pySum_Singleton {α β γ : Type} [inst : PyIterable α β] [PySummand β γ] [OfNat γ 0] [PyHAdd γ γ γ] (start : γ := 0) (x : α)
+    : ∀ y , pyIter x = [y] → pySum x start = start +ₚ PySummand.toSummand y := by
   intro y h
   grind [pySum]
 
@@ -127,3 +138,12 @@ theorem pyMax_singleton [inst : PyIterable α β] [Ord β] [Inhabited β] : ∀ 
   | x :: y :: s =>
     have c : (x :: y :: s).length ≥ 2 := by grind
     grind
+
+/-- Python `zip(*rows)`: transpose, truncated to the shortest row (`zip` stops at the shortest).
+`zip(*grid)` is the idiomatic column-wise walk of a matrix. -/
+def pyZipStar {α : Type} [Inhabited α] (rows : List (List α)) : List (List α) :=
+  match rows with
+  | [] => []
+  | first :: _ =>
+      let width := rows.foldl (fun acc r => min acc r.length) first.length
+      (List.range width).map (fun c => rows.map (fun r => r[c]!))

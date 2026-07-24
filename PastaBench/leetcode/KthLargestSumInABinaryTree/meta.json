@@ -1,0 +1,13 @@
+{
+  "problem": "kth-largest-sum-in-a-binary-tree",
+  "module": "KthLargestSumInABinaryTree",
+  "method": "kthLargestLevelSum",
+  "params": [
+    "root",
+    "k"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "class",
+  "n_tests": 47
+}

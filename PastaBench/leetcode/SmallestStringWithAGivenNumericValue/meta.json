@@ -1,0 +1,13 @@
+{
+  "problem": "smallest-string-with-a-given-numeric-value",
+  "module": "SmallestStringWithAGivenNumericValue",
+  "method": "getSmallestString",
+  "params": [
+    "n",
+    "k"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 74
+}

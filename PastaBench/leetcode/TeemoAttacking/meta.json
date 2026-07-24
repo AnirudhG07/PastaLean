@@ -1,0 +1,13 @@
+{
+  "problem": "teemo-attacking",
+  "module": "TeemoAttacking",
+  "method": "findPoisonedDuration",
+  "params": [
+    "timeSeries",
+    "duration"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 120
+}

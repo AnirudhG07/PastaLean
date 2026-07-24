@@ -121,7 +121,7 @@ def switch_with_tuple'rn := fun point ↦
 
 def switch_with_default := fun num ↦
   match num with
-  | (1 : Int) => if num == (1 : Int) then "one" else "not one"
+  | (1 : Int) => if num = (1 : Int) then "one" else "not one"
   | (2 : Int) => "two"
   | _ => "other"
 

@@ -4,7 +4,9 @@ import PastaLean.PyAPI.CommonProtocols.GetItem
 import PastaLean.PyAPI.CommonProtocols.SetItem
 import PastaLean.PyAPI.CommonProtocols.Length
 import PastaLean.PyAPI.CommonProtocols.Iterable
+import PastaLean.PyAPI.CommonProtocols.IsNone
 import PastaLean.PyAPI.Operators
+import PastaLean.PyAPI.Builtins.Casting
 
 /-!
 # `PyAny` — the dynamic-value fallback
@@ -29,7 +31,17 @@ inductive PyAny where
   | float (q : Rat)
   | list  (xs : List PyAny)
   | none
-  deriving Inhabited, Repr, BEq
+  deriving Repr
+
+/-- The canonical empty/default boxed value. Used to initialize a hoisted `let mut` binding for a
+variable Python assigns only inside a block (`if`/`try`) — Lean has no such leak-out, so codegen
+pre-declares the variable before the block. `none` (Python `None`) is the honest empty; it does not
+faithfully model `UnboundLocalError`, which the linter flags separately. -/
+def emptyPyAny : PyAny := .none
+
+/-- Default a `PyAny` to `emptyPyAny` (Python `None`), not `int 0` (the derived first-constructor
+default), so a hoisted dynamic binding reads as "unset" rather than a spurious zero. -/
+instance : Inhabited PyAny := ⟨emptyPyAny⟩
 
 namespace PyAny
 
@@ -116,11 +128,130 @@ def mul : PyAny → PyAny → PyAny
   | .int n, .str a => .str (String.join (List.replicate n.toNat a))
   | a, b => (numBinop (· * ·) (· * ·) a b).getD .none
 
+private def toRat : Sum Int Rat → Rat := fun | .inl n => (n : Rat) | .inr q => q
+
+/-- Python `/` is always true division → `float`. -/
+def div (a b : PyAny) : PyAny :=
+  match asNum a, asNum b with
+  | some x, some y => let d := toRat y; if d == 0 then .none else .float (toRat x / d)
+  | _, _ => .none
+
+/-- Python `//`: `int//int` stays `int` (floored), else a floored `float`. -/
+def floordiv (a b : PyAny) : PyAny :=
+  match asNum a, asNum b with
+  | some (.inl x), some (.inl y) => if y == 0 then .none else .int (pyFloorDiv x y)
+  | some x, some y => let d := toRat y; if d == 0 then .none else .float ((Rat.floor (toRat x / d) : Int) : Rat)
+  | _, _ => .none
+
+/-- Python `%`: `int%int` stays `int`, else float modulo `a - b*⌊a/b⌋`. -/
+def mod (a b : PyAny) : PyAny :=
+  match asNum a, asNum b with
+  | some (.inl x), some (.inl y) => if y == 0 then .none else .int (pyMod x y)
+  | some x, some y =>
+      let xr := toRat x; let yr := toRat y
+      if yr == 0 then .none else .float (xr - yr * ((Rat.floor (xr / yr) : Int) : Rat))
+  | _, _ => .none
+
+/-- Python `**`: `int**(≥0)` stays `int`; an integer exponent otherwise gives a `float`; a fractional
+exponent is transcendental (soft-`none`). -/
+def pow (a b : PyAny) : PyAny :=
+  match asNum a, asNum b with
+  | some (.inl x), some (.inl y) => if y ≥ 0 then .int (x ^ y.toNat) else .float ((toRat (.inl x)) ^ y)
+  | some x, some (.inl y) => .float ((toRat x) ^ y)
+  | _, _ => .none
+
+/-- The integer value of a boxed `int`/`bool`, for the integer-only bitwise/shift operators. -/
+def asInt : PyAny → Option Int
+  | .int n => some n
+  | .bool b => some (if b then 1 else 0)
+  | _ => Option.none
+
+def bitOp (f : Int → Int → Int) (a b : PyAny) : PyAny :=
+  match asInt a, asInt b with | some x, some y => .int (f x y) | _, _ => .none
+def shl (a b : PyAny) : PyAny := match asInt a, asInt b with | some x, some y => .int (pyShiftLeft x y) | _, _ => .none
+def shr (a b : PyAny) : PyAny := match asInt a, asInt b with | some x, some y => .int (pyShiftRight x y) | _, _ => .none
+
+/-- Numeric/string comparison, `none` when the operands are incomparable (as Python raises). -/
+def cmp (a b : PyAny) : Option Ordering :=
+  match a, b with
+  | .str x, .str y => some (compare x y)
+  | .list x, .list y => some (compare (x.map (·.toStr false)) (y.map (·.toStr false)))
+  | _, _ => match asNum a, asNum b with
+      | some x, some y => some (compare (toRat x) (toRat y))
+      | _, _ => Option.none
+
+def blt (a b : PyAny) : Bool := a.cmp b == some .lt
+def ble (a b : PyAny) : Bool := a.cmp b == some .lt || a.cmp b == some .eq
+
+/-- Python `==`: numeric across the tower (`5 == 5.0`), else structural (`5 == "5"` is `False`). -/
+partial def beq (a b : PyAny) : Bool :=
+  match asNum a, asNum b with
+  | some x, some y => toRat x == toRat y
+  | _, _ => match a, b with
+      | .str x, .str y => x == y
+      | .none, .none => true
+      | .list x, .list y => x.length == y.length && (x.zip y).all fun (p, q) => beq p q
+      | _, _ => false
+
 end PyAny
 
 instance : PyHAdd PyAny PyAny PyAny where hAdd := PyAny.add
 instance : PyHSub PyAny PyAny PyAny where hSub := PyAny.sub
 instance : PyHMul PyAny PyAny PyAny where hMul := PyAny.mul
+
+/-- Mixed `PyAny op scalar` / `scalar op PyAny`: box the scalar and dispatch on the tags, so
+arithmetic on an un-inferred (boxed) value against an `Int`/`ℚ` literal works (`x * 2` where `x` is a
+`PyAny` element of an untyped param). Low priority so the exact `PyAny × PyAny` instances win. -/
+instance (priority := low) {α} [PyToValue α] : PyHAdd PyAny α PyAny where hAdd a b := PyAny.add a (PyToValue.toValue b)
+instance (priority := low) {α} [PyToValue α] : PyHAdd α PyAny PyAny where hAdd a b := PyAny.add (PyToValue.toValue a) b
+instance (priority := low) {α} [PyToValue α] : PyHSub PyAny α PyAny where hSub a b := PyAny.sub a (PyToValue.toValue b)
+instance (priority := low) {α} [PyToValue α] : PyHSub α PyAny PyAny where hSub a b := PyAny.sub (PyToValue.toValue a) b
+instance (priority := low) {α} [PyToValue α] : PyHMul PyAny α PyAny where hMul a b := PyAny.mul a (PyToValue.toValue b)
+instance (priority := low) {α} [PyToValue α] : PyHMul α PyAny PyAny where hMul a b := PyAny.mul (PyToValue.toValue a) b
+
+instance : PyHDiv PyAny PyAny PyAny where hDiv := PyAny.div
+instance : PyModulo PyAny PyAny PyAny where hMod := PyAny.mod
+instance : PyHPow PyAny PyAny PyAny where hPow := PyAny.pow
+instance (priority := low) {α} [PyToValue α] : PyHDiv PyAny α PyAny where hDiv a b := PyAny.div a (PyToValue.toValue b)
+instance (priority := low) {α} [PyToValue α] : PyHDiv α PyAny PyAny where hDiv a b := PyAny.div (PyToValue.toValue a) b
+instance (priority := low) {α} [PyToValue α] : PyModulo PyAny α PyAny where hMod a b := PyAny.mod a (PyToValue.toValue b)
+instance (priority := low) {α} [PyToValue α] : PyModulo α PyAny PyAny where hMod a b := PyAny.mod (PyToValue.toValue a) b
+instance (priority := low) {α} [PyToValue α] : PyHPow PyAny α PyAny where hPow a b := PyAny.pow a (PyToValue.toValue b)
+instance (priority := low) {α} [PyToValue α] : PyHPow α PyAny PyAny where hPow a b := PyAny.pow (PyToValue.toValue a) b
+
+/-- `==` on `PyAny` is numeric across the tower (`5 == 5.0`), replacing the structural derived `BEq`. -/
+instance : BEq PyAny := ⟨PyAny.beq⟩
+
+instance : LT PyAny := ⟨fun a b => PyAny.blt a b = true⟩
+instance : LE PyAny := ⟨fun a b => PyAny.ble a b = true⟩
+instance (a b : PyAny) : Decidable (a < b) := inferInstanceAs (Decidable (PyAny.blt a b = true))
+instance (a b : PyAny) : Decidable (a ≤ b) := inferInstanceAs (Decidable (PyAny.ble a b = true))
+
+instance : PyFloorDiv PyAny PyAny PyAny where floorDiv := PyAny.floordiv
+instance : PyBitAnd PyAny PyAny PyAny where bitAnd := PyAny.bitOp (fun x y => pyBitAnd x y)
+instance : PyBitOr PyAny PyAny PyAny where bitOr := PyAny.bitOp (fun x y => pyBitOr x y)
+instance : PyBitXor PyAny PyAny PyAny where bitXor := PyAny.bitOp (fun x y => pyBitXor x y)
+instance : PyShiftLeft PyAny PyAny PyAny where shiftLeft := PyAny.shl
+instance : PyShiftRight PyAny PyAny PyAny where shiftRight := PyAny.shr
+instance (priority := low) {α} [PyToValue α] : PyFloorDiv PyAny α PyAny where floorDiv a b := PyAny.floordiv a (PyToValue.toValue b)
+instance (priority := low) {α} [PyToValue α] : PyFloorDiv α PyAny PyAny where floorDiv a b := PyAny.floordiv (PyToValue.toValue a) b
+instance (priority := low) {α} [PyToValue α] : PyBitAnd PyAny α PyAny where bitAnd a b := PyAny.bitOp (fun x y => pyBitAnd x y) a (PyToValue.toValue b)
+instance (priority := low) {α} [PyToValue α] : PyBitAnd α PyAny PyAny where bitAnd a b := PyAny.bitOp (fun x y => pyBitAnd x y) (PyToValue.toValue a) b
+instance (priority := low) {α} [PyToValue α] : PyBitOr PyAny α PyAny where bitOr a b := PyAny.bitOp (fun x y => pyBitOr x y) a (PyToValue.toValue b)
+instance (priority := low) {α} [PyToValue α] : PyBitOr α PyAny PyAny where bitOr a b := PyAny.bitOp (fun x y => pyBitOr x y) (PyToValue.toValue a) b
+instance (priority := low) {α} [PyToValue α] : PyBitXor PyAny α PyAny where bitXor a b := PyAny.bitOp (fun x y => pyBitXor x y) a (PyToValue.toValue b)
+instance (priority := low) {α} [PyToValue α] : PyBitXor α PyAny PyAny where bitXor a b := PyAny.bitOp (fun x y => pyBitXor x y) (PyToValue.toValue a) b
+instance (priority := low) {α} [PyToValue α] : PyShiftLeft PyAny α PyAny where shiftLeft a b := PyAny.shl a (PyToValue.toValue b)
+instance (priority := low) {α} [PyToValue α] : PyShiftLeft α PyAny PyAny where shiftLeft a b := PyAny.shl (PyToValue.toValue a) b
+instance (priority := low) {α} [PyToValue α] : PyShiftRight PyAny α PyAny where shiftRight a b := PyAny.shr a (PyToValue.toValue b)
+instance (priority := low) {α} [PyToValue α] : PyShiftRight α PyAny PyAny where shiftRight a b := PyAny.shr (PyToValue.toValue a) b
+
+/-- `float(x)` / the `/`-in-run-twin cast on a boxed value: read its numeric tag as a `Float`. -/
+instance : PyFloatCast PyAny where
+  pyFloat v := match PyAny.asNum v with
+    | some (.inl n) => Float.ofInt n
+    | some (.inr q) => q.toFloat
+    | Option.none => 0.0
 
 /-! ### Container protocols — delegate to the boxed value's own instance
 
@@ -154,6 +285,8 @@ instance : PyIterable PyAny PyAny where
     | _ => []
 
 instance : PyPrintable PyAny where pyStringify := PyAny.toStr false
+/-- A `PyAny` is `None` exactly when it carries the `none` tag. -/
+instance : PyIsNone PyAny where isNoneVal | .none => true | _ => false
 instance : PyTruthy PyAny where
   truthy
     | .int n => n != 0

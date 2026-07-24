@@ -1,0 +1,14 @@
+{
+  "problem": "minimum-cost-to-equalize-array",
+  "module": "MinimumCostToEqualizeArray",
+  "method": "minCostToEqualizeArray",
+  "params": [
+    "nums",
+    "cost1",
+    "cost2"
+  ],
+  "difficulty": "Hard",
+  "bucket": "term",
+  "feature": "term",
+  "n_tests": 122
+}

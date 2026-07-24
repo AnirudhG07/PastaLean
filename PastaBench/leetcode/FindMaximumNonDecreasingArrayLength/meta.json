@@ -1,0 +1,12 @@
+{
+  "problem": "find-maximum-non-decreasing-array-length",
+  "module": "FindMaximumNonDecreasingArrayLength",
+  "method": "findMaximumLength",
+  "params": [
+    "nums"
+  ],
+  "difficulty": "Hard",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 111
+}

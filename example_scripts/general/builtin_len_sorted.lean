@@ -12,29 +12,29 @@ set_option mvcgen.warning false
 set_option maxHeartbeats 0
 
 def builtin_len_sorted :=
-  let xs := [(5 : Int), (1 : Int), (3 : Int)]
-  let s := "dbca"
-  let d := Std.HashMap.ofList [("z", (9 : Int)), ("a", (1 : Int)), ("m", (4 : Int))]
-  let lx := PastaLean.pyLen xs
-  let ls := PastaLean.pyLen s
-  let ld := PastaLean.pyLen d
-  let sx := PastaLean.pySort xs
-  let ss := PastaLean.pySort s
-  let sd := PastaLean.pySort d
+  let xs := ([(5 : Int), (1 : Int), (3 : Int)] : List Int)
+  let s := ("dbca" : String)
+  let d := (Std.HashMap.ofList [("z", (9 : Int)), ("a", (1 : Int)), ("m", (4 : Int))] : Std.HashMap String Int)
+  let lx := (PastaLean.pyLen xs : Int)
+  let ls := (PastaLean.pyLen s : Int)
+  let ld := (PastaLean.pyLen d : Int)
+  let sx := (PastaLean.pySort xs : List Int)
+  let ss := (PastaLean.pySort s : List String)
+  let sd := (PastaLean.pySort d : List String)
   (lx, (ls, (ld, (sx, (ss, sd)))))
 
 attribute [simp, taste_ingr] builtin_len_sorted
 
 def builtin_len_sorted'rn :=
-  let xs := [(5 : Int), (1 : Int), (3 : Int)]
-  let s := "dbca"
-  let d := Std.HashMap.ofList [("z", (9 : Int)), ("a", (1 : Int)), ("m", (4 : Int))]
-  let lx := PastaLean.pyLen xs
-  let ls := PastaLean.pyLen s
-  let ld := PastaLean.pyLen d
-  let sx := PastaLean.pySort xs
-  let ss := PastaLean.pySort s
-  let sd := PastaLean.pySort d
+  let xs := ([(5 : Int), (1 : Int), (3 : Int)] : List Int)
+  let s := ("dbca" : String)
+  let d := (Std.HashMap.ofList [("z", (9 : Int)), ("a", (1 : Int)), ("m", (4 : Int))] : Std.HashMap String Int)
+  let lx := (PastaLean.pyLen xs : Int)
+  let ls := (PastaLean.pyLen s : Int)
+  let ld := (PastaLean.pyLen d : Int)
+  let sx := (PastaLean.pySort xs : List Int)
+  let ss := (PastaLean.pySort s : List String)
+  let sd := (PastaLean.pySort d : List String)
   (lx, (ls, (ld, (sx, (ss, sd)))))
 
 def in_place_sort :=

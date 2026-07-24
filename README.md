@@ -114,28 +114,40 @@ The runtime helper returns a *new* container, and codegen stores it back into th
 
 </details>
 
-<details><summary>Nested Functions & Closures (lambda lifting)</summary>
+<details><summary>Function Scoping vs Block Scoping</summary>
 
-Python lets you define a function *inside* another, and the inner one reads variables of the outer — they *feel* like globals to the inner function, but they're really **free variables** it closes over. You can't just move that `def` to the top level in Lean: it would lose those variables.
-
-So we do **lambda lifting** (closure conversion): every captured variable becomes an **extra parameter**, supplied at each call site.
+Python is **function-scoped**: a name assigned *anywhere* in a function body — inside `if`/`elif`/`else`, `for`, `while`, `try`/`except`/`finally`, `with`, and **any depth of nested loop** — lives in the one enclosing function scope and stays visible after the block. Lean is **block-scoped**: a `let`/`let mut` inside a branch or loop body dies with that block. So a variable first bound inside a block and read outside it is **hoisted**: codegen pre-declares one enclosing `let mut x : T := default` before the block, and each branch/body assignment becomes a reassignment of that single variable.
 
 ```python
-def outer(xs, w):
-    def score(x):
-        return x * w          # w is free in score; it belongs to outer
-    return sorted(xs, key=score)
-```
-```lean
-private def _outer_score := fun x ↦ fun w ↦ x *ₚ w   -- w hoisted to a parameter
-def outer := fun xs w ↦ … pySortBy (_outer_score · w) …
+for i in range(n):
+    for j in range(n):
+        y = i * j     # first bound in the innermost loop...
+return y               # ...still visible here (hoisted to `let mut y : Int := default` before the OUTER loop)
 ```
 
-**What gets lifted** is exactly `(names the inner reads) ∩ (names the outer binds)`. That intersection is the whole trick: outer's locals (`w`, `xs`) become parameters, while genuine globals and builtins (`len`, `range`) fall outside it and are left alone — they already resolve at the top level.
+The type `T` comes from `TypeInfer`; a variable bound at *different* types across branches becomes `PyAny` (initialised to `emptyPyAny`, i.e. `None`), so the branches box into one slot. The only constructs that get **their own** scope — matching Python 3 — are `def`, `lambda`, and comprehensions/generators; everything else shares the function scope. 
 
-**Mutation** (`nonlocal ans; ans += 1`) needs more than a read-only parameter, so such a capture is *threaded*: it's both a parameter and part of the return, and each call rebinds it (`ans := _outer_add x ans`).
+</details>
 
-We lift to a **sibling `private partial def`**, not `where`/`let rec`: `let rec` can't be `partial` (non-structural recursion fails termination), and `where` forces the *outer* def to become `partial` — losing its `[simp, taste_ingr]` tag and provability. A sibling def keeps `outer` a plain provable `def`. Lifting is **outermost-first** so a two-level nest captures the outer scope before the innermost def is lifted. It all lives in Lean (`PyGens/Transform/ClosureConvert.lean`), per the "all rewrites in Lean" rule — no Python pass.
+<details><summary>Nested Functions & Closures</summary>
+
+A **closure** is a nested function that reads a variable from the enclosing one — a *free variable* it "closes over":
+
+```python
+def make_adder(n):
+    def add(x):
+        return x + n     # n is free in `add`; it belongs to make_adder
+    return add
+make_adder(5)(3)         # 8 — the returned `add` still remembers n = 5
+```
+
+**The Lean problem:** you can't just move `add` to the top level (it would lose `n`), and Lean has no mutable enclosing scope to point back at.
+
+**How we deal — lambda lifting.** Every captured variable becomes an extra parameter of a **sibling `private partial def`** — `_make_adder'add := fun x n ↦ x + n` — passed at each call site (what's lifted is exactly `(names the inner reads) ∩ (names the outer binds)`; builtins/globals fall outside it). When the closure **escapes as a value** — returned, or a decorator's wrapper — we emit a genuine Lean closure that partial-applies the sibling with the captures baked in: `make_adder := fun n ↦ fun x ↦ _make_adder'add x n`. So returned closures, **currying**, and **decorators** all work, and stay **provable** — the sibling keeps its `[simp, taste_ingr]` tag, so `assert make_adder(5)(3) == 8` is proved automatically on conversion. (An un-inferable returned-closure param falls back to `PyAny`.)
+
+**Mutation** (`nonlocal ans; ans += 1`) is *threaded*: the capture is both a parameter and part of the return, each call rebinding it. The one genuinely hard case is a closure that mutates a captured cell **and escapes** (a stateful `counter()`), which needs a real reference cell — still to come.
+
+We use a sibling `private partial def` (not `where`/`let rec`, which would force the *outer* def `partial` and lose its provability). It all lives in `PyGens/Transform/ClosureConvert.lean` — no Python pass.
 
 </details>
 
@@ -178,6 +190,35 @@ Moreover, if the input types are not given, we can infer them using the `TypeInf
 
 </details>
 
+<details><summary>Two twins — one to prove, one to run</summary>
+
+Every function is emitted twice: a **provable** version (exact `ℚ` for floats, `ℝ` for transcendentals, `noncomputable` where needed) and a **runnable** `'rn` twin (`Float`, fast). This is why Python's `/` — which is *always* float division — shows up as `ℚ` in the prove twin and `Float` in the run twin.
+
+```python
+7 / 2     # prove twin: (7 : ℚ) /ₚ 2 = 7/2 exactly;   run twin: 3.5 : Float
+```
+
+</details>
+
+<details><summary>Numeric coercion — bottom-up, never top-down</summary>
+
+Python's numeric tower is `bool <: int <: float`: a value coerces *up* only at the operator that mixes it with a wider type, driven by the **operands**, never by the surrounding context. `3 + 0.5` is `float` because `0.5` is; `3` on its own stays `int`. So `TypeInfer` promotes an int only where it actually meets a float (`int ⊔ float = float`), and a variable becomes `float` only if it is genuinely *assigned* a float — a `-> float` return annotation (context) never forces it. This mirrors Lean: an `Int` stays `Int` and is cast to `ℚ`/`Float` at the mixed operation, not smeared everywhere.
+
+```python
+def avg(a: int, b: int):
+    return (a + b) / 2   # `/` is float division -> ℚ (prove) / Float (run); a and b stay Int
+```
+
+`/` is *always* float division; `//` is floor division; `%` and `**` follow Python's mixed-numeric rules.
+
+</details>
+
+<details><summary>`PyAny` can't be proved - `pyany_cases` tactic</summary>
+
+`PyAny` makes us *total* (everything runs), but it is **not** a commutative ring, so `ring`/`nlinarith`/`taste?` die on it — a boxed function can't be proved. That's why boxing is a *last resort*: infer a concrete type wherever possible, box only the residue, and in prove mode a linter warns at every `PyAny` binder ("annotate the type to prove"). Provability is the whole point of the project, so we protect it.
+
+</details>
+
 <details><summary>Object Oriented Programming</summary>
 
 OOP is handled like namespaces. The `__init__` function is used to create the structure of the class, and the methods are added as functions under the namespace of the class. For example, a class `A` with a method `foo` will be modelled as a structure `A` with a function `foo` under the namespace of `A`. The methods can be called using the dot notation, like `A.foo()`.
@@ -200,19 +241,16 @@ def describe(x):
 
 </details>
 
-<details><summary>Two twins — one to prove, one to run</summary>
+<details><summary>Python Decorators</summary>
 
-Every function is emitted twice: a **provable** version (exact `ℚ` for floats, `ℝ` for transcendentals, `noncomputable` where needed) and a **runnable** `'rn` twin (`Float`, fast). This is why Python's `/` — which is *always* float division — shows up as `ℚ` in the prove twin and `Float` in the run twin.
+Python has decorators which are functions that modify the behavior of other functions. We support decorators in PastaLean by translating them to Lean functions that take a function as an argument and return a new function like a wrapper OR do syntax changes/noops since every decorator in Python hasn't been well translated. For example:
 
 ```python
-7 / 2     # prove twin: (7 : ℚ) /ₚ 2 = 7/2 exactly;   run twin: 3.5 : Float
+
 ```
 
-</details>
-
-<details><summary>The catch — a boxed slot can't be proved</summary>
-
-`PyAny` makes us *total* (everything runs), but it is **not** a commutative ring, so `ring`/`nlinarith`/`taste?` die on it — a boxed function can't be proved. That's why boxing is a *last resort*: infer a concrete type wherever possible, box only the residue, and in prove mode a linter warns at every `PyAny` binder ("annotate the type to prove"). Provability is the whole point of the project, so we protect it.
+Multiple decorators can be applied to a function, and they are applied in the order they are listed.
+You can declare your own decorators in Python or use commonly supported OOP/library decorators like `@staticmethod`, `@classmethod`, `@property`, etc. We support a few of them, and you can add more by writing Lean definitions for them and adding them.
 
 </details>
 

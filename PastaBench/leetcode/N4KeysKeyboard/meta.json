@@ -1,0 +1,12 @@
+{
+  "problem": "4-keys-keyboard",
+  "module": "N4KeysKeyboard",
+  "method": "maxA",
+  "params": [
+    "n"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 49
+}

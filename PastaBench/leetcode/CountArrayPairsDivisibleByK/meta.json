@@ -1,0 +1,13 @@
+{
+  "problem": "count-array-pairs-divisible-by-k",
+  "module": "CountArrayPairsDivisibleByK",
+  "method": "countPairs",
+  "params": [
+    "nums",
+    "k"
+  ],
+  "difficulty": "Hard",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 102
+}

@@ -1,0 +1,12 @@
+{
+  "problem": "reach-a-number",
+  "module": "ReachANumber",
+  "method": "reachNumber",
+  "params": [
+    "target"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 70
+}

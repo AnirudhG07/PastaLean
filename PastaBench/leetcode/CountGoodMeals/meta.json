@@ -1,0 +1,12 @@
+{
+  "problem": "count-good-meals",
+  "module": "CountGoodMeals",
+  "method": "countPairs",
+  "params": [
+    "deliciousness"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 101
+}
