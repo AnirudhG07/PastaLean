@@ -1,5 +1,6 @@
 import Mathlib
 import PastaLean.PyAPI.Core
+import PastaLean.PyAPI.Builtins.FloatRepr
 
 namespace PastaLean
 
@@ -82,10 +83,15 @@ instance : PyPrintable Int where
 instance : PyPrintable Nat where
   pyStringify n := toString n
 
-/-- Rationals print as a Python-style **decimal** (`3/2` → `1.5`, via the float value), not the
-fraction `n/d` — matching `print` output when `float` lowers to `ℚ` (exact mode). -/
+/-- Floats print with Python's `repr`: the shortest decimal that round-trips (`3.0`, not
+`3.000000`; `0.2857142857142857`, not the 6-digit `0.285714`). See `Builtins/FloatRepr.lean`. -/
+instance : PyPrintable Float where
+  pyStringify := pyFloatRepr
+
+/-- Rationals print as a Python-style **decimal** (`3/2` → `1.5`), not the fraction `n/d` — matching
+`print` output when `float` lowers to `ℚ` (exact mode). Uses the same shortest-round-trip repr. -/
 instance : PyPrintable Rat where
-  pyStringify q := toString (Rat.toFloat q)
+  pyStringify q := pyFloatRepr (Rat.toFloat q)
 
 
 /-- Python exceptions print with their existing `ToString` rendering. -/
