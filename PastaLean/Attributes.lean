@@ -17,6 +17,7 @@ def pythonMethodMap? (attr : String) : Option Lean.Name :=
   match attr with
   -- String Only
   | "split"      => some ``pyStringSplit
+  | "splitlines" => some ``pyStringSplitlines
   | "join"       => some ``pyStringJoin
   | "replace"    => some ``pyStringReplace
   | "strip"      => some ``pyStringStrip

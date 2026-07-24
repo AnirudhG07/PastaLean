@@ -200,10 +200,10 @@ def inf_dp := fun (cost : List Int) ↦
     (do
       -- Canonical `[inf]*n` DP: `inf` adapts to the container's float type across both twins.
       let mut n : Int := PastaLean.pyLen cost
-      let mut dp := (PastaLean.pyListRepeat [inf] (n +ₚ (1 : Int)) : List Rat)
-      dp := PastaLean.pySetItem dp (0 : Int) (0 : Rat)
+      let mut dp : List Int := PastaLean.pyListRepeat [inf] (n +ₚ (1 : Int))
+      dp := PastaLean.pySetItem dp (0 : Int) (0 : Int)
       for i in (PastaLean.pyRange (n +ₚ (1 : Int)) (1 : Int))do
-        dp := PastaLean.pySetItem dp i (PastaLean.pyMin [dp⦋i -ₚ (1 : Int)⦌ +ₚ cost⦋i -ₚ (1 : Int)⦌, dp⦋i⦌] : Rat)
+        dp := PastaLean.pySetItem dp i (PastaLean.pyMin [dp⦋i -ₚ (1 : Int)⦌ +ₚ cost⦋i -ₚ (1 : Int)⦌, dp⦋i⦌])
       let __py_ret_1 := dp⦋n⦌
       return __py_ret_1)
 
@@ -214,10 +214,10 @@ def inf_dp'rn := fun (cost : List Int) ↦
     (do
       -- Canonical `[inf]*n` DP: `inf` adapts to the container's float type across both twins.
       let mut n : Int := PastaLean.pyLen cost
-      let mut dp := (PastaLean.pyListRepeat [inf] (n +ₚ (1 : Int)) : List Float)
-      dp := PastaLean.pySetItem dp (0 : Int) (0 : Float)
+      let mut dp : List Int := PastaLean.pyListRepeat [inf] (n +ₚ (1 : Int))
+      dp := PastaLean.pySetItem dp (0 : Int) (0 : Int)
       for i in (PastaLean.pyRange (n +ₚ (1 : Int)) (1 : Int))do
-        dp := PastaLean.pySetItem dp i (PastaLean.pyMin [dp⦋i -ₚ (1 : Int)⦌ +ₚ cost⦋i -ₚ (1 : Int)⦌, dp⦋i⦌] : Float)
+        dp := PastaLean.pySetItem dp i (PastaLean.pyMin [dp⦋i -ₚ (1 : Int)⦌ +ₚ cost⦋i -ₚ (1 : Int)⦌, dp⦋i⦌])
       let __py_ret_1 := dp⦋n⦌
       return __py_ret_1)
 
@@ -229,15 +229,14 @@ def grid_inf_dp := fun (houses : List Int) ↦
       -- otherwise `inf` defaults to ℚ while the run twin's values are `Float` (a `PySetItem (List ℚ) ℤ
       -- Float` clash). Mirrors the allocate-mailboxes shape.
       let mut n : Int := PastaLean.pyLen houses
-      let mut f :=
-        ((PastaLean.pyRange n).map fun _ => PastaLean.pyListRepeat [inf] (n +ₚ (1 : Int)) : List (List Rat))
+      let mut f : List (List Int) := (PastaLean.pyRange n).map fun _ => PastaLean.pyListRepeat [inf] (n +ₚ (1 : Int))
       for i in (PastaLean.pyRange n)do
-        f := PastaLean.pySetItem f i (PastaLean.pySetItem f⦋i⦌ (1 : Int) (houses⦋i⦌ : Rat))
+        f := PastaLean.pySetItem f i (PastaLean.pySetItem f⦋i⦌ (1 : Int) houses⦋i⦌)
         for j in (PastaLean.pyRange (i +ₚ (2 : Int)) (2 : Int))do
           for p in (PastaLean.pyRange i)do
             f :=
               PastaLean.pySetItem f i
-                (PastaLean.pySetItem f⦋i⦌ j (PastaLean.pyMin [f⦋i⦌⦋j⦌, f⦋p⦌⦋j -ₚ (1 : Int)⦌ +ₚ houses⦋i⦌] : Rat))
+                (PastaLean.pySetItem f⦋i⦌ j (PastaLean.pyMin [f⦋i⦌⦋j⦌, f⦋p⦌⦋j -ₚ (1 : Int)⦌ +ₚ houses⦋i⦌]))
       let __py_ret_1 := f⦋n -ₚ (1 : Int)⦌⦋n⦌
       return __py_ret_1)
 
@@ -251,49 +250,46 @@ def grid_inf_dp'rn := fun (houses : List Int) ↦
       -- otherwise `inf` defaults to ℚ while the run twin's values are `Float` (a `PySetItem (List ℚ) ℤ
       -- Float` clash). Mirrors the allocate-mailboxes shape.
       let mut n : Int := PastaLean.pyLen houses
-      let mut f :=
-        ((PastaLean.pyRange n).map fun _ => PastaLean.pyListRepeat [inf] (n +ₚ (1 : Int)) : List (List Float))
+      let mut f : List (List Int) := (PastaLean.pyRange n).map fun _ => PastaLean.pyListRepeat [inf] (n +ₚ (1 : Int))
       for i in (PastaLean.pyRange n)do
-        f := PastaLean.pySetItem f i (PastaLean.pySetItem f⦋i⦌ (1 : Int) (houses⦋i⦌ : Float))
+        f := PastaLean.pySetItem f i (PastaLean.pySetItem f⦋i⦌ (1 : Int) houses⦋i⦌)
         for j in (PastaLean.pyRange (i +ₚ (2 : Int)) (2 : Int))do
           for p in (PastaLean.pyRange i)do
             f :=
               PastaLean.pySetItem f i
-                (PastaLean.pySetItem f⦋i⦌ j (PastaLean.pyMin [f⦋i⦌⦋j⦌, f⦋p⦌⦋j -ₚ (1 : Int)⦌ +ₚ houses⦋i⦌] : Float))
+                (PastaLean.pySetItem f⦋i⦌ j (PastaLean.pyMin [f⦋i⦌⦋j⦌, f⦋p⦌⦋j -ₚ (1 : Int)⦌ +ₚ houses⦋i⦌]))
       let __py_ret_1 := f⦋n -ₚ (1 : Int)⦌⦋n⦌
       return __py_ret_1)
 
 def dp_sentinel_return := fun (cost : List Int) ↦
-  (Id.run
-      (do
-        -- The canonical inf-DP ending: `return -1 if unreachable else value`. The single ternary return
-        -- mixes `int` (`-1`) with the `float` DP value, so both branches are elaborated at the mode float
-        -- (`ℚ`/`Float`) — the `-1` coerces up (int→ℚ / int→Float) instead of pinning the result to `ℤ`.
-        let mut n : Int := PastaLean.pyLen cost
-        let mut dp := (PastaLean.pyListRepeat [inf] (n +ₚ (1 : Int)) : List Rat)
-        dp := PastaLean.pySetItem dp (0 : Int) (0 : Rat)
-        for i in (PastaLean.pyRange (n +ₚ (1 : Int)) (1 : Int))do
-          dp := PastaLean.pySetItem dp i (PastaLean.pyMin [dp⦋i -ₚ (1 : Int)⦌ +ₚ cost⦋i -ₚ (1 : Int)⦌, dp⦋i⦌] : Rat)
-        let __py_ret_1 := (if dp⦋n⦌ ≥ inf then -(1 : Int) else dp⦋n⦌ : Rat)
-        return __py_ret_1) :
-    Rat)
+  Id.run
+    (do
+      -- The canonical inf-DP ending: `return -1 if unreachable else value`. The single ternary return
+      -- mixes `int` (`-1`) with the `float` DP value, so both branches are elaborated at the mode float
+      -- (`ℚ`/`Float`) — the `-1` coerces up (int→ℚ / int→Float) instead of pinning the result to `ℤ`.
+      let mut n : Int := PastaLean.pyLen cost
+      let mut dp : List Int := PastaLean.pyListRepeat [inf] (n +ₚ (1 : Int))
+      dp := PastaLean.pySetItem dp (0 : Int) (0 : Int)
+      for i in (PastaLean.pyRange (n +ₚ (1 : Int)) (1 : Int))do
+        dp := PastaLean.pySetItem dp i (PastaLean.pyMin [dp⦋i -ₚ (1 : Int)⦌ +ₚ cost⦋i -ₚ (1 : Int)⦌, dp⦋i⦌])
+      let __py_ret_1 := if dp⦋n⦌ ≥ inf then -(1 : Int) else dp⦋n⦌
+      return __py_ret_1)
 
 attribute [simp, taste_ingr] dp_sentinel_return
 
 def dp_sentinel_return'rn := fun (cost : List Int) ↦
-  (Id.run
-      (do
-        -- The canonical inf-DP ending: `return -1 if unreachable else value`. The single ternary return
-        -- mixes `int` (`-1`) with the `float` DP value, so both branches are elaborated at the mode float
-        -- (`ℚ`/`Float`) — the `-1` coerces up (int→ℚ / int→Float) instead of pinning the result to `ℤ`.
-        let mut n : Int := PastaLean.pyLen cost
-        let mut dp := (PastaLean.pyListRepeat [inf] (n +ₚ (1 : Int)) : List Float)
-        dp := PastaLean.pySetItem dp (0 : Int) (0 : Float)
-        for i in (PastaLean.pyRange (n +ₚ (1 : Int)) (1 : Int))do
-          dp := PastaLean.pySetItem dp i (PastaLean.pyMin [dp⦋i -ₚ (1 : Int)⦌ +ₚ cost⦋i -ₚ (1 : Int)⦌, dp⦋i⦌] : Float)
-        let __py_ret_1 := (if dp⦋n⦌ ≥ inf then -(1 : Int) else dp⦋n⦌ : Float)
-        return __py_ret_1) :
-    Float)
+  Id.run
+    (do
+      -- The canonical inf-DP ending: `return -1 if unreachable else value`. The single ternary return
+      -- mixes `int` (`-1`) with the `float` DP value, so both branches are elaborated at the mode float
+      -- (`ℚ`/`Float`) — the `-1` coerces up (int→ℚ / int→Float) instead of pinning the result to `ℤ`.
+      let mut n : Int := PastaLean.pyLen cost
+      let mut dp : List Int := PastaLean.pyListRepeat [inf] (n +ₚ (1 : Int))
+      dp := PastaLean.pySetItem dp (0 : Int) (0 : Int)
+      for i in (PastaLean.pyRange (n +ₚ (1 : Int)) (1 : Int))do
+        dp := PastaLean.pySetItem dp i (PastaLean.pyMin [dp⦋i -ₚ (1 : Int)⦌ +ₚ cost⦋i -ₚ (1 : Int)⦌, dp⦋i⦌])
+      let __py_ret_1 := if dp⦋n⦌ ≥ inf then -(1 : Int) else dp⦋n⦌
+      return __py_ret_1)
 
 def heterogeneous_pyany :=
   (let __PastaLean_comment_17 := ()

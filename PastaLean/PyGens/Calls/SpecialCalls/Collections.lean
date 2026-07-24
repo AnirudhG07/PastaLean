@@ -46,8 +46,9 @@ def lowerCollectionsCallTerm? (funcJson : Json) (argsArray : Array Json)
       let some argJson := argsArray[0]?
         | throwError "defaultdict() expects a default-factory argument, e.g. `defaultdict(list)`."
       match factoryName? argJson with
-      -- Sets are `List`-backed in the runtime, so `set` shares the empty-list default.
-      | some "list" | some "set" =>
+      -- Sets and deques are `List`-backed in the runtime, so they share the empty-list default
+      -- (`defaultdict(deque)` — each missing key starts an empty deque `[]`, e.g. `pos[a].append(b)`).
+      | some "list" | some "set" | some "deque" =>
           return some (← `($(mkIdent ``Libraries.collections.pyDefaultDictList)))
       | some "int"  => return some (← `($(mkIdent ``Libraries.collections.pyDefaultDictInt)))
       | some "dict" => return some (← `($(mkIdent ``Libraries.collections.pyDefaultDictDict)))

@@ -52,7 +52,7 @@ def best_pair'rn := fun (rods : List Int) ↦ _best_pair'dfs'rn (0 : Int) (0 : I
 def smallest := fun (xs : List Int) ↦
   Id.run
     (do
-      let mut lo := inf
+      let mut lo : Int := inf
       for x in (PastaLean.pyIter xs)do
         lo := PastaLean.pyMin [lo, x]
       return lo)
@@ -62,7 +62,7 @@ attribute [simp, taste_ingr] smallest
 def smallest'rn := fun (xs : List Int) ↦
   Id.run
     (do
-      let mut lo := inf
+      let mut lo : Int := inf
       for x in (PastaLean.pyIter xs)do
         lo := PastaLean.pyMin [lo, x]
       return lo)

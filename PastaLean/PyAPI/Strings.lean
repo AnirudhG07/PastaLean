@@ -267,6 +267,15 @@ def pyStringSplit : String → (sep : String := " ") → List String
         else
           s.splitOn sep
 
+/-- Python `str.splitlines()`: split on line boundaries (`\n`, `\r`, `\r\n`), dropping the empty
+tail a trailing newline would produce. `"a\nb\n".splitlines() == ["a", "b"]`; `"".splitlines() == []`. -/
+def pyStringSplitlines (s : String) : List String :=
+  if s.isEmpty then []
+  else
+    let s := (s.replace "\r\n" "\n").replace "\r" "\n"
+    let parts := s.splitOn "\n"
+    if s.endsWith "\n" then parts.dropLast else parts
+
 /-- Concrete string implementation for Python `splitlines()`. -/
 def pyStringSplitLines : String → List String
   | s => s.splitOn "\n"

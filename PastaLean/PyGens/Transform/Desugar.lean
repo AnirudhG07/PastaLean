@@ -122,9 +122,15 @@ cannot be hoisted without changing evaluation order. -/
 private def conditionalContexts : Array String :=
   #["BoolOp", "IfExp", "Lambda", "ListComp", "SetComp", "DictComp", "GeneratorExp"]
 
-/-- Is there a `NamedExpr` beneath a node of type `context` anywhere in `json`? -/
+/-- Is there a `NamedExpr` beneath a node of type `context` anywhere in `json`? A `BoolOp`'s FIRST
+operand is always evaluated (`a and b` / `a or b` runs `a`), so a walrus there is safe to hoist —
+only the short-circuited later operands are conditional. (`if (n := len(a)) > 0 and n < 10:`.) -/
 private partial def hasWalrusUnder (context : String) (json : Json) : Bool :=
-  if jsonNodeType? json == some context && jsonContainsNodeType json ["NamedExpr"] then true
+  if context == "BoolOp" && jsonNodeType? json == some "BoolOp" then
+    match ((json.getObjValAs? (Array Json) "values").toOption.getD #[]).toList with
+    | [] => false
+    | v0 :: rest => hasWalrusUnder context v0 || rest.any (fun v => jsonContainsNodeType v ["NamedExpr"])
+  else if jsonNodeType? json == some context && jsonContainsNodeType json ["NamedExpr"] then true
   else match json with
     | .arr elems => elems.any (hasWalrusUnder context)
     | .obj fields => fields.toList.any (fun (_, v) => hasWalrusUnder context v)
