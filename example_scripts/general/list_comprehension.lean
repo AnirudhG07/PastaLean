@@ -140,6 +140,52 @@ def lc_with_nested_conditions'rn :=
         (PastaLean.pyRange (20 : Int))).map
     fun x => x
 
+def lc_with_nested_tuple_unpacking :=
+  let triples :=
+    ([((1 : Int), ((2 : Int), (3 : Int))), ((4 : Int), ((5 : Int), (6 : Int))), ((7 : Int), ((8 : Int), (9 : Int)))] :
+      List (Int × Int × Int))
+  (PastaLean.pyIter triples).map fun _pair_1 =>
+    let a := Prod.fst _pair_1;
+    let _pair_2 := Prod.snd _pair_1;
+    let b := Prod.fst _pair_2;
+    let c := Prod.snd _pair_2;
+    a +ₚ b +ₚ c
+
+attribute [simp, taste_ingr] lc_with_nested_tuple_unpacking
+
+def lc_with_nested_tuple_unpacking'rn :=
+  let triples :=
+    ([((1 : Int), ((2 : Int), (3 : Int))), ((4 : Int), ((5 : Int), (6 : Int))), ((7 : Int), ((8 : Int), (9 : Int)))] :
+      List (Int × Int × Int))
+  (PastaLean.pyIter triples).map fun _pair_1 =>
+    let a := Prod.fst _pair_1;
+    let _pair_2 := Prod.snd _pair_1;
+    let b := Prod.fst _pair_2;
+    let c := Prod.snd _pair_2;
+    a +ₚ b +ₚ c
+
+def dc_with_nested_tuple_unpacking :=
+  let triples := ([((1 : Int), ((2 : Int), (3 : Int))), ((4 : Int), ((5 : Int), (6 : Int)))] : List (Int × Int × Int))
+  Std.HashMap.ofList
+    ((PastaLean.pyIter triples).map fun _pair_1 =>
+      let a := Prod.fst _pair_1;
+      let _pair_2 := Prod.snd _pair_1;
+      let b := Prod.fst _pair_2;
+      let c := Prod.snd _pair_2;
+      (a, b *ₚ c))
+
+attribute [simp, taste_ingr] dc_with_nested_tuple_unpacking
+
+def dc_with_nested_tuple_unpacking'rn :=
+  let triples := ([((1 : Int), ((2 : Int), (3 : Int))), ((4 : Int), ((5 : Int), (6 : Int)))] : List (Int × Int × Int))
+  Std.HashMap.ofList
+    ((PastaLean.pyIter triples).map fun _pair_1 =>
+      let a := Prod.fst _pair_1;
+      let _pair_2 := Prod.snd _pair_1;
+      let b := Prod.fst _pair_2;
+      let c := Prod.snd _pair_2;
+      (a, b *ₚ c))
+
 def lc_with_side_effects :=
   Id.run
     (do

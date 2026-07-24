@@ -56,6 +56,50 @@ def basic_types'rn :=
     let mut tup1 : String × Int := ("foo", (42 : Int))
     let mut tup2 := (g, h)
 
+def starred_unpacking := fun (lst : List Int) ↦
+  Id.run
+    (do
+      -- `*` collects the middle into a list; elements after the star read from the end, so `last` is
+      -- always `lst[-1]` regardless of length. `head, *body, last = [1,2,3,4]` → (1, [2,3], 4).
+      let __unpack_value_1 := lst
+      let __unpack_pair_1 := __unpack_value_1
+      let mut head := PastaLean.pyListGetItem __unpack_pair_1 (0 : Int)
+      let mut body := PastaLean.pyListSlice __unpack_pair_1 (some (1 : Int)) (some (-1 : Int))
+      let mut last := PastaLean.pyListGetItem __unpack_pair_1 (-1 : Int)
+      let __unpack_value_2 := lst
+      let __unpack_pair_2 := __unpack_value_2
+      let mut first := PastaLean.pyListGetItem __unpack_pair_2 (0 : Int)
+      let mut rest := PastaLean.pyListSlice __unpack_pair_2 (some (1 : Int)) (none : Option Int)
+      let __unpack_value_3 := lst
+      let __unpack_pair_3 := __unpack_value_3
+      let mut init := PastaLean.pyListSlice __unpack_pair_3 (some (0 : Int)) (some (-1 : Int))
+      let mut tail := PastaLean.pyListGetItem __unpack_pair_3 (-1 : Int)
+      let __py_ret_1 := (head, (body, (last, (rest, init))))
+      return __py_ret_1)
+
+attribute [simp, taste_ingr] starred_unpacking
+
+def starred_unpacking'rn := fun (lst : List Int) ↦
+  Id.run
+    (do
+      -- `*` collects the middle into a list; elements after the star read from the end, so `last` is
+      -- always `lst[-1]` regardless of length. `head, *body, last = [1,2,3,4]` → (1, [2,3], 4).
+      let __unpack_value_1 := lst
+      let __unpack_pair_1 := __unpack_value_1
+      let mut head := PastaLean.pyListGetItem __unpack_pair_1 (0 : Int)
+      let mut body := PastaLean.pyListSlice __unpack_pair_1 (some (1 : Int)) (some (-1 : Int))
+      let mut last := PastaLean.pyListGetItem __unpack_pair_1 (-1 : Int)
+      let __unpack_value_2 := lst
+      let __unpack_pair_2 := __unpack_value_2
+      let mut first := PastaLean.pyListGetItem __unpack_pair_2 (0 : Int)
+      let mut rest := PastaLean.pyListSlice __unpack_pair_2 (some (1 : Int)) (none : Option Int)
+      let __unpack_value_3 := lst
+      let __unpack_pair_3 := __unpack_value_3
+      let mut init := PastaLean.pyListSlice __unpack_pair_3 (some (0 : Int)) (some (-1 : Int))
+      let mut tail := PastaLean.pyListGetItem __unpack_pair_3 (-1 : Int)
+      let __py_ret_1 := (head, (body, (last, (rest, init))))
+      return __py_ret_1)
+
 def fstring :=
   let s1 := ("Hello" : String)
   let s2 := ("World" : String)
@@ -154,7 +198,7 @@ def inf_dp'rn := fun (cost : List Int) ↦
       return __py_ret_1)
 
 def heterogeneous_pyany :=
-  (let __PastaLean_comment_6 := ()
+  (let __PastaLean_comment_8 := ()
     let xs := ([(1 : Int), "hi", (3 : Int)] : List PyAny)
     let total := (0 : Int)
     let total := total +ₚ xs⦋(0 : Int)⦌ *ₚ (2 : Int)
@@ -164,7 +208,7 @@ def heterogeneous_pyany :=
 attribute [simp] heterogeneous_pyany
 
 def heterogeneous_pyany'rn :=
-  (let __PastaLean_comment_6 := ()
+  (let __PastaLean_comment_8 := ()
     let xs := ([(1 : Int), "hi", (3 : Int)] : List PyAny)
     let total := (0 : Int)
     let total := total +ₚ xs⦋(0 : Int)⦌ *ₚ (2 : Int)

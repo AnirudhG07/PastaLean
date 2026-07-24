@@ -41,9 +41,18 @@ def listCompTargetLambda (targetJson : Json) (body : TSyntax `term) :
       let targetIdent ← getCode targetJson `ident
       `(fun $targetIdent => $body)
   | some "Tuple" =>
-      let srcIdent := mkIdent (← freshName `_src)
-      let inner ← destructureCompTarget targetJson (← `($srcIdent)) body
-      `(fun $srcIdent => $inner)
+      -- Bind the lambda parameter directly as the pair and project each position (a flat tuple
+      -- unpacks with no extra `let`); nested tuple elements recurse via `destructureCompTarget`.
+      let .ok elts := targetJson.getObjValAs? (Array Json) "elts" | throwError
+        s!"Tuple comprehension target does not have an 'elts' field: {targetJson}"
+      if elts.size < 2 then
+        throwError "Tuple comprehension target must have at least two elements."
+      let n := elts.size
+      let pairIdent := mkIdent (← freshName `_pair)
+      let mut result := body
+      for i in (List.range n).reverse do
+        result ← destructureCompTarget elts[i]! (← tupleAccessTerm pairIdent i n) result
+      `(fun $pairIdent => $result)
   | _ =>
       throwError s!"Unsupported comprehension target: {targetJson}"
 
