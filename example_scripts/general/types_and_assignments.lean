@@ -129,6 +129,30 @@ def annotated_vars'rn :=
 -- Python's numeric tower: int values coerce up to float. These guard the T1 mixed int/float codegen
 -- coercions the leetcode DP corpus depends on — regressions here are otherwise only caught by rerunning
 -- the corpus.
+def numeric_tower_widening := fun (flags : List Bool) ↦ fun (a : Int) ↦ fun (b : Int) ↦
+  Id.run
+    (do
+      -- Python's numeric tower `bool < int < float < ℚ`: a `bool` widens into an int accumulator, and
+      -- bool comparison results take part in arithmetic. `sum` of bools counts them.
+      let mut total : Int := (0 : Int)
+      for f in (PastaLean.pyIter flags)do
+        total := total +ₚ f
+      let __py_ret_1 := total +ₚ decide (a > b) +ₚ (a == b) *ₚ (2 : Int)
+      return __py_ret_1)
+
+attribute [simp, taste_ingr] numeric_tower_widening
+
+def numeric_tower_widening'rn := fun (flags : List Bool) ↦ fun (a : Int) ↦ fun (b : Int) ↦
+  Id.run
+    (do
+      -- Python's numeric tower `bool < int < float < ℚ`: a `bool` widens into an int accumulator, and
+      -- bool comparison results take part in arithmetic. `sum` of bools counts them.
+      let mut total : Int := (0 : Int)
+      for f in (PastaLean.pyIter flags)do
+        total := total +ₚ f
+      let __py_ret_1 := total +ₚ decide (a > b) +ₚ (a == b) *ₚ (2 : Int)
+      return __py_ret_1)
+
 def mixed_scalar_accumulator := fun (xs : List Int) ↦
   Id.run
     (do
@@ -239,8 +263,40 @@ def grid_inf_dp'rn := fun (houses : List Int) ↦
       let __py_ret_1 := f⦋n -ₚ (1 : Int)⦌⦋n⦌
       return __py_ret_1)
 
+def dp_sentinel_return := fun (cost : List Int) ↦
+  (Id.run
+      (do
+        -- The canonical inf-DP ending: `return -1 if unreachable else value`. The single ternary return
+        -- mixes `int` (`-1`) with the `float` DP value, so both branches are elaborated at the mode float
+        -- (`ℚ`/`Float`) — the `-1` coerces up (int→ℚ / int→Float) instead of pinning the result to `ℤ`.
+        let mut n : Int := PastaLean.pyLen cost
+        let mut dp := (PastaLean.pyListRepeat [inf] (n +ₚ (1 : Int)) : List Rat)
+        dp := PastaLean.pySetItem dp (0 : Int) (0 : Rat)
+        for i in (PastaLean.pyRange (n +ₚ (1 : Int)) (1 : Int))do
+          dp := PastaLean.pySetItem dp i (PastaLean.pyMin [dp⦋i -ₚ (1 : Int)⦌ +ₚ cost⦋i -ₚ (1 : Int)⦌, dp⦋i⦌] : Rat)
+        let __py_ret_1 := (if dp⦋n⦌ ≥ inf then -(1 : Int) else dp⦋n⦌ : Rat)
+        return __py_ret_1) :
+    Rat)
+
+attribute [simp, taste_ingr] dp_sentinel_return
+
+def dp_sentinel_return'rn := fun (cost : List Int) ↦
+  (Id.run
+      (do
+        -- The canonical inf-DP ending: `return -1 if unreachable else value`. The single ternary return
+        -- mixes `int` (`-1`) with the `float` DP value, so both branches are elaborated at the mode float
+        -- (`ℚ`/`Float`) — the `-1` coerces up (int→ℚ / int→Float) instead of pinning the result to `ℤ`.
+        let mut n : Int := PastaLean.pyLen cost
+        let mut dp := (PastaLean.pyListRepeat [inf] (n +ₚ (1 : Int)) : List Float)
+        dp := PastaLean.pySetItem dp (0 : Int) (0 : Float)
+        for i in (PastaLean.pyRange (n +ₚ (1 : Int)) (1 : Int))do
+          dp := PastaLean.pySetItem dp i (PastaLean.pyMin [dp⦋i -ₚ (1 : Int)⦌ +ₚ cost⦋i -ₚ (1 : Int)⦌, dp⦋i⦌] : Float)
+        let __py_ret_1 := (if dp⦋n⦌ ≥ inf then -(1 : Int) else dp⦋n⦌ : Float)
+        return __py_ret_1) :
+    Float)
+
 def heterogeneous_pyany :=
-  (let __PastaLean_comment_12 := ()
+  (let __PastaLean_comment_17 := ()
     let xs := ([(1 : Int), "hi", (3 : Int)] : List PyAny)
     let total := (0 : Int)
     let total := total +ₚ xs⦋(0 : Int)⦌ *ₚ (2 : Int)
@@ -250,7 +306,7 @@ def heterogeneous_pyany :=
 attribute [simp] heterogeneous_pyany
 
 def heterogeneous_pyany'rn :=
-  (let __PastaLean_comment_12 := ()
+  (let __PastaLean_comment_17 := ()
     let xs := ([(1 : Int), "hi", (3 : Int)] : List PyAny)
     let total := (0 : Int)
     let total := total +ₚ xs⦋(0 : Int)⦌ *ₚ (2 : Int)

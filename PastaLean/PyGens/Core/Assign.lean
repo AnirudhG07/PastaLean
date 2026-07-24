@@ -565,6 +565,14 @@ def returnSyntax : (kind : SyntaxNodeKind) → Json →
             -- coerce individually (Lean would otherwise unify the branch types from the first return).
             let valueStx ← if (← getBoxReturnContext)
               then `(($valueStx : PastaLean.PyAny)) else pure valueStx
+            -- In a float-reconciled function (`_ret_float`), a *branching* return `return -1 if …
+            -- else v` must have BOTH branches elaborated at `ℚ`/`Float` so the `int` branch coerces
+            -- up (via `Coe Int Rat`/`Coe Int Float`) instead of the first branch pinning the temp to
+            -- `ℤ`. Only ascribe the branching forms — a plain `return a/b` of untyped operands would
+            -- become an ambiguous `a /ₚ b : ℚ`; those are handled by the whole-body ascription.
+            let valueStx ← if (← getRetFloatContext) && jsonNodeType? value == some "IfExp"
+              then let t := if (← getNumericMode) == .exact then mkIdent ``Rat else mkIdent ``Float
+                   `(($valueStx : $t)) else pure valueStx
             -- A simple atom (`return x` / `return 42`) is always narrow, so return it directly.
             -- A wide expression placed directly after `return`, however, can be split onto the
             -- next line by the pretty-printer, which re-parses as `return` (Unit) followed by a

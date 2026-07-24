@@ -45,6 +45,14 @@ initialize boxReturnRef : IO.Ref Bool ← IO.mkRef false
 /-- Read whether we're lowering inside a `PyAny`-boxed-return function body. -/
 def getBoxReturnContext : IO Bool := boxReturnRef.get
 
+/-- Set while lowering a function whose returns mix `int` and `float` (`_ret_float`): each return
+value is ascribed to the mode float (`ℚ`/`Float`) so a mixed ternary `return -1 if … else v`
+coerces the `int` branch up instead of pinning the type to `ℤ` from the first branch. -/
+initialize retFloatRef : IO.Ref Bool ← IO.mkRef false
+
+/-- Read whether we're lowering inside a float-return-reconciled function body. -/
+def getRetFloatContext : IO Bool := retFloatRef.get
+
 /-- True while lowering a *condition position* — the direct test of an `if`/`while` — where a
 comparison may be a `Prop` (`a < b`, and `a = b`/`a ≠ b` in exact mode) so it is provable, paired
 with the `if h : …` hypothesis. False everywhere else (the default): a comparison used as a *value*
@@ -166,6 +174,18 @@ def withBoxReturnContext {α : Type} (b : Bool) (x : PygenM α) : PygenM α := d
     return r
   catch e =>
     boxReturnRef.set saved
+    throw e
+
+/-- Run `x` with the float-return-reconcile flag set to `b` (restoring it afterwards). -/
+def withRetFloatContext {α : Type} (b : Bool) (x : PygenM α) : PygenM α := do
+  let saved ← retFloatRef.get
+  retFloatRef.set b
+  try
+    let r ← x
+    retFloatRef.set saved
+    return r
+  catch e =>
+    retFloatRef.set saved
     throw e
 
 /-- Run `x` with the prop-condition flag set to `b` (restoring it afterwards). `if`/`while` set it

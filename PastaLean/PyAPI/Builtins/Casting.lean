@@ -101,6 +101,14 @@ matrix into a float one). Mirror it so an `Int` value flows into a `Float` slot.
 instance : Coe Int Float := ⟨floatOfInt⟩
 instance : Coe Nat Float := ⟨Float.ofNat⟩
 
+/-- Python's numeric tower bottoms out at `bool ⊆ int` (`True == 1`), which widens on up
+(`sum([True, False, True]) == 2`, a `bool` flowing into an int/float/ℚ slot). `int → ℚ`/`float`/`ℝ`
+and `ℚ`/`int → ℝ` already come from Mathlib / the `Coe Int Float` above, completing the tower
+`bool < int < {float, ℚ} < ℝ`. -/
+instance : Coe Bool Int   := ⟨fun b => if b then 1 else 0⟩
+instance : Coe Bool Float := ⟨fun b => if b then 1.0 else 0.0⟩
+instance : Coe Bool Rat   := ⟨fun b => if b then 1 else 0⟩
+
 /--
 Typeclass for Python-style `float(...)` coercions.
 

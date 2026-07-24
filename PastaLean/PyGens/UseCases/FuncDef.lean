@@ -821,7 +821,7 @@ def funcDefSyntax : (kind : SyntaxNodeKind) → Json →
         let retFloat := (json.getObjValAs? Bool "_ret_float" == .ok true) &&
           ((← getNumericMode) != .exact || json.getObjValAs? Bool "_real_fn" != .ok true)
         let argInfos ← functionArgInfos json
-        let effectCmd? ← withBoxReturnContext boxReturn
+        let effectCmd? ← withBoxReturnContext boxReturn <| withRetFloatContext retFloat
           (functionCommandWithEffectSignature? nameIdent argInfos json isReal)
         -- Drop any `Ensures(Result() …)`/`Assert(Result() …)` markers: they are verification-only
         -- (lifted to the spec postcondition) and `Result()` has no runtime lowering, so they must not
@@ -830,7 +830,7 @@ def funcDefSyntax : (kind : SyntaxNodeKind) → Json →
         let isRecursive := bodyElems.any (jsonReferencesName · baseName)
         -- A real-valued body (transcendental, directly or via a callee) forces `noncomputable`.
         let nc := isReal || (← bodyNeedsNoncomputable bodyElems)
-        let cmd ← withBoxReturnContext boxReturn do match effectCmd? with
+        let cmd ← withBoxReturnContext boxReturn <| withRetFloatContext retFloat do match effectCmd? with
           | some cmd => pure cmd
           | none =>
               -- Params with Python defaults become `optParam` binders on the def (`def f (b := 10)`),

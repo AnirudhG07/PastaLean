@@ -40,6 +40,15 @@ def annotated_vars():
 # coercions the leetcode DP corpus depends on — regressions here are otherwise only caught by rerunning
 # the corpus.
 
+def numeric_tower_widening(flags: List[bool], a: int, b: int) -> int:
+    # Python's numeric tower `bool < int < float < ℚ`: a `bool` widens into an int accumulator, and
+    # bool comparison results take part in arithmetic. `sum` of bools counts them.
+    total = 0
+    for f in flags:
+        total += f                     # bool → int
+    return total + (a > b) + (a == b) * 2
+
+
 def mixed_scalar_accumulator(xs: List[int]) -> float:
     # int-seeded `ans` joins a float (`x / 2`) → must become float; the `0` seed coerces to `(0 : ℚ)`.
     ans = 0
@@ -80,6 +89,18 @@ def grid_inf_dp(houses: List[int]) -> int:
             for p in range(i):
                 f[i][j] = min(f[i][j], f[p][j - 1] + houses[i])
     return f[n - 1][n]
+
+
+def dp_sentinel_return(cost: List[int]) -> int:
+    # The canonical inf-DP ending: `return -1 if unreachable else value`. The single ternary return
+    # mixes `int` (`-1`) with the `float` DP value, so both branches are elaborated at the mode float
+    # (`ℚ`/`Float`) — the `-1` coerces up (int→ℚ / int→Float) instead of pinning the result to `ℤ`.
+    n = len(cost)
+    dp = [inf] * (n + 1)
+    dp[0] = 0
+    for i in range(1, n + 1):
+        dp[i] = min(dp[i - 1] + cost[i - 1], dp[i])
+    return -1 if dp[n] >= inf else dp[n]
 
 
 def heterogeneous_pyany():

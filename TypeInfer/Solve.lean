@@ -633,6 +633,19 @@ private partial def stampFloatListElems (value : Json) : Json :=
 
 mutual
 
+/-- The types of a value's *branch leaves*, descending through `IfExp`/`BoolOp` (whose result is one
+of its operands). `return -1 if v >= inf else v` yields `[int, float]`, so a single mixed ternary
+return is seen as mixing `int` and `float` — the same reconciliation a `return 0` / `return ans`
+pair gets — not just its `float` join. -/
+partial def returnBranchTypes (sigs : Sigs) (env : Env) (v : Json) : List PyType :=
+  match nodeTypeOf v with
+  | some "IfExp" =>
+      (getField v "body").elim [] (returnBranchTypes sigs env)
+        ++ (getField v "orelse").elim [] (returnBranchTypes sigs env)
+  | some "BoolOp" =>
+      ((v.getObjValAs? (Array Json) "values").toOption.getD #[]).toList.flatMap (returnBranchTypes sigs env)
+  | _ => [typeOfExpr sigs env v]
+
 /-- Infer types for `fn` (seeded by `outer` captures and `hints` for unannotated params, resolving
 calls with `sigs`), stamp its params and every binder in its body, and recurse into nested defs.
 A function whose returns disagree (`.any`) and that has no return annotation is marked `_box_return`
@@ -669,10 +682,15 @@ partial def stampFunction (sigs : Sigs) (outer hints : Env) (fn : Json) : Json :
           let mut so := false; let mut sf := false
           for st in flatStmts ((fn.getObjValAs? (Array Json) "body").toOption.getD #[]).toList do
             if nodeTypeOf st == some "Return" then
-              match (getField st "value").bind (fun v => if v.isNull then none else some (typeOfExpr sigs env v)) with
-              | some .float => sf := true
-              | some .int | some .bool | some .unknown => so := true
-              | _ => pure ()
+              match getField st "value" with
+              | some v =>
+                  unless v.isNull do
+                    for t in returnBranchTypes sigs env v do
+                      match t with
+                      | .float => sf := true
+                      | .int | .bool | .unknown => so := true
+                      | _ => pure ()
+              | none => pure ()
           return (so, sf)
         let fn := if sawOther && sawFloat then fn.setObjVal! "_ret_float" (Json.bool true) else fn
         if retType == (.any : PyType) then fn.setObjVal! "_box_return" (Json.bool true)
