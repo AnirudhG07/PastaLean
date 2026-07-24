@@ -139,6 +139,21 @@ We lift to a **sibling `private partial def`**, not `where`/`let rec`: `let rec`
 
 </details>
 
+<details><summary>Function Scoping vs Block Scoping</summary>
+
+Python is **function-scoped**: a name assigned *anywhere* in a function body — inside `if`/`elif`/`else`, `for`, `while`, `try`/`except`/`finally`, `with`, and **any depth of nested loop** — lives in the one enclosing function scope and stays visible after the block. Lean is **block-scoped**: a `let`/`let mut` inside a branch or loop body dies with that block. So a variable first bound inside a block and read outside it is **hoisted**: codegen pre-declares one enclosing `let mut x : T := default` before the block, and each branch/body assignment becomes a reassignment of that single variable.
+
+```python
+for i in range(n):
+    for j in range(n):
+        y = i * j     # first bound in the innermost loop...
+return y               # ...still visible here (hoisted to `let mut y : Int := default` before the OUTER loop)
+```
+
+The type `T` comes from `TypeInfer`; a variable bound at *different* types across branches becomes `PyAny` (initialised to `emptyPyAny`, i.e. `None`), so the branches box into one slot. The only constructs that get **their own** scope — matching Python 3 — are `def`, `lambda`, and comprehensions/generators; everything else shares the function scope. (`TypeInfer` mirrors this: a comprehension's target is scoped to the comprehension and never leaks to conflate a same-named outer variable.)
+
+</details>
+
 <details><summary>None and Optional</summary>
 
 Python's `None` and `Optional[T]` map to Lean's `Option`. Tree/linked-list fields default to `None`, so `TreeNode.left : Option TreeNode`; a field access then unwraps:

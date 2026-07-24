@@ -463,6 +463,31 @@ def loopWithElseDoElem (breakFlag? : Option Name) (coreElems : Array (TSyntax `d
           $noop:doElem)
       pure ⟨mkNullNode (#[initFlag.raw] ++ coreElems.map TSyntax.raw ++ #[elseCheck.raw])⟩
 
+/-- Pre-declare `let mut x : T := default` for each name a block leaks out (listed under `namesKey`,
+typed via `typesKey`) that is not already bound in the enclosing scope. Python is function-scoped;
+Lean blocks are not, so a name first bound inside an `if`/`try`/`for`/`while` and used outside it must
+be hoisted. Each is registered as a mut var so a later branch/body assignment REASSIGNS it (boxing a
+`PyAny`) rather than shadowing. For nested loops the outer block's list already carries an inner-bound
+name (the annotate pass collects recursively), so hoisting there lands it at the right outer scope. -/
+def hoistEscapingDecls (json : Json) (namesKey typesKey : String) :
+    PygenM (Array (TSyntax `doElem)) := do
+  let names := (json.getObjValAs? (Array String) namesKey).toOption.getD #[]
+  let mut decls : Array (TSyntax `doElem) := #[]
+  for nm in names do
+    let nmName := nm.toName
+    unless (← hasVar nmName) do
+      let nmIdent := mkIdent nmName
+      let tyStx? ← match (jsonFieldOption json typesKey).bind (·.getObjVal? nm |>.toOption) with
+        | some ann => stampedTypeSyntax? (Json.mkObj [("_ty", ann)])
+        | none => pure none
+      let decl ← match tyStx? with
+        | some tyStx => `(doElem| let mut $nmIdent:ident : $tyStx := default)
+        | none => `(doElem| let mut $nmIdent:ident := default)
+      decls := decls.push decl
+      addVar nmName
+      setMutVar nmName
+  return decls
+
 @[pygen "While"]
 def whileSyntax : (kind : SyntaxNodeKind) → Json →
     PygenM (TSyntax kind)
@@ -478,6 +503,9 @@ def whileSyntax : (kind : SyntaxNodeKind) → Json →
         -- not via `break`. Tracked with a flag set inside `break` (scoped via `withBreakFlag`).
         let breakFlag? ← if orelseElems.isEmpty then pure none
           else pure (some (← freshName `__py_broke))
+        -- Hoist body-bound names that escape the loop (used after it) BEFORE lowering the body, so the
+        -- body's assignments become reassignments of one enclosing `let mut`, matching Python scoping.
+        let hoistDecls ← hoistEscapingDecls json "while_assigned_names" "while_assigned_types"
         -- Scope the body's variable declarations to the loop (see the `for` case): names
         -- first bound in the body do not leak to the enclosing scope.
         let bodyStxArray ← withFixedVariables do withBreakFlag breakFlag? do
@@ -489,7 +517,11 @@ def whileSyntax : (kind : SyntaxNodeKind) → Json →
         -- Parenthesize the test so its last token never glues to the `do` keyword.
         let whileLoop ← `(doElem| while ($testStx) do
             $[$bodyStxArray:doElem]*)
-        loopWithElseDoElem breakFlag? #[whileLoop] orelseElems
+        let loopStx ← loopWithElseDoElem breakFlag? #[whileLoop] orelseElems
+        if hoistDecls.isEmpty then pure loopStx
+        -- `loopStx` is itself a null-node (from `loopWithElseDoElem`); splice its children flat rather
+        -- than nesting another null-node, which would leave an inner `null` the consumer can't flatten.
+        else pure ⟨mkNullNode (hoistDecls.map TSyntax.raw ++ loopStx.raw.getArgs)⟩
     | `command, json => do
         -- A top-level `while` that mutates module globals is a state transformer.
         -- It lowers like `if`/`match`: `Id.run do let mut n := n₀; while ...; return (n...)`.
@@ -518,10 +550,12 @@ def forSyntax : (kind : SyntaxNodeKind) → Json →
         -- with a `let mut` flag set inside `break` (scoped to this loop via `withBreakFlag`).
         let breakFlag? ← if orelseElems.isEmpty then pure none
           else pure (some (← freshName `__py_broke))
-        -- Scope the loop's target and body variable declarations to the loop: names first
-        -- bound inside the body must not leak into the enclosing scope, so a later
-        -- `x = ...` after the loop is emitted as a fresh `let mut` rather than a reassignment
-        -- of a variable whose `let mut` was confined to the loop body (Python rebinds anyway).
+        -- Hoist body-bound names that escape the loop (used after it) to one enclosing `let mut`,
+        -- matching Python's function scoping (Lean's loop body is its own scope). For nested loops the
+        -- OUTER loop's list already carries an inner-bound name, so it lands at the outermost scope.
+        let hoistDecls ← hoistEscapingDecls json "for_assigned_names" "for_assigned_types"
+        -- Scope the loop's target and remaining body declarations to the loop: names used only inside
+        -- the body keep their per-iteration scope (only escaping names were hoisted above).
         let (targetIdent, bodyStxArray) ← withFixedVariables do withBreakFlag breakFlag? do
           let (targetIdent, preludeElems) ← forTargetBinder targetJson bodyElems
           let mut bodyStxArray := preludeElems
@@ -552,7 +586,11 @@ def forSyntax : (kind : SyntaxNodeKind) → Json →
             let forLoop ← `(doElem| for $targetIdent:ident in ($iterCode) do
                 $[$bodyStxArray:doElem]*)
             pure #[forLoop]
-        loopWithElseDoElem breakFlag? coreElems orelseElems
+        let loopStx ← loopWithElseDoElem breakFlag? coreElems orelseElems
+        if hoistDecls.isEmpty then pure loopStx
+        -- `loopStx` is itself a null-node (from `loopWithElseDoElem`); splice its children flat rather
+        -- than nesting another null-node, which would leave an inner `null` the consumer can't flatten.
+        else pure ⟨mkNullNode (hoistDecls.map TSyntax.raw ++ loopStx.raw.getArgs)⟩
     | `command, json => do
         match blockMutatedNames? json with
         | some names =>
@@ -576,21 +614,11 @@ def ifSyntax : (kind : SyntaxNodeKind) → Json →
         -- Lower the test in condition position so a direct comparison may be a provable `Prop`
         -- (paired with the `if h : …` hypothesis below); `and`/`or`/`not` reset this to `Bool`.
         let testStx ← truthyConditionTerm testJson (← withPropCondition true (getCode testJson `term))
-        -- Hoist names that are first bound inside a branch but escape the `if` (read after it).
-        -- Each branch lowers to its own `do` block, so a `let mut` there is invisible to the
-        -- other branch and to following statements. Pre-declaring `let mut name := default`
-        -- before the `if` (and registering it) turns both branch assignments into reassignments
-        -- of one enclosing-scope variable, matching Python's cross-branch binding. Only names
-        -- the pre-pass found to escape are listed; branch-local names keep their per-branch scope.
-        let assignedNames :=
-          (json.getObjValAs? (Array String) "if_assigned_names").toOption.getD #[]
-        let mut hoistDecls : Array (TSyntax `doElem) := #[]
-        for nm in assignedNames do
-          let nmName := nm.toName
-          unless (← hasVar nmName) do
-            let nmIdent := mkIdent nmName
-            hoistDecls := hoistDecls.push (← `(doElem| let mut $nmIdent:ident := default))
-            addVar nmName
+        -- Hoist names first bound inside a branch but escaping the `if` (read after it, or in the
+        -- other branch). Each branch lowers to its own `do` block, so a `let mut` there is invisible
+        -- outside it; pre-declaring one enclosing `let mut name : T := default` turns the branch
+        -- assignments into reassignments, matching Python's cross-branch binding.
+        let hoistDecls ← hoistEscapingDecls json "if_assigned_names" "if_assigned_types"
         -- Bind the branch condition as a hypothesis (`if h : cond then …`), so proofs about the
         -- generated code have the test available: `h` in the then-branch, `¬h` in the else.
         -- Reserve the name *before* lowering the branch bodies: `freshName` registers it, so a

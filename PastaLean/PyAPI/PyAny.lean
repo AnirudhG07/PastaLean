@@ -31,7 +31,17 @@ inductive PyAny where
   | float (q : Rat)
   | list  (xs : List PyAny)
   | none
-  deriving Inhabited, Repr
+  deriving Repr
+
+/-- The canonical empty/default boxed value. Used to initialize a hoisted `let mut` binding for a
+variable Python assigns only inside a block (`if`/`try`) — Lean has no such leak-out, so codegen
+pre-declares the variable before the block. `none` (Python `None`) is the honest empty; it does not
+faithfully model `UnboundLocalError`, which the linter flags separately. -/
+def emptyPyAny : PyAny := .none
+
+/-- Default a `PyAny` to `emptyPyAny` (Python `None`), not `int 0` (the derived first-constructor
+default), so a hoisted dynamic binding reads as "unset" rather than a spurious zero. -/
+instance : Inhabited PyAny := ⟨emptyPyAny⟩
 
 namespace PyAny
 

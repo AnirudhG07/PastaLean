@@ -530,12 +530,14 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
         | .ok "Name", .ok "int" => do
             unless keyWordsMap.isEmpty do
               throwError "int() keyword arguments are not supported yet."
-            unless argsArray.size == 1 do
-              throwError "int() expects exactly one positional argument."
-            let pyIntIdent := mkIdent ``pyInt
+            unless argsArray.size == 1 || argsArray.size == 2 do
+              throwError "int() expects one or two positional arguments."
             return ← buildIOPureApplicationFromArgs argsArray argsCodes fun resolvedArgs => do
-              let arg0 := resolvedArgs[0]!
-              `($pyIntIdent $arg0)
+              -- `int(s, base)` parses a string in the given radix; `int(x)` is the plain cast.
+              if resolvedArgs.size == 2 then
+                `($(mkIdent ``pyIntBase) $(resolvedArgs[0]!) $(resolvedArgs[1]!))
+              else
+                `($(mkIdent ``pyInt) $(resolvedArgs[0]!))
         | .ok "Name", .ok "str" => do
             unless keyWordsMap.isEmpty do
               throwError "str() keyword arguments are not supported yet."
@@ -911,12 +913,13 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
         | .ok "Name", .ok "int" => do
             unless keyWordsMap.isEmpty do
               throwError "int() keyword arguments are not supported yet."
-            unless argsArray.size == 1 do
-              throwError "int() expects exactly one positional argument."
-            let pyIntIdent := mkIdent ``pyInt
+            unless argsArray.size == 1 || argsArray.size == 2 do
+              throwError "int() expects one or two positional arguments."
             let t ← buildIOPureApplicationFromArgs argsArray argsCodes fun resolvedArgs => do
-              let arg0 := resolvedArgs[0]!
-              `($pyIntIdent $arg0)
+              if resolvedArgs.size == 2 then
+                `($(mkIdent ``pyIntBase) $(resolvedArgs[0]!) $(resolvedArgs[1]!))
+              else
+                `($(mkIdent ``pyInt) $(resolvedArgs[0]!))
             if argsArray.toList.any basicJsonUsesMonadicEffect then
               return ← `(doElem| let _ ← $t:term)
             else

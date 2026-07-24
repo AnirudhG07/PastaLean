@@ -130,3 +130,59 @@ attribute [simp, taste_ingr] value_or_default
 def value_or_default'rn := fun xs ↦
   -- `a or b` in a VALUE position returns the deciding operand, not a Bool: `xs or [0]` is the list.
   PastaLean.pyMax (if PastaLean.pyTruthy xs then xs else [(0 : Int)])
+
+def hoist_conflicting_branches := fun (c : Int) ↦
+  Id.run
+    (do
+      -- A name Python assigns at DIFFERENT types across branches leaks out of the `if` (Python has no
+      -- block scope; Lean does). It is hoisted to `let mut v : PyAny := emptyPyAny` before the `if`, and
+      -- each branch REASSIGNS (boxing): `v = 5` / `v = "hi"` all mutate one PyAny variable.
+      let mut v : PyAny := default
+      if h_1 : c > (0 : Int) then 
+        v := (5 : Int)
+      else
+        v := "hi"
+      let __py_ret_1 := PastaLean.pyStr v
+      return __py_ret_1)
+
+attribute [simp, taste_ingr] hoist_conflicting_branches
+
+def hoist_conflicting_branches'rn := fun (c : Int) ↦
+  Id.run
+    (do
+      -- A name Python assigns at DIFFERENT types across branches leaks out of the `if` (Python has no
+      -- block scope; Lean does). It is hoisted to `let mut v : PyAny := emptyPyAny` before the `if`, and
+      -- each branch REASSIGNS (boxing): `v = 5` / `v = "hi"` all mutate one PyAny variable.
+      let mut v : PyAny := default
+      if h_1 : c > (0 : Int) then 
+        v := (5 : Int)
+      else
+        v := "hi"
+      let __py_ret_1 := PastaLean.pyStr v
+      return __py_ret_1)
+
+def hoist_partial_branch := fun (c : Int) ↦
+  Id.run
+    (do
+      -- `total` is first bound inside a branch and read after the `if`; hoisted with its inferred type
+      -- (`let mut total : Int := default`) so the post-`if` read sees a single variable.
+      let mut total : Int := default
+      if h_1 : c > (0 : Int) then 
+        total := c *ₚ (2 : Int)
+      else
+        total := -(1 : Int)
+      return total)
+
+attribute [simp, taste_ingr] hoist_partial_branch
+
+def hoist_partial_branch'rn := fun (c : Int) ↦
+  Id.run
+    (do
+      -- `total` is first bound inside a branch and read after the `if`; hoisted with its inferred type
+      -- (`let mut total : Int := default`) so the post-`if` read sees a single variable.
+      let mut total : Int := default
+      if h_1 : c > (0 : Int) then 
+        total := c *ₚ (2 : Int)
+      else
+        total := -(1 : Int)
+      return total)

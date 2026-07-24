@@ -45,6 +45,34 @@ instance : PyIntCast String where
 instance : PyIntCast Float where
   pyInt x := if x ≥ 0 then (x.toUInt64.toNat : Int) else -((-x).toUInt64.toNat : Int)
 
+/-- Python `int(s, base)`: parse the string `s` as an integer in `base` (2–36), with an optional
+sign and the usual `0x`/`0b`/`0o` prefix for base 16/2/8. Malformed input yields `0`. -/
+def pyIntBase (s : String) (base : Int) : Int := Id.run do
+  let b := base.toNat
+  if b < 2 then return 0
+  let mut chars := s.trim.toList
+  let mut neg := false
+  match chars with
+  | '-' :: rest => neg := true; chars := rest
+  | '+' :: rest => chars := rest
+  | _ => pure ()
+  match b, chars with
+  | 16, '0' :: c :: rest => if c == 'x' || c == 'X' then chars := rest
+  | 2,  '0' :: c :: rest => if c == 'b' || c == 'B' then chars := rest
+  | 8,  '0' :: c :: rest => if c == 'o' || c == 'O' then chars := rest
+  | _, _ => pure ()
+  if chars.isEmpty then return 0
+  let digit? (c : Char) : Option Nat :=
+    if c.isDigit then some (c.toNat - '0'.toNat)
+    else if c.isAlpha then some (c.toLower.toNat - 'a'.toNat + 10)
+    else none
+  let mut acc : Nat := 0
+  for c in chars do
+    match digit? c with
+    | some d => if d < b then acc := acc * b + d else return 0
+    | none => return 0
+  return if neg then -(acc : Int) else (acc : Int)
+
 /--
 Python-style `str(...)` coercion.
 

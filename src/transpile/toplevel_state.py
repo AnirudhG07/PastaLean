@@ -127,7 +127,7 @@ def _annotate_ifs_in_block(stmts):
         if not isinstance(stmt, dict):
             continue
         node_type = stmt.get("node_type")
-        if node_type in ("If", "Try"):
+        if node_type in ("If", "Try", "For", "While"):
             assigned = _block_mutated_names(stmt.get("body", []))
             assigned |= _block_mutated_names(stmt.get("orelse", []))
             if node_type == "Try":
@@ -138,9 +138,12 @@ def _annotate_ifs_in_block(stmts):
             later = set()
             for later_stmt in stmts[i + 1:]:
                 later |= _names_referenced(later_stmt)
-            # A name assigned across `try`/`except`/`finally` (or `if`/`else`) that escapes the
-            # block must be hoisted to one enclosing `let mut`, matching Python's binding.
-            key = "if_assigned_names" if node_type == "If" else "try_assigned_names"
+            # A name first bound inside any block — `if`/`try`, or a `for`/`while` body at any nesting
+            # depth — that escapes it must be hoisted to one enclosing `let mut`, matching Python's
+            # function scoping. `_block_mutated_names` recurses, so an OUTER loop already collects a name
+            # bound in an INNER loop, hoisting it to the right (outermost) scope.
+            key = {"If": "if_assigned_names", "Try": "try_assigned_names",
+                   "For": "for_assigned_names", "While": "while_assigned_names"}[node_type]
             stmt[key] = sorted(assigned & later)
         for key in ("body", "orelse", "finalbody"):
             _annotate_ifs_in_block(stmt.get(key, []))

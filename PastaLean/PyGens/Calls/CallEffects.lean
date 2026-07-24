@@ -134,11 +134,13 @@ partial def inlineIOTerm (json : Json) : PygenM (TSyntax `term) := do
       | .ok "Name", .ok "int" => do
           unless keyWordsMap.isEmpty do
             throwError "int() keyword arguments are not supported yet."
-          unless argsArray.size == 1 do
-            throwError "int() expects exactly one positional argument."
-          let pyIntIdent := mkIdent ``pyInt
+          unless argsArray.size == 1 || argsArray.size == 2 do
+            throwError "int() expects one or two positional arguments."
           let arg0 ← inlineIOTerm argsArray[0]!
-          `($pyIntIdent $arg0)
+          if argsArray.size == 2 then
+            `($(mkIdent ``pyIntBase) $arg0 $(← inlineIOTerm argsArray[1]!))
+          else
+            `($(mkIdent ``pyInt) $arg0)
       | _, _ =>
           let mut inlineArgs : Array (TSyntax `term) := #[]
           for argJson in argsArray do
@@ -322,8 +324,8 @@ partial def hoistIOTerm (json : Json) : PygenM (Array (TSyntax `doElem) × TSynt
       | .ok "Name", .ok "int" => do
           unless keyWordsMap.isEmpty do
             throwError "int() keyword arguments are not supported yet."
-          unless argsArray.size == 1 do
-            throwError "int() expects exactly one positional argument."
+          unless argsArray.size == 1 || argsArray.size == 2 do
+            throwError "int() expects one or two positional arguments."
           let mut bindings : Array (TSyntax `doElem) := #[]
           let mut resolvedArgs : Array (TSyntax `term) := #[]
           for argJson in argsArray do
@@ -333,9 +335,10 @@ partial def hoistIOTerm (json : Json) : PygenM (Array (TSyntax `doElem) × TSynt
               resolvedArgs := resolvedArgs.push argTerm
             else
               resolvedArgs := resolvedArgs.push (← getCode argJson `term)
-          let pyIntIdent := mkIdent ``pyInt
-          let arg0 := resolvedArgs[0]!
-          return (bindings, ← `($pyIntIdent $arg0))
+          if resolvedArgs.size == 2 then
+            return (bindings, ← `($(mkIdent ``pyIntBase) $(resolvedArgs[0]!) $(resolvedArgs[1]!)))
+          else
+            return (bindings, ← `($(mkIdent ``pyInt) $(resolvedArgs[0]!)))
       | .ok "Name", .ok "print" => do
           -- In `prove` (exact) mode `print` is a no-op (the prove version is for theorems, not
           -- output), but we keep the full rendered line — `pyPrintNoop` takes the same args as

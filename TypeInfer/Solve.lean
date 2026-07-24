@@ -637,6 +637,22 @@ partial def stampUnpackShape (target : Json) (ty : PyType) : Json :=
     | _ => target
   else target
 
+/-- Stamp `<typesKey>`: for each name a block leaks out (listed under `namesKey`, e.g.
+`if_assigned_names`) that we can type, its annotation — so codegen ascribes the hoisted
+`let mut x : T := default`. A genuinely dynamic var (`.any`) yields `PyAny`; an `unknown` one is
+omitted (`toAnnotation?` → none), leaving codegen's untyped `let mut x := default` for Lean to infer. -/
+private partial def stampHoistTypes (env : Env) (namesKey typesKey : String) (s : Json) : Json :=
+  match s.getObjValAs? (Array String) namesKey with
+  | .ok names =>
+      -- Only ascribe where it is safe (`needsAscription`): a `.float` binder must stay unascribed, or
+      -- a `ℚ` ascription fights a real-context `ℝ` branch value; `.any` DOES need it (→ `PyAny`).
+      let entries := names.toList.filterMap (fun nm =>
+        match env.get? nm with
+        | some t => if t.needsAscription then (toAnnotation? t).map (fun ann => (nm, ann)) else none
+        | none => none)
+      if entries.isEmpty then s else s.setObjVal! typesKey (Json.mkObj entries)
+  | _ => s
+
 /-- Stamp one statement: its target, its nested blocks, and any nested def. -/
 partial def stampStmt (sigs : Sigs) (env : Env) (roots : Array Json) (s : Json) : Json :=
   if nodeTypeOf s == some "FunctionDef" then
@@ -704,6 +720,13 @@ partial def stampStmt (sigs : Sigs) (env : Env) (roots : Array Json) (s : Json) 
           if nodeTypeOf target == some "Tuple" then
             s := s.setObjVal! "target" (stampUnpackShape target (typeOfExpr sigs env value))
       | _, _ => pure ()
+    -- A name a branch/try leaks out (Python has no block scope; Lean does) is hoisted by codegen to
+    -- `let mut x : T := default` before the block. Stamp its type T so the hoist is ascribed — PyAny
+    -- for a genuinely dynamic var, so `default` resolves (to `emptyPyAny`); unknown types are omitted.
+    s := stampHoistTypes env "if_assigned_names" "if_assigned_types" s
+    s := stampHoistTypes env "try_assigned_names" "try_assigned_types" s
+    s := stampHoistTypes env "for_assigned_names" "for_assigned_types" s
+    s := stampHoistTypes env "while_assigned_names" "while_assigned_types" s
     for f in #["body", "orelse", "finalbody"] do
       if let .ok elems := s.getObjValAs? (Array Json) f then
         s := s.setObjVal! f (Json.arr (elems.map (stampStmt sigs env roots)))
