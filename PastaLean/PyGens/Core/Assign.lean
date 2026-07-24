@@ -179,6 +179,27 @@ partial def attrRecordUpdateDoElem (recvJson : Json) (attr : String) (rhs : TSyn
       let .ok innerAttr := recvJson.getObjValAs? String "attr" | throwError s!"Attribute missing 'attr': {recvJson}"
       attrRecordUpdateDoElem inner innerAttr updated
         (recvJson.getObjValAs? Bool "_unwrap_opt" == .ok true)
+  | some "Subscript" =>
+      -- `arr[i].f = v` / `self.tr[u].l = v`: rebuild the element `{arr[i] with f := v}` and store it
+      -- back into `arr[i]` via `pySetItem`, then reassign the container (a `Name`, or an `Attribute`
+      -- like `self.tr` via the same record-update recursion).
+      let .ok containerJson := recvJson.getObjVal? "value" | throwError s!"Subscript missing 'value': {recvJson}"
+      let .ok sliceJson := recvJson.getObjVal? "slice" | throwError s!"Subscript missing 'slice': {recvJson}"
+      if jsonNodeType? sliceJson == some "Slice" then
+        throwError "attribute assignment on a sliced element is not supported."
+      let containerCode ← getCode containerJson `term
+      let indexTerm ← getCode sliceJson `term
+      let newContainer ← `($(mkIdent ``PastaLean.pySetItem) $containerCode $indexTerm $updated)
+      match jsonNodeType? containerJson with
+      | some "Name" =>
+          let containerIdent ← getCode containerJson `ident
+          `(doElem| $containerIdent:ident := $newContainer)
+      | some "Attribute" =>
+          let .ok inner := containerJson.getObjVal? "value" | throwError s!"Attribute missing 'value': {containerJson}"
+          let .ok innerAttr := containerJson.getObjValAs? String "attr" | throwError s!"Attribute missing 'attr': {containerJson}"
+          attrRecordUpdateDoElem inner innerAttr newContainer
+            (containerJson.getObjValAs? Bool "_unwrap_opt" == .ok true)
+      | _ => throwError "attribute assignment `arr[i].f = v` needs a variable or attribute base container."
   | _ => throwError "attribute assignment `x.f = v` needs a variable or attribute receiver."
 
 /-- Lower a possibly-nested subscript assignment `a[i]…[k] = value` to a reassignment of the

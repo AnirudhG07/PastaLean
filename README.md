@@ -203,6 +203,19 @@ Every function is emitted twice: a **provable** version (exact `ℚ` for floats,
 
 </details>
 
+<details><summary>Numeric coercion — bottom-up, never top-down</summary>
+
+Python's numeric tower is `bool <: int <: float`: a value coerces *up* only at the operator that mixes it with a wider type, driven by the **operands**, never by the surrounding context. `3 + 0.5` is `float` because `0.5` is; `3` on its own stays `int`. So `TypeInfer` promotes an int only where it actually meets a float (`int ⊔ float = float`), and a variable becomes `float` only if it is genuinely *assigned* a float — a `-> float` return annotation (context) never forces it. This mirrors Lean: an `Int` stays `Int` and is cast to `ℚ`/`Float` at the mixed operation, not smeared everywhere.
+
+```python
+def avg(a: int, b: int):
+    return (a + b) / 2   # `/` is float division -> ℚ (prove) / Float (run); a and b stay Int
+```
+
+`/` is *always* float division; `//` is floor division; `%` and `**` follow Python's mixed-numeric rules.
+
+</details>
+
 <details><summary>`PyAny` can't be proved - `pyany_cases` tactic</summary>
 
 `PyAny` makes us *total* (everything runs), but it is **not** a commutative ring, so `ring`/`nlinarith`/`taste?` die on it — a boxed function can't be proved. That's why boxing is a *last resort*: infer a concrete type wherever possible, box only the residue, and in prove mode a linter warns at every `PyAny` binder ("annotate the type to prove"). Provability is the whole point of the project, so we protect it.

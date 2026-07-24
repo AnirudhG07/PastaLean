@@ -238,31 +238,67 @@ private def paramSeed (fn : Json) : Env := Id.run do
       | none => pure ()
   return env
 
-/-- What `name`'s usage in one expression tells us — but only from **unambiguous** signals: a method
-call whose name pins the receiver's type (`p.split()` → str, `p.append(x)` → list, `p.keys()` →
-dict). Ambiguous uses (`p[i]`, `for x in p`, `len(p)` — any of list/str/dict) are deliberately left
-`unknown` so a string parameter is never mis-typed as a list. -/
+/-- The type a **type-exclusive** method pins its receiver to, or `unknown`. Only methods that belong
+to exactly ONE builtin type are listed — Python semantics, exhaustively. Shared methods are omitted
+on purpose (`pop` is list AND dict; `remove` is list AND set; `index`/`count` are list/str/tuple;
+`update` is dict AND set) so a receiver is never mis-typed. -/
+private def methodReceiverType? (attr : String) : PyType :=
+  -- str-only: no list/dict/set/tuple has these.
+  if ["split", "rsplit", "splitlines", "upper", "lower", "title", "capitalize", "casefold",
+      "swapcase", "strip", "lstrip", "rstrip", "replace", "startswith", "endswith", "find", "rfind",
+      "join", "format", "format_map", "ljust", "rjust", "center", "zfill", "encode", "expandtabs",
+      "partition", "rpartition", "removeprefix", "removesuffix", "translate", "maketrans",
+      "isdigit", "isalpha", "isalnum", "isspace", "isupper", "islower", "istitle", "isnumeric",
+      "isdecimal", "isidentifier", "isprintable", "isascii"].contains attr then .str
+  -- list-only: str/dict/set lack these (`pop`/`remove`/`index`/`count` are shared → excluded).
+  else if ["append", "extend", "insert", "sort", "reverse"].contains attr then .list .unknown
+  -- dict-only: `keys`/`values`/`items`/`get`/`setdefault`/`popitem`/`fromkeys` (`update`/`pop` shared).
+  else if ["keys", "values", "items", "get", "setdefault", "popitem", "fromkeys"].contains attr
+    then .dict .unknown .unknown
+  -- set-only: `add`/`discard`/`issubset`/… (`remove`/`update`/`union`&co are shared or on frozenset).
+  else if ["add", "discard", "issubset", "issuperset", "isdisjoint", "symmetric_difference",
+           "symmetric_difference_update", "difference_update", "intersection_update"].contains attr
+    then .set .unknown
+  else .unknown
+
+/-- What `name`'s usage in one expression unambiguously tells us — enumerated exhaustively over the
+Python signals that pin exactly one type: a type-exclusive method on it (`p.split()` → str), an
+int-only operator over it (`p << 1`, `p >> 1`, `~p` — bitwise `& | ^` are int OR set, so NOT here),
+or a type-fixing builtin arg (`ord(p)` → str, `chr(p)` → int). Genuinely ambiguous uses (`p[i]`,
+`for x in p`, `len(p)`, `p + q`) stay `unknown` — the fixpoint fills them in. -/
 private partial def usageType (name : String) (json : Json) : PyType :=
+  let isName (j : Option Json) : Bool := j.bind nameId? == some name
   let here : PyType :=
     match nodeTypeOf json with
     | some "Call" =>
         match getField json "func" with
+        -- `p.method(...)`: a type-exclusive method pins `p`.
         | some func =>
-            if nodeTypeOf func != some "Attribute" then .unknown else
-            match (getField func "value").bind nameId? with
-            | some n =>
-                if n != name then .unknown else
-                match (func.getObjValAs? String "attr").toOption with
-                | some attr =>
-                    if ["split", "rsplit", "splitlines", "upper", "lower", "strip", "lstrip",
-                        "rstrip", "replace", "startswith", "endswith"].contains attr then .str
-                    else if ["append", "pop", "sort", "reverse", "insert", "extend"].contains attr then .list .unknown
-                    else if ["keys", "values", "items", "setdefault"].contains attr then .dict .unknown .unknown
-                    else if ["add", "discard"].contains attr then .set .unknown
-                    else .unknown
-                | none => .unknown
-            | none => .unknown
+            if nodeTypeOf func == some "Attribute" then
+              if isName (getField func "value") then
+                (func.getObjValAs? String "attr").toOption.elim .unknown methodReceiverType?
+              else .unknown
+            -- `ord(p)` → p is a one-char str; `chr(p)` → p is an int.
+            else match nameId? func with
+              | some fn =>
+                  let args := (json.getObjValAs? (Array Json) "args").toOption.getD #[]
+                  if args.any (fun a => nameId? a == some name) then
+                    if fn == "ord" then .str else if fn == "chr" then .int else .unknown
+                  else .unknown
+              | none => .unknown
         | none => .unknown
+    -- Shift is int-only in Python (`p << 1`); `& | ^` also work on sets, so they pin nothing.
+    | some "BinOp" =>
+        match (json.getObjValAs? String "op").toOption with
+        | some op =>
+            if ["lshift", "rshift"].contains op
+               && (isName (getField json "left") || isName (getField json "right")) then .int
+            else .unknown
+        | none => .unknown
+    -- `~p` (bitwise NOT) is int-only.
+    | some "UnaryOp" =>
+        if (json.getObjValAs? String "op").toOption == some "invert" && isName (getField json "operand")
+        then .int else .unknown
     | _ => .unknown
   let sub := match json with
     | .arr xs => PyType.joinAll (xs.toList.map (usageType name))

@@ -297,7 +297,12 @@ def hoistMutatingCalls (stmts : Array Json) : DesugarM (Array Json) := do
   let mut out := #[]
   for stmt in stmts do
     let mut stmt := stmt
-    if let some field := hoistableField stmt then
+    -- Hoist from the primary field, and also from an assignment TARGET — the mutation may sit in the
+    -- target's subscript index (`vis[stk.pop()] = False`), not only in the RHS.
+    let isAssign := #["Assign", "AugAssign"].contains (jsonNodeType? stmt |>.getD "")
+    let fields := (match hoistableField stmt with | some f => #[f] | none => #[])
+      ++ (if isAssign then #["target"] else #[])
+    for field in fields do
       if let .ok expr := stmt.getObjVal? field then
         let nestedOnly := !isValueMutateCall expr
         let guarded := conditionalContexts.any (fun c =>
