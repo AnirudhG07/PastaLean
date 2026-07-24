@@ -530,6 +530,8 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
         | .ok "Name", .ok "int" => do
             unless keyWordsMap.isEmpty do
               throwError "int() keyword arguments are not supported yet."
+            -- `int()` with no argument is Python's `0`.
+            if argsArray.isEmpty then return ← `((0 : Int))
             unless argsArray.size == 1 || argsArray.size == 2 do
               throwError "int() expects one or two positional arguments."
             return ← buildIOPureApplicationFromArgs argsArray argsCodes fun resolvedArgs => do

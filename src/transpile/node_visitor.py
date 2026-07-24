@@ -624,11 +624,13 @@ class ASTToJsonLeanVisitorBase:
         entries = []
         for key, value in zip(node.keys, node.values):
             if key is None:
-                raise NotImplementedError("Dictionary unpacking is not supported.")
-            entries.append({
-                "key": self.visit(key),
-                "value": self.visit(value),
-            })
+                # `{**d}` spread: `value` is the dict being merged in (no key).
+                entries.append({"spread": self.visit(value)})
+            else:
+                entries.append({
+                    "key": self.visit(key),
+                    "value": self.visit(value),
+                })
         return {
             "node_type": "Dict",
             "entries": entries

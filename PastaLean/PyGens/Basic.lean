@@ -282,20 +282,34 @@ def starredSyntax : (kind : SyntaxNodeKind) → Json →
 def dictSyntax : (kind : SyntaxNodeKind) → Json →
     PygenM (TSyntax kind)
   | `term, json => do
-    let .ok entriesJson := json.getObjValAs? Json "entries" | throwError
-      s!"Dict node does not have an 'entries' field or it is not a JSON value: {json}"
-    let entryCodes ← match entriesJson with
-      | .arr arr => arr.mapM fun entryJson => do
+    let .ok entries := json.getObjValAs? (Array Json) "entries" | throwError
+      s!"Dict node does not have an 'entries' field or it is not a JSON array: {json}"
+    let ofListIdent := mkIdent ``Std.HashMap.ofList
+    -- `{**d1, 'k': v, **d2}`: each entry contributes a `List (κ × ν)` chunk — a singleton for a
+    -- `key: value` pair, the merged dict's `.toList` for a `**spread`. Concatenating in source
+    -- order and feeding `ofList` gives Python's "later wins" (ofList keeps the last dup key).
+    if entries.any (·.getObjVal? "spread" |>.toOption.isSome) then
+      let chunks ← entries.mapM fun entryJson => do
+        match entryJson.getObjVal? "spread" with
+        | .ok spreadJson => `($(mkIdent ``Std.HashMap.toList) $(← getCode spreadJson `term))
+        | _ =>
           let .ok keyJson := entryJson.getObjValAs? Json "key" | throwError
             s!"Dict entry is missing a 'key' field: {entryJson}"
           let .ok valueJson := entryJson.getObjValAs? Json "value" | throwError
             s!"Dict entry is missing a 'value' field: {entryJson}"
-          let keyCode ← getCode keyJson `term
-          let valueCode ← getCode valueJson `term
-          `(($keyCode, $valueCode))
-      | _ => throwError s!"Dict node 'entries' field is not an array: {entriesJson}"
-    let ofListIdent := mkIdent ``Std.HashMap.ofList
-    `($ofListIdent [$entryCodes,*])
+          `([($(← getCode keyJson `term), $(← getCode valueJson `term))])
+      let mut joined := chunks[0]!
+      for chunk in chunks.toList.drop 1 do
+        joined ← `($joined ++ $chunk)
+      `($ofListIdent $joined)
+    else
+      let entryCodes ← entries.mapM fun entryJson => do
+        let .ok keyJson := entryJson.getObjValAs? Json "key" | throwError
+          s!"Dict entry is missing a 'key' field: {entryJson}"
+        let .ok valueJson := entryJson.getObjValAs? Json "value" | throwError
+          s!"Dict entry is missing a 'value' field: {entryJson}"
+        `(($(← getCode keyJson `term), $(← getCode valueJson `term)))
+      `($ofListIdent [$entryCodes,*])
   | _, _ => throwError s!"Unsupported syntax category for Dict node"
 
 
