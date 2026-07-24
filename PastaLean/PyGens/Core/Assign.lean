@@ -249,6 +249,11 @@ partial def tupleElementAssignDoElem (isTuple : Bool) (elt : Json) (acc : TSynta
   | none =>
     match jsonNodeType? elt with
     | some "Name" => bindOrAssignLocal (← getCode elt `ident) acc
+    | some "Attribute" =>
+      -- `a.val, b.val = b.val, a.val` (a value swap on tree nodes): rebuild each receiver record.
+      let .ok recv := elt.getObjVal? "value" | throwError s!"Attribute target missing 'value': {elt}"
+      let .ok attr := elt.getObjValAs? String "attr" | throwError s!"Attribute target missing 'attr': {elt}"
+      attrRecordUpdateDoElem recv attr acc (elt.getObjValAs? Bool "_unwrap_opt" == .ok true)
     | some "Tuple" | some "List" =>
       let subElts := (elt.getObjValAs? (Array Json) "elts").toOption.getD #[]
       let tmp := mkIdent (← freshName `__unpack_nested)
@@ -257,8 +262,8 @@ partial def tupleElementAssignDoElem (isTuple : Bool) (elt : Json) (acc : TSynta
         binds := binds.push (← tupleElementAssignDoElem isTuple subElts[i]! (← unpackAccessTerm isTuple tmp i subElts.size))
       pure ⟨mkNullNode (binds.map TSyntax.raw)⟩
     | _ =>
-      throwError s!"Unsupported tuple-assignment target element (only `Name`, nested tuple, and \
-        subscript `a[i]` targets are supported): {elt}"
+      throwError s!"Unsupported tuple-assignment target element (only `Name`, attribute `a.f`, \
+        nested tuple, and subscript `a[i]` targets are supported): {elt}"
 
 /-- Index of a `Starred` element in a tuple target (`a, *b = …`), if any. -/
 def starredTargetIndex? (elts : Array Json) : Option Nat :=

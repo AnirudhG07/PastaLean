@@ -54,6 +54,15 @@ def pythonMethodMap? (attr : String) : Option Lean.Name :=
   | "extend"     => some ``pyExtend
   | "reverse"    => some ``pyReverse
   | "copy"       => some ``pyCopy
+  -- Set Only (pure, non-mutating — return a new set / Bool; the `&`/`|`/`-`/`^` operators lower
+  -- to the same runtime functions).
+  | "union"                => some ``pySetUnion
+  | "intersection"         => some ``pySetIntersection
+  | "difference"           => some ``pySetDifference
+  | "symmetric_difference" => some ``pySetSymmetricDifference
+  | "issubset"             => some ``pySetSubset
+  | "issuperset"           => some ``pySetSuperset
+  | "isdisjoint"           => some ``pySetIsDisjoint
   -- Dict Only
   | "items"      => some ``pyItems
   | "keys"       => some ``pyKeys

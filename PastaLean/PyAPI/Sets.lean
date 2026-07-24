@@ -69,6 +69,12 @@ def pySetSubset {α : Type} [BEq α] (a b : List α) : Bool := a.all (fun x => b
 def pySetProperSubset {α : Type} [BEq α] (a b : List α) : Bool :=
   pySetSubset a b && !pySetEq a b
 
+/-- Python `a.issuperset(b)`: every element of `b` is in `a`. -/
+def pySetSuperset {α : Type} [BEq α] (a b : List α) : Bool := pySetSubset b a
+
+/-- Python `a.isdisjoint(b)`: `a` and `b` share no element. -/
+def pySetIsDisjoint {α : Type} [BEq α] (a b : List α) : Bool := a.all (fun x => !b.contains x)
+
 /-! The binary set operators reuse the same surface names as the integer bitwise operators
 (`&`, `|`, `^`) and Python subtraction (`-`), so a set expression `a & b` lowers identically to
 codegen and the list-backed instance is selected by type. -/
