@@ -9,6 +9,17 @@ functions, exceptions.
 This file is a map so you don't have to re-derive the architecture. Read it first, then open
 only the files you actually need.
 
+## Working rules (read first)
+
+- **NEVER `git commit` (or push) until the user explicitly tells you to in that moment.** Permission
+  is per-commit and does NOT carry forward — a "commit" earlier in the session does not authorise the
+  next one. Make and stage changes freely; leave committing to the user's explicit say-so.
+- **Run the full regression gate (`lake exe palc`) only when finishing a feature/amendment, or when
+  fixing a regression it would catch — not routinely.** During a batch, verify with a single targeted
+  `pastalean translate <the file you're fixing>`, not PALC.
+- **Batch builds.** `lake build` is slow (Mathlib); group related edits, build once, test once.
+- **Comments: minimal and precise** (see Code writing tips below).
+
 ---
 
 ## The pipeline (Python text → Lean text)
