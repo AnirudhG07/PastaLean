@@ -505,6 +505,21 @@ class ASTToJsonLeanVisitorBase:
             "value": self.visit(node.value)
         }
 
+    def visit_Yield(self, node):
+        """Translates `yield e` (a generator produce). The Lean generator-lowering pass turns each
+        yield in a generator body into an append onto the materialised result list."""
+        return {
+            "node_type": "Yield",
+            "value": self.visit(node.value) if node.value is not None else None,
+        }
+
+    def visit_YieldFrom(self, node):
+        """Translates `yield from it` (delegate to a sub-iterable) — lowered to a list extend."""
+        return {
+            "node_type": "YieldFrom",
+            "value": self.visit(node.value),
+        }
+
     def visit_Pass(self, node):
         """Translates ast.Pass to a JSON IR no-op node."""
         return {

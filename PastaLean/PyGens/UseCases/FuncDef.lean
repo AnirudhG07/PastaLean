@@ -11,6 +11,7 @@ import PastaLean.PyVerify.AssertTactic
 import PastaLean.PyVerify.Contracts
 import PastaLean.PyGens.Transform.ClosureConvert
 import PastaLean.PyGens.Transform.Desugar
+import PastaLean.PyGens.Transform.GeneratorLower
 import PastaLean.PyGens.Transform.Decorators
 
 open Lean Meta Elab Term Qq Std

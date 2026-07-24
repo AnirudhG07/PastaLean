@@ -54,6 +54,12 @@ def runTranslateTask (jsonTask : Json) (ctx : Core.Context) (env : Environment) 
   -- The whole-module `inferTypes` pass (run by the driver) marks each statement `_inferred`; only fall
   -- back to the context-free per-statement stamp when it did not run (a bare term, or on failure).
   let alreadyInferred := (json.getObjVal? "_inferred").toOption.isSome
+  -- Generators (`yield`) materialise to a list-building function before anything else, so the
+  -- synthesised `append`/`extend`/`return` flow through desugaring and codegen; see
+  -- `PyGens/Transform/GeneratorLower.lean`.
+  let json ← match PastaLean.lowerGenerators json with
+    | .ok lowered => pure lowered
+    | .error message => return errorResponse s!"Error generating code: {message}"
   -- Syntactic desugaring (nested `for` targets, walrus) runs before codegen; see
   -- `PyGens/Transform/Desugar.lean`.
   let json ← match PastaLean.desugarAst json with
@@ -104,7 +110,12 @@ stamped AST for the driver to send back one node at a time. -/
 def runInferTypesTask (jsonTask : Json) : IO Json := do
   let .ok ast := jsonTask.getObjVal? "ast"
     | return errorResponse "inferTypes: missing 'ast' field"
-  pure <| Json.mkObj [("result", Json.bool true), ("ast", TypeInfer.inferModule ast)]
+  -- Materialise generators (`yield`) to list-builders BEFORE inferring, so the synthesised
+  -- accumulator `__gen'acc` is typed by TypeInfer (a bare `let mut __gen'acc := []` added
+  -- post-inference has an unpinned element type that defaults wrong under recursion.
+  match PastaLean.lowerGenerators ast with
+  | .error message => pure <| errorResponse message
+  | .ok ast => pure <| Json.mkObj [("result", Json.bool true), ("ast", TypeInfer.inferModule ast)]
 
 def handleTaskJson (jsonTask : Json) (ctx : Core.Context) (env : Environment) : IO Json := do
   let .ok task := jsonTask.getObjValAs? String "task"

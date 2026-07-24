@@ -151,6 +151,21 @@ We use a sibling `private partial def` (not `where`/`let rec`, which would force
 
 </details>
 
+<details><summary>Generators & <code>yield</code></summary>
+
+A **generator** is a function that `yield`s a lazy stream of values. We **materialise it to a `List`**: the body is rewritten to build and return a list, so every consumer (`for x in g()`, `list(g())`, `sum(g())`, comprehensions) just sees an ordinary `List` handled by the existing `PyIterable` protocol — no new consumer machinery.
+
+```python
+def squares(n):
+    for i in range(n):
+        yield i * i          #  ->  __gen'acc.append(i * i)
+list(squares(4))             # [0, 1, 4, 9]
+```
+
+Per generator, `yield e` → `acc.append(e)`, `yield from it` → `acc.extend(it)`, and `return` → `return acc` (in a generator, `return` just *stops*); the body is wrapped with `acc = []` … `return acc`. The `append`/`for`/`while` value-semantics threading is reused as-is. It lives in `PyGens/Transform/GeneratorLower.lean` and runs *before* type inference, so the accumulator gets a real element type — which is what makes **recursive** generators (`yield from inorder(node.left)`, backtracking `subsets`/`permutations`) and generator **pipelines** (`for x in doubled(evens(data))`) work. (Materialisation is eager, so an *infinite* generator consumed lazily won't terminate.)
+
+</details>
+
 <details><summary>None and Optional</summary>
 
 Python's `None` and `Optional[T]` map to Lean's `Option`. Tree/linked-list fields default to `None`, so `TreeNode.left : Option TreeNode`; a field access then unwraps:
