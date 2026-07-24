@@ -8,6 +8,30 @@ open Lean Meta Elab Term Qq Std
 
 namespace PastaLean
 
+/-- Destructure `source` according to a comprehension target, wrapping `body` in the resulting
+`let` bindings. Recurses through nested tuples (`for a, (b, c) in …`): each tuple level binds its
+value to a fresh pair name so projections aren't recomputed, then unpacks each position. -/
+partial def destructureCompTarget (targetJson : Json) (source : TSyntax `term) (body : TSyntax `term) :
+    PygenM (TSyntax `term) := do
+  match jsonNodeType? targetJson with
+  | some "Name" =>
+      let ident ← getCode targetJson `ident
+      `(let $ident := $source; $body)
+  | some "Tuple" =>
+      let .ok elts := targetJson.getObjValAs? (Array Json) "elts" | throwError
+        s!"Tuple comprehension target does not have an 'elts' field: {targetJson}"
+      if elts.size < 2 then
+        throwError "Tuple comprehension target must have at least two elements."
+      let n := elts.size
+      let pairIdent := mkIdent (← freshName `_pair)
+      let mut result := body
+      for i in (List.range n).reverse do
+        let acc ← tupleAccessTerm pairIdent i n
+        result ← destructureCompTarget elts[i]! acc result
+      `(let $pairIdent := $source; $result)
+  | _ =>
+      throwError s!"Unsupported comprehension target: {targetJson}"
+
 /-- Build a lambda binder for a comprehension target. Tuple unpacking is lowered with
 intermediate pair bindings so later clauses can use the unpacked names. -/
 def listCompTargetLambda (targetJson : Json) (body : TSyntax `term) :
@@ -17,22 +41,9 @@ def listCompTargetLambda (targetJson : Json) (body : TSyntax `term) :
       let targetIdent ← getCode targetJson `ident
       `(fun $targetIdent => $body)
   | some "Tuple" =>
-      let .ok elts := targetJson.getObjValAs? (Array Json) "elts" | throwError
-        s!"Tuple comprehension target does not have an 'elts' field: {targetJson}"
-      if elts.size < 2 then
-        throwError "Tuple comprehension target must have at least two elements."
-      let mut idents := #[]
-      for elt in elts do
-        unless jsonNodeType? elt == some "Name" do
-          throwError "Only Name targets are supported in tuple comprehension unpacking."
-        idents := idents.push (← getCode elt `ident)
-      let n := idents.size
-      let pairIdent := mkIdent (← freshName `_pair)
-      let mut result := body
-      for i in (List.range n).reverse do
-        let acc ← tupleAccessTerm pairIdent i n
-        result ← `(let $(idents[i]!) := $acc; $result)
-      `(fun $pairIdent => $result)
+      let srcIdent := mkIdent (← freshName `_src)
+      let inner ← destructureCompTarget targetJson (← `($srcIdent)) body
+      `(fun $srcIdent => $inner)
   | _ =>
       throwError s!"Unsupported comprehension target: {targetJson}"
 

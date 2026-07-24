@@ -260,6 +260,37 @@ partial def tupleElementAssignDoElem (isTuple : Bool) (elt : Json) (acc : TSynta
       throwError s!"Unsupported tuple-assignment target element (only `Name`, nested tuple, and \
         subscript `a[i]` targets are supported): {elt}"
 
+/-- Index of a `Starred` element in a tuple target (`a, *b = …`), if any. -/
+def starredTargetIndex? (elts : Array Json) : Option Nat :=
+  (List.range elts.size).find? (fun i => jsonNodeType? elts[i]! == some "Starred")
+
+/-- Lower a starred tuple-assignment `a, *b, c = src` over a list `src`. The starred element (at
+`k`) collects the middle slice `src[k : -(after)]`; elements before it index from the front, and
+elements after it index from the end (negative indices), so `c` always reads the last element
+regardless of how many `src` holds. `src` must be list-accessed (a `*` target collects a list). -/
+def starredUnpackDoElems (elts : Array Json) (k : Nat) (srcIdent : TSyntax `ident) :
+    PygenM (Array (TSyntax `doElem)) := do
+  let n := elts.size
+  let after := n - 1 - k
+  let getItem := mkIdent ``PastaLean.pyListGetItem
+  let mut binds : Array (TSyntax `doElem) := #[]
+  for i in List.range n do
+    let elt := elts[i]!
+    let bind ←
+      if i < k then
+        tupleElementAssignDoElem false elt (← `($getItem $srcIdent $(← intToStx (Int.ofNat i))))
+      else if i == k then
+        let .ok inner := elt.getObjVal? "value" | throwError
+          s!"Starred assignment target is missing a 'value' field: {elt}"
+        let startStx ← `(some $(← intToStx (Int.ofNat k)))
+        let stopStx ← if after == 0 then `((none : Option Int))
+                      else `(some $(← intToStx (-(Int.ofNat after))))
+        tupleElementAssignDoElem false inner (← `($(mkIdent ``PastaLean.pyListSlice) $srcIdent $startStx $stopStx))
+      else
+        tupleElementAssignDoElem false elt (← `($getItem $srcIdent $(← intToStx (-(Int.ofNat (n - i))))))
+    binds := binds.push bind
+  pure binds
+
 /-- Lower an optional slice bound expression to a `some _`/`none` `Option Int` term. -/
 def sliceBoundOptTerm (boundJson? : Option Json) : PygenM (TSyntax `term) := do
   match boundJson? with
@@ -374,6 +405,11 @@ def assignSyntax : (kind : SyntaxNodeKind) → Json →
               else
                 `(doElem| let $valueTmpIdent:ident := $valueStx)
             let bindUnpackTmp ← `(doElem| let $unpackTmpIdent:ident := $valueTmpIdent)
+            -- `a, *b, c = src`: the `*` target collects a list slice, so `src` is list-accessed
+            -- (never a `Prod`), and elements after the star index from the end.
+            if let some k := starredTargetIndex? elts then
+              let starBinds ← starredUnpackDoElems elts k unpackTmpIdent
+              return ⟨mkNullNode ((#[bindValueTmp, bindUnpackTmp] ++ starBinds).map TSyntax.raw)⟩
             -- A literal `Tuple` RHS builds a `Prod` (use `Prod.fst`/`Prod.snd`); so does a
             -- function call returning a `tuple[...]` (the Python pre-pass only leaves such
             -- tuple-returning calls as native unpacking — list-returning RHSs are pre-split

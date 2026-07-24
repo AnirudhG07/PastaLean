@@ -15,6 +15,15 @@ def basic_types():
     tup1 = ("foo", 42)
     tup2 = (g, h)
 
+def starred_unpacking(lst: List[int]):
+    # `*` collects the middle into a list; elements after the star read from the end, so `last` is
+    # always `lst[-1]` regardless of length. `head, *body, last = [1,2,3,4]` → (1, [2,3], 4).
+    head, *body, last = lst
+    first, *rest = lst
+    *init, tail = lst
+    return head, body, last, rest, init
+
+
 def fstring():
     s1 = "Hello"
     s2 = "World"
