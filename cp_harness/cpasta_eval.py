@@ -359,39 +359,94 @@ def py_lit_to_lean(v):
     return None
 
 
-def build_test_harness(converted_lean, fn_name, cases):
-    """Append a `main` that runs the computable `fn'rn` twin over the cases, printing `PASSED p/t` and
-    a `FAIL <idx>: got <value>` line per failing case. Cases with an unrenderable argument or expected
-    value are skipped. Returns (source, runnable_indices).
+def _lean_type_of(values):
+    """Infer ONE Lean type covering all concrete Python `values` at a given argument position, or
+    None if they are unrenderable/mixed (dict, object, list-mixed-with-scalar). Empty lists default
+    their element type to `Int`. Used to give the runtime JSON decoder a target type per field."""
+    seen, elems = set(), []
+    for v in values:
+        if isinstance(v, bool):
+            seen.add("bool")
+        elif isinstance(v, int):
+            seen.add("int")
+        elif isinstance(v, float):
+            seen.add("float")
+        elif isinstance(v, str):
+            seen.add("str")
+        elif isinstance(v, (list, tuple)):
+            seen.add("list"); elems.extend(v)
+        else:
+            return None
+    if "list" in seen:
+        if seen != {"list"}:
+            return None
+        inner = _lean_type_of(elems)
+        return None if inner is None else f"(List {inner})"
+    if "str" in seen:
+        return None if seen != {"str"} else "String"
+    if "float" in seen:
+        return "Float"
+    if seen == {"bool"}:
+        return "Bool"
+    return "Int"  # int (or int+bool, which coerces), or no information at all
 
-    The cases are emitted as ONE runtime data list iterated by a loop — not unrolled into one
-    statement per case — so the `fn'rn` application is elaborated once instead of N times. On a
-    100-case problem this turns ~35 s of typechecking into ~5 s (the elaboration cost was per
-    unrolled statement, not the execution), which is what was blowing the harness timeout."""
+
+def build_test_harness(converted_lean, fn_name, cases, data_path):
+    """Append a `main` that runs the computable `fn'rn` twin over the cases, printing `PASSED p/t`
+    and a `FAIL <idx>: got <value>` line per failing case. Cases with an unrenderable argument or
+    expected value are skipped. Returns (source, runnable_indices, data_json).
+
+    The cases are NOT compiled into the binary — that made a big-dataset problem embed a multi-MB
+    Lean literal, whose elaboration/C-codegen took 30 GB / hours and wedged the single native build.
+    Instead the data is written (by the caller) to `data_path` as JSON and READ AT RUNTIME: the
+    binary carries only the solution, a small per-field `Lean.fromJson?` decoder, and the check
+    loop. The decoder's target types are inferred from the concrete case values."""
     rn = f"{fn_name}'rn"
-    tuples, runnable, arity = [], [], 0
+    # Renderable cases (same skip rule as before: any None/dict/object value drops the case).
+    renderable = []
     for idx, (args, expected) in enumerate(cases):
-        arg_lits = [py_lit_to_lean(a) for a in args]
-        exp_lit = py_lit_to_lean(expected)
-        if exp_lit is None or any(a is None for a in arg_lits):
+        if py_lit_to_lean(expected) is None or any(py_lit_to_lean(a) is None for a in args):
             continue
-        # Each case carries its ORIGINAL index so a `FAIL <idx>` still maps back to `cases[idx]`.
-        elems = [f"({idx} : Nat)"] + [f"({a})" for a in arg_lits] + [f"({exp_lit})"]
-        tuples.append("(" + ", ".join(elems) + ")")
-        runnable.append(idx)
-        arity = len(arg_lits)
-    if not tuples:
+        renderable.append((idx, list(args), expected))
+    arity = len(renderable[0][1]) if renderable else 0
+    kept = [r for r in renderable if len(r[1]) == arity]
+    arg_types = [_lean_type_of([r[1][i] for r in kept]) for i in range(arity)]
+    exp_type = _lean_type_of([r[2] for r in kept])
+
+    if not kept or exp_type is None or any(t is None for t in arg_types):
         body = "\n".join([converted_lean.rstrip(), "",
                           'def main : IO Unit := IO.println "PASSED 0/0"', ""])
-        return body, runnable
-    arg_names = [f"a{i}" for i in range(arity)]
-    pat = "(" + ", ".join(["idx"] + arg_names + ["e"]) + ")"
-    call = rn + (" " + " ".join(arg_names) if arg_names else "")
+        return body, [], "[]"
+
+    runnable = [idx for (idx, _a, _e) in kept]
+    data_json = json.dumps([[idx] + args + [expected] for (idx, args, expected) in kept])
+
+    names = ["idx"] + [f"a{i}" for i in range(arity)] + ["e"]
+    field_types = ["Nat"] + arg_types + [exp_type]
+    disc = ", ".join(f"Lean.fromJson? (α := {t}) (f.getD {k} .null)"
+                     for k, t in enumerate(field_types))
+    ok_pat = ", ".join(f".ok {n}" for n in names)
+    wild = ", ".join("_" for _ in field_types)
+    tuple_ty = " × ".join(field_types)
+    pat = "(" + ", ".join(names) + ")"
+    call = rn + ((" " + " ".join(f"a{i}" for i in range(arity))) if arity else "")
+    path_lit = str(data_path).replace("\\", "\\\\").replace('"', '\\"')
     body = "\n".join([
+        "import Lean.Data.Json",
         converted_lean.rstrip(), "",
-        "def _cases := [\n    " + ",\n    ".join(tuples) + "\n  ]", "",
+        f"private def _decodeCase' (j : Lean.Json) : Option ({tuple_ty}) :=",
+        "  match j.getArr? with",
+        "  | .error _ => none",
+        "  | .ok f =>",
+        f"    match {disc} with",
+        f"    | {ok_pat} => some ({', '.join(names)})",
+        f"    | {wild} => none", "",
         "def main : IO Unit := do",
         "  let _out ← IO.getStdout",
+        f'  let _raw ← IO.FS.readFile "{path_lit}"',
+        "  let _cases := match Lean.Json.parse _raw with",
+        "    | .ok j => ((j.getArr?).toOption.getD #[]).toList.filterMap _decodeCase'",
+        "    | .error _ => []",
         "  let mut _p := 0",
         "  let mut _t := 0",
         f"  for {pat} in _cases do",
@@ -403,7 +458,7 @@ def build_test_harness(converted_lean, fn_name, cases):
         # (how many passed / attempted before it hung) instead of a bare 0/N.
         '    _out.putStr s!"PROG {_t} {_p}\\n"; _out.flush',
         '  IO.println s!"PASSED {_p}/{_t}"', ""])
-    return body, runnable
+    return body, runnable, data_json
 
 
 def load_callable(fn_src, method):
@@ -1144,11 +1199,13 @@ class CPastaEval:
             if status_path.read_text().strip() != "ok":
                 continue
             name = status_path.stem
-            harness, runnable = build_test_harness(
-                (lean_dir / f"{name}.lean").read_text(), method, cases)
+            harness_path = self.tmp_dir / f"{prob_dir.name}_{name}_harness.lean"
+            data_path = harness_path.with_suffix(".data.json").resolve()
+            harness, runnable, data_json = build_test_harness(
+                (lean_dir / f"{name}.lean").read_text(), method, cases, str(data_path))
+            data_path.write_text(data_json)
             n = len(runnable)
             print(f"[*] {prob_dir.name}/{name} (function) over {n} renderable test(s)...", flush=True)
-            harness_path = self.tmp_dir / f"{prob_dir.name}_{name}_harness.lean"
             res, got_by_idx, err = self.run_lean_harness(harness, harness_path, warm)
             lean_pass, lean_total = res if res else (0, n)
 
@@ -1292,10 +1349,11 @@ class CPastaEval:
         rest = "\n".join(l for l in lines if not l.startswith("import "))
         rest = rest.replace("def main : IO Unit", "def run : IO Unit", 1)
         ns = f"CpHarness.H{hid}"
-        # The embedded `_cases` list literal is one `List.cons` deep per test case, so a
-        # many-case problem would exceed the default `maxRecDepth` (512) and be miscounted as a
-        # solution compile_fail. Raise both guards (finite, so a pathological compile still ends).
-        opts = "set_option maxRecDepth 10000\nset_option maxHeartbeats 4000000\n"
+        # The dataset is read from a JSON sidecar at runtime, not compiled in, so the module elaborates
+        # cheaply regardless of case count/size. `maxHeartbeats` is a per-file backstop: a runaway
+        # elaboration (heavy solution) trips it in bounded time and just loses its `.olean` (excluded
+        # from `ok_ids`) instead of wedging the single build. `maxRecDepth` covers deep decoders.
+        opts = "set_option maxRecDepth 10000\nset_option maxHeartbeats 800000\n"
         return "\n".join(imports) + f"\n{opts}namespace {ns}\n" + rest + f"\nend {ns}\n"
 
     def _lake_build(self, target):
@@ -1349,8 +1407,10 @@ class CPastaEval:
                     continue
                 name = status_path.stem
                 code = (prob_dir / "lean" / f"{name}.lean").read_text()
-                harness, _ = build_test_harness(code, method, cases)
                 hid = len(entries)
+                data_path = (ns_dir / f"H{hid}.data.json").resolve()
+                harness, _, data_json = build_test_harness(code, method, cases, str(data_path))
+                data_path.write_text(data_json)
                 (ns_dir / f"H{hid}.lean").write_text(self._native_module(harness, hid))
                 entries.append(dict(id=hid, prob_dir=prob_dir, name=name, method=method, cases=cases))
 
