@@ -515,6 +515,15 @@ partial def markTuples (env : Env) (json : Json) : Json :=
             | some (.tuple es) =>
                 json.setObjVal! "value"
                   (v.setObjVal! "_PastaLean_tuple_arity" (Json.num (JsonNumber.mk (Int.ofNat es.length) 0)))
+            | some (.dict _ _) =>
+                -- `d[i, j]` on a dict is a single tuple-KEY access (`d[(i, j)]`), NOT numpy-style
+                -- multi-index (`d[i][j]`). Mark the slice so codegen forms the tuple key.
+                match getField json "slice" with
+                | some s =>
+                    if nodeTypeOf s == some "Tuple" then
+                      json.setObjVal! "slice" (s.setObjVal! "_dict_tuple_key" (Json.bool true))
+                    else json
+                | none => json
             | _ => json
         | none => json
       else json

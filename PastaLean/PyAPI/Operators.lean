@@ -446,6 +446,12 @@ instance : PyBitAnd Int Int Int where bitAnd := pyTwosComp Nat.land
 instance : PyBitOr Int Int Int where bitOr := pyTwosComp Nat.lor
 instance : PyBitXor Int Int Int where bitXor := pyTwosComp Nat.xor
 
+/-- On two `bool`s Python's `&`/`|`/`^` are the boolean connectives (returning `bool`), e.g.
+`flag |= cond`, `parity ^= bit`. Mixed `bool`/`int` goes through the `Int` instances (bool coerces). -/
+instance : PyBitAnd Bool Bool Bool where bitAnd a b := a && b
+instance : PyBitOr Bool Bool Bool where bitOr a b := a || b
+instance : PyBitXor Bool Bool Bool where bitXor a b := xor a b
+
 class PyShiftLeft (α β : Type) (γ : outParam Type) where shiftLeft : α → β → γ
 class PyShiftRight (α β : Type) (γ : outParam Type) where shiftRight : α → β → γ
 /-- Python `a << b`. -/

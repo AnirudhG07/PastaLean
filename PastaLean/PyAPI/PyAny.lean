@@ -7,6 +7,8 @@ import PastaLean.PyAPI.CommonProtocols.Iterable
 import PastaLean.PyAPI.CommonProtocols.IsNone
 import PastaLean.PyAPI.Operators
 import PastaLean.PyAPI.Builtins.Casting
+import PastaLean.PyAPI.Builtins.Math
+import PastaLean.PyAPI.Strings
 
 /-!
 # `PyAny` — the dynamic-value fallback
@@ -266,6 +268,22 @@ instance : PyGetItem PyAny Int PyAny where
     | .str s => .str (pyStringGetItemStr s i)
     | _ => .none
 
+/-- A *typed* list indexed by a *boxed* index (`xs[k]` where `k` is dynamic, e.g. a loop variable
+that stayed `PyAny`) — unbox an integer index and delegate to the list instance. -/
+instance {α : Type} [Inhabited α] : PyGetItem (List α) PyAny α where
+  getItem xs i := match i with | .int n => pyListGetItem xs n | _ => default
+
+/-- A boxed value indexed by a *boxed* index (`x[k]` where `k` is also dynamic) — unbox an integer
+index and delegate; any other index yields `None`. -/
+instance : PyGetItem PyAny PyAny PyAny where
+  getItem v i :=
+    match i with
+    | .int n => match v with
+        | .list xs => pyListGetItem xs n
+        | .str s => .str (pyStringGetItemStr s n)
+        | _ => .none
+    | _ => .none
+
 instance : PySetItem PyAny Int PyAny where
   setItem v i x :=
     match v with
@@ -295,5 +313,32 @@ instance : PyTruthy PyAny where
     | .float q => q != 0
     | .none => false
     | .list xs => !xs.isEmpty
+
+/-- Total ordering for `sorted`/`min`/`max`/`Ord`-keyed containers over boxed values. Reuses the
+numeric/string/list comparison in `PyAny.cmp`; incomparable tags compare equal (a stable no-op). -/
+instance : Ord PyAny := ⟨fun a b => (a.cmp b).getD .eq⟩
+
+/-- Python `abs` on a boxed number; non-numbers pass through. -/
+instance : PyAbs PyAny where
+  pyAbs
+    | .int n => .int (if n < 0 then -n else n)
+    | .float q => .float (if q < 0 then -q else q)
+    | v => v
+
+/-- Hash a boxed value by tag + payload, so a `PyAny` can key a dict / enter a set. -/
+partial def PyAny.pyHash : PyAny → UInt64
+  | .int n => mixHash 3 (hash n)
+  | .bool b => mixHash 5 (hash b)
+  | .str s => mixHash 7 (hash s)
+  | .float q => mixHash 11 (mixHash (hash q.num) (hash q.den))
+  | .none => 13
+  | .list xs => xs.foldl (fun h x => mixHash h x.pyHash) 17
+instance : Hashable PyAny := ⟨PyAny.pyHash⟩
+
+/-- `sep.join(xs)` where each boxed item stringifies (Python str-joins any iterable of str-likes). -/
+instance : PyStringJoin PyAny where toJoinString := PyAny.toStr false
+
+/-- `float('inf')`/`float('nan')` in a boxed slot becomes a boxed float. -/
+instance : PyNonFinite PyAny where nonFinite s := .float (PyNonFinite.nonFinite s)
 
 end PastaLean

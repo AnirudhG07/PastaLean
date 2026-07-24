@@ -19,6 +19,22 @@ def intToStx (n : Int) : MetaM <| TSyntax `term := do
     let nStx := Syntax.mkNumLit (toString (n))
     `(($nStx : $intIdent))
 
+/-- If a subscript slice is a dict tuple-key access (`d[i, j]` meaning `d[(i, j)]`, marked
+`_dict_tuple_key` by TypeInfer when the container is a dict), build the `(i, j, …)` tuple key term;
+otherwise `none` (a numpy-style multi-index or a plain index). -/
+def dictTupleKeyTerm? (sliceJson : Json) : PygenM (Option (TSyntax `term)) := do
+  if sliceJson.getObjValAs? Bool "_dict_tuple_key" == .ok true then
+    match sliceJson.getObjValAs? (Array Json) "elts" with
+    | .ok elts =>
+        if elts.isEmpty then return none
+        let keyTerms ← elts.mapM (fun e => getCode e `term)
+        let mut key := keyTerms[keyTerms.size - 1]!
+        for t in keyTerms.toList.dropLast.reverse do
+          key ← `(($t, $key))
+        return some key
+    | _ => return none
+  else return none
+
 def numToStx (mantissa : Int) (exponent : Nat) : MetaM <| TSyntax `term := do
   match exponent with
     | 0 => intToStx mantissa

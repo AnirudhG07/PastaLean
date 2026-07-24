@@ -216,7 +216,8 @@ partial def nestedSubscriptSetDoElem? (target : Json) (value : TSyntax `term) :
   let .ok sliceJson := target.getObjValAs? Json "slice" | throwError
     s!"Subscript assignment target is missing a 'slice' field: {target}"
   if jsonNodeType? sliceJson == some "Slice" then return none
-  let indexTerm ← getCode sliceJson `term
+  -- `d[i, j] = v` on a dict is a single tuple-KEY write (`d[(i, j)] = v`); otherwise the plain index.
+  let indexTerm ← (return (← dictTupleKeyTerm? sliceJson).getD (← getCode sliceJson `term))
   let setItemIdent := mkIdent ``PastaLean.pySetItem
   let containerCode ← getCode containerJson `term
   let newContainer ← `($setItemIdent $containerCode $indexTerm $value)

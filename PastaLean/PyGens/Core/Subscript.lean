@@ -80,10 +80,14 @@ def subscriptTermFromValue (valueJson sliceJson : Json) (valueCode : TSyntax `te
         let sliced ← if isTuple && !isString then `(PastaLean.pyIter $valueCode) else pure valueCode
         `($sliceIdent $sliced $startStx $stopStx $stepStx)
     else if sliceType == .ok "Tuple" then
-        -- numpy-style 2-D indexing on a `List (List _)`: `a[i,j]`, `a[:,j]` (column), `a[i,:]` (row).
         match sliceJson.getObjValAs? (Array Json) "elts" with
         | .ok elts =>
-            if elts.size == 2 then
+            if let some key ← dictTupleKeyTerm? sliceJson then
+                -- `d[i, j]` on a dict is a single tuple-KEY access `d[(i, j)]` (TypeInfer saw a dict
+                -- container), so index once by the tuple key.
+                `($valueCode⦋$key⦌)
+            else if elts.size == 2 then
+                -- numpy-style 2-D indexing on a `List (List _)`: `a[i,j]`, `a[:,j]`, `a[i,:]`.
                 let a := elts[0]!
                 let b := elts[1]!
                 let aSlice := a.getObjValAs? String "node_type" == .ok "Slice"

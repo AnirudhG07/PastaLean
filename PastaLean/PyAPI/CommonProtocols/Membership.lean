@@ -44,4 +44,13 @@ instance : PyContains String String where
 instance {β : Type} [BEq α] [Hashable α] : PyContains (Std.HashMap α β) α where
   contains := fun m k => m.contains k
 
+/-- `x in (a, b)` on a homogeneous 2-tuple. A homogeneous n-tuple is the nested product
+`α × (α × …)`, so the recursive instance below flattens the tail, matching the `PyIterable` tuple
+design; `x in (a, b, c)` therefore also resolves. -/
+instance [BEq α] : PyContains (α × α) α where
+  contains p x := p.1 == x || p.2 == x
+
+instance [BEq α] [PyContains β α] : PyContains (α × β) α where
+  contains p x := p.1 == x || pyContains p.2 x
+
 end PastaLean
