@@ -32,6 +32,19 @@ private def nodeType? (j : Json) : Option String := (j.getObjValAs? String "node
 private def field (j : Json) (k : String) : Option Json := (j.getObjVal? k).toOption
 private def eltsOf (j : Json) : List Json := ((j.getObjValAs? (Array Json) "elts").toOption.getD #[]).toList
 
+/-- `float('inf')` / `float('nan')` — a non-finite sentinel, not a computed float. -/
+private def isNonFiniteFloatCall (name : String) (args : List Json) : Bool :=
+  name == "float" &&
+  match args.head? with
+  | some a =>
+      nodeType? a == some "Constant" &&
+      match (a.getObjVal? "value").toOption with
+      | some (.str s) =>
+          let t := s.toLower
+          t == "inf" || t == "-inf" || t == "nan" || t == "infinity" || t == "-infinity"
+      | _ => false
+  | none => false
+
 /-- A subscript index that is a non-negative integer literal, for static tuple projection. -/
 def literalIndex? (slice : Json) : Option Nat :=
   if nodeType? slice == some "Constant" then
@@ -196,6 +209,11 @@ partial def typeOfCall (sigs : Sigs) (env : Env) (e : Json) : PyType :=
 
 /-- Return type of a builtin `name(args)`; `unknown` for non-builtins. -/
 partial def builtinReturn (sigs : Sigs) (env : Env) (name : String) (args : List Json) : PyType :=
+  -- `float('inf')`/`float('nan')` is a POLYMORPHIC sentinel: it adapts to the numeric type of
+  -- whatever container/expression it lands in (an int DP keeps `int`, a float DP keeps `float`),
+  -- rather than forcing everything to `float`. So it is the numeric bottom (`.unknown`), joining up
+  -- to the surrounding values — codegen's `pyNonFinite` then picks the `PyNonFinite Int/Rat/Float`.
+  if isNonFiniteFloatCall name args then .unknown else
   match constReturnBuiltins.lookup name with
   | some t => t
   | none =>
