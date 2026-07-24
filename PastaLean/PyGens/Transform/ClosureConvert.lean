@@ -199,12 +199,32 @@ private def argNode (name : String) (annotation : Option Json) : Json :=
   Json.mkObj [("node_type", Json.str "arg"), ("arg", Json.str name),
               ("annotation", annotation.getD Json.null)]
 
+/-- The `PyAny` type annotation node — the total fallback for a param we cannot otherwise type. -/
+private def pyAnyAnnotation : Json := Json.mkObj [("node_type", Json.str "Name"), ("id", Json.str "PyAny")]
+
+/-- Stamp `_ty = PyAny` on every parameter of `fn` that has neither an annotation nor an inferred
+`_ty`. Used when a read-only helper ESCAPES as a value: its wrapper `fun (p : T) ↦ new p caps` needs
+each `T`, so an un-inferred one falls back to `PyAny` (total) rather than blocking the whole closure. -/
+private def stampUnannotatedParamsPyAny (fn : Json) : Json :=
+  match fn.getObjVal? "args" with
+  | .ok argsObj =>
+      match argsObj.getObjValAs? (Array Json) "args" with
+      | .ok argsArr =>
+          let argsArr := argsArr.map fun a =>
+            let typed := (match a.getObjVal? "annotation" with | .ok x => !x.isNull | _ => false)
+              || (jsonFieldOption a "_ty").isSome
+            if typed then a else a.setObjVal! "_ty" pyAnyAnnotation
+          fn.setObjVal! "args" (argsObj.setObjVal! "args" (Json.arr argsArr))
+      | _ => fn
+  | _ => fn
+
 /-- The value form of a CAPTURING helper passed as a value (`sort(key=helper)`): a `Lambda`
 `fun params ↦ new(params…, caps…)`, partially applying the captured args (which come after the
 helper's own params). -/
 private def captureWrapperLambda (new : String) (origParams : Array (String × Option Json))
     (captures : Array String) : Json :=
-  let paramArgs := origParams.map (fun (n, ann?) => argNode n ann?)
+  -- An un-inferred wrapper param falls back to `PyAny` (the sibling is stamped `PyAny` to match).
+  let paramArgs := origParams.map (fun (n, ann?) => argNode n (ann?.orElse (fun _ => some pyAnyAnnotation)))
   let callArgs := (origParams.map (·.1) ++ captures).map nameNode
   let call := Json.mkObj [("node_type", Json.str "Call"), ("func", nameNode new),
                           ("args", Json.arr callArgs), ("keywords", Json.mkObj [])]
@@ -232,10 +252,11 @@ partial def rewriteHelperCalls (old new : String) (origParams : Array (String ×
               | _ => pure (Json.mkObj [])
             return (json.setObjVal! "func" (nameNode new)).setObjVal! "args" (Json.arr args)
               |>.setObjVal! "keywords" keywords
-      -- `old` as a VALUE (`sort(key=old)`): capture-free → the lifted name. A capturing one COULD
-      -- become `fun p ↦ new p caps` (`captureWrapperLambda`), which works where the param type is
-      -- inferable (`key=`/`map`), but an ODE-style callback (`odeint(system, …)`) can't infer the
-      -- untyped wrapper binders — so keep rejecting until the wrapper carries inferred param types.
+      -- `old` as a VALUE (`sort(key=old)`, `return old`): capture-free → the lifted name; a capturing
+      -- one becomes `fun p ↦ new p caps` (`captureWrapperLambda`). This needs each wrapper param typed:
+      -- a RETURNED closure's un-inferred params were stamped `PyAny` in `liftHelper` (so `origParams`
+      -- carries them); a closure passed to a FOREIGN numeric callback (`odeint(system, …)`) was left
+      -- un-stamped on purpose — `PyAny` would wreck its numeric/provable semantics — so it still errors.
       if jsonNodeType? json == some "Name" && json.getObjValAs? String "id" == .ok old then
         if captures.isEmpty then return nameNode new
         else if origParams.all (·.2.isSome) then
@@ -369,6 +390,18 @@ partial def usedAsValue (old : String) (json : Json) : Bool :=
         fields.toList.any (fun (key, value) => key != "func" && usedAsValue old value)
       else if jsonNodeType? json == some "Name" && json.getObjValAs? String "id" == .ok old then true
       else fields.toList.any (fun (_, value) => usedAsValue old value)
+  | _ => false
+
+/-- Is `old` RETURNED as a value (`return old`, `return (old, …)`)? Distinguished from being passed to
+another call (`odeint(old, …)`): only a returned closure gets the `PyAny`-param fallback — a closure
+handed to a foreign numeric callback keeps its (possibly-degrading) typed treatment. -/
+partial def returnedAsValue (old : String) (json : Json) : Bool :=
+  match json with
+  | .arr elems => elems.any (returnedAsValue old)
+  | .obj fields =>
+      if jsonNodeType? json == some "Return" then
+        (json.getObjVal? "value").toOption.any (usedAsValue old)
+      else fields.toList.any (fun (_, value) => returnedAsValue old value)
   | _ => false
 
 private def emptyListNode : Json := Json.mkObj [("node_type", Json.str "List"), ("elts", Json.arr #[])]
@@ -680,8 +713,14 @@ private def liftHelper (outerName : String) (outerJson innerJson : Json) :
   -- A helper used as a value (`sort(key=f)`): capture-free → a plain reference; read-only captures →
   -- a `fun p ↦ new p caps` wrapper (in `rewriteHelperCalls`). Only a THREADED (mutated) capture used
   -- as a value is genuinely unsupported — a value lambda can't rebind the threaded state.
-  if (usedAsValue innerName inner || usedAsValue innerName (Json.arr outerBody)) && !threaded.isEmpty then
+  let escapesAsValue := usedAsValue innerName inner || usedAsValue innerName (Json.arr outerBody)
+  if escapesAsValue && !threaded.isEmpty then
     throwError s!"nested function '{innerName}' mutates a captured variable and is used as a value; unsupported."
+  -- A read-only closure RETURNED as a value gets a typed wrapper `fun (p : T) ↦ new p caps`; default
+  -- any un-inferred param to `PyAny` on the SIBLING here so it matches the wrapper. Only for RETURNED
+  -- closures — one passed to a foreign numeric callback (`odeint`) must keep concrete types or degrade.
+  let inner := if returnedAsValue innerName (Json.arr outerBody) then stampUnannotatedParamsPyAny inner
+               else inner
 
   let hasValue := hasValuedReturn (Json.arr innerBody)
   unless threaded.isEmpty do

@@ -678,6 +678,9 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
           let isUserFn := (← userNamesRef.get).contains nm
           let isBuiltin := (← builtinMappedName? nm).isSome
           if !isCtor && !isUserFn && !isBuiltin then allArgs := allArgs.push (← `(()))
+      -- `expr()` where `expr` is itself a call (`make_counter()()`, `build(a,b)()`) applies the
+      -- 0-arg closure `expr` returned — that closure is a `fun () ↦ …` thunk, so pass it `Unit`.
+      | .ok "Call", _ => allArgs := allArgs.push (← `(()))
       | _, _ => pure ()
 
     let buildApplied : Array (TSyntax `term) → PygenM (TSyntax `term) := fun resolvedArgs => do
@@ -1014,6 +1017,9 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
           let isUserFn := (← userNamesRef.get).contains nm
           let isBuiltin := (← builtinMappedName? nm).isSome
           if !isCtor && !isUserFn && !isBuiltin then allArgs := allArgs.push (← `(()))
+      -- `expr()` where `expr` is itself a call (`make_counter()()`, `build(a,b)()`) applies the
+      -- 0-arg closure `expr` returned — that closure is a `fun () ↦ …` thunk, so pass it `Unit`.
+      | .ok "Call", _ => allArgs := allArgs.push (← `(()))
       | _, _ => pure ()
 
     let buildApplied : Array (TSyntax `term) → PygenM (TSyntax `term) := fun resolvedArgs => do

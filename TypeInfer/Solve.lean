@@ -105,11 +105,30 @@ partial def bindTargetType (env : Env) (target : Json) (t : PyType) : Env :=
       | _ => elts.foldl (fun e elt => bindTargetType e elt t.elemType) env
   | _ => env
 
+/-- A `FunctionDef`'s type as a value: `fn[param annotations] → return annotation` (un-annotated
+slots are `unknown`). Lets a nested def referenced by name (`return mul`, `key=mul`) be typed as a
+function, so a higher-order caller's callback param is refined from the call site. -/
+private def functionSignatureType (fn : Json) : PyType :=
+  let args := ((getField fn "args").bind (fun a => (a.getObjValAs? (Array Json) "args").toOption)).getD #[]
+  let argTypes := args.toList.map fun a =>
+    match getField a "annotation" with
+    | some ann => if ann.isNull then PyType.unknown else ofAnnotation ann
+    | none => PyType.unknown
+  let ret := match getField fn "returns" with
+    | some r => if r.isNull then PyType.unknown else ofAnnotation r
+    | none => PyType.unknown
+  PyType.fn argTypes ret
+
 /-- Update the environment with what one statement teaches us. Only ever `join`s facts in. -/
 def applyStmt (sigs : Sigs) (env : Env) (s : Json) : Env :=
   let learn (env : Env) (name : String) (t : PyType) : Env :=
     if t == .unknown then env else env.insert name ((env.get? name |>.getD .unknown).join t)
   match nodeTypeOf s with
+  -- A nested `def foo(...)` binds `foo` to its function type, so `return foo` / `key=foo` is typed.
+  | some "FunctionDef" =>
+      match s.getObjValAs? String "name" with
+      | .ok nm => env.insert nm (functionSignatureType s)
+      | _ => env
   | some "AnnAssign" =>
       match (getField s "target").bind nameId?, getField s "annotation" with
       | some name, some ann => env.insert name (ofAnnotation ann)   -- an explicit annotation wins
@@ -282,7 +301,10 @@ private partial def usageType (name : String) (json : Json) : PyType :=
             else match nameId? func with
               | some fn =>
                   let args := (json.getObjValAs? (Array Json) "args").toOption.getD #[]
-                  if args.any (fun a => nameId? a == some name) then
+                  -- `p(...)` — the param is CALLED, so it is a function of this arity (a higher-order
+                  -- callback); the arg/return types are refined from the call site interprocedurally.
+                  if fn == name then .fn (List.replicate args.size .unknown) .unknown
+                  else if args.any (fun a => nameId? a == some name) then
                     if fn == "ord" then .str else if fn == "chr" then .int else .unknown
                   else .unknown
               | none => .unknown
