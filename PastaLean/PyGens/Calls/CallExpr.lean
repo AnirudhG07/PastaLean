@@ -632,6 +632,13 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
               | some d => `(($iter).headD $d)
               | none   => `(($iter).headD default)
         | .ok "Name", .ok funcName =>
+            -- `any`/`all` test each element's TRUTHINESS, so lower the iterable argument in a
+            -- truthiness context — a `BoolOp` element (`x and y` on mixed-type operands) then stays a
+            -- `Bool` (`pyTruthy x && y`) instead of the value form whose branches don't unify.
+            if (funcName == "any" || funcName == "all") && argsArray.size == 1 && keyWordsMap.isEmpty then
+              if let some mapped ← builtinMappedName? funcName then
+                let argCode ← withTruthinessContext true (getCode argsArray[0]! `term)
+                return ← `($(mkIdent mapped) $argCode)
             -- Class instantiation `C(args)` (or `cls(args)` in a classmethod) -> `C.mk args`.
             -- Prefer the py2lean dispatch stamp (`_class_ctor`); fall back to the local registry.
             match ← (do match (json.getObjValAs? String "_class_ctor").toOption with

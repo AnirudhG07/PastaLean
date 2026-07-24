@@ -64,6 +64,16 @@ initialize propConditionRef : IO.Ref Bool ← IO.mkRef false
 /-- Read whether comparisons may currently lower to a provable `Prop` (condition position). -/
 def getPropCondition : IO Bool := propConditionRef.get
 
+/-- Set while lowering an expression whose *truthiness* is what matters — e.g. an element of
+`any(...)`/`all(...)`. There a `BoolOp` (`a and b`) must stay a `Bool` connective (`pyTruthy a && b`)
+rather than the value form `if pyTruthy a then b else a`, whose branches would be different types
+(`a : List`, `b : Bool`). Unlike `propCondition` it does NOT force comparisons to `Prop` (so an
+`any(a == b for …)` stays `List Bool`), and comprehensions do NOT reset it. -/
+initialize truthinessContextRef : IO.Ref Bool ← IO.mkRef false
+
+/-- Read whether the current expression is evaluated only for its truthiness. -/
+def getTruthinessContext : IO Bool := truthinessContextRef.get
+
 /-- When emitting the runnable "twin" of a declaration in `--mode both`, this is the suffix (`'rn`)
 appended to every top-level definition name AND to references to other user-defined functions/classes
 (listed in `userNamesRef`). Empty for the single-version `prove`/`run` modes. Lets one file carry the
@@ -186,6 +196,19 @@ def withRetFloatContext {α : Type} (b : Bool) (x : PygenM α) : PygenM α := do
     return r
   catch e =>
     retFloatRef.set saved
+    throw e
+
+/-- Run `x` with the truthiness flag set to `b` (restoring it afterwards). Set by `any`/`all` around
+their element so a `BoolOp` there stays a `Bool` connective, not the mixed-type value form. -/
+def withTruthinessContext {α : Type} (b : Bool) (x : PygenM α) : PygenM α := do
+  let saved ← truthinessContextRef.get
+  truthinessContextRef.set b
+  try
+    let r ← x
+    truthinessContextRef.set saved
+    return r
+  catch e =>
+    truthinessContextRef.set saved
     throw e
 
 /-- Run `x` with the prop-condition flag set to `b` (restoring it afterwards). `if`/`while` set it

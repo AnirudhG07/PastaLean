@@ -585,11 +585,13 @@ def boolOpSyntax : (kind : SyntaxNodeKind) → Json →
       s!"BoolOp node does not have an 'op' field or it is not a string: {json}"
     let .ok valuesJson := json.getObjValAs? Json "values" | throwError
       s!"BoolOp node does not have a 'values' field or it is not a JSON value: {json}"
-    -- A test position (`while`/`if`/assert) sets this; there `and`/`or` must stay a `Bool`
-    -- connective in every twin, never the value form (a `while` cond needs `Bool`, not `Int`).
-    let inCondition ← getPropCondition
-    -- In exact `Prop` positions, `and`/`or` become `∧`/`∨`; otherwise lower to `Bool`.
-    let opProp := inCondition && (← numericModeIsExact)
+    -- A test position (`while`/`if`/assert) or a truthiness context (`any(…)`/`all(…)`) sets this;
+    -- there `and`/`or` must stay a `Bool` connective, never the value form (a `while` cond needs
+    -- `Bool`, and `any(list and bool for …)` would otherwise have mismatched value-form branches).
+    let inCondition := (← getPropCondition) || (← getTruthinessContext)
+    -- In exact `Prop` positions, `and`/`or` become `∧`/`∨`; otherwise lower to `Bool`. A truthiness
+    -- context stays `Bool` (it does NOT force `Prop`) — so `any(a == b for …)` is `List Bool`.
+    let opProp := (← getPropCondition) && (← numericModeIsExact)
     -- `a or b` / `a and b` on NON-boolean operands returns the deciding *operand*, not a `Bool`
     -- (`[…] or [0]` yields the list, `x or 0` the number) — but only in a VALUE position; a
     -- condition keeps the `Bool` connective. Only all-boolean operands are a real connective.
