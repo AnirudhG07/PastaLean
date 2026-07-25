@@ -240,14 +240,17 @@ partial def builtinReturn (sigs : Sigs) (env : Env) (name : String) (args : List
           .dict .unknown vt
       -- `min(a, b, …)` / `max(a, b, …)` return the join of all their arguments — a float sentinel
       -- and an int accumulator (`ans = max(ans, cur - inf)`) make the result `float`, which then
-      -- flows back to the accumulator. The single-argument container form uses the element type.
+      -- flows back to the accumulator. The single-argument container form uses the element type —
+      -- for a KNOWN container we take its element type even when still `unknown`: returning the
+      -- container itself (`min([ans, d])`, the desugared `min(ans, d)`, before `d` resolves) would
+      -- poison the target into a `list` under the monotone fixpoint, cascading to `any`.
       | "min" | "max" =>
-          if args.length == 1 then
-            if arg0.elemType != .unknown then arg0.elemType else arg0
+          if args.length == 1 then arg0.containerElemOrSelf
           else PyType.joinAll (args.map (typeOfExpr sigs env))
-      | "abs" | "sum" =>
-          -- element for the container forms, else the argument itself.
-          if args.length == 1 && arg0.elemType != .unknown then arg0.elemType else arg0
+      -- `sum(xs)` iterates a container → element type (same monotone-poison hazard as `min`).
+      | "sum" => if args.length == 1 then arg0.containerElemOrSelf else arg0
+      -- `abs(x)` is scalar: the argument's own numeric type.
+      | "abs" => arg0
       -- `zip(a, b, …)` → list of tuples of the element types; `enumerate(a)` → list[(int, elem)];
       -- `pairwise(a)` → list of consecutive (elem, elem) pairs.
       | "zip" => .list (.tuple (args.map (fun a => (typeOfExpr sigs env a).elemType)))

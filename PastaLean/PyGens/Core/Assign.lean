@@ -249,7 +249,9 @@ partial def tupleElementAssignDoElem (isTuple : Bool) (elt : Json) (acc : TSynta
   | some setStx => pure setStx
   | none =>
     match jsonNodeType? elt with
-    | some "Name" => bindOrAssignLocal (← getCode elt `ident) acc
+    -- Ascribe the binder to the element's inferred type (`_ty`, stamped by TypeInfer) so a slot
+    -- seeded by a polymorphic sentinel (`ans, mi = (0, inf)` → `mi : Int`, not the `ℚ` default) pins.
+    | some "Name" => bindOrAssignLocal (← getCode elt `ident) acc (ty? := ← stampedTypeSyntax? elt)
     | some "Attribute" =>
       -- `a.val, b.val = b.val, a.val` (a value swap on tree nodes): rebuild each receiver record.
       let .ok recv := elt.getObjVal? "value" | throwError s!"Attribute target missing 'value': {elt}"

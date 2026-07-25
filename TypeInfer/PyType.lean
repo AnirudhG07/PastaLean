@@ -183,6 +183,18 @@ def elemType : PyType → PyType
   | .any => .any
   | _ => .unknown
 
+/-- For a builtin that iterates its single argument (`min`/`max`/`sum` over one container), the
+result type: the element type of a KNOWN container — even when still `unknown`, so a transiently
+under-determined element doesn't leak the container type back onto the target — or the argument
+itself when it is a scalar (`min(x)` on an un-inferred `x`). -/
+def containerElemOrSelf : PyType → PyType
+  | .list e | .set e => e
+  | .str => .str
+  | .dict k _ => k
+  | .tuple es => joinAll es
+  | .any => .any
+  | other => other
+
 /-- What to do when a value of type `actual` reaches a position expecting `expected`: the small
 implicit coercion Python performs, or `box` (fall back to `PyAny`) when the types are unrelated. -/
 inductive Reconcile where

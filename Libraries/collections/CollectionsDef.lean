@@ -20,6 +20,11 @@ variable {κ ν : Type} [BEq κ] [Hashable κ]
 /-- `defaultdict(f)` / `Counter()`: empty, reading missing keys as `dflt`. -/
 def PyDefaultDict.empty (dflt : ν) : PyDefaultDict κ ν := ⟨∅, [], dflt⟩
 
+/-- An empty default-dict whose missing-key default is the value type's own `default` (`0` for a
+`Counter`, `[]` for `defaultdict(list)`). Lets a hoisted `let mut d : PyDefaultDict _ _ := default`
+resolve — the block later rebinds it to the real `Counter(...)`. -/
+instance [Inhabited ν] : Inhabited (PyDefaultDict κ ν) := ⟨PyDefaultDict.empty default⟩
+
 /-- Set `k` to `v`, recording `k` at the end of `order` when it is new. -/
 def PyDefaultDict.insert (d : PyDefaultDict κ ν) (k : κ) (v : ν) : PyDefaultDict κ ν :=
   { d with
@@ -100,5 +105,10 @@ instance : PyKeys (PyDefaultDict κ ν) κ where
 
 instance : PyAnys (PyDefaultDict κ ν) ν where
   pyAnys d := d.toPairs.map Prod.snd
+
+-- `sorted(d)` sorts a dict's KEYS (matching `Std.HashMap`), so a `defaultdict`/`Counter` iterated as
+-- `for x in sorted(d)` resolves.
+instance [Ord κ] : PySort (PyDefaultDict κ ν) κ where
+  pySort d := d.order.mergeSort pyOrdLe
 
 end Libraries.collections

@@ -127,8 +127,8 @@ private def _walk'total := fun (graph : Libraries.collections.PyDefaultDict Int 
       for k in (PastaLean.pyRange (PastaLean.pyLen todo))do
         let __unpack_value_1 := todo⦋k⦌
         let __unpack_pair_1 := __unpack_value_1
-        let mut i := Prod.fst __unpack_pair_1
-        let mut j := Prod.snd __unpack_pair_1
+        let mut i : Int := Prod.fst __unpack_pair_1
+        let mut j : Int := Prod.snd __unpack_pair_1
         acc := acc +ₚ (PastaLean.pyLen graph⦋i⦌ +ₚ seen⦋i⦌ +ₚ j)
       return acc)
 
@@ -159,8 +159,8 @@ private def _walk'total'rn := fun (graph : Libraries.collections.PyDefaultDict I
       for k in (PastaLean.pyRange (PastaLean.pyLen todo))do
         let __unpack_value_1 := todo⦋k⦌
         let __unpack_pair_1 := __unpack_value_1
-        let mut i := Prod.fst __unpack_pair_1
-        let mut j := Prod.snd __unpack_pair_1
+        let mut i : Int := Prod.fst __unpack_pair_1
+        let mut j : Int := Prod.snd __unpack_pair_1
         acc := acc +ₚ (PastaLean.pyLen graph⦋i⦌ +ₚ seen⦋i⦌ +ₚ j)
       return acc)
 
@@ -178,6 +178,41 @@ def walk'rn := fun (pairs : List (List Int)) ↦
         todo := PastaLean.pyAppend todo (a, b)
       let __py_ret_1 := _walk'total'rn graph seen todo
       return __py_ret_1)
+
+-- A `Counter`/`defaultdict` first ASSIGNED inside a loop (so it is hoisted to `let mut t := default`
+-- before the block) must keep its `PyDefaultDict` backing — the hoist used to emit `Std.HashMap`,
+-- clashing with the `Counter(...)` reassignment. `sorted(d)` then sorts the dict's KEYS.
+def group_max := fun (words : List String) ↦
+  Id.run
+    (do
+      let mut cnt : Libraries.collections.PyDefaultDict String Int := Libraries.collections.pyDefaultDictInt
+      for w in (PastaLean.pyIter words)do
+        let mut t : Libraries.collections.PyDefaultDict String Int := Libraries.collections.pyCounter w
+        for _pair_1 in (PastaLean.pyIter (PastaLean.pyItems t))do
+          let c := Prod.fst _pair_1
+          let v := Prod.snd _pair_1
+          cnt := PastaLean.pySetItem cnt c (PastaLean.pyMax [cnt⦋c⦌, v])
+      let mut acc : Int := (0 : Int)
+      for c in (PastaLean.pyIter (PastaLean.pySort cnt))do
+        acc := acc +ₚ cnt⦋c⦌
+      return acc)
+
+attribute [simp, taste_ingr] group_max
+
+def group_max'rn := fun (words : List String) ↦
+  Id.run
+    (do
+      let mut cnt : Libraries.collections.PyDefaultDict String Int := Libraries.collections.pyDefaultDictInt
+      for w in (PastaLean.pyIter words)do
+        let mut t : Libraries.collections.PyDefaultDict String Int := Libraries.collections.pyCounter w
+        for _pair_1 in (PastaLean.pyIter (PastaLean.pyItems t))do
+          let c := Prod.fst _pair_1
+          let v := Prod.snd _pair_1
+          cnt := PastaLean.pySetItem cnt c (PastaLean.pyMax [cnt⦋c⦌, v])
+      let mut acc : Int := (0 : Int)
+      for c in (PastaLean.pyIter (PastaLean.pySort cnt))do
+        acc := acc +ₚ cnt⦋c⦌
+      return acc)
 
 -- A capturing helper passed as a VALUE (`key=`), not called directly. Lifting it leaves a partial
 -- application, so the wrapper lambda needs its parameter TYPED — an untyped binder is exactly what
@@ -201,6 +236,7 @@ def main' :=
       let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg (pick [[(1 : Int), (1 : Int)], [(2 : Int), (3 : Int)]])]
       let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg (tally ["ab", "ab", "c"])]
       let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg (walk [[(1 : Int), (2 : Int)], [(1 : Int), (3 : Int)]])]
+      let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg (group_max ["ab", "bc", "abb"])]
       let _ ←
         PastaLean.ProofMode.pyPrintProof
             [pyPrintArg (ranked [(1 : Int), (2 : Int), (3 : Int)] [(10 : Int), (1 : Int)])]) :
@@ -213,6 +249,7 @@ def main''rn :=
       let _ ← pyPrintIO [pyPrintArg (pick'rn [[(1 : Int), (1 : Int)], [(2 : Int), (3 : Int)]])]
       let _ ← pyPrintIO [pyPrintArg (tally'rn ["ab", "ab", "c"])]
       let _ ← pyPrintIO [pyPrintArg (walk'rn [[(1 : Int), (2 : Int)], [(1 : Int), (3 : Int)]])]
+      let _ ← pyPrintIO [pyPrintArg (group_max'rn ["ab", "bc", "abb"])]
       let _ ← pyPrintIO [pyPrintArg (ranked'rn [(1 : Int), (2 : Int), (3 : Int)] [(10 : Int), (1 : Int)])]) :
     IO _)
 

@@ -192,8 +192,8 @@ def fib := fun (n : Int) ↦
       -- Stateful generator: the `a, b = b, a + b` swap threads through the materialised loop.
       let __unpack_value_1 := ((0 : Int), (1 : Int))
       let __unpack_pair_1 := __unpack_value_1
-      let mut a := Prod.fst __unpack_pair_1
-      let mut b := Prod.snd __unpack_pair_1
+      let mut a : Int := Prod.fst __unpack_pair_1
+      let mut b : Int := Prod.snd __unpack_pair_1
       for _ in (PastaLean.pyRange n)do
         __gen'acc := PastaLean.pyAppend __gen'acc a
         let __unpack_value_2 := (b, a +ₚ b)
@@ -211,8 +211,8 @@ def fib'rn := fun (n : Int) ↦
       -- Stateful generator: the `a, b = b, a + b` swap threads through the materialised loop.
       let __unpack_value_1 := ((0 : Int), (1 : Int))
       let __unpack_pair_1 := __unpack_value_1
-      let mut a := Prod.fst __unpack_pair_1
-      let mut b := Prod.snd __unpack_pair_1
+      let mut a : Int := Prod.fst __unpack_pair_1
+      let mut b : Int := Prod.snd __unpack_pair_1
       for _ in (PastaLean.pyRange n)do
         __gen'acc := PastaLean.pyAppend __gen'acc a
         let __unpack_value_2 := (b, a +ₚ b)

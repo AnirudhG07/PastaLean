@@ -67,6 +67,21 @@ def walk(pairs: List[List[int]]) -> int:
     return total()
 
 
+# A `Counter`/`defaultdict` first ASSIGNED inside a loop (so it is hoisted to `let mut t := default`
+# before the block) must keep its `PyDefaultDict` backing — the hoist used to emit `Std.HashMap`,
+# clashing with the `Counter(...)` reassignment. `sorted(d)` then sorts the dict's KEYS.
+def group_max(words: List[str]) -> int:
+    cnt = defaultdict(int)
+    for w in words:
+        t = Counter(w)
+        for c, v in t.items():
+            cnt[c] = max(cnt[c], v)
+    acc = 0
+    for c in sorted(cnt):
+        acc += cnt[c]
+    return acc
+
+
 # A capturing helper passed as a VALUE (`key=`), not called directly. Lifting it leaves a partial
 # application, so the wrapper lambda needs its parameter TYPED — an untyped binder is exactly what
 # an inference-hungry callback cannot resolve.
@@ -81,6 +96,7 @@ def main():
     print(pick([[1, 1], [2, 3]]))
     print(tally(["ab", "ab", "c"]))
     print(walk([[1, 2], [1, 3]]))
+    print(group_max(["ab", "bc", "abb"]))
     print(ranked([1, 2, 3], [10, 1]))
 
 

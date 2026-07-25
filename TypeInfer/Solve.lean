@@ -950,6 +950,31 @@ partial def stampUnpackShape (target : Json) (ty : PyType) : Json :=
     | _ => target
   else target
 
+/-- Is `name` assigned from a `Counter(...)`/`defaultdict(...)` call anywhere in `json` (bare or
+module-qualified)? Such a var is backed by `PyDefaultDict`, not the `Std.HashMap` a plain `.dict`
+annotation emits, so its hoisted binder must use the defaultdict annotation — otherwise the
+`pyCounter` reassignment clashes with the `Std.HashMap` declaration. Skips nested defs. -/
+partial def assignedFromDefaultDict (name : String) (json : Json) : Bool :=
+  if nodeTypeOf json == some "FunctionDef" then false
+  else
+    let hitHere : Bool :=
+      nodeTypeOf json == some "Assign"
+        && ((getField json "target").bind nameId? == some name)
+        && (match getField json "value" with
+            | some v =>
+                nodeTypeOf v == some "Call" &&
+                (match getField v "func" with
+                 | some f =>
+                     match (nameId? f).orElse (fun _ => (f.getObjValAs? String "attr").toOption) with
+                     | some n => n == "Counter" || n == "defaultdict"
+                     | none => false
+                 | none => false)
+            | none => false)
+    hitHere || (match json with
+      | .arr xs => xs.any (assignedFromDefaultDict name)
+      | .obj fs => fs.toList.any (fun (_, v) => assignedFromDefaultDict name v)
+      | _ => false)
+
 /-- Stamp `<typesKey>`: for each name a block leaks out (listed under `namesKey`, e.g.
 `if_assigned_names`) that we can type, its annotation — so codegen ascribes the hoisted
 `let mut x : T := default`. A genuinely dynamic var (`.any`) yields `PyAny`; an `unknown` one is
@@ -961,7 +986,14 @@ private partial def stampHoistTypes (env : Env) (namesKey typesKey : String) (s 
       -- a `ℚ` ascription fights a real-context `ℝ` branch value; `.any` DOES need it (→ `PyAny`).
       let entries := names.toList.filterMap (fun nm =>
         match env.get? nm with
-        | some t => if t.needsAscription then (toAnnotation? t).map (fun ann => (nm, ann)) else none
+        | some t =>
+            if t.needsAscription then
+              -- A dict var fed by `Counter`/`defaultdict` is `PyDefaultDict`-backed, not `Std.HashMap`.
+              let ann? := match t with
+                | .dict k v => if assignedFromDefaultDict nm s then defaultDictAnnotation? k v else toAnnotation? t
+                | _ => toAnnotation? t
+              ann?.map (fun ann => (nm, ann))
+            else none
         | none => none)
       if entries.isEmpty then s else s.setObjVal! typesKey (Json.mkObj entries)
   | _ => s
@@ -1095,14 +1127,75 @@ private def topLevelStmts (module : Json) : Array Json :=
   ((module.getObjValAs? (Array Json) "body").toOption.getD #[]).filter
     (nodeTypeOf · != some "FunctionDef")
 
-/-- The hint environment for `fn`'s parameters from `params` (its inferred per-position types). -/
-private def hintsFor (params : ParamSigs) (fn : Json) : Env := Id.run do
+/-- Top-level `ClassDef`s of a module. -/
+private def classDefsOf (module : Json) : Array Json :=
+  ((module.getObjValAs? (Array Json) "body").toOption.getD #[]).filter (nodeTypeOf · == some "ClassDef")
+
+/-- The `FunctionDef` methods of a class (stored under `methods`, or `body` on older nodes). -/
+private def methodsOf (classDef : Json) : Array Json :=
+  (#["methods", "body"].foldl (fun acc key =>
+    acc ++ (classDef.getObjValAs? (Array Json) key).toOption.getD #[]) #[]).filter
+    (nodeTypeOf · == some "FunctionDef")
+
+/-- Names of every class defined at module top level. -/
+private def classNamesOf (module : Json) : Std.HashSet String :=
+  (classDefsOf module).foldl (fun s c => (c.getObjValAs? String "name").toOption.elim s s.insert) {}
+
+/-- True when `fn`'s first parameter is `self` — an instance method, as opposed to a `@staticmethod`. -/
+private def isInstanceMethod (fn : Json) : Bool := (paramNames fn)[0]? == some "self"
+
+/-- Collect `Class.method(...)` call sites for method-parameter inference, keyed `"Class.method"` (a
+dot no Python function name has). Two shapes resolve a class: a qualified call on a class *name*
+(`BinaryIndexedTree.lowbit(x)`, static or explicit-`self`) and an instance call whose receiver types
+to `.cls C` (`tree.update(a, b)`, `self.query(x)`). An instance method's arg list is prefixed with the
+receiver's `.cls C` so it aligns with the `self` parameter. Skips nested defs' own scopes only in that
+`env` is the enclosing one; the walk itself is exhaustive. -/
+private partial def collectMethodCalls (sigs : Sigs) (env : Env) (classNames : Std.HashSet String)
+    (methodSelf : Std.HashMap String Bool) (json : Json) : Array (String × Array PyType) :=
+  let here : Array (String × Array PyType) :=
+    match nodeTypeOf json, getField json "func" with
+    | some "Call", some func =>
+        if nodeTypeOf func != some "Attribute" then #[] else
+        match (func.getObjValAs? String "attr").toOption, getField func "value" with
+        | some attr, some recv =>
+            let args := ((json.getObjValAs? (Array Json) "args").toOption.getD #[]).map (typeOfExpr sigs env)
+            match nameId? recv with
+            -- Qualified on a class name: static (args as-is) or explicit-self (prefix `.cls C`).
+            | some rname =>
+                if classNames.contains rname then
+                  let key := s!"{rname}.{attr}"
+                  let args := if (methodSelf.get? key).getD false then #[PyType.cls rname] ++ args else args
+                  #[(key, args)]
+                else instanceCall attr recv args
+            | none => instanceCall attr recv args
+        | _, _ => #[]
+    | _, _ => #[]
+  here ++ (match json with
+    | .arr xs => xs.foldl (fun acc x => acc ++ collectMethodCalls sigs env classNames methodSelf x) #[]
+    | .obj fs => fs.toList.foldl (fun acc (_, v) => acc ++ collectMethodCalls sigs env classNames methodSelf v) #[]
+    | _ => #[])
+where
+  /-- An instance call `recv.attr(args)` where `recv : .cls C` → `C.attr` with the args prefixed by
+  the receiver's `.cls C` (the `self` slot). -/
+  instanceCall (attr : String) (recv : Json) (args : Array PyType) : Array (String × Array PyType) :=
+    match (typeOfExpr sigs env recv).classNameOf? with
+    | some c => #[(s!"{c}.{attr}", #[PyType.cls c] ++ args)]
+    | none => #[]
+
+/-- The hint environment for the parameters named in `fn`, drawn from `params[key]` (its inferred
+per-position types). `key` is the callee's name — a bare function name, or `"Class.method"` for a
+class method. -/
+private def hintsForKey (params : ParamSigs) (fn : Json) (key : String) : Env := Id.run do
   let names := paramNames fn
-  let types := (params.get? ((fn.getObjValAs? String "name").toOption.getD "")).getD #[]
+  let types := (params.get? key).getD #[]
   let mut env : Env := {}
   for i in [0:names.size] do
     if let some t := types[i]? then if t != .unknown then env := env.insert names[i]! t
   return env
+
+/-- The hint environment for `fn`'s parameters from `params` (its inferred per-position types). -/
+private def hintsFor (params : ParamSigs) (fn : Json) : Env :=
+  hintsForKey params fn ((fn.getObjValAs? String "name").toOption.getD "")
 
 /-- Collect `(calleeName, argumentTypes)` for every direct call `foo(a, b, …)` in `json`, typing the
 arguments under `env`. Nested calls are included; method calls are ignored (no positional callee). -/
@@ -1222,26 +1315,56 @@ partial def collectSigs (module : Json) : Sigs × ParamSigs := Id.run do
     if let .ok name := fn.getObjValAs? String "name" then
       let seed := paramSeed fn
       params := params.insert name ((paramNames fn).map fun p => (seed.get? p).getD .unknown)
-  -- Class field types share the `sigs` table under `"Class.field"` keys (no Python function name
-  -- contains a dot, so they cannot collide with a return type).
+  -- Class methods join the same table under `"Class.method"` keys (a dot no function name has), so
+  -- their params are refined from call sites just like a free function's. `methodSelf` records which
+  -- take a leading `self` (an instance method) vs a `@staticmethod`, so a qualified `Class.m(...)` call
+  -- prefixes the receiver type only for the former.
+  let classNames := classNamesOf module
+  let methodEntries : Array (String × String × Json) := (classDefsOf module).foldl (fun acc cd =>
+    match (cd.getObjValAs? String "name").toOption with
+    | some cls => acc ++ (methodsOf cd).filterMap (fun m =>
+        (m.getObjValAs? String "name").toOption.map (fun mn => (cls, mn, m)))
+    | none => acc) #[]
+  let mut methodSelf : Std.HashMap String Bool := {}
+  for (cls, mn, m) in methodEntries do
+    let key := s!"{cls}.{mn}"
+    let seed := paramSeed m
+    params := params.insert key ((paramNames m).map fun p => (seed.get? p).getD .unknown)
+    methodSelf := methodSelf.insert key (isInstanceMethod m)
+  -- Class field types share the `sigs` table under `"Class.field"` keys; a bare class name maps to
+  -- `.cls C`, so a `t = C(...)` constructor call types `t` (letting `t.method(...)` resolve `C.method`).
   let mut sigs : Sigs := classFieldSigs module
+  for cls in classNames.toList do sigs := sigs.insert cls (.cls cls)
+  -- Hints for a method, with `self : .cls C` seeded (an instance method's receiver).
+  let methodHints (params : ParamSigs) (cls key : String) (m : Json) : Env :=
+    let h := hintsForKey params m key
+    if isInstanceMethod m then h.insert "self" (.cls cls) else h
   for _ in [0:6] do
     let mut nextSigs := sigs
     let mut nextParams := params
+    let refineFrom (nextParams : ParamSigs) (calls : Array (String × Array PyType)) : ParamSigs :=
+      calls.foldl (fun p (callee, argTypes) =>
+        if params.contains callee then refineParams p callee argTypes.size argTypes else p) nextParams
     for fn in fns do
       if let .ok name := fn.getObjValAs? String "name" then
         let hints := hintsFor params fn
         nextSigs := nextSigs.insert name (returnTypeOf sigs hints fn)
         -- refine callees' params from this function's call sites, typed under its own env.
         let env := inferFunction sigs {} hints fn
-        for (callee, argTypes) in collectCalls sigs env fn do
-          if params.contains callee then
-            nextParams := refineParams nextParams callee argTypes.size argTypes
+        nextParams := refineFrom nextParams (collectCalls sigs env fn)
+        nextParams := refineFrom nextParams (collectMethodCalls sigs env classNames methodSelf fn)
+    -- Class methods: refine callees from each method body, with `self` typed to its class.
+    for (cls, mn, m) in methodEntries do
+      let key := s!"{cls}.{mn}"
+      let hints := methodHints params cls key m
+      nextSigs := nextSigs.insert key (returnTypeOf sigs hints m)
+      let env := inferFunction sigs {} hints m
+      nextParams := refineFrom nextParams (collectCalls sigs env m)
+      nextParams := refineFrom nextParams (collectMethodCalls sigs env classNames methodSelf m)
     -- Module top-level call sites (outside any def), typed under an empty env (literal args).
     for stmt in topLevelStmts module do
-      for (callee, argTypes) in collectCalls sigs {} stmt do
-        if params.contains callee then
-          nextParams := refineParams nextParams callee argTypes.size argTypes
+      nextParams := refineFrom nextParams (collectCalls sigs {} stmt)
+      nextParams := refineFrom nextParams (collectMethodCalls sigs {} classNames methodSelf stmt)
     -- Decorator unification: `@d def g` is `g = d(g_raw)`, so g's type and d's wrapped-parameter
     -- type are the same. Flow each into the other: g's `.fn` type refines d's parameter 0 (so a
     -- decorator's `f` is learned from the function it wraps), and d's parameter 0 — if a function
@@ -1273,14 +1396,19 @@ partial def stampNodeWith (sigs : Sigs) (params : ParamSigs) (globals : Env) (s 
   match nodeTypeOf s with
   | some "FunctionDef" => stampFunction sigs (outerFor s) (hintsFor params s) s
   | some "ClassDef" =>
-      let s := match s.getObjValAs? String "name" with
-        | .ok cls => stampClassFields sigs cls s
-        | _ => s
-      -- A class keeps its methods under "methods"; older nodes use "body".
+      let cls := (s.getObjValAs? String "name").toOption.getD ""
+      let s := if cls.isEmpty then s else stampClassFields sigs cls s
+      -- A class keeps its methods under "methods"; older nodes use "body". Each method's params are
+      -- keyed `"Class.method"` in `params` (from call-site inference), and `self : .cls Class` seeds
+      -- the outer env so `self.field`/`self.method(...)` resolve.
       #["methods", "body"].foldl (fun s key =>
         match s.getObjValAs? (Array Json) key with
         | .ok ms => s.setObjVal! key (Json.arr (ms.map fun m =>
-            if nodeTypeOf m == some "FunctionDef" then stampFunction sigs (outerFor m) (hintsFor params m) m else m))
+            if nodeTypeOf m == some "FunctionDef" then
+              let mn := (m.getObjValAs? String "name").toOption.getD ""
+              let outer := if isInstanceMethod m then (outerFor m).insert "self" (.cls cls) else outerFor m
+              stampFunction sigs outer (hintsForKey params m s!"{cls}.{mn}") m
+            else m))
         | _ => s) s
   | some "Module" =>
       match s.getObjValAs? (Array Json) "body" with

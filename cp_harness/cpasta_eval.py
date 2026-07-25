@@ -111,23 +111,40 @@ def normalize(text):
 
 
 def summarize_error(status, log_text):
-    """A concise one-line reason from a failing stage's output."""
+    """A reason string from a failing stage's output. Keeps the FULL first Lean diagnostic — the
+    error message AND its continuation lines (the offending type / instance / expression), which is
+    what actually distinguishes one failure cluster from another (`PyGetItem (Option TreeNode × ℤ) ℤ`
+    vs `PyGetItem (List ℤ) Bool`). One truncated headline line collapses unrelated bugs together."""
     lines = [ln.rstrip() for ln in (log_text or "").splitlines() if ln.strip()]
     if not lines:
         return "(no error output)"
     if status == "convert_fail":
         for ln in reversed(lines):
             if "Error generating code:" in ln:
-                return ln.split("Error generating code:", 1)[1].strip()
+                # Keep the innermost (most specific) codegen message, not the outer wrapper chain.
+                return ln.rsplit("Error generating code:", 1)[-1].split(": ", 1)[-1].strip() \
+                    if ": " in ln.rsplit("Error generating code:", 1)[-1] \
+                    else ln.rsplit("Error generating code:", 1)[-1].strip()
         return lines[-1].strip()
-    for ln in lines:  # compile_fail: first Lean diagnostic mentioning an error
+    # compile_fail: the first Lean diagnostic (`file:line:col: error(kind): msg`) plus the indented
+    # detail lines that follow it, up to the next diagnostic / `Hint:` / blank. Joined with " | ".
+    DIAG = re.compile(r"^.*?:\d+:\d+:\s*(?:error|warning)")
+    for i, ln in enumerate(lines):
         low = ln.lower()
-        if "error" in low and ":" in ln:
-            tail = ln[low.find("error"):]
+        if "error" in low and DIAG.match(ln):
+            head = ln[low.find("error"):]
             for sep in ("): ", "error: "):
-                if sep in tail:
-                    return tail.split(sep, 1)[1].strip()
-            return tail.strip()
+                if sep in head:
+                    head = head.split(sep, 1)[1].strip()
+                    break
+            detail = []
+            for cont in lines[i + 1:]:
+                if DIAG.match(cont) or cont.lstrip().startswith("Hint:"):
+                    break
+                detail.append(cont.strip())
+                if len(detail) >= 4:
+                    break
+            return " | ".join([head, *detail]).strip()
     return lines[0].strip()
 
 

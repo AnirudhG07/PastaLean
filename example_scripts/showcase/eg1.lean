@@ -121,7 +121,7 @@ noncomputable def run_example :=
       let __unpack_value_1 ← find_nearest_neighbor target_point dataset
       let __unpack_pair_1 := __unpack_value_1
       let mut dist := Prod.fst __unpack_pair_1
-      let mut nearest := Prod.snd __unpack_pair_1
+      let mut nearest : List Int := Prod.snd __unpack_pair_1
       let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg "Nearest Neighbor to Target:"]
       let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg "Point:", pyPrintArg nearest]
       let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg "Distance:", pyPrintArg dist]
@@ -130,7 +130,7 @@ noncomputable def run_example :=
       let __unpack_value_2 ← find_nearest_neighbor invalid_point dataset
       let __unpack_pair_2 := __unpack_value_2
       let mut dist_inv := Prod.fst __unpack_pair_2
-      let mut nearest_inv := Prod.snd __unpack_pair_2
+      let mut nearest_inv : List Int := Prod.snd __unpack_pair_2
       let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg "Fallback Distance:", pyPrintArg dist_inv]) :
     PastaLean.ProofMode.PyProofM _)
 
@@ -149,7 +149,7 @@ def run_example'rn :=
       let __unpack_value_1 ← find_nearest_neighbor'rn target_point dataset
       let __unpack_pair_1 := __unpack_value_1
       let mut dist := Prod.fst __unpack_pair_1
-      let mut nearest := Prod.snd __unpack_pair_1
+      let mut nearest : List Int := Prod.snd __unpack_pair_1
       let _ ← pyPrintIO [pyPrintArg "Nearest Neighbor to Target:"]
       let _ ← pyPrintIO [pyPrintArg "Point:", pyPrintArg nearest]
       let _ ← pyPrintIO [pyPrintArg "Distance:", pyPrintArg dist]
@@ -158,7 +158,7 @@ def run_example'rn :=
       let __unpack_value_2 ← find_nearest_neighbor'rn invalid_point dataset
       let __unpack_pair_2 := __unpack_value_2
       let mut dist_inv := Prod.fst __unpack_pair_2
-      let mut nearest_inv := Prod.snd __unpack_pair_2
+      let mut nearest_inv : List Int := Prod.snd __unpack_pair_2
       let _ ← pyPrintIO [pyPrintArg "Fallback Distance:", pyPrintArg dist_inv]) :
     PastaLean.PyExcept _)
 

@@ -105,8 +105,8 @@ def nested_for_unpack := fun (xs : List Int) ↦ fun (ys : List Int) ↦
         let __for_unpack_1 := Prod.snd _pair_1
         let __unpack_value_1 := __for_unpack_1
         let __unpack_pair_1 := __unpack_value_1
-        let mut a := Prod.fst __unpack_pair_1
-        let mut b := Prod.snd __unpack_pair_1
+        let mut a : Int := Prod.fst __unpack_pair_1
+        let mut b : Int := Prod.snd __unpack_pair_1
         total := total +ₚ i *ₚ (a +ₚ b)
       return total)
 
@@ -121,8 +121,8 @@ def nested_for_unpack'rn := fun (xs : List Int) ↦ fun (ys : List Int) ↦
         let __for_unpack_1 := Prod.snd _pair_1
         let __unpack_value_1 := __for_unpack_1
         let __unpack_pair_1 := __unpack_value_1
-        let mut a := Prod.fst __unpack_pair_1
-        let mut b := Prod.snd __unpack_pair_1
+        let mut a : Int := Prod.fst __unpack_pair_1
+        let mut b : Int := Prod.snd __unpack_pair_1
         total := total +ₚ i *ₚ (a +ₚ b)
       return total)
 

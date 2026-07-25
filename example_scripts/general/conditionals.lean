@@ -50,9 +50,9 @@ def cond_multi := fun (x : Int) ↦
     let mut x := x
     let __unpack_value_1 := ((1 : Int), ((2 : Int), (1 : Int)))
     let __unpack_pair_1 := __unpack_value_1
-    let mut a := Prod.fst __unpack_pair_1
-    let mut b := Prod.fst (Prod.snd __unpack_pair_1)
-    let mut c := Prod.snd (Prod.snd __unpack_pair_1)
+    let mut a : Int := Prod.fst __unpack_pair_1
+    let mut b : Int := Prod.fst (Prod.snd __unpack_pair_1)
+    let mut c : Int := Prod.snd (Prod.snd __unpack_pair_1)
     if h_1 : a < b ∧ b > c then 
       x := x +ₚ (1 : Int)
     else
@@ -65,9 +65,9 @@ def cond_multi'rn := fun (x : Int) ↦
     let mut x := x
     let __unpack_value_1 := ((1 : Int), ((2 : Int), (1 : Int)))
     let __unpack_pair_1 := __unpack_value_1
-    let mut a := Prod.fst __unpack_pair_1
-    let mut b := Prod.fst (Prod.snd __unpack_pair_1)
-    let mut c := Prod.snd (Prod.snd __unpack_pair_1)
+    let mut a : Int := Prod.fst __unpack_pair_1
+    let mut b : Int := Prod.fst (Prod.snd __unpack_pair_1)
+    let mut c : Int := Prod.snd (Prod.snd __unpack_pair_1)
     if h_1 : decide (a < b) && decide (b > c) then 
       x := x +ₚ (1 : Int)
     else

@@ -69,7 +69,12 @@ movement is +259 ok, but these are real losses we introduced. Reversing them is 
    `flower-planting-with-no-adjacent`, `get-biggest-three-rhombus-sums-in-a-grid`,
    `maximum-score-of-a-good-subarray`, +2.
 
-2. **inf-seeded MUTABLE ACCUMULATOR boxes to `PyAny` (2 regressions) — commit `a1a37f5`. [DIAGNOSED, NOT FIXED]**
+2. **inf-seeded MUTABLE ACCUMULATOR boxes to `PyAny` (2 regressions) — commit `a1a37f5`. [✅ FIXED this session]**
+   Root cause was `min([ans, <transiently-unknown>])` returning the LIST type (not its element),
+   monotone-poisoning `ans` to `list` → `any`. Fixed in `Rules.lean` (`containerElemOrSelf`): a known
+   container's `min`/`max`/`sum` always yields `elemType`, even when the element is still `unknown`.
+   `shortest-subarray-…`, `minimum-consecutive-cards-…` recover. Original (obsolete) diagnosis below.
+   ORIGINAL NOTE —
    `ans = inf` → `let mut ans : PyAny := inf`; `pyMin [ans, i-…]` then mixes `PyAny`+`Int`.
    **Precise diagnosis this session** (repros `infA`–`infH` in scratch): the box appears ONLY with
    `inf`-seed **AND** a `min`/`max` arg whose type reaches `int` only *after* a fixpoint iteration —
@@ -94,14 +99,14 @@ movement is +259 ok, but these are real losses we introduced. Reversing them is 
    `Option TreeNode`/`Int`), OR lower class `==` to `BEq` (`==`) in the pure path too. Ties into §1.4.
 
 4. **other `PyAny` over-widening (7 regressions) — the TypeInfer/PyAny commits `e6ba2a6`, `f3b7c77`.**
-   A var the baseline inferred as concrete `Int` is now `PyAny`, which lacks the operator/getitem
-   instance. Sub-cases: generator lowering (`f3b7c77`) loses element type (`mi = min(<generator>)` →
-   `PyAny`, `b-a = mi` mismatches Int); `t = Counter(a)` typed `Std.HashMap` but `pyCounter` returns
-   `PyDefaultDict` → invalid reassignment; `PyDefaultDict PyAny (List ℤ)`; `PyGetItem (List ℤ) PyAny`;
-   `PyHSub ℤ ℤ PyAny`. Fix: tighten TypeInfer seeding so `min/max` over a generator, `Counter(...)`, and
-   defaultdict keys recover concrete element/key types instead of falling to `PyAny`.
-   `minimum-absolute-difference`, `word-subsets`, `number-of-good-paths`, +4. See `[[typeinfer-engine]]`
-   `[[pyvalue-fallback]]`.
+   **[PARTIAL ✅ — 3 sub-cases fixed this session]** `mi = min(<generator>)` losing the element type
+   (`minimum-absolute-difference` ✅) is the same `containerElemOrSelf` fix as §0.2. `t = Counter(a)`
+   hoisted-in-loop as `Std.HashMap` but reassigned `PyDefaultDict` (`word-subsets` ✅): the hoist now
+   detects a `Counter`/`defaultdict`-fed dict (`assignedFromDefaultDict`) and stamps the defaultdict
+   annotation, plus a new `Inhabited (PyDefaultDict)` so `:= default` resolves. `sorted(defaultdict)`
+   needed a `PySort (PyDefaultDict) κ` keys instance (`minimum-area-rectangle` ✅). STILL OPEN:
+   `PyGetItem (List ℤ) PyAny`, `PyHSub ℤ ℤ PyAny`, defaultdict-key concretisation. `number-of-good-paths`,
+   +. See `[[typeinfer-engine]]` `[[pyvalue-fallback]]`.
 
 ## §1 · COMPILE_FAIL clusters (466; recent batch fixed 0/84 — this is the real surface)
 
@@ -138,13 +143,16 @@ leverage × tractability.
    key=check)` / `nlargest(k, xs, key=)` splits needle/element types (`key(a[mid]) < x`); needs a
    `key`-aware shim overload. See `[[leetcode-library-imports]]`.
 
-3. **Numeric inf / ℤ→ℝ/ℚ widening (33; 38 mention `inf`).** (a) scalar/tuple-bound `inf` mixed with int
-   in `min`/`max` — `best-time-to-buy-and-sell-stock` (`ans, mi = (0, inf)`; `max(ans, v-mi)` →
-   `v-ₚ mi : ℚ` expected `ℤ`); the container inf-fix doesn't reach scalar tuple binds. (b) mut var
-   inferred `ℤ` at first assign, later reassigned wider (`ℝ` from `sqrt`) → `invalid reassignment` (21 of
-   the 28 invalid-reassignments). (c) `dist[u] = 0` (ℤ) into `List ℚ` → `PySetItem (List ℚ) ℤ ℤ`. Fix:
-   extend inf-adapt to scalar/tuple/mut binds (**merges with §0.2**); type a mut var as the **join of
-   ALL its assignments**; widen SetItem values to the container element type. See
+3. **Numeric inf / ℤ→ℝ/ℚ widening (33; 38 mention `inf`). [✅ (a)+§0.2 FIXED this session]** (a) scalar/
+   tuple-bound `inf` mixed with int in `min`/`max` — `best-time-to-buy-and-sell-stock` (`ans, mi = (0,
+   inf)`), `shortest-subarray-…`, `minimum-absolute-difference` all ✅. **Two root causes fixed:**
+   (i) tuple-unpack target binders never read their `_ty` stamp, so an `inf`-seeded slot defaulted to
+   `ℚ` — `tupleElementAssignDoElem` now ascribes from `stampedTypeSyntax?` (Assign.lean);
+   (ii) `min([ans, d])`/`sum` over a container whose element is transiently `unknown` returned the
+   CONTAINER type, poisoning the target into a `list` → `any` under the monotone fixpoint —
+   `Rules.lean` now takes `elemType` for any KNOWN container (`containerElemOrSelf`), even when the
+   element is still `unknown`. This also reverses §0.2. (b) mut var inferred `ℤ` then reassigned wider
+   (`ℝ` from `sqrt`) → `invalid reassignment`, and (c) `dist[u] = 0` into `List ℚ` — STILL OPEN. See
    `[[numeric-reconcile-tower]]`.
 
 4. **Node/Option typing — linked-list + tree (49). [PARTIAL — 2 cluster problems recovered]** Fixed
@@ -325,7 +333,7 @@ fix the top root causes.
 - **cherry-pick of 6 `ups` commits** onto master (`6b38589^..1870c09`); `types_and_assignments.py`
   verified.
 
-## This session — UNCOMMITTED (PALC 90/0, awaiting explicit commit say-so)
+## This session — committed `c082378` (PALC 90/0)
 - **§1.2 bisect/2-kwarg calls**: `buildApplied` emits ≤2 named args on ONE application spine
   (`f a (k := v) (k2 := v2)`), not nested-paren `((f) (k:=v)) (k2:=v2)` — needed for defaulted-param
   shims + `ListNode.new (next := head)`. Golden: `functions_and_calls.lean`.
@@ -334,6 +342,20 @@ fix the top root causes.
 - **§1.4 Node/Option (partial)**: `_mut_opt` inferred-nullable cursor + run-twin class-param suffix +
   ctor named-args. 2 cluster problems recovered (`convert-binary…`, `remove-duplicates…`). Regression:
   `optional_nodes.py::get_decimal`. Hard core (general Option field read/write) still open — see §1.4.
+
+## This session — UNCOMMITTED (PALC 90/0, awaiting explicit commit say-so)
+- **§0.2+§1.3(a) inf/min-max container-poison [big]**: (i) `min([xs])`/`sum` over a KNOWN container
+  with a transiently-`unknown` element now returns `elemType` not the container (`containerElemOrSelf`,
+  Rules/PyType) — was poisoning the target to `list`→`any` under the monotone fixpoint; (ii) tuple-unpack
+  binders read their `_ty` stamp (`tupleElementAssignDoElem`, Assign.lean) so `ans, mi = (0, inf)` pins
+  `int`. Recovers `best-time-to-buy-…`, `shortest-subarray-…`, `minimum-absolute-difference`. Regression:
+  `numeric_sentinels.py` (`max_profit`, `shortest_gap`).
+- **§0.4 Counter/defaultdict hoist backing**: a `Counter`/`defaultdict`-fed dict first assigned inside a
+  block is hoisted with the defaultdict annotation (`assignedFromDefaultDict` + `stampHoistTypes`), plus
+  `Inhabited (PyDefaultDict)` (`:= default` resolves) and `PySort (PyDefaultDict) κ` (keys, for
+  `sorted(d)`). Recovers `word-subsets`, `minimum-area-rectangle`. Regression:
+  `captured_containers.py::group_max`.
+- Corpus `--random 50 --seed 5`: **41 ok / 8 compile_fail / 1 convert_fail** (baseline was ~53%).
 
 ## Earlier sessions
 negative-index→Int; numeric-container `List ℚ` read+write (lattice tower / comprehension inference /

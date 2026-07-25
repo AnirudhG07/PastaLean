@@ -29,7 +29,7 @@ def UnionFind.new := fun n ↦
   ({ p := PastaLean.pyList (PastaLean.pyRange n), size := PastaLean.pyListRepeat [(1 : Int)] n, count := n } :
     UnionFind)
 
-partial def UnionFind.find := fun (self : UnionFind) ↦ fun x ↦
+partial def UnionFind.find := fun (self : UnionFind) ↦ fun (x : Int) ↦
   Id.run
     (do
       let mut self := self
@@ -40,14 +40,14 @@ partial def UnionFind.find := fun (self : UnionFind) ↦ fun x ↦
       let __py_ret_1 := self.p⦋x⦌
       return __py_ret_1)
 
-def UnionFind.union := fun (self : UnionFind) ↦ fun a ↦ fun b ↦
+def UnionFind.union := fun (self : UnionFind) ↦ fun (a : Int) ↦ fun (b : Int) ↦
   Id.run
     (do
       let mut self := self
       let __unpack_value_1 := (UnionFind.find self a, UnionFind.find self b)
       let __unpack_pair_1 := __unpack_value_1
-      let mut ra := Prod.fst __unpack_pair_1
-      let mut rb := Prod.snd __unpack_pair_1
+      let mut ra : Int := Prod.fst __unpack_pair_1
+      let mut rb : Int := Prod.snd __unpack_pair_1
       if h_1 : ra ≠ rb then 
         self := { self with p := PastaLean.pySetItem self.p ra rb }
         self := { self with count := self.count -ₚ (1 : Int) }
@@ -67,7 +67,7 @@ def UnionFind'rn.new := fun n ↦
   ({ p := PastaLean.pyList (PastaLean.pyRange n), size := PastaLean.pyListRepeat [(1 : Int)] n, count := n } :
     UnionFind'rn)
 
-partial def UnionFind'rn.find := fun (self : UnionFind'rn) ↦ fun x ↦
+partial def UnionFind'rn.find := fun (self : UnionFind'rn) ↦ fun (x : Int) ↦
   Id.run
     (do
       let mut self := self
@@ -78,14 +78,14 @@ partial def UnionFind'rn.find := fun (self : UnionFind'rn) ↦ fun x ↦
       let __py_ret_1 := self.p⦋x⦌
       return __py_ret_1)
 
-def UnionFind'rn.union := fun (self : UnionFind'rn) ↦ fun a ↦ fun b ↦
+def UnionFind'rn.union := fun (self : UnionFind'rn) ↦ fun (a : Int) ↦ fun (b : Int) ↦
   Id.run
     (do
       let mut self := self
       let __unpack_value_1 := (UnionFind'rn.find self a, UnionFind'rn.find self b)
       let __unpack_pair_1 := __unpack_value_1
-      let mut ra := Prod.fst __unpack_pair_1
-      let mut rb := Prod.snd __unpack_pair_1
+      let mut ra : Int := Prod.fst __unpack_pair_1
+      let mut rb : Int := Prod.snd __unpack_pair_1
       if h_1 : ra != rb then 
         self := { self with p := PastaLean.pySetItem self.p ra rb }
         self := { self with count := self.count -ₚ (1 : Int) }
