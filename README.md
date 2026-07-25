@@ -129,43 +129,6 @@ The type `T` comes from `TypeInfer`; a variable bound at *different* types acros
 
 </details>
 
-<details><summary>Nested Functions & Closures</summary>
-
-A **closure** is a nested function that reads a variable from the enclosing one — a *free variable* it "closes over":
-
-```python
-def make_adder(n):
-    def add(x):
-        return x + n     # n is free in `add`; it belongs to make_adder
-    return add
-make_adder(5)(3)         # 8 — the returned `add` still remembers n = 5
-```
-
-**The Lean problem:** you can't just move `add` to the top level (it would lose `n`), and Lean has no mutable enclosing scope to point back at.
-
-**How we deal — lambda lifting.** Every captured variable becomes an extra parameter of a **sibling `private partial def`** — `_make_adder'add := fun x n ↦ x + n` — passed at each call site (what's lifted is exactly `(names the inner reads) ∩ (names the outer binds)`; builtins/globals fall outside it). When the closure **escapes as a value** — returned, or a decorator's wrapper — we emit a genuine Lean closure that partial-applies the sibling with the captures baked in: `make_adder := fun n ↦ fun x ↦ _make_adder'add x n`. So returned closures, **currying**, and **decorators** all work, and stay **provable** — the sibling keeps its `[simp, taste_ingr]` tag, so `assert make_adder(5)(3) == 8` is proved automatically on conversion. (An un-inferable returned-closure param falls back to `PyAny`.)
-
-**Mutation** (`nonlocal ans; ans += 1`) is *threaded*: the capture is both a parameter and part of the return, each call rebinding it. The one genuinely hard case is a closure that mutates a captured cell **and escapes** (a stateful `counter()`), which needs a real reference cell — still to come.
-
-We use a sibling `private partial def` (not `where`/`let rec`, which would force the *outer* def `partial` and lose its provability). It all lives in `PyGens/Transform/ClosureConvert.lean` — no Python pass.
-
-</details>
-
-<details><summary>Generators & <code>yield</code></summary>
-
-A **generator** is a function that `yield`s a lazy stream of values. We **materialise it to a `List`**: the body is rewritten to build and return a list, so every consumer (`for x in g()`, `list(g())`, `sum(g())`, comprehensions) just sees an ordinary `List` handled by the existing `PyIterable` protocol — no new consumer machinery.
-
-```python
-def squares(n):
-    for i in range(n):
-        yield i * i          #  ->  __gen'acc.append(i * i)
-list(squares(4))             # [0, 1, 4, 9]
-```
-
-Per generator, `yield e` → `acc.append(e)`, `yield from it` → `acc.extend(it)`, and `return` → `return acc` (in a generator, `return` just *stops*); the body is wrapped with `acc = []` … `return acc`. The `append`/`for`/`while` value-semantics threading is reused as-is. It lives in `PyGens/Transform/GeneratorLower.lean` and runs *before* type inference, so the accumulator gets a real element type — which is what makes **recursive** generators (`yield from inorder(node.left)`, backtracking `subsets`/`permutations`) and generator **pipelines** (`for x in doubled(evens(data))`) work. (Materialisation is eager, so an *infinite* generator consumed lazily won't terminate.)
-
-</details>
-
 <details><summary>None and Optional</summary>
 
 Python's `None` and `Optional[T]` map to Lean's `Option`. Tree/linked-list fields default to `None`, so `TreeNode.left : Option TreeNode`; a field access then unwraps:
@@ -253,6 +216,43 @@ def describe(x):
     except ValueError:
         return "negative"   # str   ->  def describe : Int -> PyExcept PyAny
 ```
+
+</details>
+
+<details><summary>Nested Functions & Closures</summary>
+
+A **closure** is a nested function that reads a variable from the enclosing one — a *free variable* it "closes over":
+
+```python
+def make_adder(n):
+    def add(x):
+        return x + n     # n is free in `add`; it belongs to make_adder
+    return add
+make_adder(5)(3)         # 8 — the returned `add` still remembers n = 5
+```
+
+**The Lean problem:** you can't just move `add` to the top level (it would lose `n`), and Lean has no mutable enclosing scope to point back at.
+
+**How we deal — lambda lifting.** Every captured variable becomes an extra parameter of a **sibling `private partial def`** — `_make_adder'add := fun x n ↦ x + n` — passed at each call site (what's lifted is exactly `(names the inner reads) ∩ (names the outer binds)`; builtins/globals fall outside it). When the closure **escapes as a value** — returned, or a decorator's wrapper — we emit a genuine Lean closure that partial-applies the sibling with the captures baked in: `make_adder := fun n ↦ fun x ↦ _make_adder'add x n`. So returned closures, **currying**, and **decorators** all work, and stay **provable** — the sibling keeps its `[simp, taste_ingr]` tag, so `assert make_adder(5)(3) == 8` is proved automatically on conversion. (An un-inferable returned-closure param falls back to `PyAny`.)
+
+**Mutation** (`nonlocal ans; ans += 1`) is *threaded*: the capture is both a parameter and part of the return, each call rebinding it. The one genuinely hard case is a closure that mutates a captured cell **and escapes** (a stateful `counter()`), which needs a real reference cell — still to come.
+
+We use a sibling `private partial def` (not `where`/`let rec`, which would force the *outer* def `partial` and lose its provability). It all lives in `PyGens/Transform/ClosureConvert.lean`.
+
+</details>
+
+<details><summary>Generators & <code>yield</code></summary>
+
+A **generator** is a function that `yield`s a lazy stream of values. We **materialise it to a `List`**: the body is rewritten to build and return a list, so every consumer (`for x in g()`, `list(g())`, `sum(g())`, comprehensions) just sees an ordinary `List` handled by the existing `PyIterable` protocol — no new consumer machinery.
+
+```python
+def squares(n):
+    for i in range(n):
+        yield i * i          #  ->  __gen'acc.append(i * i)
+list(squares(4))             # [0, 1, 4, 9]
+```
+
+Per generator, `yield e` → `acc.append(e)`, `yield from it` → `acc.extend(it)`, and `return` → `return acc` (in a generator, `return` just *stops*); the body is wrapped with `acc = []` … `return acc`. The `append`/`for`/`while` value-semantics threading is reused as-is. It lives in `PyGens/Transform/GeneratorLower.lean` and runs *before* type inference, so the accumulator gets a real element type — which is what makes **recursive** generators (`yield from inorder(node.left)`, backtracking `subsets`/`permutations`) and generator **pipelines** (`for x in doubled(evens(data))`) work. (Materialisation is eager, so an *infinite* generator consumed lazily won't terminate.)
 
 </details>
 

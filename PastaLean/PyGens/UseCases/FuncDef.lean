@@ -191,6 +191,20 @@ def functionReturnTypeSyntax? (json : Json) : PygenM (Option (TSyntax `term)) :=
         functionArgTypeSyntax? returnJson
   | none => pure none
 
+/-- Return-type ascription for a RECURSIVE function: the annotated/inferred type, or `Unit` for a
+genuinely void body (no `return e` anywhere — only bare `return`/fall-through). A recursive
+`partial def` with an unconstrained return type otherwise leaves `Inhabited ?m` stuck. Guarded by
+`hasValuedReturn` so a state-threaded helper (which gains a valued `return (…threaded…)` and a
+concrete tuple return type) is never mis-pinned to `Unit`. -/
+def recursiveReturnTypeSyntax? (json : Json) : PygenM (Option (TSyntax `term)) := do
+  match ← functionReturnTypeSyntax? json with
+  | some rt => return some rt
+  | none =>
+    -- Check the BODY, not the def node: `hasValuedReturn` short-circuits to `false` on a
+    -- `FunctionDef` (its job is to skip *nested* defs), so passing `json` here always reads void.
+    let body := (json.getObjVal? "body").toOption.getD Json.null
+    if hasValuedReturn body then return none else return some (← `(Unit))
+
 /-- Check whether a JSON subtree references a given variable name. -/
 partial def jsonReferencesName (json : Json) (target : String) : Bool :=
   let directMatch :=
@@ -838,7 +852,7 @@ def funcDefSyntax : (kind : SyntaxNodeKind) → Json →
               match ← functionParamBinders? json argInfos with
               | some binders =>
                   let body ← functionValueSyntax #[] bodyElems boxReturn retFloat
-                  let rt? ← if isRecursive then functionReturnTypeSyntax? json else pure none
+                  let rt? ← if isRecursive then recursiveReturnTypeSyntax? json else pure none
                   match isRecursive, nc, rt? with
                   | true, true, some rt => `(noncomputable partial def $nameIdent $binders* : $rt := $body)
                   | true, false, some rt => `(partial def $nameIdent $binders* : $rt := $body)
@@ -850,7 +864,7 @@ def funcDefSyntax : (kind : SyntaxNodeKind) → Json →
               let valueStx ← functionValueSyntax argInfos bodyElems boxReturn retFloat
               -- take care of recursion function Type
               if isRecursive then
-                let fullTy? ← match ← functionReturnTypeSyntax? json with
+                let fullTy? ← match ← recursiveReturnTypeSyntax? json with
                   | some retTy => functionArrowTypeSyntax? argInfos retTy
                   | none => pure none
                 match fullTy?, nc with

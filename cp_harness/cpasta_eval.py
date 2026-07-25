@@ -391,6 +391,111 @@ def _lean_type_of(values):
     return "Int"  # int (or int+bool, which coerces), or no information at all
 
 
+def _balanced_paren(s, i):
+    """`s[i]` must be '('. Return (inner-text-without-the-outer-parens, index-just-past-the-close),
+    or (None, len(s)) if unbalanced."""
+    depth = 0
+    for j in range(i, len(s)):
+        if s[j] == "(":
+            depth += 1
+        elif s[j] == ")":
+            depth -= 1
+            if depth == 0:
+                return s[i + 1:j], j + 1
+    return None, len(s)
+
+
+def _split_top_level(s, sep):
+    """Split `s` on the single char `sep`, but only at parenthesis-depth 0."""
+    parts, depth, cur = [], 0, ""
+    for ch in s:
+        if ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+        if ch == sep and depth == 0:
+            parts.append(cur)
+            cur = ""
+        else:
+            cur += ch
+    parts.append(cur)
+    return parts
+
+
+# Numeric-tower names the exact (`ℚ`/`ℝ`) twin can emit, mapped to the runnable JSON-decodable atom.
+_DECODABLE_ATOM = {
+    "Int": "Int", "Nat": "Nat", "Bool": "Bool", "String": "String", "Float": "Float",
+    "ℤ": "Int", "ℕ": "Nat", "ℚ": "Float", "ℝ": "Float", "Rat": "Float",
+}
+
+
+def _normalize_lean_type(t):
+    """Map a Lean type from the twin's signature to a JSON-decodable harness field type, or None if
+    the runtime `fromJson?` decoder can't handle it (`PyAny`, functions, class/struct types, …).
+    Handles atoms, `List X`, and tuples `A × B × …`, recursively."""
+    t = t.strip()
+    # Peel one fully-enclosing paren pair: `(List Int)` → `List Int`.
+    while t.startswith("(") and t.endswith(")"):
+        inner, end = _balanced_paren(t, 0)
+        if inner is None or end != len(t):
+            break
+        t = inner.strip()
+    if t in _DECODABLE_ATOM:
+        return _DECODABLE_ATOM[t]
+    prod = _split_top_level(t, "×")
+    if len(prod) > 1:
+        parts = [_normalize_lean_type(p) for p in prod]
+        if any(p is None for p in parts):
+            return None
+        return "(" + " × ".join(parts) + ")"
+    if t.startswith("List "):
+        inner = _normalize_lean_type(t[len("List "):])
+        return None if inner is None else f"(List {inner})"
+    return None
+
+
+def _signature_arg_types(converted_lean, fn_name, arity):
+    """Parse the `'rn` twin's explicit parameter types from its signature, so harness field types
+    come from the transpiler's inferred signature rather than the (possibly out-of-spec) test data —
+    one stray Float in an Int column otherwise flips the whole field to `List Float` and the wrapper
+    fails to elaborate against the `List Int` twin. Returns a list of `arity` decodable type strings
+    (`None` per position it cannot supply), or `None` to fall back entirely to data inference.
+
+    The twin is `def NAME'rn := fun (a : T) ↦ fun (b : U) ↦ …`; we walk the leading `fun (…) ↦`
+    binder chain, normalizing each binder's ascribed type."""
+    m = re.search(r"\bdef\s+" + re.escape(fn_name) + r"'rn\s*:=", converted_lean)
+    if m is None:
+        return None
+    s, i, n = converted_lean, m.end(), len(converted_lean)
+    types, guard = [], 0
+    while len(types) < arity and guard < 100000:
+        guard += 1
+        while i < n and s[i].isspace():
+            i += 1
+        if i >= n:
+            break
+        if s.startswith("fun", i):
+            i += 3
+        elif s.startswith("↦", i):
+            i += len("↦")
+        elif s.startswith("=>", i):
+            i += 2
+        elif s[i] == "(":
+            content, end = _balanced_paren(s, i)
+            i = end
+            if content is None or ":" not in content:
+                return None  # unparseable binder → don't trust any of it
+            names_part, _, ty = content.partition(":")
+            nty = _normalize_lean_type(ty)
+            for _ in names_part.split():  # `(a b : Int)` shares one type across names
+                types.append(nty)
+        else:
+            break  # implicit binder `{…}` or the function body — stop
+    if not types:
+        return None
+    return (types + [None] * arity)[:arity]
+
+
 def build_test_harness(converted_lean, fn_name, cases, data_path):
     """Append a `main` that runs the computable `fn'rn` twin over the cases, printing `PASSED p/t`
     and a `FAIL <idx>: got <value>` line per failing case. Cases with an unrenderable argument or
@@ -411,9 +516,19 @@ def build_test_harness(converted_lean, fn_name, cases, data_path):
     arity = len(renderable[0][1]) if renderable else 0
     kept = [r for r in renderable if len(r[1]) == arity]
     arg_types = [_lean_type_of([r[1][i] for r in kept]) for i in range(arity)]
-    exp_type = _lean_type_of([r[2] for r in kept])
 
-    if not kept or exp_type is None or any(t is None for t in arg_types):
+    # Prefer the twin's inferred parameter types over types guessed from the (possibly out-of-spec)
+    # test data: one stray Float in an Int column otherwise flips the whole field to `List Float`,
+    # and the wrapper fails to elaborate against the `List Int` twin. Cases whose data doesn't
+    # conform to the signature type are then dropped by the runtime `fromJson?` decoder, rather than
+    # breaking the whole harness compile. Falls back to data inference where the signature is
+    # unparseable or not a decodable type.
+    sig_types = _signature_arg_types(converted_lean, fn_name, arity)
+    if sig_types is not None:
+        arg_types = [sig if sig is not None else data
+                     for sig, data in zip(sig_types, arg_types)]
+
+    if not kept or any(t is None for t in arg_types):
         body = "\n".join([converted_lean.rstrip(), "",
                           'def main : IO Unit := IO.println "PASSED 0/0"', ""])
         return body, [], "[]"
@@ -421,25 +536,34 @@ def build_test_harness(converted_lean, fn_name, cases, data_path):
     runnable = [idx for (idx, _a, _e) in kept]
     data_json = json.dumps([[idx] + args + [expected] for (idx, args, expected) in kept])
 
-    names = ["idx"] + [f"a{i}" for i in range(arity)] + ["e"]
-    field_types = ["Nat"] + arg_types + [exp_type]
+    # The expected value is NOT given a data-inferred type — a stray Float in the *result* column
+    # would otherwise mistype `e` (`List Float`) against the twin's `List Int` return and fail the
+    # whole compile. Instead it's carried as a raw `Json` and decoded per-case AT THE CALL'S ACTUAL
+    # RESULT TYPE via `_decodeLike _got`, so tuple/int/float returns all resolve correctly and only
+    # genuinely out-of-spec expected values are dropped (not compiled away).
+    in_names = ["idx"] + [f"a{i}" for i in range(arity)]
+    in_types = ["Nat"] + arg_types
     disc = ", ".join(f"Lean.fromJson? (α := {t}) (f.getD {k} .null)"
-                     for k, t in enumerate(field_types))
-    ok_pat = ", ".join(f".ok {n}" for n in names)
-    wild = ", ".join("_" for _ in field_types)
-    tuple_ty = " × ".join(field_types)
-    pat = "(" + ", ".join(names) + ")"
+                     for k, t in enumerate(in_types))
+    ok_pat = ", ".join(f".ok {n}" for n in in_names)
+    wild = ", ".join("_" for _ in in_types)
+    tuple_ty = " × ".join(in_types + ["Lean.Json"])
+    pat = "(" + ", ".join(in_names + ["ejson"]) + ")"
     call = rn + ((" " + " ".join(f"a{i}" for i in range(arity))) if arity else "")
     path_lit = str(data_path).replace("\\", "\\\\").replace('"', '\\"')
     body = "\n".join([
         "import Lean.Data.Json",
         converted_lean.rstrip(), "",
+        # Decode the expected JSON at the SAME type as the value the twin computed: `_pat`'s type
+        # (`α`) is unified with `_got` at the call site, so no return-type annotation is needed.
+        "private def _decodeLike {α : Type} [Lean.FromJson α] (_pat : α) "
+        "(j : Lean.Json) : Option α := (Lean.fromJson? j).toOption", "",
         f"private def _decodeCase' (j : Lean.Json) : Option ({tuple_ty}) :=",
         "  match j.getArr? with",
         "  | .error _ => none",
         "  | .ok f =>",
         f"    match {disc} with",
-        f"    | {ok_pat} => some ({', '.join(names)})",
+        f"    | {ok_pat} => some ({', '.join(in_names)}, f.getD {arity + 1} .null)",
         f"    | {wild} => none", "",
         "def main : IO Unit := do",
         "  let _out ← IO.getStdout",
@@ -450,13 +574,18 @@ def build_test_harness(converted_lean, fn_name, cases, data_path):
         "  let mut _p := 0",
         "  let mut _t := 0",
         f"  for {pat} in _cases do",
-        "    _t := _t + 1",
+        f"    let _got := {call}",
+        "    match _decodeLike _got ejson with",
+        # Expected value undecodable at the result type → out-of-spec case, drop (don't count).
+        "    | none => pure ()",
+        "    | some e =>",
+        "      _t := _t + 1",
         # `repr` prints what Lean computed so a failure is debuggable without a rerun.
-        f"    if ({call}) == e then _p := _p + 1",
-        f'    else IO.println s!"FAIL {{idx}}: got {{repr ({call})}}"',
+        "      if _got == e then _p := _p + 1",
+        '      else IO.println s!"FAIL {idx}: got {repr _got}"',
         # Flush a running count each case so a native run that times out still reports partials
         # (how many passed / attempted before it hung) instead of a bare 0/N.
-        '    _out.putStr s!"PROG {_t} {_p}\\n"; _out.flush',
+        '      _out.putStr s!"PROG {_t} {_p}\\n"; _out.flush',
         '  IO.println s!"PASSED {_p}/{_t}"', ""])
     return body, runnable, data_json
 

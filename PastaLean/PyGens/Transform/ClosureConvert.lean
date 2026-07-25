@@ -652,11 +652,15 @@ partial def rewriteThreadedStmts (old new : String) (captures threaded : Array S
           unless hasValue do
             throwError s!"nested function '{old}' returns no value but its result is assigned."
           let .ok target := stmt.getObjVal? "target" | throwError "Assign is missing a 'target'"
+          -- A subscript target may itself contain a threaded call in its index (`p[find(x)] = find(y)`);
+          -- hoist those to temporaries first so the index is threaded too, not left as a bare call.
+          let (target, tgtPre) ← hoistThreadedCalls old new captures threaded hasValue counter target
           let args := (value.getObjValAs? (Array Json) "args").toOption.getD #[]
           let call := retargetCall new captures value args
           -- The threaded return is a fully-`Prod` tuple, so a nested target (`(ls, ln), ans`) unpacks
           -- with `Prod` at every level; `_thread_unpack` tells codegen to use `Prod`, not list access.
           let tgt := (tupleNode (#[target] ++ threadedNodes)).setObjVal! "_thread_unpack" (Json.bool true)
+          out := out ++ tgtPre
           out := out.push (assignNode tgt call)
           continue
 

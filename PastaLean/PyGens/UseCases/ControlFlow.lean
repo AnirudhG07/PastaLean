@@ -246,7 +246,12 @@ def forTargetBinder (targetJson : Json) (bodyElems : Array Json := #[]) :
         -- the rebind introduce its own `let mut` over it.
         let eltConflicts := (jsonFieldOption elts[i]! "_ty").any
           (fun t => t.getObjValAs? String "id" == .ok "PyAny")
-        if bodyElems.any (bodyReassignsName idents[i]!.getId.toString) then
+        -- Mirrors the Name case: a target already a `let mut` in scope (function-scope hoisted, or a
+        -- name reused as a loop target) is assigned into, not shadowed — Lean forbids a `for` binder
+        -- from shadowing an enclosing `let mut`.
+        if ← hasVar idents[i]!.getId then
+          prelude := prelude.push (← `(doElem| $(idents[i]!):ident := $acc))
+        else if bodyElems.any (bodyReassignsName idents[i]!.getId.toString) then
           if eltConflicts then
             prelude := prelude.push (← `(doElem| let $(idents[i]!) := $acc))
           else
