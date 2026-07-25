@@ -125,8 +125,16 @@ Python `list` is a dynamic array — O(1) amortized append, O(1) index. A `List 
 - **`Array α` — the runnable twin (`fn'rn`).** `Array` is `structure { toList : List α }` with
   `@[extern]` C ops, so `push`/`set!`/`get!` are **O(1) when the array is uniquely owned** — which
   the codegen's threaded mutation (`xs := pyArrayAppend xs v`, rebinding the same name) guarantees
-  (refcount 1 ⇒ Perceus mutates in place). Lives in `PyAPI/Arrays.lean` (concrete `pyArray*`
+  (refcount 1 ⇒ **Perceus** mutates in place). Lives in `PyAPI/Arrays.lean` (concrete `pyArray*`
   functions + `Array` instances of `PyGetItem`/`PySetItem`/`PyLen`/`PyContains`/`PyTruthy`/…).
+
+  The in-place-when-unique guarantee is Lean 4's reference-counting model, "functional but in-place"
+  (FBIP): Ullrich & de Moura, *[Counting Immutable Beans: Reference Counting Optimized for Purely
+  Functional Programming](https://arxiv.org/abs/1908.05647)* (IFL 2019); Reinking, Xie, de Moura &
+  Leijen, *[Perceus: Garbage Free Reference Counting with Reuse](https://www.microsoft.com/en-us/research/uploads/prod/2020/11/perceus-tr-v1.pdf)*
+  (PLDI 2021). Because our mutation model already threads a list linearly, the runnable twin gets O(1)
+  append/index essentially for free — no linear-type annotations. (Measured: `List` append+index at
+  n=30000 ran ~134× slower than `Array`.)
 
 Because `Array α` is *defined as* `{ toList : List α }`, the two twins are the **same value in two
 representations**, bridged by `Array.toList` — not divergent implementations. So they must agree

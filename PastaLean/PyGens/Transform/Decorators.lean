@@ -58,4 +58,14 @@ def appliedDecorators (json : Json) : Array String :=
   let decos := (json.getObjValAs? (Array Json) "decorator_list").toOption.getD #[]
   (decos.filterMap decoratorName?).filter (fun n => !isTransparent n)
 
+/-- `@cache` / `@lru_cache` / `@functools.cache` etc. — value-transparent but performance-critical:
+the runnable twin memoizes so exponential recursion runs in polynomial time. -/
+def isMemoizing (name : String) : Bool :=
+  ["cache", "lru_cache"].contains (lastSegment name)
+
+/-- Does this `FunctionDef` carry a memoizing decorator (`@cache`/`@lru_cache`)? -/
+def hasMemoizingDecorator (json : Json) : Bool :=
+  let decos := (json.getObjValAs? (Array Json) "decorator_list").toOption.getD #[]
+  (decos.filterMap decoratorName?).any isMemoizing
+
 end PastaLean.Decorators

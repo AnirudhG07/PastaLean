@@ -704,6 +704,91 @@ def emitHelperGroup (group : Array Json) : PygenM (TSyntax `command) := do
     getCode j `command
   else throwError "closure conversion produced an empty helper group"
 
+/-- Does a recursive call to `name` appear inside a lazily/conditionally-evaluated expression — a
+ternary `IfExp`, a short-circuit `BoolOp`, a `Lambda`, or a comprehension? There a memoized self-call
+`(← foo'memo'rn …)` is illegal (do-notation only hoists `(←…)` from statement position, and hoisting
+out of a conditional would change *when* it runs), so such a function can't be memoized as-is. -/
+partial def selfCallUnderExpr (name : String) (json : Json) : Bool :=
+  match jsonNodeType? json with
+  | some "IfExp" | some "BoolOp" | some "Lambda"
+  | some "ListComp" | some "SetComp" | some "DictComp" | some "GeneratorExp" =>
+      containsCallTo name json
+  | _ => match json with
+    | .arr xs => xs.any (selfCallUnderExpr name)
+    | .obj fs => fs.toList.any (fun (_, v) => selfCallUnderExpr name v)
+    | _ => false
+
+/-- The memoized run-twin of a `@cache`/`@lru_cache` function: a `StateM`-threaded worker `foo'memo'rn`
+that shares one `HashMap` cache across the whole recursion, plus the pure wrapper `foo'rn` that seeds a
+fresh cache per top-level call. Recursive self-calls in the body lower to `(← foo'memo'rn args)` (via
+`withMemoizeSelf`), so the recursion is memoized — turning exponential `@cache` DP into polynomial.
+Returns `none` (fall back to a plain, unmemoized def) unless the function has a known return type and
+all-`int` params (a `Hashable`/`BEq` cache key). -/
+def memoizedRunCommand? (json : Json) (nameIdent : TSyntax `ident) (baseName : String) :
+    PygenM (Option (TSyntax `command)) := do
+  let some retTy ← functionReturnTypeSyntax? json | return none
+  -- Params live in the nested `arguments` node (`json.args.args`). The cache is keyed on the ORIGINAL
+  -- params only; a closure-`_capture` (added when lifting a nested `@cache dfs`) is constant across
+  -- the recursion and may be a non-hashable container, so it is threaded through but NOT keyed. Every
+  -- ORIGINAL param must be `int`/`bool`/`str` — a `Hashable`/`BEq` type the key (a tuple of them) uses.
+  let argNodes := ((json.getObjVal? "args").toOption.bind
+    (·.getObjValAs? (Array Json) "args" |>.toOption)).getD #[]
+  let isCapture (a : Json) : Bool := a.getObjValAs? Bool "_capture" == .ok true
+  let keyTyFor (a : Json) : Option (TSyntax `term) :=
+    match (a.getObjVal? "annotation").toOption.bind (·.getObjValAs? String "id" |>.toOption) with
+    | some "int" => some (mkIdent ``Int)
+    | some "bool" => some (mkIdent ``Bool)
+    | some "str" => some (mkIdent ``String)
+    | _ => none
+  let argInfos ← functionArgInfos json
+  unless argInfos.size == argNodes.size do return none
+  -- (ident, key-type) for each ORIGINAL param; `none` if an original isn't a scalar key type.
+  let keyPartsOpt : Array (Option (TSyntax `term × TSyntax `term)) :=
+    (argNodes.zip argInfos).filterMap fun (a, (id, _)) =>
+      if isCapture a then none else some ((keyTyFor a).map (fun kt => (⟨id.raw⟩, kt)))
+  -- every original must be keyable (else the key is incomplete → wrong cache), and there must be ≥1.
+  unless !keyPartsOpt.isEmpty && keyPartsOpt.all (·.isSome) do return none
+  let keyParts := keyPartsOpt.filterMap id
+  let keyTerms := keyParts.map (·.1)
+  let keyTys := keyParts.map (·.2)
+  let argTerms : Array (TSyntax `term) := argInfos.map (fun (i, _) => ⟨i.raw⟩)
+  -- key: one original → the param; many → the right-nested tuple `(a, b, …)`; type = the `×` product.
+  let mut keyExpr : TSyntax `term := keyTerms.back!
+  for a in keyTerms.pop.reverse do keyExpr ← `(($a, $keyExpr))
+  let mut keyTy : TSyntax `term := keyTys.back!
+  for t in keyTys.pop.reverse do keyTy ← `($t × $keyTy)
+  let worker : TSyntax `ident := mkIdent (baseName ++ "'memo'rn").toName
+  let bodyElems := stripResultMarkers (← functionBodyElems json)
+  -- A self-call in a ternary/`and`/`or`/lambda/comprehension can't be a monadic `(←…)`; fall back.
+  if bodyElems.any (selfCallUnderExpr baseName) then return none
+  let bodyDoElems ← withMemoizeSelf (some (baseName, worker.getId)) (monadicFunctionBodySyntax bodyElems)
+  let cacheDo ← `(do
+    match (← get)[$keyExpr]? with
+    | some v => return v
+    | none =>
+        let v ← (do $[$bodyDoElems:doElem]*)
+        modify (·.insert $keyExpr v)
+        return v)
+  let mut workerVal : TSyntax `term := cacheDo
+  for (argIdent, ty?) in argInfos.reverse do
+    workerVal ← match ty? with
+      | some t => `(fun ($argIdent : $t) ↦ $workerVal)
+      | none => `(fun $argIdent ↦ $workerVal)
+  let stateRetTy ← `(StateM (Std.HashMap $keyTy $retTy) $retTy)
+  let some workerTy ← functionArrowTypeSyntax? argInfos stateRetTy | return none
+  let workerDef ← `(command| partial def $worker : $workerTy := $workerVal)
+  -- wrapper: `fun (params) ↦ (worker args).run' ∅`
+  let mut wrapCall : TSyntax `term ← `($worker)
+  for i in argTerms do wrapCall ← `($wrapCall $i)
+  let mut wrapperVal : TSyntax `term ← `(($wrapCall).run' ∅)
+  for (argIdent, ty?) in argInfos.reverse do
+    wrapperVal ← match ty? with
+      | some t => `(fun ($argIdent : $t) ↦ $wrapperVal)
+      | none => `(fun $argIdent ↦ $wrapperVal)
+  let some wrapperTy ← functionArrowTypeSyntax? argInfos retTy | return none
+  let wrapperDef ← `(command| def $nameIdent : $wrapperTy := $wrapperVal)
+  return some ⟨mkNullNode #[workerDef.raw, wrapperDef.raw]⟩
+
 @[pygen "FunctionDef"]
 def funcDefSyntax : (kind : SyntaxNodeKind) → Json →
     PygenM (TSyntax kind)
@@ -849,6 +934,12 @@ def funcDefSyntax : (kind : SyntaxNodeKind) → Json →
         -- (lifted to the spec postcondition) and `Result()` has no runtime lowering, so they must not
         -- leak into a runnable body — notably the `'rn` twin, which reaches this generic path.
         let bodyElems := stripResultMarkers (← functionBodyElems json)
+        -- A `@cache`/`@lru_cache` function: the runnable twin memoizes (StateM-threaded cache) so
+        -- exponential recursion runs in polynomial time. The provable twin (exact) stays the plain
+        -- recursive def below. Falls back to the plain def for shapes memoization doesn't cover.
+        if Decorators.hasMemoizingDecorator json && (← getNumericMode) == .approx then
+          if let some memoCmd ← memoizedRunCommand? json nameIdent baseName then
+            return memoCmd
         let isRecursive := bodyElems.any (jsonReferencesName · baseName)
         -- A real-valued body (transcendental, directly or via a callee) forces `noncomputable`.
         let nc := isReal || (← bodyNeedsNoncomputable bodyElems)

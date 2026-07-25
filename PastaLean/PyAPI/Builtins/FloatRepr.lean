@@ -38,9 +38,9 @@ private def decExp (q : Rat) : Int :=
     else (n : Int) * 10 ^ (-est).toNat ≥ (d : Int)
   if geEst then est else est - 1
 
-private def strTake (s : String) (n : Nat) : String := String.mk (s.toList.take n)
-private def strDrop (s : String) (n : Nat) : String := String.mk (s.toList.drop n)
-private def zeros (n : Nat) : String := String.mk (List.replicate n '0')
+private def strTake (s : String) (n : Nat) : String := String.ofList (s.toList.take n)
+private def strDrop (s : String) (n : Nat) : String := String.ofList (s.toList.drop n)
+private def zeros (n : Nat) : String := String.ofList (List.replicate n '0')
 
 /-- Place the `p`-digit significand `R` at decimal exponent `E` (Python's `%g` layout: plain decimal
 for `-4 ≤ E < 16`, scientific otherwise). Integers keep a trailing `.0`. -/

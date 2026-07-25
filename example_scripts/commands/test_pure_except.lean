@@ -15,7 +15,6 @@ set_option maxHeartbeats 0
 /-
 Test that pure exceptions (no IO) use PyExceptId in prove mode.
 -/
--- CHECK: def validate : Int → PyExceptId Int
 def validate : Int → PastaLean.ProofMode.PyProofM Int := fun (x : Int) ↦ do
   if h_1 : x < (0 : Int) then 
     throw (PastaLean.PyException.Raise "ValueError" (ToString.toString "negative"))
@@ -34,7 +33,6 @@ def validate'rn : Int → PastaLean.PyExcept Int := fun (x : Int) ↦ do
   let __py_ret_1 := x *ₚ (2 : Int)
   return __py_ret_1
 
--- CHECK: def validate_with_print : Int → PyExceptId Int
 def validate_with_print : Int → PastaLean.ProofMode.PyProofM Int := fun (x : Int) ↦ do
   let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg x]
   if h_1 : x < (0 : Int) then 

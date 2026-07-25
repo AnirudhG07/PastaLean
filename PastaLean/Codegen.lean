@@ -74,6 +74,14 @@ initialize truthinessContextRef : IO.Ref Bool ← IO.mkRef false
 /-- Read whether the current expression is evaluated only for its truthiness. -/
 def getTruthinessContext : IO Bool := truthinessContextRef.get
 
+/-- Inside a memoized function's body (a `@cache`/`@lru_cache` run-twin), the base name of the
+function being memoized paired with its `StateM` worker `fooMemo'rn`, so a recursive self-call lowers
+to a monadic `(← fooMemo'rn args)` threading the shared cache instead of an unmemoized plain call. -/
+initialize memoizeSelfRef : IO.Ref (Option (String × Lean.Name)) ← IO.mkRef none
+
+/-- Read the currently-memoized function's (base name, `StateM` worker name), if any. -/
+def getMemoizeSelf : IO (Option (String × Lean.Name)) := memoizeSelfRef.get
+
 /-- When emitting the runnable "twin" of a declaration in `--mode both`, this is the suffix (`'rn`)
 appended to every top-level definition name AND to references to other user-defined functions/classes
 (listed in `userNamesRef`). Empty for the single-version `prove`/`run` modes. Lets one file carry the
@@ -196,6 +204,19 @@ def withRetFloatContext {α : Type} (b : Bool) (x : PygenM α) : PygenM α := do
     return r
   catch e =>
     retFloatRef.set saved
+    throw e
+
+/-- Run `x` with the memoize-self context set (a recursive self-call to `name` lowers to
+`(← $worker args)`), restoring it afterwards. -/
+def withMemoizeSelf {α : Type} (ctx : Option (String × Lean.Name)) (x : PygenM α) : PygenM α := do
+  let saved ← memoizeSelfRef.get
+  memoizeSelfRef.set ctx
+  try
+    let r ← x
+    memoizeSelfRef.set saved
+    return r
+  catch e =>
+    memoizeSelfRef.set saved
     throw e
 
 /-- Run `x` with the truthiness flag set to `b` (restoring it afterwards). Set by `any`/`all` around

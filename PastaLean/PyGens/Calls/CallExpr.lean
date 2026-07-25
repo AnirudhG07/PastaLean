@@ -482,6 +482,14 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
             | none =>
                 throwError s!"Unsupported Python method '{attr}' encountered in Call node."
       else
+        -- Inside a memoized function's body, a recursive self-call lowers to the monadic `StateM`
+        -- worker `(← fooMemo'rn args)`, so the recursion threads the shared cache. Do-notation hoists
+        -- the `(←…)` to a bind in the enclosing do-block (the memoized body is a `do`).
+        if let some (memoName, memoWorker) ← getMemoizeSelf then
+          if funcJson.getObjValAs? String "id" == .ok memoName
+             && funcJson.getObjValAs? String "node_type" == .ok "Name" then
+            let argCodes ← argsArray.mapM (fun a => getCode a `term)
+            return ← `((← $(mkIdent memoWorker) $argCodes*))
         match funcJson.getObjValAs? String "node_type", funcJson.getObjValAs? String "id" with
         | .ok "Name", .ok "print" => do
             let supportedKeywords := ["sep", "end"]

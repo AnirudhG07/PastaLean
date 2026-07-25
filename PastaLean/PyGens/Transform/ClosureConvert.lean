@@ -747,7 +747,10 @@ private def liftHelper (outerName : String) (outerJson innerJson : Json) :
   let .ok innerArgs := inner.getObjVal? "args" | throwError
     s!"nested FunctionDef is missing 'args': {inner}"
   let innerArgsArray := (innerArgs.getObjValAs? (Array Json) "args").toOption.getD #[]
-  let extraArgs := ordered.map fun c => argNode c (annotations[c]?)
+  -- Captures become extra params AFTER the originals; mark them `_capture` so a memoized (`@cache`)
+  -- helper keys its cache on the ORIGINAL params only — a capture is constant across the recursion
+  -- (the cache is seeded fresh per top-level call), and may be a non-hashable container.
+  let extraArgs := ordered.map fun c => (argNode c (annotations[c]?)).setObjVal! "_capture" (Json.bool true)
   let innerArgs := innerArgs.setObjVal! "args" (Json.arr (innerArgsArray ++ extraArgs))
 
   let remaining := outerBody.filter fun stmt =>

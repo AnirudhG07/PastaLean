@@ -256,6 +256,23 @@ Per generator, `yield e` → `acc.append(e)`, `yield from it` → `acc.extend(it
 
 </details>
 
+<details><summary>Sequence backing: <code>List</code> to prove, <code>Array</code> to run</summary>
+
+A Python `list` is a dynamic array — O(1) amortized `append`, O(1) index — but a `List α`-backed `xs = xs ++ [v]` is O(n) and `xs[i]` is O(i), so an append/index loop becomes **O(n²)**. We keep *both* backings and use each where it wins. The **provable** twin (`fn`) stays `List α`: it is an inductive type with a free induction principle, so `taste?`/`mvcgen`, `omega`, and Mathlib's lemma library work naturally. The **runnable** twin (`fn'rn`) backs a `list` with `Array α` wherever every use is Array-portable, giving **O(1)** append/index.
+
+That O(1) is Lean 4's reference-counting model — "functional but in-place" (FBIP): `Array.push`/`set!`/`get!` mutate in place when the array is uniquely owned, which the codegen's threaded mutation (`xs := pyArrayAppend xs v`, rebinding the same name) guarantees. See Ullrich & de Moura, *[Counting Immutable Beans](https://arxiv.org/abs/1908.05647)* (IFL 2019) and Reinking, Xie, de Moura & Leijen, *[Perceus: Garbage Free Reference Counting with Reuse](https://www.microsoft.com/en-us/research/uploads/prod/2020/11/perceus-tr-v1.pdf)* (PLDI 2021). Because `Array α` is *defined as* `{ toList : List α }`, the two twins are the same value in two representations — not divergent implementations.
+
+The choice is **per value**, decided at compile time (`List.toArray`/`Array.toList` are each O(n), so flipping per-operation would reintroduce O(n²)): `Array` by default (wins build-by-`append` + random index), `List` fallback for a value dominated by prepend / `insert(0,·)` / `pop(0)` (where `List` is O(n) and `Array` O(n²)) or by any op not ported to `Array`. Details in [`PastaLean/README.md`](./PastaLean/README.md#sequence-backing-list-prove-vs-array-run).
+
+```python
+def f(n):
+    xs = []
+    for i in range(n): xs.append(i)   # fn'rn: Array push, O(1)   |  fn: List ++, provable
+    return sum(xs[i] for i in range(n))
+```
+
+</details>
+
 <details><summary>Python Decorators</summary>
 
 Python has decorators which are functions that modify the behavior of other functions. We support decorators in PastaLean by translating them to Lean functions that take a function as an argument and return a new function like a wrapper OR do syntax changes/noops since every decorator in Python hasn't been well translated. For example:
@@ -266,6 +283,26 @@ Python has decorators which are functions that modify the behavior of other func
 
 Multiple decorators can be applied to a function, and they are applied in the order they are listed.
 You can declare your own decorators in Python or use commonly supported OOP/library decorators like `@staticmethod`, `@classmethod`, `@property`, etc. We support a few of them, and you can add more by writing Lean definitions for them and adding them.
+
+</details>
+
+<details><summary><code>@cache</code> / <code>@lru_cache</code> memoization</summary>
+
+`@cache`/`@lru_cache` are value-transparent (memoization recomputes to the same result) but performance-critical: naive recursion recomputes exponentially. The **runnable** twin memoizes so exponential `@cache` DP runs in polynomial time; the **provable** twin stays the plain pure recursion (so it is still provable). The run twin is emitted as a `StateM`-threaded worker that shares one `HashMap` cache across the recursion, plus a pure wrapper that seeds a fresh cache per top-level call:
+
+```lean
+partial def fib'memo'rn : Int → StateM (Std.HashMap Int Int) Int := fun (n : Int) => do
+  match (← get)[n]? with
+  | some v => return v
+  | none => let v ← (do if n < 2 then return n
+                        else return ((← fib'memo'rn (n-1)) + (← fib'memo'rn (n-2))))
+            modify (·.insert n v); return v
+def fib'rn : Int → Int := fun (n : Int) => (fib'memo'rn n).run' ∅
+```
+
+Recursive self-calls in the body are lowered to `(← fib'memo'rn …)`, so the recursion threads the shared cache; `do`-notation hoists each `(←…)` to a bind. This is pure (no `unsafe`/global ref, so it runs under `lean --run` and native alike). It turns exponential recomputation into linear — the complexity-theoretic backing for memoization is Avanzini & Dal Lago, *[On Sharing, Memoization, and Polynomial Time](https://arxiv.org/abs/1501.00894)* (Information and Computation, 2017).
+
+**Coverage.** Params of type `int`/`bool`/`str` (a `Hashable`/`BEq` key); one param keys directly, several key on the tuple `(a, b, …) : A × B × …`. The common competitive-programming shape — a **nested `@cache dfs(i, j, …)`** (multi-arg, often capturing the grid/array) — works: closure-conversion lifts the `dfs` to a sibling def whose captures become trailing params, and the cache is keyed on the **original** params only (a capture is constant across the recursion and may be a non-hashable container, so it's threaded through but not keyed). What isn't memoised **falls back to the plain recursive def** (correct, just not faster): a self-call inside a ternary / `and` / `or` / lambda / comprehension (a `(←…)` can't hoist out of a lazily-evaluated position) or a param whose type isn't inferred. `example_scripts/general/decorators.py` exercises the memoised path.
 
 </details>
 

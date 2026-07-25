@@ -89,11 +89,28 @@ def add'undecorated'rn := fun (a : Int) ↦ fun (b : Int) ↦ a +ₚ b
 def add'rn :=
   checked'rn add'undecorated'rn
 
--- `@cache` is transparent — emitted unchanged, recursion still resolves.
+-- `@cache`/`@lru_cache`: the RUNNABLE twin memoises (a `StateM`-threaded `HashMap` cache shared across
+-- the recursion, seeded fresh per top-level call) so exponential DP runs in polynomial time; recursive
+-- self-calls become `(← fib'memo'rn …)`. The PROVABLE twin `fib` stays the plain pure recursion.
 partial def fib : Int → Int := fun (n : Int) ↦ if n < (2 : Int) then n else fib (n -ₚ (1 : Int)) +ₚ fib (n -ₚ (2 : Int))
 
-partial def fib'rn : Int → Int := fun (n : Int) ↦
-  if n < (2 : Int) then n else fib'rn (n -ₚ (1 : Int)) +ₚ fib'rn (n -ₚ (2 : Int))
+partial def fib'memo'rn : Int → StateM (Std.HashMap Int Int) Int := fun (n : Int) ↦ do
+  match (← get)[n]? with
+  | some v =>
+    return v
+  | none =>
+    let v ←
+      (do
+          if h_1 : n < (2 : Int) then 
+            return n
+          else
+            let _ := ()
+          let __py_ret_1 := (← fib'memo'rn (n -ₚ (1 : Int))) +ₚ (← fib'memo'rn (n -ₚ (2 : Int)))
+          return __py_ret_1)
+    modify (·.insert n v)
+    return v
+
+def fib'rn : Int → Int := fun (n : Int) ↦ (fib'memo'rn n).run' ∅
 
 -- OOP: the method-binding markers. `@staticmethod` drops `self`; `@property` reads as an attribute;
 -- `@classmethod` drops `cls`.
