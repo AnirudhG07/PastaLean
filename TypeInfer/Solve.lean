@@ -477,7 +477,16 @@ private def stampParams (env : Env) (fn : Json) : Json :=
                 let annotated := match getField arg "annotation" with
                   | some a => !a.isNull
                   | none => false
-                if annotated || (getField arg "_ty").isSome then arg
+                if annotated || (getField arg "_ty").isSome then
+                  -- A node param annotated `ListNode`/`TreeNode` (non-optional) that the body reassigns
+                  -- from a `.next`/`.left` (Option) — so `env` widened it to `.opt (.cls c)` — is really
+                  -- nullable. Mark `_mut_opt` so codegen seeds its mut shadow as `Option c` (`some p`),
+                  -- letting `while node`, `node.field` (Option-unwrap), and `node = node.next` line up
+                  -- WITHOUT changing the param's type (callers still pass a plain `c`).
+                  match env.get? name, getField arg "annotation" with
+                  | some (.opt (.cls c)), some ann =>
+                      if ofAnnotation ann == .cls c then arg.setObjVal! "_mut_opt" (Json.str c) else arg
+                  | _, _ => arg
                 else
                   -- A residual-unknown param is boxed as `PyAny` only when it is used in a
                   -- container-dispatch position (else it would compile-error); otherwise it is left
@@ -914,8 +923,8 @@ partial def stampFunction (sigs : Sigs) (outer hints : Env) (fn : Json) : Json :
   let eligible := arrayEligibleVars env fn
   match fn.getObjValAs? (Array Json) "body" with
   | .ok body => fn.setObjVal! "body"
-      (Json.arr ((((body.map (stampStmt sigs env body)).map (markTuples env)).map (markOptAttrs sigs env)).map
-        (stampArraySeqs eligible)))
+      (Json.arr (((((body.map (stampStmt sigs env body)).map (markTuples env)).map (markOptAttrs sigs env)).map
+        (stampArraySeqs eligible)).map (stampCompTargets sigs env)))
   | _ => fn
 
 /-- Stamp a (possibly nested) tuple-unpack target with the list-vs-`Prod` access mode at EVERY level,
@@ -956,6 +965,32 @@ private partial def stampHoistTypes (env : Env) (namesKey typesKey : String) (s 
         | none => none)
       if entries.isEmpty then s else s.setObjVal! typesKey (Json.mkObj entries)
   | _ => s
+
+/-- Stamp `_list_unpack` on a comprehension/generator tuple target iterating a list-of-lists
+(`[… for a, b in edges]`, `edges : list[list[int]]`), so codegen indexes it (`row[0]`) instead of
+projecting a `Prod` — the same mark `stampStmt` gives a `for`-statement target. Iterates the whole
+subtree; the first generator's `iter` is typed in the enclosing `env` (the common case). -/
+partial def stampCompTargets (sigs : Sigs) (env : Env) (json : Json) : Json :=
+  if nodeTypeOf json == some "FunctionDef" then json
+  else
+    let json :=
+      match nodeTypeOf json with
+      | some "ListComp" | some "SetComp" | some "GeneratorExp" | some "DictComp" =>
+          match json.getObjValAs? (Array Json) "generators" with
+          | .ok gens =>
+              json.setObjVal! "generators" (Json.arr (gens.map fun g =>
+                match getField g "target", getField g "iter" with
+                | some target, some iter =>
+                    if nodeTypeOf target == some "Tuple" then
+                      g.setObjVal! "target" (stampUnpackShape target (typeOfExpr sigs env iter).elemType)
+                    else g
+                | _, _ => g))
+          | _ => json
+      | _ => json
+    match json with
+    | .arr xs => Json.arr (xs.map (stampCompTargets sigs env))
+    | .obj fs => Json.mkObj (fs.toList.map (fun (k, v) => (k, stampCompTargets sigs env v)))
+    | _ => json
 
 /-- Stamp one statement: its target, its nested blocks, and any nested def. -/
 partial def stampStmt (sigs : Sigs) (env : Env) (roots : Array Json) (s : Json) : Json :=

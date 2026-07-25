@@ -117,3 +117,27 @@ def total'rn := fun (head : Option ListNode) ↦
         acc := acc +ₚ ((head).getD default).val
         head := ((head).getD default).next
       return acc)
+
+-- Param annotated as a bare `ListNode` (NOT `Optional`), but `head = head.next` makes it nullable —
+-- inference must widen the cursor to `Option ListNode` and the run twin must suffix the param class.
+def get_decimal := fun (head : ListNode) ↦
+  Id.run
+    (do
+      let mut head : Option ListNode := some head
+      let mut ans : Int := (0 : Int)
+      while (PastaLean.pyTruthy head) do
+        ans := PastaLean.pyBitOr (PastaLean.pyShiftLeft ans (1 : Int)) ((head).getD default).val
+        head := ((head).getD default).next
+      return ans)
+
+attribute [simp, taste_ingr] get_decimal
+
+def get_decimal'rn := fun (head : ListNode'rn) ↦
+  Id.run
+    (do
+      let mut head : Option ListNode'rn := some head
+      let mut ans : Int := (0 : Int)
+      while (PastaLean.pyTruthy head) do
+        ans := PastaLean.pyBitOr (PastaLean.pyShiftLeft ans (1 : Int)) ((head).getD default).val
+        head := ((head).getD default).next
+      return ans)

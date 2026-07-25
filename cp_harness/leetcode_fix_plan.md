@@ -128,12 +128,15 @@ leverage × tractability.
      bug** (`depth` passed at call sites but not declared as a param). Both are real features. Ties
      into `[[void-mutation-punit-bug]]` `[[closure-conversion]]`.
 
-2. **bisect / heapq `key=` (30) — isolated, but a real feature (NOT near-free).** VERIFIED: `lo=`/`hi=`
-   already work (shims have the optParams, codegen maps them). The remaining gap is **`key=`**:
-   `bisect_left(a, x, key=check)` and `nlargest(k, xs, key=)`. For bisect this splits needle/element
-   types (`key(a[mid]) < x`, x used as-is → `pyBisectLeft (a : List α) (x : β) … (key : α → β)`); for
-   heapq it's a projection before the heap order. Fix: add a `key`-aware overload to the bisect/heapq
-   shims. See `[[leetcode-library-imports]]`.
+2. **bisect / heapq kwargs (30). [✅ kwarg-application bug FIXED; `key=` value-split still open]**
+   The real blocker was NOT the shims — it was codegen applying a named arg to the *already-complete*
+   `(f a b)` (`bisect_right(s, x, lo=…)` → `(pyBisectRight s x) (lo := …)`, "Invalid argument name"),
+   because the shim's remaining params have defaults. FIXED: `buildApplied` (CallExpr.lean) now keeps
+   the named args in the SAME application spine (`f a b (lo := …)`), handling 1–2 kwargs explicitly
+   (`lo=`/`hi=`/`key=`/`reverse=`). `count-pairs-of-nodes` 0 errors; also fixes the `ListNode.new
+   (next := …)` paren break (§4-node). REMAINING: `key=` as a value transform — `bisect_left(a, x,
+   key=check)` / `nlargest(k, xs, key=)` splits needle/element types (`key(a[mid]) < x`); needs a
+   `key`-aware shim overload. See `[[leetcode-library-imports]]`.
 
 3. **Numeric inf / ℤ→ℝ/ℚ widening (33; 38 mention `inf`).** (a) scalar/tuple-bound `inf` mixed with int
    in `min`/`max` — `best-time-to-buy-and-sell-stock` (`ans, mi = (0, inf)`; `max(ans, v-mi)` →
@@ -144,14 +147,19 @@ leverage × tractability.
    ALL its assignments**; widen SetItem values to the container element type. See
    `[[numeric-reconcile-tower]]`.
 
-4. **Node/Option typing — linked-list + tree (49).** `curr = curr.next` reassigns `ListNode`-typed mut
-   with `Option ListNode` → invalid reassignment (`add-two-numbers`); `.next`/`.val`/`.left` through
-   `Option` → `Option.next does not exist` (`odd-even-linked-list`); `PyTruthy ListNode/TreeNode`
-   (`if node:`); `Ord (Option ListNode)` (heap of nodes); **`ListNode.new (next := head)` fails** —
-   codegen wraps the ctor as `(ListNode.new) (next := head)`, the paren breaks Lean named-arg syntax
-   even though `next` is a real param (6 problems, **quick isolated sub-win**). Fix: model nullable
-   nodes as `Option`, auto-lift `.field`/truthiness through `Option`, emit ctor named-args without
-   wrapping parens, add `Ord (Option _)`. (§0.3 `DecidableEq` folds in here.)
+4. **Node/Option typing — linked-list + tree (49). [PARTIAL — 2 cluster problems recovered]** Fixed
+   this session: (a) a param annotated as a bare `ListNode` but reassigned `curr = curr.next` — TypeInfer
+   now stamps `_mut_opt`, codegen seeds the mut cursor as `Option c := some p` so truthiness + `.getD`
+   field reads line up (`convert-binary…`, `remove-duplicates-from-sorted-list` now ✅); (b) **run-twin
+   class params are now suffixed** (`head : ListNode'rn`, not the prove-twin `ListNode`) — a pre-existing
+   gap `functionArgTypeSyntax?` masked, exposed once (a) coerced `some head`; (c) `ListNode.new (next := head)`
+   ctor named-args emit on one application spine (2-kwarg `buildApplied` fix), no wrapping parens.
+   Regression: `example_scripts/typing/optional_nodes.py::get_decimal`.
+   **STILL FAILING (the hard core):** general `Option` field **read/write** in statement positions —
+   `b = c = head.next` then `a.next = b.next` / `a = a.next` (`odd-even-linked-list`), node-returning
+   builders (`add-two-numbers`), `PyTruthy`/`Ord (Option ListNode)` for node heaps (`middle-of-the-linked-list`).
+   These need the P4 `reconcile`/`unwrapOpt` lifting (auto-unwrap on every `.field`, re-wrap on write),
+   not just the cursor case. (§0.3 `DecidableEq` folds in here.)
 
 5. **mutable var shadowed by for-target (21).** `beautiful-towers-ii`: `x` both a `let mut` and later a
    `for x in …` target. **SAME bug as §0.1** — fixing `forTargetBinder`'s Tuple/Name `hasVar` path
@@ -162,11 +170,16 @@ leverage × tractability.
    needs `Neg β` on unconstrained `β` → `failed to synthesize Neg β` / `ToString β`. Fix: ascribe the
    key-lambda's param type from the sorted collection's element type instead of generalizing.
 
-7. **list/tuple-unpack confusion (~72; largest raw count, HARDEST — tackle after the above).** Iterating
-   `product`/`zip`/`enumerate`/list-of-lists and unpacking `for a, b in …` where the element is typed
-   `List ℤ`, not `α × β`. `campus-bikes`: `for i, j in product(range(n), range(m))` → `_pair_1 has type
-   List ℤ … expected … × ℤ`. Sub-case: heterogeneous tuple indexed by a literal — `cnt.most_common(1)
-   [0][1]` → `PyGetItem (String × ℤ) ℤ`. Fix: infer the iterated-element type as a **tuple** when the
+7. **list/tuple-unpack confusion (~72; largest raw count). [✅ COMPREHENSION/GENERATOR case FIXED]**
+   Iterating a list-of-lists and unpacking `for a, b in …` where the element is `List ℤ`, not `α × β`.
+   **FIXED for comprehensions/generators**: `sum(a-b for a,b in transactions)` / `[(b,a) for a,b in
+   edges]` (`transactions : list[list[int]]`) emitted `Prod.fst`/`Prod.snd` — a `for`-STATEMENT got the
+   `_list_unpack` mark but a comprehension target didn't. Added `stampCompTargets` (TypeInfer, marks
+   each comprehension generator's tuple target via `stampUnpackShape`) + `compAccessTerm` (ListComp
+   codegen, `pyListGetItem` when marked). `minimum-money-required-…` 0 errors, runs correct (=10).
+   REMAINING: `product(range,range)`/`zip` element-as-tuple inference (`campus-bikes`), and a
+   heterogeneous tuple indexed by a literal — `cnt.most_common(1)[0][1]` → `PyGetItem (String × ℤ) ℤ`.
+   Fix: infer the iterated-element type as a **tuple** when the
    unpack arity matches; statically project literal indices into tuples.
 
 8. **SortedList / `sortedcontainers` (6) — genuinely unsupported, defer.** `from sortedcontainers import
@@ -208,17 +221,17 @@ leverage × tractability.
 
 ## §3 · EVAL / HARNESS — the biggest single lever is timeouts, and 2 harness bugs are free
 
-### 3.1 · `@cache` / `@lru_cache` memoization — **61 timeout problems, biggest eval lever [ASSESSED, NOT STARTED]**
-Currently `@cache`/`@lru_cache` are **transparent** (`Decorators.lean` — emitted unchanged, correct
-value but no memo), so exponential recursion that CPython memoizes to polynomial blows the wall-clock.
-**Design (assessed this session):** real memoization can't just wrap the top-level `def` — the
-recursive self-calls inside the body must hit the cache. Pure-Lean approach that keeps the provable
-twin untouched: `@[implemented_by fMemoImpl]` where `fMemoImpl` is an `unsafe` copy of the body with
-recursive calls redirected to `fMemoImpl` and results cached in a top-level `initialize
-fCache : IO.Ref (Std.HashMap Key Ret)` (key = arg tuple, needs `Hashable`/`BEq`). Additive and
-provability-safe (isolated to cache-decorated fns) but substantial codegen: move `cache`/`lru_cache`
-out of the transparent set, generate the cache + redirected-recursion impl + the attribute, build the
-key tuple. Needs a corpus run to confirm. See `[[unbounded-iterators]]` `[[closed-program-kernel-hang]]`.
+### 3.1 · `@cache` / `@lru_cache` memoization — **61 timeout problems [✅ DONE, commit `c2cbfd7`]**
+The runnable twin memoises so exponential `@cache` DP runs in polynomial time; the provable twin stays
+the plain pure recursion. Went with a **pure `StateM`** worker (not `@[implemented_by]`+`initialize` —
+that breaks under `lean --run`, which `pastalean run` uses): `partial def foo'memo'rn (params) : StateM
+(HashMap Key Ret) Ret := do match (← get)[key]? with | some v => return v | none => let v ← (do
+<body>); modify (·.insert key v); return v` + wrapper `foo'rn := (foo'memo'rn args).run' ∅`. Recursive
+self-calls lower to `(← foo'memo'rn …)` via a codegen memoize-self context; `do`-notation hoists the
+bind. Covers `int`/`bool`/`str` params (tuple key for multi-arg) and **nested `@cache dfs`** (keyed on
+the ORIGINAL params — a lifted `_capture` is threaded through, not keyed). Falls back to the plain def
+for a self-call in a ternary/`and`/`or`/lambda/comprehension or an untyped param. `fib(90)`/`countPaths`
+verified vs CPython; 12/30 sampled corpus `@cache` memoise. See `[[unbounded-iterators]]`.
 
 ### 3.2 · ✅ DONE — 22 native compile_fails were **HARNESS float-poisoning, NOT codegen.** Namespaced
 modules (`CpHarness.H<id>`), so not collisions. Root cause: `build_test_harness` derived the wrapper's
@@ -311,6 +324,16 @@ fix the top root causes.
   Bool (not forced Prop); recovered `check-if-string-is-transformable-…`.
 - **cherry-pick of 6 `ups` commits** onto master (`6b38589^..1870c09`); `types_and_assignments.py`
   verified.
+
+## This session — UNCOMMITTED (PALC 90/0, awaiting explicit commit say-so)
+- **§1.2 bisect/2-kwarg calls**: `buildApplied` emits ≤2 named args on ONE application spine
+  (`f a (k := v) (k2 := v2)`), not nested-paren `((f) (k:=v)) (k2:=v2)` — needed for defaulted-param
+  shims + `ListNode.new (next := head)`. Golden: `functions_and_calls.lean`.
+- **§1.7 comprehension tuple-unpack**: `_list_unpack` stamp routes `for [a,b] in listOfLists` targets
+  through `pyListGetItem` (not `Prod.fst/snd`); `stampCompTargets` in Solve.
+- **§1.4 Node/Option (partial)**: `_mut_opt` inferred-nullable cursor + run-twin class-param suffix +
+  ctor named-args. 2 cluster problems recovered (`convert-binary…`, `remove-duplicates…`). Regression:
+  `optional_nodes.py::get_decimal`. Hard core (general Option field read/write) still open — see §1.4.
 
 ## Earlier sessions
 negative-index→Int; numeric-container `List ℚ` read+write (lattice tower / comprehension inference /

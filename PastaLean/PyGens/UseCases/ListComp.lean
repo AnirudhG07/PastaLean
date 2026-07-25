@@ -8,6 +8,15 @@ open Lean Meta Elab Term Qq Std
 
 namespace PastaLean
 
+/-- Access position `i` of a comprehension pair: `pyListGetItem` (Python list-index) when the target
+was marked `_list_unpack` (`for a,b in edges`, `edges : list[list[int]]`), else `Prod` projection —
+mirroring `forTargetBinder`, so a comprehension over a list-of-lists doesn't wrongly emit `Prod.fst`. -/
+def compAccessTerm (listUnpack : Bool) (pairIdent : TSyntax `ident) (i n : Nat) : PygenM (TSyntax `term) := do
+  if listUnpack then
+    let iStx ← intToStx (i : Int)
+    `($(mkIdent ``PastaLean.pyListGetItem) $pairIdent $iStx)
+  else tupleAccessTerm pairIdent i n
+
 /-- Destructure `source` according to a comprehension target, wrapping `body` in the resulting
 `let` bindings. Recurses through nested tuples (`for a, (b, c) in …`): each tuple level binds its
 value to a fresh pair name so projections aren't recomputed, then unpacks each position. -/
@@ -23,10 +32,11 @@ partial def destructureCompTarget (targetJson : Json) (source : TSyntax `term) (
       if elts.size < 2 then
         throwError "Tuple comprehension target must have at least two elements."
       let n := elts.size
+      let listUnpack := targetJson.getObjValAs? Bool "_list_unpack" == .ok true
       let pairIdent := mkIdent (← freshName `_pair)
       let mut result := body
       for i in (List.range n).reverse do
-        let acc ← tupleAccessTerm pairIdent i n
+        let acc ← compAccessTerm listUnpack pairIdent i n
         result ← destructureCompTarget elts[i]! acc result
       `(let $pairIdent := $source; $result)
   | _ =>
@@ -48,10 +58,11 @@ def listCompTargetLambda (targetJson : Json) (body : TSyntax `term) :
       if elts.size < 2 then
         throwError "Tuple comprehension target must have at least two elements."
       let n := elts.size
+      let listUnpack := targetJson.getObjValAs? Bool "_list_unpack" == .ok true
       let pairIdent := mkIdent (← freshName `_pair)
       let mut result := body
       for i in (List.range n).reverse do
-        result ← destructureCompTarget elts[i]! (← tupleAccessTerm pairIdent i n) result
+        result ← destructureCompTarget elts[i]! (← compAccessTerm listUnpack pairIdent i n) result
       `(fun $pairIdent => $result)
   | _ =>
       throwError s!"Unsupported comprehension target: {targetJson}"

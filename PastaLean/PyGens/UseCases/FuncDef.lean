@@ -47,8 +47,12 @@ partial def functionArgTypeSyntax? (annotationJson : Json) : PygenM (Option (TSy
           | .approx => return some (mkIdent ``Float)
       | "Any" => return none -- let Lean handle the type inference for now
       -- A user class (`TreeNode`) or anything else this manual reader misses: fall back to the
-      -- `TypeInfer` lowering, which handles class names (`.cls`) and `Optional`.
-      | _ => pyTypeSyntax? (TypeInfer.ofAnnotation annotationJson)
+      -- `TypeInfer` lowering, which handles class names (`.cls`) and `Optional`. A bare class name is
+      -- run-suffixed here (`ListNode` → `ListNode'rn`) — `TypeInfer` is context-free and can't know.
+      | _ =>
+          match TypeInfer.ofAnnotation annotationJson with
+          | .cls c => return some (mkIdent (← suffixIfUserName c).toName)
+          | other => pyTypeSyntax? other
   | "Subscript" =>
       let .ok valueJson := annotationJson.getObjValAs? Json "value" | throwError
         s!"Function argument subscript annotation is missing a 'value' field: {annotationJson}"
@@ -292,6 +296,15 @@ partial def jsonMutatesName (json : Json) (name : String) : Bool :=
           mutatedHere || fields.toList.any (fun (_, v) => jsonMutatesName v name)
   | _ => false
 
+/-- `(param-name, class-name)` for each node param TypeInfer marked `_mut_opt` (annotated `c` but
+reassigned from `.next`/`.left`, so nullable) — codegen seeds its mut shadow as `Option c`. -/
+def optMutParamsOf (json : Json) : Array (String × String) :=
+  (((json.getObjVal? "args").toOption.bind
+      (·.getObjValAs? (Array Json) "args" |>.toOption)).getD #[]).filterMap fun a =>
+    match a.getObjValAs? String "arg", a.getObjValAs? String "_mut_opt" with
+    | .ok n, .ok c => some (n, c)
+    | _, _ => none
+
 /-- Build the Lean value for a Python function body, using a pure term when possible and
 falling back to `do` notation for effectful bodies. This helper is reused for top-level
 definitions, nested local functions, and `Head_FunctionDef` threading.
@@ -301,7 +314,7 @@ inside a nested function do not leak into the enclosing scope's `let`/`let mut` 
 leak would otherwise cause a later same-named outer assignment to be emitted as a reassignment
 of a variable that was never declared `let mut`. -/
 def functionValueSyntax (argInfos : Array (TSyntax `ident × Option (TSyntax `term))) (bodyElems : Array Json)
-    (boxReturn : Bool := false) (retFloat : Bool := false) :
+    (boxReturn : Bool := false) (retFloat : Bool := false) (optMutParams : Array (String × String) := #[]) :
     PygenM (TSyntax `term) := withFreshVariables do
   let usesExceptions := bodyNeedsExceptionMonad bodyElems
   let usesRealIO := bodyNeedsIOMonad bodyElems
@@ -326,7 +339,16 @@ def functionValueSyntax (argInfos : Array (TSyntax `ident × Option (TSyntax `te
   for (argIdent, _) in argInfos do
     if bodyElems.any (fun b => jsonMutatesName b argIdent.getId.toString) then
       addVar argIdent.getId
-      paramPrelude := paramPrelude.push (← `(doElem| let mut $argIdent:ident := $argIdent))
+      -- A node param the body treats as nullable (`while head; head = head.next`, marked `_mut_opt` by
+      -- TypeInfer) seeds its mut shadow as `Option c` (`some p`), so `Option`-unwrap field access and
+      -- truthiness line up while the param itself stays a plain `c` (callers unaffected).
+      match optMutParams.find? (·.1 == argIdent.getId.toString) with
+      | some (_, cls) =>
+          let clsId := mkIdent (← suffixIfUserName cls).toName
+          paramPrelude := paramPrelude.push
+            (← `(doElem| let mut $argIdent:ident : Option $clsId := some $argIdent))
+      | none =>
+          paramPrelude := paramPrelude.push (← `(doElem| let mut $argIdent:ident := $argIdent))
   -- The monad codomain: `PyAny` when the returns disagree (`_box_return`), else a hole for Lean to
   -- infer. Without this an effectful boxed function would keep `_`, and Lean would fix the monad's
   -- type from the first `return` — forcing e.g. `Float`, so a later `return 0` (`ℤ`) fails to match.
@@ -961,6 +983,7 @@ def funcDefSyntax : (kind : SyntaxNodeKind) → Json →
                   | false, false, _ => `(def $nameIdent $binders* := $body)
               | none =>
               let valueStx ← functionValueSyntax argInfos bodyElems boxReturn retFloat
+                (optMutParams := optMutParamsOf json)
               -- take care of recursion function Type
               if isRecursive then
                 let fullTy? ← match ← recursiveReturnTypeSyntax? json with

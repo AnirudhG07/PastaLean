@@ -701,12 +701,28 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
       | _, _ => pure ()
 
     let buildApplied : Array (TSyntax `term) → PygenM (TSyntax `term) := fun resolvedArgs => do
-      let mut t ← `($funcIdent $resolvedArgs*)
-      for (kwName, kwValueJson) in keyWordsMap.toList do
-        let kwValueCode ← getCode kwValueJson `term
-        let kwId := mkIdent kwName.toName
-        t ← `($t ($kwId:ident := $kwValueCode))
-      return t
+      -- Named args go in the SAME application as the positionals (`f a b (k := v)`), NOT applied to
+      -- `(f a b)` — for a shim whose remaining params have defaults, `f a b` is already a complete
+      -- value, so `(f a b) (lo := …)` fails with "Invalid argument name" (`bisect_right(s, x, lo=…)`).
+      -- Named args go in the SAME application spine (`f a b (k := v)`), so a shim with defaulted
+      -- params (`bisect_right(s, x, lo=…)`) binds them instead of applying to the already-complete
+      -- `(f a b)`. Handled explicitly for 1–2 kwargs (the common `lo=`/`hi=`/`key=`/`reverse=`); 3+
+      -- falls to the fold (rare, and only fails when every remaining param has a default).
+      match keyWordsMap.toList with
+      | [] => `($funcIdent $resolvedArgs*)
+      | [(n, v)] =>
+          let a ← getCode v `term
+          `($funcIdent $resolvedArgs* ($(mkIdent n.toName) := $a))
+      | [(n1, v1), (n2, v2)] =>
+          let a ← getCode v1 `term
+          let b ← getCode v2 `term
+          `($funcIdent $resolvedArgs* ($(mkIdent n1.toName) := $a) ($(mkIdent n2.toName) := $b))
+      | kwPairs =>
+          let mut t ← `($funcIdent $resolvedArgs*)
+          for (kwName, kwValueJson) in kwPairs do
+            let kwValueCode ← getCode kwValueJson `term
+            t ← `($t ($(mkIdent kwName.toName):ident := $kwValueCode))
+          return t
 
     if allArgJsons.toList.any basicJsonUsesIOEffect then
       return ← buildIOPureApplicationFromArgs allArgJsons allArgs buildApplied
@@ -1048,12 +1064,28 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
       | _, _ => pure ()
 
     let buildApplied : Array (TSyntax `term) → PygenM (TSyntax `term) := fun resolvedArgs => do
-      let mut t ← `($funcIdent $resolvedArgs*)
-      for (kwName, kwValueJson) in keyWordsMap.toList do
-        let kwValueCode ← getCode kwValueJson `term
-        let kwId := mkIdent kwName.toName
-        t ← `($t ($kwId:ident := $kwValueCode))
-      return t
+      -- Named args go in the SAME application as the positionals (`f a b (k := v)`), NOT applied to
+      -- `(f a b)` — for a shim whose remaining params have defaults, `f a b` is already a complete
+      -- value, so `(f a b) (lo := …)` fails with "Invalid argument name" (`bisect_right(s, x, lo=…)`).
+      -- Named args go in the SAME application spine (`f a b (k := v)`), so a shim with defaulted
+      -- params (`bisect_right(s, x, lo=…)`) binds them instead of applying to the already-complete
+      -- `(f a b)`. Handled explicitly for 1–2 kwargs (the common `lo=`/`hi=`/`key=`/`reverse=`); 3+
+      -- falls to the fold (rare, and only fails when every remaining param has a default).
+      match keyWordsMap.toList with
+      | [] => `($funcIdent $resolvedArgs*)
+      | [(n, v)] =>
+          let a ← getCode v `term
+          `($funcIdent $resolvedArgs* ($(mkIdent n.toName) := $a))
+      | [(n1, v1), (n2, v2)] =>
+          let a ← getCode v1 `term
+          let b ← getCode v2 `term
+          `($funcIdent $resolvedArgs* ($(mkIdent n1.toName) := $a) ($(mkIdent n2.toName) := $b))
+      | kwPairs =>
+          let mut t ← `($funcIdent $resolvedArgs*)
+          for (kwName, kwValueJson) in kwPairs do
+            let kwValueCode ← getCode kwValueJson `term
+            t ← `($t ($(mkIdent kwName.toName):ident := $kwValueCode))
+          return t
 
     if allArgJsons.toList.any basicJsonUsesIOEffect then
       let t ← buildIOPureApplicationFromArgs allArgJsons allArgs buildApplied

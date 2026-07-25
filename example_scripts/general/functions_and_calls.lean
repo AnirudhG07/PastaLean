@@ -23,11 +23,11 @@ attribute [simp, taste_ingr] call_add
 
 def call_add'rn := fun n ↦ add'rn n (1 : Int)
 
-def keyword_call := fun n ↦ ((add) (a := n)) (b := (2 : Int))
+def keyword_call := fun n ↦ add (a := n) (b := (2 : Int))
 
 attribute [simp, taste_ingr] keyword_call
 
-def keyword_call'rn := fun n ↦ ((add'rn) (a := n)) (b := (2 : Int))
+def keyword_call'rn := fun n ↦ add'rn (a := n) (b := (2 : Int))
 
 def many_args := fun a ↦ fun b ↦ fun c ↦ fun d ↦ fun e ↦ a +ₚ b +ₚ c +ₚ d +ₚ e
 
