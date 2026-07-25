@@ -68,7 +68,15 @@ partial def functionArgTypeSyntax? (annotationJson : Json) : PygenM (Option (TSy
       -- Sets are list-backed in the runtime, so `set[T]` lowers to `List T`.
       | "list" | "set" =>
           match ← functionArgTypeSyntax? sliceJson with
-          | some elemTy => return some (← `(List $elemTy))
+          -- The runnable (`approx`) twin backs an `array_ok`-marked `list` with `Array` for O(1)
+          -- append/index (Perceus in-place reuse); the provable twin, sets, and un-marked lists stay
+          -- `List`. Marked by the TypeInfer eligibility pass as `_seq: "array"` on this annotation node.
+          | some elemTy =>
+              let arrayBacked := container == "list"
+                && (annotationJson.getObjValAs? String "_seq" == .ok "array")
+                && (← getNumericMode) == .approx
+              if arrayBacked then return some (← `(Array $elemTy))
+              else return some (← `(List $elemTy))
           | none => return none
       -- `defaultdict`/`Counter` are backed by `PyDefaultDict`, not `Std.HashMap`.
       | "dict" | "defaultdict" =>

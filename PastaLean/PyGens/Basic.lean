@@ -245,7 +245,11 @@ def listSyntax : (kind : SyntaxNodeKind) → Json →
     let eltCodes ← match eltsJson with
       | .arr arr => arr.mapM (fun eltJson => getCode eltJson `term)
       | _ => throwError s!"List node 'elts' field is not an array: {eltsJson}"
-    `([$eltCodes,*])
+    -- An `array_ok`-marked literal in the runnable twin is an `Array` (`#[…]`); else a `List` (`[…]`).
+    let arrayBacked := (json.getObjValAs? String "_seq" == .ok "array")
+      && (← getNumericMode) == .approx
+    if arrayBacked then `(#[$eltCodes,*])
+    else `([$eltCodes,*])
   | _, _ => throwError s!"Unsupported syntax category for List node"
 
 /-- `{a, b, c}` set literals lower to a deduplicated list via `pySetFromList`; sets are

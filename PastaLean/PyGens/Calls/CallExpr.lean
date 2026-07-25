@@ -795,6 +795,14 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
         if let some (rebuildFn, arities) := statementMutatorRebuild? attr then
           if keyWordsMap.isEmpty && arities.contains argsArray.size then
             let argCodes ← argsArray.mapM (fun argJson => getCode argJson `term)
+            -- An `array_ok`-stamped receiver (runnable twin) uses the O(1) `Array` variant.
+            let rebuildFn ←
+              if (json.getObjValAs? String "_seq" == .ok "array") && (← getNumericMode) == .approx then
+                pure (match attr with
+                  | "append" => ``PastaLean.pyArrayAppend
+                  | "extend" => ``PastaLean.pyArrayExtend
+                  | _ => rebuildFn)
+              else pure rebuildFn
             let fnIdent := mkIdent rebuildFn
             return ← mutatingMethodDoElem valueJson fun recv => `($fnIdent $recv $argCodes*)
 

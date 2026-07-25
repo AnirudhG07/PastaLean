@@ -113,6 +113,40 @@ Concrete APIs like `pyUpper`, `pySplit`, `pyItems`, or a list-specific `pyAppend
 should stay in their type-specific files unless you intentionally promote them into
 a shared protocol.
 
+## Sequence backing: `List` (prove) vs `Array` (run)
+
+Python `list` is a dynamic array — O(1) amortized append, O(1) index. A `List α`-backed
+`xs := xs ++ [v]` is O(n) and `xs[i]` is O(i), so an append/index loop is **O(n²)** (measured
+~134× slower than `Array` at n=30000). We keep **both backings and use each where it wins**:
+
+- **`List α` — the provable twin (`fn`).** `List` is an inductive type with a free induction
+  principle, so proofs (`taste?`/mvcgen, `omega`, Mathlib's lemma library) are natural. Lives in
+  `PyAPI/Lists.lean` + the `List` protocol instances.
+- **`Array α` — the runnable twin (`fn'rn`).** `Array` is `structure { toList : List α }` with
+  `@[extern]` C ops, so `push`/`set!`/`get!` are **O(1) when the array is uniquely owned** — which
+  the codegen's threaded mutation (`xs := pyArrayAppend xs v`, rebinding the same name) guarantees
+  (refcount 1 ⇒ Perceus mutates in place). Lives in `PyAPI/Arrays.lean` (concrete `pyArray*`
+  functions + `Array` instances of `PyGetItem`/`PySetItem`/`PyLen`/`PyContains`/`PyTruthy`/…).
+
+Because `Array α` is *defined as* `{ toList : List α }`, the two twins are the **same value in two
+representations**, bridged by `Array.toList` — not divergent implementations. So they must agree
+numerically; `PALC/PyAPI/TestLists.lean` pins that parity (an Array build→append→index→sum equals
+the `List` one and the closed form).
+
+**Choice is per *value*, not per *operation*.** `List.toArray`/`Array.toList` are each O(n), so
+flipping representations per op reintroduces O(n²). Each list-typed value gets one backing for its
+whole lifetime:
+- **`Array` (default)** — wins the common build-by-`append` + random-`index` pattern (O(1) both).
+- **`List` (fallback)** — for a value *dominated* by operations where `Array` is asymptotically
+  worse: prepend / `insert(0,·)` / `pop(0)` (List O(n) loop vs Array O(n²) shift), head/tail
+  recursion, or persistent/aliased sharing (List shares tails O(1); Array copies O(n)). Also the
+  fallback for any op not yet ported to `Array` — the generated code is identical, only the binder
+  type differs.
+- A **`toList`→burst→`toArray`** switch only pays for an otherwise-Array-dominant value with a
+  concentrated local burst of the above (a future codegen optimization, not day-one).
+- The **queue** pattern (`append` end + `pop(0)` front) is O(n²) on *both* — that's a `deque`, a
+  separate amortized-O(1)-both-ends structure, not a List/Array choice.
+
 ## Builtins vs Methods
 
 This distinction matters:

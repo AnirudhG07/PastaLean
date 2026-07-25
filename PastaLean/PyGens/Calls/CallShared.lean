@@ -32,6 +32,24 @@ def defaultDictAnnParts? (ann : Json) : Option (Json × Json) :=
           | _, _ => none
     | _, _ => none
 
+/-- Emit a type from an annotation, honouring the `_seq: "array"` marker the eligibility pass stamps
+on each `list[...]` level: an `array_ok` list becomes `Array` (recursively, so `list[list[int]]` →
+`Array (Array Int)`) in the runnable twin. The marker has no `PyType` slot, so `pyTypeSyntax? ∘
+ofAnnotation` would drop it — hence this reads it off the annotation directly, falling back to the
+`PyType` path for un-marked (or non-`list`) levels. -/
+partial def seqAwareTypeSyntax? (ann : Json) : PygenM (Option (TSyntax `term)) := do
+  let isArrList := (ann.getObjValAs? String "node_type" == .ok "Subscript")
+    && ((ann.getObjVal? "value").toOption.any (·.getObjValAs? String "id" |>.toOption |>.any (· == "list")))
+    && (ann.getObjValAs? String "_seq" == .ok "array")
+  if isArrList && (← getNumericMode) == .approx then
+    match ann.getObjVal? "slice" with
+    | .ok elemAnn =>
+        match ← seqAwareTypeSyntax? elemAnn with
+        | some et => return some (← `(Array $et))
+        | none => pyTypeSyntax? (TypeInfer.ofAnnotation ann)
+    | _ => pyTypeSyntax? (TypeInfer.ofAnnotation ann)
+  else pyTypeSyntax? (TypeInfer.ofAnnotation ann)
+
 /-- The Lean type stamped on a node by the inference pass (`_ty`), if any. `_ty` is an annotation
 node, so it round-trips through `PyType` and the full emitter — covering lists, dicts, tuples and
 `Optional`, not just the shapes the annotation reader handles directly. -/
@@ -45,7 +63,7 @@ def stampedTypeSyntax? (node : Json) : PygenM (Option (TSyntax `term)) := do
           match ← pyTypeSyntax? (TypeInfer.ofAnnotation k), ← pyTypeSyntax? (TypeInfer.ofAnnotation v) with
           | some kt, some vt => return some (← `(Libraries.collections.PyDefaultDict $kt $vt))
           | _, _ => return none
-      | none => pyTypeSyntax? (TypeInfer.ofAnnotation ann)
+      | none => seqAwareTypeSyntax? ann
   | none => return none
 
 /-- Infer a simple runtime type from a value expression when the shape is obvious. -/

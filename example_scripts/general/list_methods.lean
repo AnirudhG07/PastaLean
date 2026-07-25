@@ -52,7 +52,7 @@ def list_len :=
 attribute [simp, taste_ingr] list_len
 
 def list_len'rn :=
-  let xs := ([(10 : Int), (20 : Int), (30 : Int), (40 : Int)] : List Int)
+  let xs := (#[(10 : Int), (20 : Int), (30 : Int), (40 : Int)] : Array Int)
   PastaLean.pyLen xs
 
 def list_membership :=

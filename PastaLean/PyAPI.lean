@@ -5,6 +5,7 @@ import PastaLean.PyAPI.Operators
 import PastaLean.PyAPI.Builtins
 import PastaLean.PyAPI.Strings
 import PastaLean.PyAPI.Lists
+import PastaLean.PyAPI.Arrays
 import PastaLean.PyAPI.Dicts
 import PastaLean.PyAPI.Sets
 import PastaLean.PyAPI.CommonProtocols

@@ -7,11 +7,10 @@ def pyListAppend : List α → α → List α
   | lst, elem => lst ++ [elem]
 
 /--
-Public runtime surface for Python `append`.
-
-Keep codegen targeting `pyAppend`; if another runtime type later needs append-like
-behavior, this public name can be promoted to a protocol without changing the
-generated Lean surface.
+Public runtime surface for Python `append`. Stays monomorphic on `List` so an untyped receiver (a
+nested helper's threaded accumulator, `fun ans ↦ … pyAppend ans v`) unifies to `List` — a protocol
+would leave the container a stuck metavariable. The runnable twin's `Array` append is dispatched in
+codegen (`pyArrayAppend`, emitted for an `array_ok`-stamped receiver), not by instance resolution.
 -/
 def pyAppend : List α → α → List α :=
   pyListAppend
@@ -38,7 +37,8 @@ API for `list.extend()` which concatenates two lists.
 def pyListExtend (xs : List α) (ys : List α) : List α :=
   xs ++ ys
 
-/-- Public runtime surface for Python `extend()`. -/
+/-- Public runtime surface for Python `extend()` (monomorphic on `List`; `Array` extend is emitted as
+`pyArrayExtend` in codegen — see `pyAppend`). -/
 def pyExtend : List α → List α → List α :=
   pyListExtend
 

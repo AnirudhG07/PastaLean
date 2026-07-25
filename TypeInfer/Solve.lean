@@ -631,6 +631,217 @@ private partial def stampFloatListElems (value : Json) : Json :=
       (getField value "value").elim value (fun e => value.setObjVal! "value" (stampFloatListElems e))
   | _ => value
 
+/-! ### Array-backing eligibility (runnable twin)
+
+A `list` local whose every use is `Array`-portable is stamped `_seq: "array"` so codegen backs it
+with `Array` (O(1) append/index) in the runnable twin; everything else stays `List`. -/
+
+/-- Does `v` occur as a `Name` anywhere in `j`? (for the for-target rebind guard). -/
+partial def refsListName (v : String) (j : Json) : Bool :=
+  nameId? j == some v ||
+    (match j with
+     | .arr xs => xs.any (refsListName v)
+     | .obj fs => fs.toList.any (fun (_, x) => refsListName v x)
+     | _ => false)
+
+/-- A use of list variable `v` that `Array`-backing supports with the identical generated surface:
+integer-index `v[i]` (read/write), `len(v)`, `for _ in v`, `(re)binding v`, and — only when
+`allowAppend` — a bare `v.append(x)`. Returns `false` on ANY other use — a slice `v[a:b]`, another
+method (`v.sort()`/`v.pop()`), a nested `v[i].append(...)`, passing `v` to a function, returning it,
+storing it — so an ineligible value safely stays `List`. `allowAppend` is off for NESTED lists: the
+appended row's own backing can't be guaranteed to match, so a nested list is only eligible when it is
+a full literal accessed by index (no append). Conservative: an unrecognised context recurses into
+every child and a bare `Name v` reached there fails. Skips nested defs/lambdas (separate scope). -/
+partial def listUsePorted (v : String) (allowAppend : Bool) (json : Json) : Bool :=
+  match nodeTypeOf json with
+  | some "Name" => nameId? json != some v
+  | some "FunctionDef" | some "ClassDef" | some "Lambda" => true
+  | some "Subscript" =>
+      let val := (getField json "value").getD Json.null
+      let slice := (getField json "slice").getD Json.null
+      if nameId? val == some v then
+        if nodeTypeOf slice == some "Slice" then false else listUsePorted v allowAppend slice
+      else listUsePorted v allowAppend val && listUsePorted v allowAppend slice
+  | some "Call" =>
+      let func := (getField json "func").getD Json.null
+      let args := (json.getObjValAs? (Array Json) "args").toOption.getD #[]
+      let kws := (json.getObjValAs? (Array Json) "keywords").toOption.getD #[]
+      -- an `.append(...)` whose receiver mentions v (covers `v.append` and `v[i].append`)
+      let appendRecvV := nodeTypeOf func == some "Attribute"
+        && (func.getObjValAs? String "attr" == .ok "append")
+        && ((getField func "value").any (refsListName v))
+      let isLen := nameId? func == some "len"
+      if appendRecvV then
+        -- only a bare `v.append(x)` on an append-allowed (flat scalar) list is ported
+        if allowAppend && ((getField func "value").any (fun r => nameId? r == some v)) then
+          args.all (listUsePorted v allowAppend) && kws.all (listUsePorted v allowAppend)
+        else false
+      else if isLen then
+        args.all (fun a => nameId? a == some v || listUsePorted v allowAppend a)
+          && kws.all (listUsePorted v allowAppend)
+      else listUsePorted v allowAppend func && args.all (listUsePorted v allowAppend)
+        && kws.all (listUsePorted v allowAppend)
+  | some "For" =>
+      let target := (getField json "target").getD Json.null
+      let iter := (getField json "iter").getD Json.null
+      let body := (json.getObjValAs? (Array Json) "body").toOption.getD #[]
+      let orelse := (json.getObjValAs? (Array Json) "orelse").toOption.getD #[]
+      if refsListName v target then false
+      else (nameId? iter == some v || listUsePorted v allowAppend iter)
+        && body.all (listUsePorted v allowAppend) && orelse.all (listUsePorted v allowAppend)
+  | some "Assign" | some "AnnAssign" | some "AugAssign" =>
+      let value := (getField json "value").getD Json.null
+      let tgt := (getField json "target").getD Json.null
+      let tgtOk :=
+        match nodeTypeOf tgt with
+        | some "Name" => true
+        | some "Subscript" =>
+            let tv := (getField tgt "value").getD Json.null
+            let ts := (getField tgt "slice").getD Json.null
+            if nameId? tv == some v then (nodeTypeOf ts != some "Slice") && listUsePorted v allowAppend ts
+            else listUsePorted v allowAppend tv && listUsePorted v allowAppend ts
+        | _ => listUsePorted v allowAppend tgt
+      tgtOk && listUsePorted v allowAppend value
+  | _ =>
+      match json with
+      | .arr xs => xs.all (listUsePorted v allowAppend)
+      | .obj fs => fs.toList.all (fun (_, x) => listUsePorted v allowAppend x)
+      | _ => true
+
+-- A flat list of scalars: `list[int]` / `list[float]` / `list[str]` / `list[bool]`. Append is safe
+-- (scalar elements are always consistently backed), so these are eligible even when built by append.
+private def isFlatScalarList : PyType → Bool
+  | .list .int | .list .bool | .list .float | .list .str => true
+  | _ => false
+
+-- A NESTED list of scalars: `list[list[int]]`, `list[list[list[float]]]`, … . Backed `Array (Array
+-- …)` but only when a full literal accessed by index (no append — see `listUsePorted`).
+private partial def isNestedScalarList : PyType → Bool
+  | .list (.list e) => isNestedScalarList (.list e) || isFlatScalarList (.list e)
+  | _ => false
+
+/-- The init value matches `ty`'s list nesting: every list LEVEL is a literal (markable as `Array`),
+scalar leaves may be any expression. With `full`, each list level must be NON-EMPTY (a nested list is
+only eligible fully-populated — an empty `[]` that is later appended to can't be safely backed). -/
+private partial def litMatchesNesting (full : Bool) (ty : PyType) (v : Json) : Bool :=
+  match ty with
+  | .list inner =>
+      nodeTypeOf v == some "List"
+        && (let elts := (v.getObjValAs? (Array Json) "elts").toOption.getD #[]
+            (!full || !elts.isEmpty) && elts.all (litMatchesNesting full inner))
+  | _ => true
+
+/-- Every bare-`Name` assignment to `name` is a nesting-matching `List` literal (and there is at
+least one) — so the variable is only initialised from literals, never aliased to another list. -/
+private def initsAreLits (stmts : List Json) (name : String) (ty : PyType) (full : Bool) : Bool := Id.run do
+  let mut sawOne := false
+  for s in stmts do
+    if nodeTypeOf s == some "Assign" || nodeTypeOf s == some "AnnAssign" then
+      if let some tgt := getField s "target" then
+        if nameId? tgt == some name then
+          sawOne := true
+          if !litMatchesNesting full ty ((getField s "value").getD Json.null) then return false
+  return sawOne
+
+/-- Local list variables codegen may back with `Array` in the runnable twin: a FLAT scalar list whose
+uses are ported (append allowed), or a NESTED scalar list that is a full literal accessed by index
+(no append). Everything else stays `List`. -/
+def arrayEligibleVars (env : Env) (fn : Json) : Std.HashSet String := Id.run do
+  let body := (fn.getObjValAs? (Array Json) "body").toOption.getD #[]
+  let stmts := flatStmts body.toList
+  let params := paramNames fn
+  let mut result : Std.HashSet String := {}
+  for (name, ty) in env.toList do
+    if params.contains name then
+      pure ()
+    else if isFlatScalarList ty then
+      if initsAreLits stmts name ty false && body.all (listUsePorted name true) then
+        result := result.insert name
+    else if isNestedScalarList ty then
+      if initsAreLits stmts name ty true && body.all (listUsePorted name false) then
+        result := result.insert name
+  return result
+
+/-- Mark `_seq: "array"` on EVERY `list[...]` level of a type annotation (so `list[list[int]]` →
+`Array (Array Int)`, not `Array (List Int)`). -/
+private partial def markSeqAnn (ann : Json) : Json :=
+  if ann.getObjValAs? String "node_type" == .ok "Subscript"
+     && ((ann.getObjVal? "value").toOption.any (·.getObjValAs? String "id" |>.toOption |>.any (· == "list"))) then
+    let ann := ann.setObjVal! "_seq" (Json.str "array")
+    match ann.getObjVal? "slice" with
+    | .ok inner => ann.setObjVal! "slice" (markSeqAnn inner)
+    | _ => ann
+  else ann
+
+/-- Mark `_seq: "array"` on a nested `List` literal at every level (`[[..],[..]]` → `#[#[..],#[..]]`). -/
+private partial def markSeqLit (v : Json) : Json :=
+  if nodeTypeOf v == some "List" then
+    let v := v.setObjVal! "_seq" (Json.str "array")
+    match v.getObjValAs? (Array Json) "elts" with
+    | .ok elts => v.setObjVal! "elts" (Json.arr (elts.map markSeqLit))
+    | _ => v
+  else v
+
+/-- A var assigned inside an `if`/`for`/`while`/`try` block is hoisted to a `let mut x : T := default`
+at the function top, with `T` from a `<block>_assigned_types` map (stamped from `env`, so no `_seq`).
+Mark the `array_ok` names there too, else the hoisted `List` type clashes with the `Array` literal. -/
+private def markHoistTypeMaps (eligible : Std.HashSet String) (json : Json) : Json := Id.run do
+  let mut j := json
+  for key in #["if_assigned_types", "try_assigned_types", "for_assigned_types", "while_assigned_types"] do
+    if let some tmap := getField j key then
+      let mut newMap := tmap
+      for nm in eligible.toList do
+        if let some ann := (tmap.getObjVal? nm).toOption then
+          newMap := newMap.setObjVal! nm (markSeqAnn ann)
+      j := j.setObjVal! key newMap
+  return j
+
+/-- Stamp `_seq: "array"` on a `v.append(x)` / `v.extend(x)` call whose receiver `v` is `array_ok`, so
+codegen emits the O(1) `pyArrayAppend`/`pyArrayExtend` instead of the `List` `pyAppend`/`pyExtend`. -/
+private def markAppendCall (eligible : Std.HashSet String) (json : Json) : Json :=
+  match getField json "func" with
+  | some func =>
+      let attr := (func.getObjValAs? String "attr").toOption
+      if nodeTypeOf func == some "Attribute" && (attr == some "append" || attr == some "extend")
+         && ((getField func "value").any (fun r => (nameId? r).any eligible.contains)) then
+        json.setObjVal! "_seq" (Json.str "array")
+      else json
+  | none => json
+
+/-- Stamp `_seq: "array"` on an `array_ok` local's declaring binder type (`_ty`), its nested list
+literals at every level, and its hoisted-type-map entries; codegen then emits `Array`/`#[…]` in the
+runnable twin. Only the declaration needs it — append/index/len/iter dispatch by the resulting type.
+Does not descend into nested defs. -/
+partial def stampArraySeqs (eligible : Std.HashSet String) (json : Json) : Json :=
+  if nodeTypeOf json == some "FunctionDef" || nodeTypeOf json == some "ClassDef" then json
+  else
+    let json := markHoistTypeMaps eligible json
+    let json := if nodeTypeOf json == some "Call" then markAppendCall eligible json else json
+    let recurse : Json :=
+      match json with
+      | .arr xs => Json.arr (xs.map (stampArraySeqs eligible))
+      | .obj fs => Json.mkObj (fs.toList.map (fun (k, x) => (k, stampArraySeqs eligible x)))
+      | _ => json
+    if nodeTypeOf json == some "Assign" || nodeTypeOf json == some "AnnAssign" then
+      let tgt := (getField json "target").getD Json.null
+      if (nameId? tgt).any eligible.contains then
+        let json := match getField tgt "_ty" with
+          | some ty => json.setObjVal! "target" (tgt.setObjVal! "_ty" (markSeqAnn ty))
+          | none => json
+        match getField json "value" with
+        | some v =>
+            -- mark the literal (`#[…]`) AND the value's own `_ty` ascription (`(… : Array …)`), which
+            -- codegen adds from `stampedTypeSyntax? value` for numeric-container element pinning.
+            let v := markSeqLit v
+            let v := match getField v "_ty" with
+              | some ty => v.setObjVal! "_ty" (markSeqAnn ty)
+              | none => v
+            json.setObjVal! "value" v
+        | none => json
+      else recurse
+    else recurse
+
+
 mutual
 
 /-- The types of a value's *branch leaves*, descending through `IfExp`/`BoolOp` (whose result is one
@@ -700,9 +911,11 @@ partial def stampFunction (sigs : Sigs) (outer hints : Env) (fn : Json) : Json :
           | none => fn
         else fn
     | _ => fn
+  let eligible := arrayEligibleVars env fn
   match fn.getObjValAs? (Array Json) "body" with
   | .ok body => fn.setObjVal! "body"
-      (Json.arr (((body.map (stampStmt sigs env body)).map (markTuples env)).map (markOptAttrs sigs env)))
+      (Json.arr ((((body.map (stampStmt sigs env body)).map (markTuples env)).map (markOptAttrs sigs env)).map
+        (stampArraySeqs eligible)))
   | _ => fn
 
 /-- Stamp a (possibly nested) tuple-unpack target with the list-vs-`Prod` access mode at EVERY level,

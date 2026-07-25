@@ -32,7 +32,7 @@ def lmbda_with_array :=
 attribute [simp, taste_ingr] lmbda_with_array
 
 def lmbda_with_array'rn :=
-  let a := ([(1 : Int), (2 : Int), (3 : Int), (4 : Int), (5 : Int)] : List Int)
+  let a := (#[(1 : Int), (2 : Int), (3 : Int), (4 : Int), (5 : Int)] : Array Int)
   let b := fun x ↦ if PastaLean.pyContains a x then some (x *ₚ x) else none
   let c := b
   c
@@ -103,9 +103,9 @@ attribute [simp, taste_ingr] lmbda_with_side_effects
 def lmbda_with_side_effects'rn :=
   Id.run
     (do
-      let mut result : List Int := []
+      let mut result : Array Int := #[]
       for x in (PastaLean.pyRange (5 : Int))do
-        result := PastaLean.pyAppend result (x *ₚ x)
+        result := PastaLean.pyArrayAppend result (x *ₚ x)
       let __py_ret_1 := fun (y : Unit) ↦ result
       return __py_ret_1)
 

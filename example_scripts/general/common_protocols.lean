@@ -23,7 +23,7 @@ def len_protocols :=
 attribute [simp, taste_ingr] len_protocols
 
 def len_protocols'rn :=
-  let xs := ([(1 : Int), (2 : Int), (3 : Int)] : List Int)
+  let xs := (#[(1 : Int), (2 : Int), (3 : Int)] : Array Int)
   let s := ("hello" : String)
   let d := (Std.HashMap.ofList [("a", (1 : Int))] : Std.HashMap String Int)
   let lx := (PastaLean.pyLen xs : Int)
