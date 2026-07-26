@@ -36,6 +36,11 @@ structure Counter where
   step : Int
   deriving Inhabited, Repr, BEq
 
+instance : PastaLean.PyTruthy Counter where truthy _ := true
+
+instance : Coe Counter (Option Counter) :=
+  ⟨some⟩
+
 def Counter.new (start : _ := (0 : Int)) (step : _ := (1 : Int)) : Counter :=
   ({ value := start, step := step } : Counter)
 
@@ -49,6 +54,11 @@ structure Counter'rn where
   step : Int
   deriving Inhabited, Repr, BEq
 
+instance : PastaLean.PyTruthy Counter'rn where truthy _ := true
+
+instance : Coe Counter'rn (Option Counter'rn) :=
+  ⟨some⟩
+
 def Counter'rn.new (start : _ := (0 : Int)) (step : _ := (1 : Int)) : Counter'rn :=
   ({ value := start, step := step } : Counter'rn)
 
@@ -61,6 +71,11 @@ structure TreeNode where
   right : Option TreeNode
   deriving Inhabited, Repr, BEq
 
+instance : PastaLean.PyTruthy TreeNode where truthy _ := true
+
+instance : Coe TreeNode (Option TreeNode) :=
+  ⟨some⟩
+
 def TreeNode.new (val : _ := (0 : Int)) (left : Option TreeNode := Option.none)
     (right : Option TreeNode := Option.none) : TreeNode :=
   ({ val := val, left := left, right := right } : TreeNode)
@@ -70,6 +85,11 @@ structure TreeNode'rn where
   left : Option TreeNode'rn
   right : Option TreeNode'rn
   deriving Inhabited, Repr, BEq
+
+instance : PastaLean.PyTruthy TreeNode'rn where truthy _ := true
+
+instance : Coe TreeNode'rn (Option TreeNode'rn) :=
+  ⟨some⟩
 
 def TreeNode'rn.new (val : _ := (0 : Int)) (left : Option TreeNode'rn := Option.none)
     (right : Option TreeNode'rn := Option.none) : TreeNode'rn :=

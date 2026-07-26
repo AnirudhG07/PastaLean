@@ -247,15 +247,66 @@ def paramNames (fn : Json) : Array String := Id.run do
     if let .ok name := arg.getObjValAs? String "arg" then names := names.push name
   return names
 
-/-- Parameter name → annotated type for a `FunctionDef` (annotated params only). -/
+/-- A `None` literal (`Constant` whose value is JSON null). -/
+private def isNoneConst (j : Json) : Bool :=
+  nodeTypeOf j == some "Constant" && (getField j "value" == some Json.null)
+
+/-- Does the body test `name` against `None` (`x is None`, `x == None`, `if not x`)? Such a test
+proves the parameter is nullable, so a bare node-class annotation (LeetCode writes `root: TreeNode`
+but the base case `if root is None: return` means `Optional[TreeNode]`) should widen to `Optional`. -/
+private partial def nameIsNoneTested (name : String) (json : Json) : Bool :=
+  -- Do NOT descend into a nested `def` — a same-named param there (`def dfs(root)` inside `def
+  -- convertBST(root)`) is a DIFFERENT, shadowing variable, and its `if root is None` must not widen
+  -- this scope's param.
+  if nodeTypeOf json == some "FunctionDef" then false else
+  let here : Bool :=
+    match nodeTypeOf json with
+    | some "Compare" =>
+        (["is", "is_not", "eq", "not_eq"].contains ((json.getObjValAs? String "op").toOption.getD "")) &&
+        (((getField json "left").bind nameId? == some name && (getField json "right").any isNoneConst) ||
+         ((getField json "right").bind nameId? == some name && (getField json "left").any isNoneConst))
+    | some "UnaryOp" =>
+        (json.getObjValAs? String "op").toOption == some "not" && (getField json "operand").bind nameId? == some name
+    | _ => false
+  here || (match json with
+    | .arr xs => xs.any (nameIsNoneTested name)
+    | .obj fs => fs.toList.any (fun (_, v) => nameIsNoneTested name v)
+    | _ => false)
+
+/-- Is `name` ever an assignment / aug-assign / `for` target (a `Name` target) in `json`, not
+descending into a nested def? A reassigned nullable node param is a mut-cursor (`node = node.next`,
+handled by a `_mut_opt` shadow); one only read + recursed on (`dfs(root.left)`) needs its param TYPE
+itself widened to `Optional`. -/
+private partial def nameReassigned (name : String) (json : Json) : Bool :=
+  if nodeTypeOf json == some "FunctionDef" then false
+  else
+    let hits (t : Json) : Bool := nameId? t == some name
+    let here : Bool := match nodeTypeOf json with
+      | some "Assign" =>
+          match getField json "targets" with | some (.arr ts) => ts.any hits | _ => false
+      | some "AugAssign" | some "AnnAssign" => (getField json "target").any hits
+      | some "For" => (getField json "target").any hits
+      | _ => false
+    here || (match json with
+      | .arr xs => xs.any (nameReassigned name)
+      | .obj fs => fs.toList.any (fun (_, v) => nameReassigned name v)
+      | _ => false)
+
+/-- Parameter name → annotated type for a `FunctionDef` (annotated params only). A bare node-class
+param the body tests against `None` is widened to `Optional` (see `nameIsNoneTested`). -/
 private def paramSeed (fn : Json) : Env := Id.run do
   let mut env : Env := {}
+  let body := Json.arr (fn.getObjValAs? (Array Json) "body" |>.toOption.getD #[])
   let .ok args := fn.getObjVal? "args" | return env
   let .ok argsArr := args.getObjValAs? (Array Json) "args" | return env
   for arg in argsArr do
     if let .ok name := arg.getObjValAs? String "arg" then
       match getField arg "annotation" with
-      | some ann => if !ann.isNull then env := env.insert name (ofAnnotation ann)
+      | some ann => if !ann.isNull then
+          let t := match ofAnnotation ann with
+            | .cls c => if nameIsNoneTested name body then .opt (.cls c) else .cls c
+            | other => other
+          env := env.insert name t
       | none => pure ()
   return env
 
@@ -318,6 +369,62 @@ private def paramUsageSeed (fn : Json) : Env := Id.run do
     if t != .unknown then env := env.insert name t
   return env
 
+/-- Names `fn` binds directly — params plus `=`/`for`/annotated targets in its own body (through
+`if`/`for` blocks, not into deeper nested defs). A name used in `fn` but NOT here is a capture of an
+enclosing scope. -/
+private def localAssignNames (fn : Json) : List String := Id.run do
+  let mut names := (paramNames fn).toList
+  for s in flatStmts ((fn.getObjValAs? (Array Json) "body").toOption.getD #[]).toList do
+    match nodeTypeOf s with
+    | some "Assign" =>
+        for t in (s.getObjValAs? (Array Json) "targets").toOption.getD #[] do
+          if let some n := nameId? t then names := n :: names
+    | some "AnnAssign" | some "AugAssign" | some "For" =>
+        if let some n := (getField s "target").bind nameId? then names := n :: names
+    | _ => pure ()
+  return names
+
+/-- The container name a teaching METHOD mutation (`xs.append(v)`, `s.add(v)`) targets, for the
+capture pass. Only `recv.method(...)` receivers — a free `heappush(h, v)` capture is rarer and left to
+the enclosing-scope pass. -/
+private def mutationReceiverName? (value : Json) : Option String :=
+  if nodeTypeOf value != some "Call" then none else
+  match getField value "func" with
+  | some func =>
+      if nodeTypeOf func == some "Attribute" then
+        match getField func "value" with
+        | some recv =>
+            if ((Libraries.methodBehaviour? ((func.getObjValAs? String "attr").toOption.getD "")).bind (·.teaches?)).isSome
+            then match nameId? recv with
+              | some n => some n
+              -- `nums[i].append(v)`: the mutated container is the subscript BASE (`nums`).
+              | none => if nodeTypeOf recv == some "Subscript" then (getField recv "value").bind nameId? else none
+            else none
+        | none => none
+      else none
+  | none => none
+
+/-- Apply container-teaching mutations found INSIDE nested defs to the enclosing `env`, so a capture
+learns its element type across scopes (`nums = []` here, `nums.append(x)` in a sibling `def dfs`, then
+`nums[i]` in `def build` — all one `List Int`). A name a nested def binds itself (param or `=`) is a
+shadow, not a capture, so it is skipped; only names already in `env` are refined (join-only, never a
+downgrade). The enclosing scope's own mutations are already handled by `applyStmt`, so refinement only
+fires `insideDef`. -/
+private partial def applyCaptureMutations (sigs : Sigs) (shadowed : List String) (insideDef : Bool)
+    (env : Env) (json : Json) : Env := Id.run do
+  let entering := nodeTypeOf json == some "FunctionDef"
+  let shadowed := if entering then shadowed ++ localAssignNames json else shadowed
+  let inside := insideDef || entering
+  let mut env := env
+  if inside then
+    if let some cname := mutationReceiverName? json then
+      if !shadowed.contains cname && (env.get? cname).isSome then
+        env := applyMutation sigs env json
+  match json with
+  | .arr xs => return xs.foldl (applyCaptureMutations sigs shadowed inside) env
+  | .obj fs => return fs.toList.foldl (fun e (_, v) => applyCaptureMutations sigs shadowed inside e v) env
+  | _ => return env
+
 /-- Infer a type for every local in `fn`, reflowing to a fixpoint. `outer` seeds the environment
 with the enclosing scope so a nested def's captures start typed; `hints` seeds unannotated
 parameters with types learned from call sites; `sigs` resolves calls to user functions. Precedence:
@@ -340,7 +447,8 @@ partial def inferFunction (sigs : Sigs) (outer hints : Env) (fn : Json) : Env :=
     -- shadows an outer variable owns a separate scope (Python-3), so clobbering the outer type (a
     -- loop `v : int` vs a comprehension `v : list[int]` → `any`) would poison it. Fresh-only respects
     -- that: never downgrade an outer binding.
-    let next := compBindings sigs (stmts.foldl (applyStmt sigs) env) bodyJson
+    let stepped := applyCaptureMutations sigs [] false (stmts.foldl (applyStmt sigs) env) bodyJson
+    let next := compBindings sigs stepped bodyJson
     if next.size == env.size && next.fold (fun ok k v => ok && (env.get? k |>.getD .unknown) == v) true then
       env := next
       break
@@ -464,7 +572,16 @@ private def stampParams (env : Env) (fn : Json) : Json :=
                   -- WITHOUT changing the param's type (callers still pass a plain `c`).
                   match env.get? name, getField arg "annotation" with
                   | some (.opt (.cls c)), some ann =>
-                      if ofAnnotation ann == .cls c then arg.setObjVal! "_mut_opt" (Json.str c) else arg
+                      if ofAnnotation ann == .cls c then
+                        -- Reassigned (`node = node.next`): keep the param type `c`, shadow it as
+                        -- `Option c` via `_mut_opt` (callers pass a plain `c`). Only read + recursed
+                        -- on (`dfs(root.left)`): widen the PARAM TYPE to `Optional c` so an Option arg
+                        -- lines up, via a `_ty` override of the bare annotation.
+                        if nameReassigned name (Json.arr body) then arg.setObjVal! "_mut_opt" (Json.str c)
+                        else match toAnnotation? (PyType.opt (.cls c)) with
+                          | some optAnn => arg.setObjVal! "_ty" optAnn
+                          | none => arg.setObjVal! "_mut_opt" (Json.str c)
+                      else arg
                   | _, _ => arg
                 else
                   -- A residual-unknown param is boxed as `PyAny` only when it is used in a
@@ -532,6 +649,14 @@ partial def markOptAttrs (sigs : Sigs) (env : Env) (json : Json) : Json :=
         match (getField json "value").map (typeOfExpr sigs env) with
         | some (.opt _) => json.setObjVal! "_unwrap_opt" (Json.bool true)
         | _ => json
+      -- `root1 == root2` / `root1 is root2` between two user-class (node) values: mark `_class_cmp`
+      -- so codegen compares through `BEq` (`==`) even in the exact twin — nodes have no `DecidableEq`
+      -- for a propositional `=`.
+      else if nodeTypeOf json == some "Compare" then
+        let isClassish := fun (side : String) => match (getField json side).map (typeOfExpr sigs env) with
+          | some (.cls _) | some (.opt (.cls _)) => true
+          | _ => false
+        if isClassish "left" || isClassish "right" then json.setObjVal! "_class_cmp" (Json.bool true) else json
       else json
     match json with
     | .arr xs => Json.arr (xs.map (markOptAttrs sigs env))

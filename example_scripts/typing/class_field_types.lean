@@ -25,6 +25,11 @@ structure UnionFind where
   count : Int
   deriving Inhabited, Repr, BEq
 
+instance : PastaLean.PyTruthy UnionFind where truthy _ := true
+
+instance : Coe UnionFind (Option UnionFind) :=
+  ⟨some⟩
+
 def UnionFind.new := fun n ↦
   ({ p := PastaLean.pyList (PastaLean.pyRange n), size := PastaLean.pyListRepeat [(1 : Int)] n, count := n } :
     UnionFind)
@@ -63,6 +68,11 @@ structure UnionFind'rn where
   count : Int
   deriving Inhabited, Repr, BEq
 
+instance : PastaLean.PyTruthy UnionFind'rn where truthy _ := true
+
+instance : Coe UnionFind'rn (Option UnionFind'rn) :=
+  ⟨some⟩
+
 def UnionFind'rn.new := fun n ↦
   ({ p := PastaLean.pyList (PastaLean.pyRange n), size := PastaLean.pyListRepeat [(1 : Int)] n, count := n } :
     UnionFind'rn)
@@ -98,6 +108,11 @@ structure Bag where
   n : Int
   deriving Inhabited, Repr, BEq
 
+instance : PastaLean.PyTruthy Bag where truthy _ := true
+
+instance : Coe Bag (Option Bag) :=
+  ⟨some⟩
+
 def Bag.new : List String → Bag := fun (words : List String) ↦
   ({ words := PastaLean.pySort words, n := PastaLean.pyLen words } : Bag)
 
@@ -109,6 +124,11 @@ structure Bag'rn where
   words : List String
   n : Int
   deriving Inhabited, Repr, BEq
+
+instance : PastaLean.PyTruthy Bag'rn where truthy _ := true
+
+instance : Coe Bag'rn (Option Bag'rn) :=
+  ⟨some⟩
 
 def Bag'rn.new : List String → Bag'rn := fun (words : List String) ↦
   ({ words := PastaLean.pySort words, n := PastaLean.pyLen words } : Bag'rn)

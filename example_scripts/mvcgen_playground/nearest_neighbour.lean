@@ -21,7 +21,7 @@ noncomputable def euclidean_distance := fun (p1 : List Int) ↦ fun (p2 : List I
       let _ := ()
     let _ := Libraries.passta.pyPassAssert (PastaLean.pyLen p1 == PastaLean.pyLen p2)
     let mut sq_diffs :=
-      (PastaLean.pyIter (PastaLean.pyZip p1 p2)).map fun _pair_1 =>
+      (PastaLean.pyIter (PastaLean.pyZip p1 p2)).map fun (_pair_1 : Int × Int) =>
         let a := Prod.fst _pair_1;
         let b := Prod.snd _pair_1;
         Libraries.math.pyMathPowExact (a -ₚ b) (2 : Int)
@@ -46,7 +46,7 @@ def euclidean_distance'rn : List Int → List Int → PastaLean.PyExcept Float :
   let _ := Libraries.passta.pyPassAssert (PastaLean.pyLen p1 == PastaLean.pyLen p2)
   -- Using zip, a list comprehension, and math.pow
   let mut sq_diffs :=
-    (PastaLean.pyIter (PastaLean.pyZip p1 p2)).map fun _pair_1 =>
+    (PastaLean.pyIter (PastaLean.pyZip p1 p2)).map fun (_pair_1 : Int × Int) =>
       let a := Prod.fst _pair_1;
       let b := Prod.snd _pair_1;
       Libraries.math.pyMathPow (a -ₚ b) (2 : Int)

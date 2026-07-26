@@ -119,6 +119,11 @@ structure Vec where
   y : Int
   deriving Inhabited, Repr, BEq
 
+instance : PastaLean.PyTruthy Vec where truthy _ := true
+
+instance : Coe Vec (Option Vec) :=
+  ⟨some⟩
+
 def Vec.new : Int → Int → Vec := fun (x : Int) ↦ fun (y : Int) ↦ ({ x := x, y := y } : Vec)
 
 def Vec.unit :=
@@ -138,6 +143,11 @@ structure Vec'rn where
   x : Int
   y : Int
   deriving Inhabited, Repr, BEq
+
+instance : PastaLean.PyTruthy Vec'rn where truthy _ := true
+
+instance : Coe Vec'rn (Option Vec'rn) :=
+  ⟨some⟩
 
 def Vec'rn.new : Int → Int → Vec'rn := fun (x : Int) ↦ fun (y : Int) ↦ ({ x := x, y := y } : Vec'rn)
 

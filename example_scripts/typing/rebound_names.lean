@@ -47,9 +47,8 @@ def letter_sum'rn := fun (s : String) ↦
 def appeal := fun (s : String) ↦
   Id.run
     (do
-      let mut __chain_1 := (0 : Int)
-      let mut ans := __chain_1
-      let mut t := __chain_1
+      let mut ans : Int := (0 : Int)
+      let mut t : Int := (0 : Int)
       let mut pos : List Int := PastaLean.pyListRepeat [-(1 : Int)] (26 : Int)
       for _pair_1 in (PastaLean.pyIter (PastaLean.pyEnumerate s))do
         let i := Prod.fst _pair_1
@@ -65,9 +64,8 @@ attribute [simp, taste_ingr] appeal
 def appeal'rn := fun (s : String) ↦
   Id.run
     (do
-      let mut __chain_1 := (0 : Int)
-      let mut ans := __chain_1
-      let mut t := __chain_1
+      let mut ans : Int := (0 : Int)
+      let mut t : Int := (0 : Int)
       let mut pos : List Int := PastaLean.pyListRepeat [-(1 : Int)] (26 : Int)
       for _pair_1 in (PastaLean.pyIter (PastaLean.pyEnumerate s))do
         let i := Prod.fst _pair_1

@@ -21,8 +21,7 @@ instance : PyIntCast Int where
   pyInt x := x
 
 /-- `int(x)` on an exact-mode real number (a transcendental result). `ℝ` is noncomputable, so this
-is `noncomputable` and only lets the program elaborate — regenerate with `--mode run` to evaluate.
-Uses the floor `⌊x⌋`. -/
+is `noncomputable` and only lets the program elaborate. -/
 noncomputable instance : PyIntCast ℝ where
   pyInt x := ⌊x⌋
 
@@ -50,7 +49,7 @@ sign and the usual `0x`/`0b`/`0o` prefix for base 16/2/8. Malformed input yields
 def pyIntBase (s : String) (base : Int) : Int := Id.run do
   let b := base.toNat
   if b < 2 then return 0
-  let mut chars := s.trim.toList
+  let mut chars := s.trimAscii.toString.toList
   let mut neg := false
   match chars with
   | '-' :: rest => neg := true; chars := rest

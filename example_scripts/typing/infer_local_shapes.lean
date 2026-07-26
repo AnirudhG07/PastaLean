@@ -18,12 +18,22 @@ structure Counter where
   tag : String
   deriving Inhabited, Repr, BEq
 
+instance : PastaLean.PyTruthy Counter where truthy _ := true
+
+instance : Coe Counter (Option Counter) :=
+  ⟨some⟩
+
 def Counter.new : Int → Counter := fun (n : Int) ↦ ({ c := PastaLean.pyListRepeat [(0 : Int)] n, tag := "x" } : Counter)
 
 structure Counter'rn where
   c : List Int
   tag : String
   deriving Inhabited, Repr, BEq
+
+instance : PastaLean.PyTruthy Counter'rn where truthy _ := true
+
+instance : Coe Counter'rn (Option Counter'rn) :=
+  ⟨some⟩
 
 def Counter'rn.new : Int → Counter'rn := fun (n : Int) ↦
   ({ c := PastaLean.pyListRepeat [(0 : Int)] n, tag := "x" } : Counter'rn)

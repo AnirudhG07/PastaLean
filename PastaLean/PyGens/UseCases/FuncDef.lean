@@ -114,10 +114,12 @@ partial def functionArgTypeSyntax? (annotationJson : Json) : PygenM (Option (TSy
                   return some ty
               | _, _ => return none
           | _, _ => return none
-      -- `Optional[T]` and other containers this reader misses fall back to `TypeInfer`.
-      | _ => pyTypeSyntax? (TypeInfer.ofAnnotation annotationJson)
-  -- `X | None` (`Optional`) and forward-ref strings: `TypeInfer` handles them.
-  | _ => pyTypeSyntax? (TypeInfer.ofAnnotation annotationJson)
+      -- `Optional[T]` and other containers this reader misses fall back to `TypeInfer` — via
+      -- `seqAwareTypeSyntax?` so a class inside `Option`/a container is still run-suffixed
+      -- (`Optional[ListNode]` → `Option ListNode'rn` in the run twin), not left bare.
+      | _ => seqAwareTypeSyntax? annotationJson
+  -- `X | None` (`Optional`) and forward-ref strings: `TypeInfer` handles them (run-suffixed).
+  | _ => seqAwareTypeSyntax? annotationJson
 
 /-- Read Python function parameters as Lean idents plus any simple type annotations we can preserve. -/
 def functionArgInfos (json : Json) : PygenM (Array (TSyntax `ident × Option (TSyntax `term))) := do
@@ -133,15 +135,18 @@ def functionArgInfos (json : Json) : PygenM (Array (TSyntax `ident × Option (TS
     -- call site → ascribe `ℝ` (exact mode), overriding the annotation. Everything else stays `ℚ`.
     let isRealParam := (← getNumericMode) == .exact && arg.getObjValAs? Bool "_real" == .ok true
     let ty? ← withRealContext isRealParam do
-      match jsonFieldOption arg "annotation" with
-      -- Real-marked params lower their annotation under real-context so `float` → `ℝ` while the
-      -- container shape is preserved (`list[list[float]]` → `List (List ℝ)`, scalar → `ℝ`).
-      | some annotationJson => functionArgTypeSyntax? annotationJson
-      -- No annotation: use the type `TypeInfer` inferred (`_ty`), else a bare `ℝ` if real.
+      -- An inference `_ty` override (a nullable node param widened `TreeNode` → `Optional[TreeNode]`)
+      -- wins over the bare annotation — otherwise the emitted param would clash with the Option args
+      -- the body recurses with. Only such widened params carry `_ty` alongside an annotation.
+      match ← stampedTypeSyntax? arg with
+      | some t => pure (some t)
       | none =>
-          match ← stampedTypeSyntax? arg with
-          | some t => pure (some t)
-          | none => if isRealParam then pure (some (← `(Real))) else pure none
+        match jsonFieldOption arg "annotation" with
+        -- Real-marked params lower their annotation under real-context so `float` → `ℝ` while the
+        -- container shape is preserved (`list[list[float]]` → `List (List ℝ)`, scalar → `ℝ`).
+        | some annotationJson => functionArgTypeSyntax? annotationJson
+        -- No annotation and no `_ty`: a bare `ℝ` if real, else untyped.
+        | none => if isRealParam then pure (some (← `(Real))) else pure none
     argInfos := argInfos.push (mkIdent argName.toName, ty?)
   return argInfos
 
@@ -203,12 +208,31 @@ def functionReturnTypeSyntax? (json : Json) : PygenM (Option (TSyntax `term)) :=
         functionArgTypeSyntax? returnJson
   | none => pure none
 
+/-- The user-class name a node-returning function's annotation names (`TreeNode` or
+`Optional[TreeNode]`), if any. Such a function mixes bare `return TreeNode(...)`, a nullable cursor
+`return slow`, and `return None` base cases — all `Optional[C]` in Python — so its non-recursive def
+must ASCRIBE the codomain as `Option C` (never bare `C`): the bare arm coerces via `Coe C (Option C)`,
+the Option arms match. Ascribing bare `C` (or letting Lean pin the codomain to the first return seen)
+makes the other arms clash. Gated to node returns so other non-recursive defs (whose unascribed body
+type is fine, e.g. `bool`-widening-to-`int`) stay untouched. -/
+def returnClassName? (json : Json) : Option String :=
+  match (jsonFieldOption json "returns").orElse (fun _ => jsonFieldOption json "_ret_ty") with
+  | some r => match TypeInfer.ofAnnotation r with
+    | .cls c | .opt (.cls c) => some c
+    | _ => none
+  | none => none
+
 /-- Return-type ascription for a RECURSIVE function: the annotated/inferred type, or `Unit` for a
 genuinely void body (no `return e` anywhere — only bare `return`/fall-through). A recursive
 `partial def` with an unconstrained return type otherwise leaves `Inhabited ?m` stuck. Guarded by
 `hasValuedReturn` so a state-threaded helper (which gains a valued `return (…threaded…)` and a
 concrete tuple return type) is never mis-pinned to `Unit`. -/
 def recursiveReturnTypeSyntax? (json : Json) : PygenM (Option (TSyntax `term)) := do
+  -- A node-returning recursive helper (`build(i,j) -> TreeNode` that also `return None`s at its base
+  -- case) has codomain `Option C`, never bare `C` — same as the non-recursive path.
+  if let some c := returnClassName? json then
+    if let some codom ← runAwareTypeSyntax? (TypeInfer.PyType.opt (.cls c)) then
+      return some codom
   match ← functionReturnTypeSyntax? json with
   | some rt => return some rt
   | none =>
@@ -994,10 +1018,21 @@ def funcDefSyntax : (kind : SyntaxNodeKind) → Json →
                 | some fullTy, false => `(partial def $nameIdent : $fullTy := $valueStx)
                 | none, true => `(noncomputable partial def $nameIdent := $valueStx)
                 | none, false => `(partial def $nameIdent := $valueStx)
-              else if nc then
-                `(noncomputable def $nameIdent := $valueStx)
               else
-                `(def $nameIdent := $valueStx)
+                -- A node-returning function mixes bare `TreeNode(...)`, nullable cursors and `None`
+                -- base cases: ascribe the full arrow type with codomain `Option C` so every arm
+                -- coerces (`Coe C (Option C)`) instead of pinning the codomain to the first return.
+                let fullTy? ← match returnClassName? json with
+                  | some c =>
+                      match ← runAwareTypeSyntax? (TypeInfer.PyType.opt (.cls c)) with
+                      | some codom => functionArrowTypeSyntax? argInfos codom
+                      | none => pure none
+                  | none => pure none
+                match fullTy?, nc with
+                | some fullTy, true => `(noncomputable def $nameIdent : $fullTy := $valueStx)
+                | some fullTy, false => `(def $nameIdent : $fullTy := $valueStx)
+                | none, true => `(noncomputable def $nameIdent := $valueStx)
+                | none, false => `(def $nameIdent := $valueStx)
         -- Python's leading-underscore convention (`def _foo`) maps to a Lean `private def`.
         let finalCmd ← applyPrivacy name cmd
         -- Tag prove-version (exact) functions for proof search. Skip RECURSIVE/`partial` defs: Lean

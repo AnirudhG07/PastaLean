@@ -206,3 +206,45 @@ duplicates a LITERAL RHS to each target (no shared temp) so `ans = pre = 0` type
 Recovers `car-fleet` (`pre : ℚ` from `pre = a/b`), `middle-of-the-linked-list` (`slow = fast = head`
 chained → Option cursor), and broadly anything with chained assign across clusters. HIGH blast radius —
 the whole corpus now infers on the desugared IR; verify against the overnight regression run.
+
+## §NODE_OPTION FIX (2026-07-26 afternoon) — run-suffix classes inside `Option`/containers
+
+`FuncDef.functionArgTypeSyntax?` ascribed `Optional[T]` and `X | None` params (and return types) via
+`pyTypeSyntax? ∘ ofAnnotation`, which is context-free and does NOT run-suffix a class name — so a param
+`head: Optional[ListNode]` became `Option ListNode` (prove name) while the run twin's body built
+`ListNode'rn` values → "Option ListNode but expected Option ListNode'rn". Fix: route both fallbacks
+through `seqAwareTypeSyntax?` (which recurses via `runAwareTypeSyntax?`, suffixing the class inside
+`Option`/`List`/`Set`, and keeps `_seq` array-marking). **node_option 20-sample: 3 → 9 ok (+6).**
+Scales across the 62-problem cluster (Optional node params/returns are ubiquitous) → est. **~18 corpus**.
+Newly OK: construct-bst, convert-sorted-list, merge-nodes, odd-even, remove-nodes, rotate-list.
+Remaining node core = `Option Node` passed to a helper whose param is bare `Node` (interprocedural
+param-widening + in-body unwrap) — the genuinely hard part, deferred.
+
+## §NODE_OPTION CLUSTER PUSH (2026-07-26 evening) — 6 structural fixes, ~50→38 failing
+
+Full node-referencing set = **152** problems (superset of the 62-failing cluster). Baseline this
+session ~102 ok. After six fixes: **114/152 ok (75%)**. All are general (help beyond nodes):
+
+1. **run-suffix through `Option`** (FuncDef `functionArgTypeSyntax?`): `Optional[C]` params/returns
+   route via `seqAwareTypeSyntax?` so the class inside `Option`/containers is run-suffixed
+   (`Option ListNode'rn`). [+6 in the 20-sample] — [[twin-suffix-through-option]]
+2. **nullable param-widening** (Solve `paramSeed`/`nameIsNoneTested`, skips nested defs): a bare
+   node-class param the body tests `is None` widens to `Optional[C]` (LeetCode writes `root:TreeNode`,
+   means `Optional`). Split `_mut_opt` (reassigned cursor) vs `_ty` override (pure recursive dfs).
+3. **Option-codomain return ascription** (FuncDef `returnClassName?`, both recursive + non-recursive):
+   a node-returning fn's codomain is `Option C` (bare arms coerce via `Coe C (Option C)`), never bare.
+4. **class comparison via `BEq`** (Basic `_class_cmp`, stamped in Solve `markOptAttrs`): node `==`/`is`
+   emit `==`/`!=` even in the exact twin — nodes derive `BEq` but not `DecidableEq` for a
+   propositional `=`. [cleared the Decidable bucket, ~7]
+5. **node tuple-unpack coercion** (Assign `tupleElementAssignDoElem`): `↑` on a projection into an
+   `Option C` mut-cursor target (`tl, tr = (l, r)`) so it elaborates at `C` then lifts, instead of the
+   ascription back-unifying the polymorphic `Prod.fst`. [cleared the unpack_pair bucket, ~6]
+6. **cross-scope capture mutations** (Solve `applyCaptureMutations`): a container mutated in a nested
+   def (`nums.append(x)` / `nums[i].append(x)` in `def dfs`) refines the outer binding, so a sibling
+   `def build` reading `nums[i]` sees `List Int`. Shadow-guarded (join-only).
+
+Remaining ~38 = the hard tail, NO single-fix bucket left: untyped nested-container ascription +
+defaultdict-key inference (general), `Array`/`List` backing reconcile (numeric, not node), recursive
+tuple-return + state-threading dfs (maxSumBST/largestBST/minCameraCover), `Hashable` node-as-dict-key,
+tuple-index-on-a-call (`dfs(root)[0]`), and one-offs (`setattr`, mutual-recursion `nonlocal`). Each is
+a standalone effort or a general subsystem, not a shaped cluster.

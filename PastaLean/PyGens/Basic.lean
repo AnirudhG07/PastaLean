@@ -462,7 +462,7 @@ membership lowering: a string literal on the left of `in`/`not in` means substri
 (`pyStrContainsSubstr`); otherwise membership uses `pyContains`, whose `outParam` element type
 pins the element from the container. -/
 def compareApplyTerm (op : String) (leftJson : Json) (leftCode rightCode : TSyntax `term)
-    (rightJson : Option Json := none) : PygenM (TSyntax `term) := do
+    (rightJson : Option Json := none) (classCmp : Bool := false) : PygenM (TSyntax `term) := do
   -- Set comparisons are order-independent (subset / set-equality), unlike the list-backed `==`/`≤`
   -- the same `List` value would otherwise select. Fires when either operand is statically a set.
   if (← jsonIsSetExpr leftJson) || (← (rightJson.mapM jsonIsSetExpr).map (·.getD false)) then
@@ -500,10 +500,12 @@ def compareApplyTerm (op : String) (leftJson : Json) (leftCode rightCode : TSynt
   let prop ← getPropCondition
   let exact ← numericModeIsExact
   match op with
+  -- User-class (node) operands compare through `BEq` (`==`): they derive `BEq` but not `DecidableEq`,
+  -- so the propositional `=`/`≠` the exact twin would otherwise emit has no `Decidable` instance.
   | "eq" | "is" =>
-      if prop && exact then `($leftCode = $rightCode) else `($leftCode == $rightCode)
+      if prop && exact && !classCmp then `($leftCode = $rightCode) else `($leftCode == $rightCode)
   | "ne" | "isnot" =>
-      if prop && exact then `($leftCode ≠ $rightCode) else `($leftCode != $rightCode)
+      if prop && exact && !classCmp then `($leftCode ≠ $rightCode) else `($leftCode != $rightCode)
   | "lt" => if prop then `($leftCode < $rightCode) else `(decide ($leftCode < $rightCode))
   | "gt" => if prop then `($leftCode > $rightCode) else `(decide ($leftCode > $rightCode))
   | "le" => if prop then `($leftCode <= $rightCode) else `(decide ($leftCode <= $rightCode))
@@ -637,7 +639,8 @@ def compareSyntax : (kind : SyntaxNodeKind) → Json →
       s!"Compare node does not have a 'right' field or it is not a JSON value: {json}"
     let leftCode ← getCode leftJson `term
     let rightCode ← getCode rightJson `term
-    compareApplyTerm op leftJson leftCode rightCode (rightJson := some rightJson)
+    let classCmp := json.getObjValAs? Bool "_class_cmp" == .ok true
+    compareApplyTerm op leftJson leftCode rightCode (rightJson := some rightJson) (classCmp := classCmp)
   | _, _ => throwError s!"Unsupported syntax category for Compare node"
 
 @[pygen "IfExp"]

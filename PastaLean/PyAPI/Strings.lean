@@ -70,6 +70,11 @@ instance : PyStringJoin String where
 instance : PyStringJoin Char where
   toJoinString c := String.singleton c
 
+/-- Joining a nullable-string sequence (elements typed `Optional[str]` by inference): a `none`
+contributes the empty string. -/
+instance : PyStringJoin (Option String) where
+  toJoinString := (·.getD "")
+
 /--
 Concrete string implementation for Python `join`.
 

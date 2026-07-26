@@ -24,6 +24,11 @@ structure TreeNode where
   right : Option TreeNode
   deriving Inhabited, Repr, BEq
 
+instance : PastaLean.PyTruthy TreeNode where truthy _ := true
+
+instance : Coe TreeNode (Option TreeNode) :=
+  ⟨some⟩
+
 def TreeNode.new (val : _ := (0 : Int)) (left : Option TreeNode := Option.none)
     (right : Option TreeNode := Option.none) : TreeNode :=
   ({ val := val, left := left, right := right } : TreeNode)
@@ -34,6 +39,11 @@ structure TreeNode'rn where
   right : Option TreeNode'rn
   deriving Inhabited, Repr, BEq
 
+instance : PastaLean.PyTruthy TreeNode'rn where truthy _ := true
+
+instance : Coe TreeNode'rn (Option TreeNode'rn) :=
+  ⟨some⟩
+
 def TreeNode'rn.new (val : _ := (0 : Int)) (left : Option TreeNode'rn := Option.none)
     (right : Option TreeNode'rn := Option.none) : TreeNode'rn :=
   ({ val := val, left := left, right := right } : TreeNode'rn)
@@ -43,6 +53,11 @@ structure ListNode where
   next : Option ListNode
   deriving Inhabited, Repr, BEq
 
+instance : PastaLean.PyTruthy ListNode where truthy _ := true
+
+instance : Coe ListNode (Option ListNode) :=
+  ⟨some⟩
+
 def ListNode.new (val : _ := (0 : Int)) (next : Option ListNode := Option.none) : ListNode :=
   ({ val := val, next := next } : ListNode)
 
@@ -50,6 +65,11 @@ structure ListNode'rn where
   val : Int
   next : Option ListNode'rn
   deriving Inhabited, Repr, BEq
+
+instance : PastaLean.PyTruthy ListNode'rn where truthy _ := true
+
+instance : Coe ListNode'rn (Option ListNode'rn) :=
+  ⟨some⟩
 
 def ListNode'rn.new (val : _ := (0 : Int)) (next : Option ListNode'rn := Option.none) : ListNode'rn :=
   ({ val := val, next := next } : ListNode'rn)

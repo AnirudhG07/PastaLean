@@ -251,7 +251,16 @@ partial def tupleElementAssignDoElem (isTuple : Bool) (elt : Json) (acc : TSynta
     match jsonNodeType? elt with
     -- Ascribe the binder to the element's inferred type (`_ty`, stamped by TypeInfer) so a slot
     -- seeded by a polymorphic sentinel (`ans, mi = (0, inf)` → `mi : Int`, not the `ℚ` default) pins.
-    | some "Name" => bindOrAssignLocal (← getCode elt `ident) acc (ty? := ← stampedTypeSyntax? elt)
+    | some "Name" =>
+      -- A node mut-cursor target (`Option C`, from `tl, tr = (l, r)` then `tl = tl.next`) unpacked
+      -- from a bare-`C` tuple element: coerce the projection (`↑`) so it elaborates at `C` then lifts.
+      -- Without it the `Option C` ascription back-unifies the polymorphic `Prod.fst`, forcing the whole
+      -- tuple to `Option C × …` which the `C × C` RHS can't match. `↑` is a no-op if the element is
+      -- already `Option C`.
+      let isOptClass := match (jsonFieldOption elt "_ty").map TypeInfer.ofAnnotation with
+        | some (.opt (.cls _)) => true | _ => false
+      let acc ← if isOptClass then `(↑$acc) else pure acc
+      bindOrAssignLocal (← getCode elt `ident) acc (ty? := ← stampedTypeSyntax? elt)
     | some "Attribute" =>
       -- `a.val, b.val = b.val, a.val` (a value swap on tree nodes): rebuild each receiver record.
       let .ok recv := elt.getObjVal? "value" | throwError s!"Attribute target missing 'value': {elt}"
