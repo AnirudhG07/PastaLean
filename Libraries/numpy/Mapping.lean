@@ -3,6 +3,7 @@ import Mathlib
 import Libraries.numpy.Statistics
 import Libraries.numpy.LinearAlgebra
 import Libraries.numpy.Creation
+import Libraries.Behaviour
 import Libraries.numpy.NumpyDef
 
 namespace Libraries.numpy
@@ -121,18 +122,20 @@ partial def scalarField : TypeInfer.PyType → TypeInfer.PyType
   | .list e => scalarField e
   | t => t
 
-/-- numpy member return type as a function of its first argument's type — the shims are polymorphic
-over the field, so `np.dot` of `ℚ` vectors gives `ℚ`. `none` = let Lean infer it. -/
-def numpyMemberReturn? (member : String) : Option (TypeInfer.PyType → TypeInfer.PyType) :=
+/-- numpy member behaviour — the return type as a function of the FIRST argument's type, since the
+shims are polymorphic over the field (`np.dot` of `ℚ` vectors gives `ℚ`). `none` = let Lean infer it.
+Reductions/elementwise/creators always return `Float` (never the caller's `ℚ`), so they are omitted
+and left for Lean to infer — forcing `ℚ` in exact mode would clash with the shim. -/
+def numpyBehaviour? (member : String) : Option Libraries.Behaviour :=
+  let ofArg0 (f : TypeInfer.PyType → TypeInfer.PyType) : Libraries.Behaviour :=
+    { returns := fun as => f ((as[0]?).getD .unknown) }
   -- `dot` is the one field-scalar reduction (`… → γ`): result = the arg's scalar field.
-  if member == "dot" then some scalarField
+  if member == "dot" then some (ofArg0 scalarField)
   -- Field-preserving matrix ops (`… → List (List α)`): result has the arg's shape and field.
-  else if ["add", "subtract", "multiply", "scale", "matmul"].contains member then some id
-  else if ["argmax", "argmin", "searchsorted"].contains member then some (fun _ => .int)
-  else if ["argsort", "nonzero", "shape"].contains member then some (fun _ => .list .int)
-  else if ["any", "all"].contains member then some (fun _ => .bool)
-  -- Reductions/elementwise/creators always return `Float` (never the caller's `ℚ`), so leave them
-  -- unascribed and let Lean infer `Float` — forcing `ℚ` in exact mode would clash with the shim.
+  else if ["add", "subtract", "multiply", "scale", "matmul"].contains member then some (ofArg0 id)
+  else if ["argmax", "argmin", "searchsorted"].contains member then some (ofArg0 fun _ => .int)
+  else if ["argsort", "nonzero", "shape"].contains member then some (ofArg0 fun _ => .list .int)
+  else if ["any", "all"].contains member then some (ofArg0 fun _ => .bool)
   else none
 
 end Libraries.numpy

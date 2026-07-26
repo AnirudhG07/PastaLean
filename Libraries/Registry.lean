@@ -60,40 +60,46 @@ def pythonLibraryMapExact? (moduleName member : String) : Option Lean.Name :=
   | "numpy" => numpy.pythonNumpyMemberMapExact? member
   | _ => none
 
-/-- Return type of a library member, for TypeInfer — the single entry point, so `TypeInfer` names no
-specific library. numpy is field-polymorphic, hence a function of the first argument's type. -/
-def libraryMemberReturn? (moduleName member : String) (arg0 : TypeInfer.PyType) :
-    Option TypeInfer.PyType :=
+/-- The `Behaviour` of a **qualified** library member `module.member` — the single record carrying
+its return shape, mutation, and iterator kind. Adding a library member is one entry in that library's
+own `Mapping.lean`; this dispatch and the derived views below never change. -/
+def memberBehaviour? (moduleName member : String) : Option Behaviour :=
   match moduleName with
-  | "math" => math.mathMemberReturn? member
-  | "scipy" => scipy.scipyMemberReturn? member
-  | "numpy" => (numpy.numpyMemberReturn? member).map (· arg0)
+  | "heapq"       => heapq.heapqBehaviour? member
+  | "itertools"   => itertools.itertoolsBehaviour? member
+  | "collections" => collections.collectionsBehaviour? member
+  | "bisect"      => bisect.bisectBehaviour? member
+  | "math"        => math.mathBehaviour? member
+  | "scipy"       => scipy.scipyBehaviour? member
+  | "numpy"       => numpy.numpyBehaviour? member
   | _ => none
 
-/-- The in-place mutation spec of a library member, for the core codegen — one entry point, so
-codegen names no specific library. -/
-def libraryMutator? (moduleName member : String) : Option LibraryMutator :=
-  match moduleName with
-  | "heapq" => heapq.heapqMutator? member
-  | "bisect" => bisect.bisectMutator? member
-  | _ => none
-
-/-- The `Behaviour` of a BARE callable name (a builtin, or a star-imported library member): the single
-entry point TypeInfer consults, so the engine names no specific library. Checks Python builtins, then
-each library's own behaviour table — adding a library's inference behaviour is one entry in that
-library's `Mapping.lean`, never a change here or in `TypeInfer`. -/
+/-- The `Behaviour` of a BARE callable name (a builtin, or a star-imported library member) — the entry
+point TypeInfer consults for a `Name` call. Excludes `math`/`scipy`/`numpy`, which are qualified-only,
+so a user function named `pow`/`sqrt`/`dot` is not shadowed by the library. -/
 def bareBehaviour? (name : String) : Option Behaviour :=
   (builtinBehaviour? name).orElse fun _ =>
   (itertools.itertoolsBehaviour? name).orElse fun _ =>
   (heapq.heapqBehaviour? name).orElse fun _ =>
-  (collections.collectionsBehaviour? name)
+  (collections.collectionsBehaviour? name).orElse fun _ =>
+  (bisect.bisectBehaviour? name)
 
-/-- The unbounded-iterator spec of a library member, for the core codegen — one entry point, so
-codegen names no specific library. -/
+/-! ### Views derived from `memberBehaviour?` — one field each, so existing call sites are unchanged. -/
+
+/-- Return type of a qualified library member, for TypeInfer (`.unknown` → `none`, as before). -/
+def libraryMemberReturn? (moduleName member : String) (arg0 : TypeInfer.PyType) :
+    Option TypeInfer.PyType :=
+  match (memberBehaviour? moduleName member).map (·.returns [arg0]) with
+  | some t => if t == .unknown then none else some t
+  | none => none
+
+/-- The in-place mutation spec of a library member, for the core codegen. -/
+def libraryMutator? (moduleName member : String) : Option LibraryMutator :=
+  (memberBehaviour? moduleName member).bind (·.mutator)
+
+/-- The unbounded-iterator spec of a library member, for the core codegen. -/
 def libraryInfiniteIter? (moduleName member : String) : Option InfiniteIter :=
-  match moduleName with
-  | "itertools" => itertools.itertoolsInfiniteIter? member
-  | _ => none
+  (memberBehaviour? moduleName member).bind (·.infiniteIter)
 
 /-- A method that a library declares as a no-op, for the core codegen — keyed on the method name
 alone (these come from decorated values, e.g. `f.cache_clear()`, which carry no module tag). One

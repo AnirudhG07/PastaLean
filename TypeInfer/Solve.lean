@@ -54,54 +54,42 @@ def applyMutation (sigs : Sigs) (env : Env) (value : Json) : Env :=
   if nodeTypeOf value != some "Call" then env else
   match getField value "func" with
   | some func =>
-      -- A FUNCTION-form mutation that `Behaviour.teaches?` declares: arg `c` gains, as its element,
-      -- the type of arg `e` (`heappush(h, x)` → `(0, 1)`, so a heap of `(int, int)` pushed a `(ℚ, int)`
-      -- widens). Read off the member's declared behaviour, not hardcoded here.
-      if nodeTypeOf func == some "Name" then
-        let fn := (func.getObjValAs? String "id").toOption.getD ""
-        match (Libraries.bareBehaviour? fn).bind (·.teaches?) with
-        | some (c, e) =>
-            let args := ((value.getObjValAs? (Array Json) "args").toOption.getD #[]).toList
-            match args[c]?.bind nameId?, args[e]? with
-            | some h, some x =>
-                env.insert h ((env.get? h |>.getD .unknown).join (.list (typeOfExpr sigs env x)))
-            | _, _ => env
-        | none => env
-      else
-      if nodeTypeOf func != some "Attribute" then env else
-      match (func.getObjValAs? String "attr").toOption, getField func "value" with
-      | some attr, some recv =>
-          let args := ((value.getObjValAs? (Array Json) "args").toOption.getD #[]).toList
-          let elemFrom (i : Nat) : PyType := (args[i]?).elim .unknown (typeOfExpr sigs env)
-          let learned : PyType := match attr with
-            -- `add` is a SET method — learn `.set`, not `.list`, so `s = set()` (`.set unknown`)
-            -- refines to `.set T` instead of joining `.set` with `.list` (→ unknown → PyAny).
-            | "add" => .set (elemFrom 0)
-            | "append" | "insert" => .list (elemFrom (if attr == "insert" then 1 else 0))
-            | "extend" => match args[0]?.elim .unknown (typeOfExpr sigs env) with
-                          | .list e => .list e
-                          | _ => .unknown
-            | _ => .unknown
-          if learned == .unknown then env
-          else
-            let join1 (env : Env) (n : String) (t : PyType) : Env :=
-              env.insert n ((env.get? n |>.getD .unknown).join t)
-            match nameId? recv with
-            | some cname => join1 env cname learned
-            | none =>
-                -- `graph[k].append(v)`: the mutated thing is the VALUE at `k`, so `graph` is a
-                -- dict from the index type to `learned` (or a list of `learned`).
-                if nodeTypeOf recv == some "Subscript" then
-                  match (getField recv "value").bind nameId? with
+      let args := ((value.getObjValAs? (Array Json) "args").toOption.getD #[]).toList
+      -- A method's RECEIVER is effective argument 0, so `xs.append(v)` and `heappush(h, v)` share one
+      -- path — the member's `Behaviour.teaches?` says which effective arg is the container and which
+      -- is the element, and how (list / set / spliced-elements). The engine hardcodes no member name.
+      let behArgs? : Option (Libraries.Behaviour × List Json) := match nodeTypeOf func with
+        | some "Name" =>
+            (Libraries.bareBehaviour? ((func.getObjValAs? String "id").toOption.getD "")).map (·, args)
+        | some "Attribute" => match getField func "value" with
+            | some recv =>
+                (Libraries.methodBehaviour? ((func.getObjValAs? String "attr").toOption.getD "")).map (·, recv :: args)
+            | none => none
+        | _ => none
+      match behArgs?.bind (fun (b, ea) => b.teaches?.map (·, ea)) with
+      | some (teach, ea) =>
+          let typeAt (i : Nat) : PyType := (ea[i]?).elim .unknown (typeOfExpr sigs env)
+          let (cIdx, learned) : Nat × PyType := match teach with
+            | .pushList c e => (c, .list (typeAt e))
+            | .pushSet c e => (c, .set (typeAt e))
+            | .extendList c e => (c, match typeAt e with | .list x => .list x | _ => .unknown)
+          if learned == .unknown then env else
+          let join1 (n : String) (t : PyType) : Env := env.insert n ((env.get? n |>.getD .unknown).join t)
+          match ea[cIdx]? with
+          | some target => match nameId? target with
+              | some cname => join1 cname learned
+              -- `graph[k].append(v)`: the mutated value is at `k`, so `graph` is a dict/list of it.
+              | none => if nodeTypeOf target == some "Subscript" then
+                  match (getField target "value").bind nameId? with
                   | some base =>
-                      let kt := (getField recv "slice").elim .unknown (typeOfExpr sigs env)
+                      let kt := (getField target "slice").elim .unknown (typeOfExpr sigs env)
                       let outer := match env.get? base |>.getD .unknown with
-                        | .list _ => .list learned
-                        | _ => .dict kt learned
-                      join1 env base outer
+                        | .list _ => .list learned | _ => .dict kt learned
+                      join1 base outer
                   | none => env
                 else env
-      | _, _ => env
+          | none => env
+      | none => env
   | none => env
 
 /-- Bind an assignment/loop/comprehension target to type `t`, distributing a tuple type over a
@@ -271,29 +259,6 @@ private def paramSeed (fn : Json) : Env := Id.run do
       | none => pure ()
   return env
 
-/-- The type a **type-exclusive** method pins its receiver to, or `unknown`. Only methods that belong
-to exactly ONE builtin type are listed — Python semantics, exhaustively. Shared methods are omitted
-on purpose (`pop` is list AND dict; `remove` is list AND set; `index`/`count` are list/str/tuple;
-`update` is dict AND set) so a receiver is never mis-typed. -/
-private def methodReceiverType? (attr : String) : PyType :=
-  -- str-only: no list/dict/set/tuple has these.
-  if ["split", "rsplit", "splitlines", "upper", "lower", "title", "capitalize", "casefold",
-      "swapcase", "strip", "lstrip", "rstrip", "replace", "startswith", "endswith", "find", "rfind",
-      "join", "format", "format_map", "ljust", "rjust", "center", "zfill", "encode", "expandtabs",
-      "partition", "rpartition", "removeprefix", "removesuffix", "translate", "maketrans",
-      "isdigit", "isalpha", "isalnum", "isspace", "isupper", "islower", "istitle", "isnumeric",
-      "isdecimal", "isidentifier", "isprintable", "isascii"].contains attr then .str
-  -- list-only: str/dict/set lack these (`pop`/`remove`/`index`/`count` are shared → excluded).
-  else if ["append", "extend", "insert", "sort", "reverse"].contains attr then .list .unknown
-  -- dict-only: `keys`/`values`/`items`/`get`/`setdefault`/`popitem`/`fromkeys` (`update`/`pop` shared).
-  else if ["keys", "values", "items", "get", "setdefault", "popitem", "fromkeys"].contains attr
-    then .dict .unknown .unknown
-  -- set-only: `add`/`discard`/`issubset`/… (`remove`/`update`/`union`&co are shared or on frozenset).
-  else if ["add", "discard", "issubset", "issuperset", "isdisjoint", "symmetric_difference",
-           "symmetric_difference_update", "difference_update", "intersection_update"].contains attr
-    then .set .unknown
-  else .unknown
-
 /-- What `name`'s usage in one expression unambiguously tells us — enumerated exhaustively over the
 Python signals that pin exactly one type: a type-exclusive method on it (`p.split()` → str), an
 int-only operator over it (`p << 1`, `p >> 1`, `~p` — bitwise `& | ^` are int OR set, so NOT here),
@@ -309,7 +274,7 @@ private partial def usageType (name : String) (json : Json) : PyType :=
         | some func =>
             if nodeTypeOf func == some "Attribute" then
               if isName (getField func "value") then
-                (func.getObjValAs? String "attr").toOption.elim .unknown methodReceiverType?
+                (func.getObjValAs? String "attr").toOption.elim .unknown Libraries.builtinMethodReceiver?
               else .unknown
             -- `ord(p)` → p is a one-char str; `chr(p)` → p is an int.
             else match nameId? func with

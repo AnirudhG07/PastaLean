@@ -72,17 +72,6 @@ private def constReturnBuiltins : List (String × PyType) :=
     ("bool", .bool), ("float", .float), ("chr", .str), ("hash", .int),
     ("bin", .str), ("hex", .str), ("oct", .str) ]
 
-/-- Methods whose result type is fixed regardless of the receiver. -/
-private def constReturnMethods : List (String × PyType) :=
-  [ ("split", .list .str), ("rsplit", .list .str), ("splitlines", .list .str),
-    ("join", .str), ("strip", .str), ("lstrip", .str), ("rstrip", .str),
-    ("lower", .str), ("upper", .str), ("replace", .str), ("format", .str),
-    ("title", .str), ("swapcase", .str), ("casefold", .str), ("center", .str),
-    ("removeprefix", .str), ("removesuffix", .str), ("rjust", .str), ("ljust", .str),
-    ("count", .int), ("find", .int), ("rfind", .int), ("index", .int),
-    ("lstrip", .str), ("rstrip", .str),
-    ("startswith", .bool), ("endswith", .bool), ("isdigit", .bool), ("isalpha", .bool) ]
-
 mutual
 
 /-- The type of an expression under the current environment. `sigs` gives user functions' return
@@ -194,9 +183,13 @@ partial def typeOfCall (sigs : Sigs) (env : Env) (e : Json) : PyType :=
           let fallback : PyType :=
             match (func.getObjValAs? String "attr").toOption with
             | some attr =>
-                if ["Counter", "defaultdict", "OrderedDict", "deque"].contains attr then
-                  builtinReturn sigs env attr args
-                else methodReturn sigs env attr (field func "value") args
+                -- A module-qualified collections constructor (`collections.Counter()`) declares its
+                -- return in `collectionsBehaviour?`; `defaultdict` reads its factory arg's identifier
+                -- (so it stays in `builtinReturn`); anything else is a method call.
+                match Libraries.memberBehaviour? "collections" attr with
+                | some b => b.returns (args.map (typeOfExpr sigs env))
+                | none => if attr == "defaultdict" then builtinReturn sigs env attr args
+                          else methodReturn sigs env attr (field func "value") args
             | none => .unknown
           match (func.getObjValAs? String "library_module").toOption,
                 (func.getObjValAs? String "library_member").toOption with
@@ -233,28 +226,12 @@ partial def builtinReturn (sigs : Sigs) (env : Env) (name : String) (args : List
       | some b => b.returns (args.map (typeOfExpr sigs env))
       | none => .unknown
 
-/-- Return type of `recv.attr(args)`. -/
+/-- Return type of `recv.attr(args)` — entirely `methodBehaviour?`-driven, with the RECEIVER as
+effective argument 0 (so `d.get(k, default)` reads the receiver and the default from the arg types).
+The engine names no method. -/
 partial def methodReturn (sigs : Sigs) (env : Env) (attr : String) (recv : Option Json) (args : List Json) : PyType :=
-  match constReturnMethods.lookup attr with
-  | some t => t
-  | none =>
-      let recvT := recv.elim .unknown (typeOfExpr sigs env)
-      match attr with
-      | "keys" => .list (match recvT with | .dict k _ => k | _ => .unknown)
-      | "values" => .list (match recvT with | .dict _ v => v | _ => .unknown)
-      | "items" => .list (match recvT with | .dict k v => .tuple [k, v] | _ => .unknown)
-      -- `d.get(k)` gives `Optional[V]`; `d.get(k, default)` uses the default to type the result.
-      | "get" =>
-          let fromRecv := match recvT with | .dict _ v => v | _ => recvT.elemType
-          match args[1]? with
-          | some d => fromRecv.join (typeOfExpr sigs env d)
-          | none => .opt fromRecv
-      -- `d.pop(k)`/`d.setdefault(k)` return `V`; return `xs.pop()`/`q.popleft()`/`q.popright()`
-      | "pop" | "popleft" | "popright" | "setdefault" =>
-          let fromRecv := match recvT with | .dict _ v => v | _ => recvT.elemType
-          fromRecv.join (args[1]?.elim .unknown (typeOfExpr sigs env))
-      | "copy" => recvT
-      | _ => .unknown
+  let recvT := recv.elim .unknown (typeOfExpr sigs env)
+  ((Libraries.methodBehaviour? attr).map (·.returns (recvT :: args.map (typeOfExpr sigs env)))).getD .unknown
 
 end
 

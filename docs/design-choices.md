@@ -775,15 +775,22 @@ mutating it. For a long time that knowledge lived as a growing `match name with 
 library's function widens a number, meant editing `TypeInfer/Rules.lean`. That is exactly the coupling
 §5 removed for name resolution, creeping back in through the type system.
 
-**The choice.** A `Behaviour` record (`Libraries/Behaviour.lean`) captures the translation-relevant
-behaviour of one callable beyond "it maps to F": its `returns : List PyType → PyType` rule and a
-`teaches? : Option (Nat × Nat)` mutation-widening rule (`heappush(h, x)` → `(0, 1)`: arg 0 gains arg
-1's type as its element). Each **library declares its members' behaviour in its own `Mapping.lean`**
-(`heapq.heapqBehaviour?`, `itertools.itertoolsBehaviour?`, …), right next to the name→function map;
-Python builtins live in `builtinBehaviour?`; `Registry.bareBehaviour?` aggregates them behind one
-lookup. `TypeInfer` calls that lookup and **names no specific library** — `builtinReturn` is now a
-registry consult, not a per-member `match`. Adding a library's inference behaviour is one entry in
-that library's file, never a change to the engine.
+**The choice.** A `Behaviour` record (`Libraries/Behaviour.lean`) captures *everything* the translator
+needs about one callable beyond "it maps to F", in one place read by **both** inference and codegen:
+`returns : List PyType → PyType` (result shape), `teaches?` (which argument gains which element type
+by mutation — the inference side of an in-place mutation), `mutator` (how the code generator lowers
+that mutation at runtime), `infiniteIter` (unbounded-iterator shape for the desugarer), and
+`keyedVariant` (the `*Key` shim to route to when called with `key=`). A **method's receiver is
+argument 0**, so `xs.append(v)` and `heappush(h, v)` share the same record and the same `push 0 1`
+rule. Each **library declares its members in its own `Mapping.lean`** (`heapqBehaviour?`,
+`itertoolsBehaviour?`, …) as named return-*shape* combinators (`listOf 0`, `push 0 1`), not raw
+lambdas; builtins live in `builtinBehaviour?`. `Registry` aggregates them (`bareBehaviour?` for a bare
+`Name` call, `memberBehaviour?` for a qualified `module.member`) and **derives** the engine's old views
+(`libraryMemberReturn?`/`libraryMutator?`/`libraryInfiniteIter?`) as one-field projections — so every
+call site, in the inference engine *and* the code generator, reads the single record and **names no
+specific library**. Adding a library member's whole behaviour is one entry in that library's file.
+(`math`/`scipy`/`numpy` stay *qualified-only* — kept out of `bareBehaviour?` — so a user function
+named `pow`/`sqrt`/`dot` is not shadowed.)
 
 **Why `List PyType → PyType` directly, not a neutral encoding.** `Libraries` may depend on
 `TypeInfer.PyType` (numpy/scipy/math Mappings already did), so a library expresses its return shape

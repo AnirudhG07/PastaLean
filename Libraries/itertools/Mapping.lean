@@ -24,18 +24,10 @@ def pythonItertoolsMemberMap? (member : String) : Option Lean.Name :=
   | "islice"        => some ``Libraries.itertools.pyIslice
   | _ => none
 
-/-- The `itertools` iterators that never end. `repeat` is here only in its 1-argument form; with a
-count it is finite and uses `pyRepeat` above, so the desugaring checks the arity. -/
-def itertoolsInfiniteIter? (member : String) : Option Libraries.InfiniteIter :=
-  match member with
-  | "count"  => some .counter
-  | "cycle"  => some .cyclic
-  | "repeat" => some .constant
-  | _ => none
-
-/-- Return-type behaviour of `itertools` members that feed inference: `chain` concatenates to a list
-of the common element type; `product` builds a list of Cartesian-product tuples; `accumulate` is a
-running fold over the element type; `pairwise` yields consecutive `(elem, elem)` pairs. -/
+/-- The full behaviour of each `itertools` member: return shape for inference (`chain` → list of the
+common element type; `product` → list of Cartesian-product tuples; `accumulate` → running fold;
+`pairwise` → consecutive `(elem, elem)` pairs), and the unbounded-iterator shape for the desugarer
+(`count`/`cycle`/`repeat`, the last only in its 1-argument form — the desugaring checks arity). -/
 def itertoolsBehaviour? (member : String) : Option Behaviour :=
   open Behaviour in
   match member with
@@ -43,6 +35,9 @@ def itertoolsBehaviour? (member : String) : Option Behaviour :=
   | "product"    => some listOfTuples
   | "accumulate" => some (listOf 0)
   | "pairwise"   => some adjacentPairs
+  | "count"      => some { infiniteIter := some .counter }
+  | "cycle"      => some { infiniteIter := some .cyclic }
+  | "repeat"     => some { infiniteIter := some .constant }
   | _ => none
 
 end Libraries.itertools
