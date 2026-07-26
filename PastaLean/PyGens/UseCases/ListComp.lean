@@ -63,7 +63,11 @@ def listCompTargetLambda (targetJson : Json) (body : TSyntax `term) :
       let mut result := body
       for i in (List.range n).reverse do
         result ← destructureCompTarget elts[i]! (← compAccessTerm listUnpack pairIdent i n) result
-      `(fun $pairIdent => $result)
+      -- Ascribe the pair param to the iterable's element type (`_pair_ty`, stamped by TypeInfer), so
+      -- the body doesn't pin it wrong (`c *ₚ v` over `sorted(cnt.items())` would default to `ℤ × ℤ`).
+      match ← (jsonFieldOption targetJson "_pair_ty").mapM (fun ann => pyTypeSyntax? (TypeInfer.ofAnnotation ann)) with
+      | some (some ty) => `(fun ($pairIdent : $ty) => $result)
+      | _ => `(fun $pairIdent => $result)
   | _ =>
       throwError s!"Unsupported comprehension target: {targetJson}"
 

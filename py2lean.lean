@@ -57,12 +57,14 @@ def runTranslateTask (jsonTask : Json) (ctx : Core.Context) (env : Environment) 
   -- Generators (`yield`) materialise to a list-building function before anything else, so the
   -- synthesised `append`/`extend`/`return` flow through desugaring and codegen; see
   -- `PyGens/Transform/GeneratorLower.lean`.
-  let json ← match PastaLean.lowerGenerators json with
+  -- When the driver pre-ran the `inferTypes` task, generators + desugaring already happened there
+  -- (before inference), so re-running them here would double-desugar; skip straight to codegen.
+  let json ← if alreadyInferred then pure json else match PastaLean.lowerGenerators json with
     | .ok lowered => pure lowered
     | .error message => return errorResponse s!"Error generating code: {message}"
-  -- Syntactic desugaring (nested `for` targets, walrus) runs before codegen; see
+  -- Syntactic desugaring (nested `for` targets, walrus, chained assign) runs before codegen; see
   -- `PyGens/Transform/Desugar.lean`.
-  let json ← match PastaLean.desugarAst json with
+  let json ← if alreadyInferred then pure json else match PastaLean.desugarAst json with
     | .ok desugared => pure desugared
     | .error message => return errorResponse s!"Error generating code: {message}"
   -- Type inference stamps `_ty` on binders whose Lean type the code generator would otherwise
@@ -110,12 +112,16 @@ stamped AST for the driver to send back one node at a time. -/
 def runInferTypesTask (jsonTask : Json) : IO Json := do
   let .ok ast := jsonTask.getObjVal? "ast"
     | return errorResponse "inferTypes: missing 'ast' field"
-  -- Materialise generators (`yield`) to list-builders BEFORE inferring, so the synthesised
-  -- accumulator `__gen'acc` is typed by TypeInfer (a bare `let mut __gen'acc := []` added
-  -- post-inference has an unpinned element type that defaults wrong under recursion.
+  -- Materialise generators (`yield`) to list-builders AND run syntactic desugaring (chained assign,
+  -- walrus, nested for-targets) BEFORE inferring — otherwise inference sees the un-split
+  -- `a = b = expr` (a multi-`targets` node it can't learn per-target from) and later desugaring
+  -- strips the stamps it would have produced. Codegen skips both passes when `_inferred` is set.
   match PastaLean.lowerGenerators ast with
   | .error message => pure <| errorResponse message
-  | .ok ast => pure <| Json.mkObj [("result", Json.bool true), ("ast", TypeInfer.inferModule ast)]
+  | .ok ast =>
+    match PastaLean.desugarAst ast with
+    | .error message => pure <| errorResponse message
+    | .ok ast => pure <| Json.mkObj [("result", Json.bool true), ("ast", TypeInfer.inferModule ast)]
 
 def handleTaskJson (jsonTask : Json) (ctx : Core.Context) (env : Environment) : IO Json := do
   let .ok task := jsonTask.getObjValAs? String "task"

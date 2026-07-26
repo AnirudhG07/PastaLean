@@ -943,6 +943,9 @@ partial def stampUnpackShape (target : Json) (ty : PyType) : Json :=
         for i in [0:elts.size] do
           newElts := newElts.push (stampUnpackShape elts[i]! (childTy i))
         let t := target.setObjVal! "elts" (Json.arr newElts)
+        -- Stamp the whole element's type so a comprehension's lambda param `_pair` is ascribed —
+        -- otherwise Lean infers it from the body (`c*ₚv` → `ℤ×ℤ`) and clashes with the real element.
+        let t := match toAnnotation? ty with | some ann => t.setObjVal! "_pair_ty" ann | none => t
         match ty with
         | .list _ => return t.setObjVal! "_list_unpack" (Json.bool true)
         | .tuple _ => return t.setObjVal! "_tuple_unpack" (Json.bool true)

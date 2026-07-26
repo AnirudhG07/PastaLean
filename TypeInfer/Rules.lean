@@ -256,6 +256,12 @@ partial def builtinReturn (sigs : Sigs) (env : Env) (name : String) (args : List
       | "zip" => .list (.tuple (args.map (fun a => (typeOfExpr sigs env a).elemType)))
       | "enumerate" => .list (.tuple [.int, arg0.elemType])
       | "pairwise" => .list (.tuple [arg0.elemType, arg0.elemType])
+      -- `chain(a, b, …)` concatenates iterables → list of their common element type (so
+      -- `for v, w in chain(items1, items2)` over `list[list[int]]` unpacks a LIST, not a `Prod`).
+      | "chain" => .list (PyType.joinAll (args.map (fun a => (typeOfExpr sigs env a).elemType)))
+      -- `product(a, b, …)` → list of tuples of each iterable's element type (Cartesian product), so
+      -- `for i, j in product(range(n), range(m))` unpacks a `Prod`.
+      | "product" => .list (.tuple (args.map (fun a => (typeOfExpr sigs env a).elemType)))
       | _ => .unknown
 
 /-- Return type of `recv.attr(args)`. -/

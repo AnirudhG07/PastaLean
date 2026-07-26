@@ -25,40 +25,41 @@ private partial def bisectSearch {α : Type} [Inhabited α] (leftMode : Bool) (l
 /-- `bisect.bisect_left(a, x, lo, hi, key)` with an explicit `key : α → β` mapping each element to the
 value compared against `x` — the binary-search-on-answer idiom `bisect_left(range(lo, hi), True,
 key=check)`, where the elements are `Int` but `x`/`key` are `Bool`. -/
-def pyBisectLeftKey {α β : Type} [Inhabited β] [LinearOrder β]
+def pyBisectLeftKey {α β : Type} [Inhabited β] [Ord β]
     (a : List α) (x : β) (key : α → β) (lo : Int := 0) (hi : Int := -1) : Int :=
   let (loN, w) := bisectWindow a lo hi
   let arr := (w.map key).toArray
-  Int.ofNat loN + Int.ofNat (bisectSearch true (fun p q => decide (p < q)) arr x 0 arr.size)
+  Int.ofNat loN + Int.ofNat (bisectSearch true (fun p q => compare p q == Ordering.lt) arr x 0 arr.size)
 
 /-- `bisect.bisect_right(a, x, lo, hi, key)`, keyed form (see `pyBisectLeftKey`). -/
-def pyBisectRightKey {α β : Type} [Inhabited β] [LinearOrder β]
+def pyBisectRightKey {α β : Type} [Inhabited β] [Ord β]
     (a : List α) (x : β) (key : α → β) (lo : Int := 0) (hi : Int := -1) : Int :=
   let (loN, w) := bisectWindow a lo hi
   let arr := (w.map key).toArray
-  Int.ofNat loN + Int.ofNat (bisectSearch false (fun p q => decide (p < q)) arr x 0 arr.size)
+  Int.ofNat loN + Int.ofNat (bisectSearch false (fun p q => compare p q == Ordering.lt) arr x 0 arr.size)
 
 /-- `bisect.bisect_left(a, x, lo=0, hi=len(a))`: the leftmost index in `a[lo:hi]` at which `x` keeps
-`a` sorted. `pyBisectLeft [1, 3, 3, 5] 3 = 1`. -/
-def pyBisectLeft {α : Type} [LinearOrder α] [Inhabited α]
+`a` sorted. `Ord` (not `LinearOrder`) so a LIST of tuples — `bisect_left(sorted((s,i) …), (e, -inf))` —
+resolves via the lexicographic `Ord (α × β)`. `pyBisectLeft [1, 3, 3, 5] 3 = 1`. -/
+def pyBisectLeft {α : Type} [Ord α] [Inhabited α]
     (a : List α) (x : α) (lo : Int := 0) (hi : Int := -1) : Int :=
   pyBisectLeftKey a x id lo hi
 
 /-- `bisect.bisect_right(a, x, lo=0, hi=len(a))`: the rightmost such index in `a[lo:hi]`.
 `pyBisectRight [1, 3, 3, 5] 3 = 3`. -/
-def pyBisectRight {α : Type} [LinearOrder α] [Inhabited α]
+def pyBisectRight {α : Type} [Ord α] [Inhabited α]
     (a : List α) (x : α) (lo : Int := 0) (hi : Int := -1) : Int :=
   pyBisectRightKey a x id lo hi
 
 /-- `bisect.insort_left(a, x, lo=0, hi=len(a))`: insert `x` in place at its `bisect_left` position.
 `pyInsortLeft [1, 3, 5] 3 = [1, 3, 3, 5]`. -/
-def pyInsortLeft {α : Type} [LinearOrder α] [Inhabited α]
+def pyInsortLeft {α : Type} [Ord α] [Inhabited α]
     (a : List α) (x : α) (lo : Int := 0) (hi : Int := -1) : List α :=
   let i := (pyBisectLeft a x lo hi).toNat
   a.take i ++ x :: a.drop i
 
 /-- `bisect.insort_right(a, x, lo=0, hi=len(a))`: the same at the `bisect_right` position. -/
-def pyInsortRight {α : Type} [LinearOrder α] [Inhabited α]
+def pyInsortRight {α : Type} [Ord α] [Inhabited α]
     (a : List α) (x : α) (lo : Int := 0) (hi : Int := -1) : List α :=
   let i := (pyBisectRight a x lo hi).toNat
   a.take i ++ x :: a.drop i

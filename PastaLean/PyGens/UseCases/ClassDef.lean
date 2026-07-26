@@ -353,6 +353,15 @@ def classDefSyntax : (kind : SyntaxNodeKind) → Json → PygenM (TSyntax kind)
                 $[$fieldBinders]* deriving $derivs,*)
 
       let mut members : Array (TSyntax `command) := #[structCmd]
+      -- A class instance is a non-`None` object, so Python truthiness on it is always `true`
+      -- (`if node:` / `while node:`); a nullable cursor is `Option C`, whose own `PyTruthy` handles
+      -- the `none` case. Without this, `if node:` on a bare-typed `ListNode`/`TreeNode` has no instance.
+      members := members.push
+        (← `(command| instance : PastaLean.PyTruthy $nameId where truthy _ := true))
+      -- Lift a bare node into `Option C` so a nullable cursor (`curr = head`, later `curr = curr.next`)
+      -- ascribed `Option C` takes its bare initial value, and `curr = ListNode(...)` reassignments fit.
+      members := members.push
+        (← `(command| instance : Coe $nameId (Option $nameId) := ⟨some⟩))
 
       -- Constructor (from `__init__`), operator/printable dunders, and the remaining methods.
       let mut hasInit := false

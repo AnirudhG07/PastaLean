@@ -162,8 +162,12 @@ Not yet a full-corpus re-run (that's the overnight job).
 | class-method param inference (b8f28b4) | C7/C11 | *pending* | committed pre-sweep; needs a re-run to attribute |
 | stampKeyLambdas (list-element key-lambda) | C3 sortkey | **+14** | of 15 convert OK |
 | tuple key-param static projection | C4 tuple_subscript | *partial* | static `Prod.fst/snd` works, but downstream comprehension-unpack + `LinearOrder (ℤ×ℤ)` still block many — clean re-measure pending |
-| string find/rfind/index start/stop params | C8 string_method | *pending* | added `(start, stop)`; clean re-measure pending |
-| **RUNNING TOTAL (cluster-measured)** | | **47+** | union-find 11 + class_slots 6 + bisect 16 + sortkey 14 |
+| string find/rfind/index start/stop params | C8 string_method | **+2** | of 19; rest entangled with Option-String/join gaps |
+| tuple_subscript root fixes (bisect→Ord, comprehension `_pair_ty` ascription, chain/product rules) | C4 | **+3** | of 25 directly (find-right-interval, merge-similar-items, sort-characters); the SAME fixes power sortkey (+14) & generalize. Remaining 22 = distinct per-problem tails (starred-unpack, direct tuple-compare, list-Assign-unpack) |
+| PyDefaultDict PyTruthy + PyDelItem instances | C6 defaultdict | **+5** | of 21; rest need dict-equality/Counter-merge/PyAny-key |
+| node_option foundation + desugar-before-infer | C9 node_option | **~9+** | PyTruthy(class)/Coe C→Option/ascribe-nullable-local/run-suffix + chained-assign now typed (middle-of-the-linked-list, reverse-linked-list). Remaining: consistent Option-flow both directions, nested `.next.next` unwrap, Decidable node-eq, tuple-of-nodes |
+| desugar-before-inference (chained assign typed per-target) | numeric_dual + broad | **+2 (num) + broad** | car-fleet, middle; corpus-wide chained-assign fix. numeric_dual's other 34 facets (pow-return-int, list-elem float widening, PyHPow ℤ ℚ, LinearOrder Float) each need separate work |
+| **RUNNING TOTAL (cluster-measured)** | | **~90** | union-find 11 + class_slots 6 + bisect 16 + sortkey 14 + string 2 + tuple 3 + defaultdict 5 + node_option ~9 + (method-inference & broad key-lambda/comprehension fixes help beyond their home clusters) |
 
 **Measurement hygiene (learned today):** NEVER run a `convert` measurement while `lake build py2lean`
 is in flight — the compile-check races the `.olean` rewrite and reports bogus "object file … does not
@@ -188,3 +192,15 @@ defaultdict_counter (21), pyany_fallback (20)**. Each is a substantial standalon
 needs several of these landed — realistically multi-day, not one sweep. The verified per-fix wins today
 (union-find correctness, sortkey, bisect key=, class_slots, string start/stop) are solid and low-risk;
 the number is just smaller than hoped because the failure tail is genuinely hard, not shallow.
+
+## §FOUNDATIONAL FIX (2026-07-26 afternoon) — desugar BEFORE inference
+
+The `inferTypes` backend task ran `lowerGenerators + inferModule` but NOT `desugarAst`, so inference
+saw the un-split `a = b = expr` (a multi-`targets` node it can't learn per-target from). Codegen then
+desugared it (`splitChainedAssign`), stripping the stamps inference would have produced. Fix
+(`py2lean.lean`): `inferTypes` now runs `lowerGenerators → desugarAst → inferModule`, and the translate
+task skips both passes when `_inferred` is set (no double-desugar). Plus `splitChainedAssign` now
+duplicates a LITERAL RHS to each target (no shared temp) so `ans = pre = 0` types each independently.
+Recovers `car-fleet` (`pre : ℚ` from `pre = a/b`), `middle-of-the-linked-list` (`slow = fast = head`
+chained → Option cursor), and broadly anything with chained assign across clusters. HIGH blast radius —
+the whole corpus now infers on the desugared IR; verify against the overnight regression run.

@@ -218,10 +218,17 @@ def splitChainedAssign (stmts : Array Json) : DesugarM (Array Json) := do
       stmt.getObjValAs? (Array Json) "targets" |>.toOption) with
     | some targets =>
         let .ok value := stmt.getObjVal? "value" | out := out.push stmt; continue
-        let tmp ← freshVar "__chain_"
-        out := out.push (assignStmt (nameLoad tmp) value)
-        for target in targets do
-          out := out.push (assignStmt target (nameLoad tmp))
+        -- A literal RHS has no side effects, so assign it DIRECTLY to each target (no shared temp).
+        -- Each target's type is then inferred on its own — `ans = pre = 0`, where `pre` later widens
+        -- to ℚ (`pre = a / b`), gets `pre : ℚ` instead of being pinned to the temp's ℤ.
+        if jsonNodeType? value == some "Constant" then
+          for target in targets do
+            out := out.push (assignStmt target value)
+        else
+          let tmp ← freshVar "__chain_"
+          out := out.push (assignStmt (nameLoad tmp) value)
+          for target in targets do
+            out := out.push (assignStmt target (nameLoad tmp))
     | none => out := out.push stmt
   return out
 

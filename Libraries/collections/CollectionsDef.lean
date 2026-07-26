@@ -111,4 +111,12 @@ instance : PyAnys (PyDefaultDict κ ν) ν where
 instance [Ord κ] : PySort (PyDefaultDict κ ν) κ where
   pySort d := d.order.mergeSort pyOrdLe
 
+-- `if d:` / `while d:` — a dict is truthy iff non-empty (Python).
+instance : PyTruthy (PyDefaultDict κ ν) where
+  truthy d := !d.order.isEmpty
+
+-- `del d[k]` drops the key from both the map and the insertion order.
+instance : PyDelItem (PyDefaultDict κ ν) κ where
+  delItem d k := { d with map := d.map.erase k, order := d.order.filter (· != k) }
+
 end Libraries.collections

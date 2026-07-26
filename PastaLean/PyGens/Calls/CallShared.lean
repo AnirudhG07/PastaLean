@@ -32,6 +32,17 @@ def defaultDictAnnParts? (ann : Json) : Option (Json × Json) :=
           | _, _ => none
     | _, _ => none
 
+/-- Like `pyTypeSyntax?` but run-suffixes user-class names (`ListNode` → `ListNode'rn` in the run
+twin) — `TypeInfer`'s emitter is context-free, so a class inside a `_ty` (`Option ListNode`,
+`List TreeNode`) would otherwise stay unsuffixed and clash with the suffixed struct. -/
+partial def runAwareTypeSyntax? (t : TypeInfer.PyType) : PygenM (Option (TSyntax `term)) := do
+  match t with
+  | .cls c => return some (mkIdent (← suffixIfUserName c).toName)
+  | .opt e => match ← runAwareTypeSyntax? e with | some s => return some (← `(Option $s)) | none => return none
+  | .list e => match ← runAwareTypeSyntax? e with | some s => return some (← `(List $s)) | none => return none
+  | .set e => match ← runAwareTypeSyntax? e with | some s => return some (← `(List $s)) | none => return none
+  | other => pyTypeSyntax? other
+
 /-- Emit a type from an annotation, honouring the `_seq: "array"` marker the eligibility pass stamps
 on each `list[...]` level: an `array_ok` list becomes `Array` (recursively, so `list[list[int]]` →
 `Array (Array Int)`) in the runnable twin. The marker has no `PyType` slot, so `pyTypeSyntax? ∘
@@ -46,9 +57,9 @@ partial def seqAwareTypeSyntax? (ann : Json) : PygenM (Option (TSyntax `term)) :
     | .ok elemAnn =>
         match ← seqAwareTypeSyntax? elemAnn with
         | some et => return some (← `(Array $et))
-        | none => pyTypeSyntax? (TypeInfer.ofAnnotation ann)
-    | _ => pyTypeSyntax? (TypeInfer.ofAnnotation ann)
-  else pyTypeSyntax? (TypeInfer.ofAnnotation ann)
+        | none => runAwareTypeSyntax? (TypeInfer.ofAnnotation ann)
+    | _ => runAwareTypeSyntax? (TypeInfer.ofAnnotation ann)
+  else runAwareTypeSyntax? (TypeInfer.ofAnnotation ann)
 
 /-- The Lean type stamped on a node by the inference pass (`_ty`), if any. `_ty` is an annotation
 node, so it round-trips through `PyType` and the full emitter — covering lists, dicts, tuples and

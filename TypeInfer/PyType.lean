@@ -114,6 +114,10 @@ partial def needsAscription : PyType → Bool
   -- The known-dynamic top type materialises as `PyAny`, which Lean cannot infer from a heterogeneous
   -- literal's first element — so a container wrapping it (`list[any]` → `List PyAny`) must be ascribed.
   | .any => true
+  -- A nullable node local (`curr = head` then `curr = curr.next`) is inferred `Option C` but, without
+  -- an ascription, `let mut curr := head` fixes it to the bare `C` — clashing with the `.getD`/`some`
+  -- the Option uses emit. Ascribe it `Option C` (a `Coe C (Option C)` lifts the bare initial value).
+  | .opt (.cls _) => true
   | _ => false
 
 /-- Least upper bound.
