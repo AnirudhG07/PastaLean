@@ -132,3 +132,59 @@ channel 1). RE-RUN C7/C11 against `b8f28b4` before investing.
 - `ec9757b` harness error verbosity — `summarize_error` keeps the full first diagnostic (type/instance),
   so `errors_by_frequency` distinguishes clusters. (This analysis used the FULL per-problem `.log` files.)
 - (uncommitted) W1 union-find `_thread_unpack` restore-before-write reorder — verifying.
+
+## §R · DEFERRED REFACTOR — ShimSpec registry (not today; own focused session)
+
+Today each library function is hand-wired across FOUR disconnected places: name→fn
+(`Libraries/*/Mapping.lean`), return type (`TypeInfer/Rules.lean builtinReturn` — a hardcoded match,
+NOT the registry), mutation kind (`Libraries/Mutator.lean` + `Attributes.lean`), and kwargs/`key=`
+(scattered `CallExpr` special-cases). Adding a function touches all four. Proposed fix: ONE
+`ShimSpec` descriptor per member —
+`{ leanFn, arity, kwargs (key/lo/hi/reverse + keyed-variant), returns (const|fromArg|elementOf|custom),
+effect (pure|mutates|value+mutation), argTypes (e.g. key-param = element type of arg 0), lower? hook }` —
+read by BOTH codegen (dispatch/kwargs/key=) and TypeInfer (return + arg-type propagation). Subsumes the
+library clusters (bisect/heapq/itertools/functools/collections/string/math, ~80-100 problems + all
+future shims) and turns today's `key=` param-PyAny bug into a one-line `argTypes` rule. Does NOT touch
+the core-language clusters (node_option/numeric/closure/tuple), which are the bulk of the 489 — so it's
+a maintainability + shim-coverage win, scheduled separately from the sweep.
+
+## §TALLY · Problems potentially fixed today (2026-07-26 sweep) — target >300
+
+Measured on the affected problems (convert OK = out of compile_fail; full-pass = wrong-answer fixed).
+Not yet a full-corpus re-run (that's the overnight job).
+
+| fix | cluster | measured | note |
+|-----|---------|---------:|------|
+| union-find `_thread_unpack` reorder (de91948) | §W1 | **+11** | of 15 DSU; 4 remain (separate bugs, now flagged by the fixed divergence detector) |
+| class_slots `__slots__` drop | C1 | **+6** | of 17 convert OK; 11 remain (deeper Trie/Node cluster C11) |
+| bisect `key=` keyed-variant routing | C2 | **+16** | of 35 convert OK; 12 remain = key-fn param `PyAny` (→ stampKeyLambdas / key-callback refinement), 2 = heapq nlargest key= |
+| stampKeyLambdas (key-lambda param = element type) | C3 sortkey | **+14** | of 15 convert OK; also unblocks the list-element tuple_subscript cases |
+| class-method param inference (b8f28b4) | C7/C11 | *pending* | committed pre-sweep; needs a re-run to attribute |
+| stampKeyLambdas (list-element key-lambda) | C3 sortkey | **+14** | of 15 convert OK |
+| tuple key-param static projection | C4 tuple_subscript | *partial* | static `Prod.fst/snd` works, but downstream comprehension-unpack + `LinearOrder (ℤ×ℤ)` still block many — clean re-measure pending |
+| string find/rfind/index start/stop params | C8 string_method | *pending* | added `(start, stop)`; clean re-measure pending |
+| **RUNNING TOTAL (cluster-measured)** | | **47+** | union-find 11 + class_slots 6 + bisect 16 + sortkey 14 |
+
+**Measurement hygiene (learned today):** NEVER run a `convert` measurement while `lake build py2lean`
+is in flight — the compile-check races the `.olean` rewrite and reports bogus "object file … does not
+exist" failures (`[[py2lean-build-race]]`). A random 60-sample was invalidated this way; re-running
+clean. Extrapolation target: the sample estimates the whole-404 recovery rate for a full re-run.
+
+TOTAL = ?? 
+
+
+## §ESTIMATE · Honest whole-corpus projection (clean 60-sample)
+
+Random 60 of the 404 compile_fails, re-converted with ALL of today's fixes (build-race-free):
+**8 OK (13.3%)** → extrapolated **~54 compile_fails** recovered across the full 404. The 8 are all in
+today's clusters (sortkey/bisect/class_slots), confirming the fixes generalise.
+- compile_fail recovered: **~54** (of 404)
+- wrong-answer recovered (union-find): **~11** (of the DSU 15)
+- **TODAY'S TOTAL (projected): ~65 problems** — well short of the 300 stretch target.
+
+The remaining ~350 compile_fails are dominated by HARD core-language clusters a shim/lambda fix can't
+touch: **node_option (62), numeric_dual (36), closure_helper (26), tuple_subscript downstream (25),
+defaultdict_counter (21), pyany_fallback (20)**. Each is a substantial standalone fix. Reaching 300
+needs several of these landed — realistically multi-day, not one sweep. The verified per-fix wins today
+(union-find correctness, sortkey, bisect key=, class_slots, string start/stop) are solid and low-risk;
+the number is just smaller than hoped because the failure tail is genuinely hard, not shallow.

@@ -901,11 +901,18 @@ class ASTToJsonLeanVisitorBase:
         if node.body and self._is_docstring_stmt(node.body[0]):
             docstring = node.body[0].value.value
 
+        # Class-body metadata dunders (`__slots__ = [...]`, `__qualname__`, `__module__`) are storage
+        # hints, not data fields — drop them so they don't become a bogus struct field.
+        CLASS_META_DUNDERS = {"__slots__", "__qualname__", "__module__", "__dict__", "__weakref__"}
         for stmt in node.body:
             if isinstance(stmt, ast.AnnAssign) and isinstance(stmt.target, ast.Name):
+                if stmt.target.id in CLASS_META_DUNDERS:
+                    continue
                 self._add_class_field(fields, seen, stmt.target.id, stmt.annotation, stmt.value)
             elif (isinstance(stmt, ast.Assign) and len(stmt.targets) == 1
                   and isinstance(stmt.targets[0], ast.Name)):
+                if stmt.targets[0].id in CLASS_META_DUNDERS:
+                    continue
                 self._add_class_field(fields, seen, stmt.targets[0].id, None, stmt.value)
             elif isinstance(stmt, ast.FunctionDef):
                 methods.append(self.visit(stmt))

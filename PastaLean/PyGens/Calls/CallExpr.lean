@@ -700,6 +700,14 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
       | .ok "Call", _ => allArgs := allArgs.push (← `(()))
       | _, _ => pure ()
 
+    -- `bisect_left/right(a, x, key=fn)` routes to the keyed shim variant, whose `key` parameter the
+    -- named arg then binds — the plain `pyBisectLeft`/`pyBisectRight` have no `key`.
+    if (keyWordsMap.get? "key").isSome then
+      let fn := funcIdent.raw.getId
+      if fn == ``Libraries.bisect.pyBisectLeft then
+        funcIdent := mkIdent ``Libraries.bisect.pyBisectLeftKey
+      else if fn == ``Libraries.bisect.pyBisectRight then
+        funcIdent := mkIdent ``Libraries.bisect.pyBisectRightKey
     let buildApplied : Array (TSyntax `term) → PygenM (TSyntax `term) := fun resolvedArgs => do
       -- Named args go in the SAME application as the positionals (`f a b (k := v)`), NOT applied to
       -- `(f a b)` — for a shim whose remaining params have defaults, `f a b` is already a complete
@@ -1063,6 +1071,14 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
       | .ok "Call", _ => allArgs := allArgs.push (← `(()))
       | _, _ => pure ()
 
+    -- `bisect_left/right(a, x, key=fn)` routes to the keyed shim variant, whose `key` parameter the
+    -- named arg then binds — the plain `pyBisectLeft`/`pyBisectRight` have no `key`.
+    if (keyWordsMap.get? "key").isSome then
+      let fn := funcIdent.raw.getId
+      if fn == ``Libraries.bisect.pyBisectLeft then
+        funcIdent := mkIdent ``Libraries.bisect.pyBisectLeftKey
+      else if fn == ``Libraries.bisect.pyBisectRight then
+        funcIdent := mkIdent ``Libraries.bisect.pyBisectRightKey
     let buildApplied : Array (TSyntax `term) → PygenM (TSyntax `term) := fun resolvedArgs => do
       -- Named args go in the SAME application as the positionals (`f a b (k := v)`), NOT applied to
       -- `(f a b)` — for a shim whose remaining params have defaults, `f a b` is already a complete

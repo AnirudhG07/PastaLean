@@ -152,37 +152,40 @@ def pyStringRstrip : String → (chars : String := " ") → String
       let p := if chars = " " then isPyWhitespace else (fun c => chars.toList.contains c)
       String.ofList (stripLeftBy p s.toList.reverse).reverse
 
-/-- Python `rfind`: index of the LAST occurrence of `sub`, or `-1`. -/
-def pyStringRfind (s sub : String) : Int :=
-  let n := s.length
-  let m := sub.length
-  let rec go (i : Nat) : Int :=
-    if i = 0 then (if (s.toList.take m) = sub.toList then 0 else -1)
-    else if (s.toList.drop i).take m = sub.toList then (i : Int)
-    else go (i - 1)
-  if m = 0 then (n : Int) else if m > n then -1 else go (n - m)
+/-- Clamp a Python slice bound (negative counts from the end) into `[0, n]`. -/
+private def pyClampIdx (n : Nat) (i : Int) : Nat :=
+  if i < 0 then (max 0 ((n : Int) + i)).toNat else min i.toNat n
 
-/--
-Concrete string implementation for Python `find`.
+/-- Char positions `i` in `[start, stop)` where `s[i:i+len(sub)]` matches `sub` (all char-indexed, so
+`start`/`stop` are Python char bounds). Shared by `find`/`rfind`. -/
+private def pyMatchPositions (s sub : String) (start stop : Int) : List Nat :=
+  let cs := s.toList; let subL := sub.toList
+  let n := cs.length; let m := subL.length
+  let lo := pyClampIdx n start; let hi := pyClampIdx n stop
+  (List.range (n + 1)).filter (fun i => lo ≤ i ∧ i + m ≤ hi ∧ (cs.drop i).take m == subL)
 
-Returns `-1` when the substring is missing, matching Python's `str.find`.
--/
-def pyStringFind : String → (sub : String) → Int
-  | s, sub =>
-      match s.find? sub with
-      | some idx => idx.offset.byteIdx
-      | none => -1
+/-- Python `str.find(sub, start=0, stop=len)`: index of the FIRST occurrence of `sub` within
+`s[start:stop]` (char-indexed), or `-1`. -/
+def pyStringFind (s sub : String) (start : Int := 0) (stop : Int := (s.length : Int)) : Int :=
+  match (pyMatchPositions s sub start stop).head? with
+  | some i => Int.ofNat i
+  | none => -1
+
+/-- Python `str.rfind(sub, start=0, stop=len)`: index of the LAST occurrence, or `-1`. -/
+def pyStringRfind (s sub : String) (start : Int := 0) (stop : Int := (s.length : Int)) : Int :=
+  match (pyMatchPositions s sub start stop).getLast? with
+  | some i => Int.ofNat i
+  | none => -1
 
 /--
 Concrete string implementation for Python `index`.
 
 Raises at runtime when the substring is missing, matching Python's `str.index`.
 -/
-def pyStringIndex : String → (sub : String) → Int
-  | s, sub =>
-      match s.find? sub with
-      | some idx => idx.offset.byteIdx
-      | none => panic! "ValueError: substring not found"
+def pyStringIndex (s sub : String) (start : Int := 0) (stop : Int := (s.length : Int)) : Int :=
+  match (pyMatchPositions s sub start stop).head? with
+  | some i => Int.ofNat i
+  | none => panic! "ValueError: substring not found"
 
 /-- Concrete string implementation for Python `startswith`. -/
 def pyStringStartswith : String → (pfx : String) → Bool
@@ -390,10 +393,10 @@ theorem pyUpper_length_invariant (s : String) : (pyStringUpper s).length = s.len
 
 theorem pyFind_eq_pyIndex (s sub : String) : pyStringFind s sub ≠ -1 → pyStringFind s sub = pyStringIndex s sub := by
   intro h
-  match eq : s.find? sub with
-  | some idx =>
-      simp [pyStringFind, pyStringIndex,eq]
-  | none => simp [pyStringFind, eq] at h
+  unfold pyStringFind pyStringIndex
+  match hm : (pyMatchPositions s sub 0 (s.length : Int)).head? with
+  | some i => simp [hm]
+  | none => unfold pyStringFind at h; simp [hm] at h
 
 -- #check String.split
 end PastaLean

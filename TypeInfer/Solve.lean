@@ -923,8 +923,8 @@ partial def stampFunction (sigs : Sigs) (outer hints : Env) (fn : Json) : Json :
   let eligible := arrayEligibleVars env fn
   match fn.getObjValAs? (Array Json) "body" with
   | .ok body => fn.setObjVal! "body"
-      (Json.arr (((((body.map (stampStmt sigs env body)).map (markTuples env)).map (markOptAttrs sigs env)).map
-        (stampArraySeqs eligible)).map (stampCompTargets sigs env)))
+      (Json.arr ((((((body.map (stampStmt sigs env body)).map (markTuples env)).map (markOptAttrs sigs env)).map
+        (stampArraySeqs eligible)).map (stampCompTargets sigs env)).map (stampKeyLambdas sigs env)))
   | _ => fn
 
 /-- Stamp a (possibly nested) tuple-unpack target with the list-vs-`Prod` access mode at EVERY level,
@@ -1022,6 +1022,68 @@ partial def stampCompTargets (sigs : Sigs) (env : Env) (json : Json) : Json :=
     match json with
     | .arr xs => Json.arr (xs.map (stampCompTargets sigs env))
     | .obj fs => Json.mkObj (fs.toList.map (fun (k, v) => (k, stampCompTargets sigs env v)))
+    | _ => json
+
+/-- Set `_ty` (an annotation) on a lambda's FIRST parameter. -/
+private partial def stampLambdaParam (lam : Json) (ann : Json) : Json :=
+  match lam.getObjVal? "args" with
+  | .ok argsNode =>
+      match argsNode.getObjValAs? (Array Json) "args" with
+      | .ok params =>
+          if params.size ≥ 1 then
+            lam.setObjVal! "args" (argsNode.setObjVal! "args"
+              (Json.arr (params.set! 0 (params[0]!.setObjVal! "_ty" ann))))
+          else lam
+      | _ => lam
+  | _ => lam
+
+/-- The keyed collection of a `key=`-callback call (`sorted/min/max(coll, key=f)`, `xs.sort(key=f)`,
+`bisect_left/right(a, x, key=f)`): the value whose ELEMENT type the callback's parameter takes. -/
+private partial def keyCallbackColl? (json : Json) : Option Json :=
+  match getField json "func" with
+  | some func =>
+      let args := (json.getObjValAs? (Array Json) "args").toOption.getD #[]
+      match nodeTypeOf func, (func.getObjValAs? String "id").toOption,
+            (func.getObjValAs? String "attr").toOption with
+      | some "Name", some fn, _ =>
+          if ["sorted", "min", "max", "bisect_left", "bisect_right", "bisect",
+              "nlargest", "nsmallest"].contains fn then args[0]? else none
+      | some "Attribute", _, some "sort" => getField func "value"
+      | _, _, _ => none
+  | none => none
+
+/-- Stamp each `key=`-callback lambda's first parameter with the keyed collection's element type, so
+`sorted(xs, key=lambda p: -p[1])` types `p` as `xs`'s element (`list[int]` or a tuple) instead of the
+polymorphic `α × β` fallback — which leaves `-p[1]` stuck on `Neg β`. Only stamps a concrete element
+type (`toAnnotation?` succeeds); a tuple element is stamped too, letting codegen project statically. -/
+partial def stampKeyLambdas (sigs : Sigs) (env : Env) (json : Json) : Json :=
+  if nodeTypeOf json == some "FunctionDef" then json
+  else
+    let json :=
+      if nodeTypeOf json == some "Call" then
+        match keyCallbackColl? json, getField json "keywords" with
+        | some coll, some kwObj =>
+            match getField kwObj "key" with
+            | some keyVal =>
+                if nodeTypeOf keyVal == some "Lambda" then
+                  let elemTy := (typeOfExpr sigs env coll).elemType
+                  match toAnnotation? elemTy with
+                  | some ann =>
+                      -- A tuple element gets `_pair_param` too, so codegen projects `p[0]`/`p[1]`
+                      -- statically (`Prod.fst`/`snd`) rather than a non-existent `PyGetItem (_ × _)`.
+                      let keyVal := stampLambdaParam keyVal ann
+                      let keyVal := match elemTy with
+                        | .tuple _ => keyVal.setObjVal! "_pair_param" (Json.bool true)
+                        | _ => keyVal
+                      json.setObjVal! "keywords" (kwObj.setObjVal! "key" keyVal)
+                  | none => json
+                else json
+            | none => json
+        | _, _ => json
+      else json
+    match json with
+    | .arr xs => Json.arr (xs.map (stampKeyLambdas sigs env))
+    | .obj fs => Json.mkObj (fs.toList.map (fun (k, v) => (k, stampKeyLambdas sigs env v)))
     | _ => json
 
 /-- Stamp one statement: its target, its nested blocks, and any nested def. -/
