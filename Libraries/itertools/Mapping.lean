@@ -1,7 +1,9 @@
 import Libraries.itertools.ItertoolsDef
 import Libraries.Mutator
+import Libraries.Behaviour
 
 namespace Libraries.itertools
+open Libraries TypeInfer
 
 /-- Map supported `itertools` members to the Lean runtime helpers they lower to. Members whose call
 needs custom lowering — variadic (`chain`/`product`/`zip_longest`), a predicate/function argument
@@ -29,6 +31,18 @@ def itertoolsInfiniteIter? (member : String) : Option Libraries.InfiniteIter :=
   | "count"  => some .counter
   | "cycle"  => some .cyclic
   | "repeat" => some .constant
+  | _ => none
+
+/-- Return-type behaviour of `itertools` members that feed inference: `chain` concatenates to a list
+of the common element type; `product` builds a list of Cartesian-product tuples; `accumulate` is a
+running fold over the element type; `pairwise` yields consecutive `(elem, elem)` pairs. -/
+def itertoolsBehaviour? (member : String) : Option Behaviour :=
+  open Behaviour in
+  match member with
+  | "chain"      => some listOfJoined
+  | "product"    => some listOfTuples
+  | "accumulate" => some (listOf 0)
+  | "pairwise"   => some adjacentPairs
   | _ => none
 
 end Libraries.itertools

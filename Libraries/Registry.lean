@@ -1,5 +1,6 @@
 import Lean
 import Libraries.Mutator
+import Libraries.Behaviour
 import Libraries.bisect.Mapping
 import Libraries.collections.Mapping
 import Libraries.functools.Mapping
@@ -76,6 +77,16 @@ def libraryMutator? (moduleName member : String) : Option LibraryMutator :=
   | "heapq" => heapq.heapqMutator? member
   | "bisect" => bisect.bisectMutator? member
   | _ => none
+
+/-- The `Behaviour` of a BARE callable name (a builtin, or a star-imported library member): the single
+entry point TypeInfer consults, so the engine names no specific library. Checks Python builtins, then
+each library's own behaviour table — adding a library's inference behaviour is one entry in that
+library's `Mapping.lean`, never a change here or in `TypeInfer`. -/
+def bareBehaviour? (name : String) : Option Behaviour :=
+  (builtinBehaviour? name).orElse fun _ =>
+  (itertools.itertoolsBehaviour? name).orElse fun _ =>
+  (heapq.heapqBehaviour? name).orElse fun _ =>
+  (collections.collectionsBehaviour? name)
 
 /-- The unbounded-iterator spec of a library member, for the core codegen — one entry point, so
 codegen names no specific library. -/

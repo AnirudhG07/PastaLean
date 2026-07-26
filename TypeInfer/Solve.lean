@@ -54,6 +54,20 @@ def applyMutation (sigs : Sigs) (env : Env) (value : Json) : Env :=
   if nodeTypeOf value != some "Call" then env else
   match getField value "func" with
   | some func =>
+      -- A FUNCTION-form mutation that `Behaviour.teaches?` declares: arg `c` gains, as its element,
+      -- the type of arg `e` (`heappush(h, x)` → `(0, 1)`, so a heap of `(int, int)` pushed a `(ℚ, int)`
+      -- widens). Read off the member's declared behaviour, not hardcoded here.
+      if nodeTypeOf func == some "Name" then
+        let fn := (func.getObjValAs? String "id").toOption.getD ""
+        match (Libraries.bareBehaviour? fn).bind (·.teaches?) with
+        | some (c, e) =>
+            let args := ((value.getObjValAs? (Array Json) "args").toOption.getD #[]).toList
+            match args[c]?.bind nameId?, args[e]? with
+            | some h, some x =>
+                env.insert h ((env.get? h |>.getD .unknown).join (.list (typeOfExpr sigs env x)))
+            | _, _ => env
+        | none => env
+      else
       if nodeTypeOf func != some "Attribute" then env else
       match (func.getObjValAs? String "attr").toOption, getField func "value" with
       | some attr, some recv =>
