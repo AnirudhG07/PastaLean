@@ -1386,13 +1386,23 @@ class CPastaEval:
             deltas["py_total"] += py_total
             deltas["solutions"] += 1
 
-            # A compiling solution that disagrees with CPython is a runtime/API bug — the same
-            # `lean_wrong_python_right` bucket the stdio model reports.
-            if lean_pass < py_pass or (err and py_total):
+            # A compiling solution that disagrees with the reference is a runtime/API bug. Prefer the
+            # CPython oracle when Python actually ran; otherwise fall back to the dataset's
+            # expected-answer oracle (`lean_pass < lean_total`), so wrong answers surface even when
+            # Python is skipped — the LeetCode path skips Python (`"python": null`), which used to make
+            # this check dead (`py_pass = py_total = 0`) and report a false "0 divergences".
+            if py_total:
+                lean_wrong = lean_pass < py_pass or bool(err)
+                classification = "lean_wrong_python_right"
+            else:
+                lean_wrong = lean_pass < lean_total
+                classification = "lean_wrong_expected_right"
+            if lean_wrong:
                 diverged.append({
                     "problem": prob_dir.name, "solution": name, "model": "function",
-                    "classification": "lean_wrong_python_right",
-                    "lean": f"{lean_pass}/{lean_total}", "python": f"{py_pass}/{py_total}",
+                    "classification": classification,
+                    "lean": f"{lean_pass}/{lean_total}",
+                    "python": f"{py_pass}/{py_total}" if py_total else "skipped",
                     "lean_error": err, "harness": str(harness_path),
                     "failures": failures[:5],
                 })
@@ -1613,6 +1623,7 @@ class CPastaEval:
 
         binary = str(Path(REPO_ROOT) / ".lake" / "build" / "bin" / "cpharness_run")
         report, lock, done, total = {}, threading.Lock(), [0], len(entries)
+        divergences = []
 
         def run_one(e):
             n, out, timed_out = len(e["cases"]), "", False
@@ -1647,6 +1658,15 @@ class CPastaEval:
                     "model": "function", "method": e["method"],
                     "lean": {"passed": lp, "total": lt, "error": err},
                     "failures": fail_list}, indent=2, default=str))
+                # Python is skipped on this path, so score against the dataset's expected answers:
+                # `lp < lt` (some expected answer wrong) or a runtime `err` (timeout/crash) is a bug.
+                if lp < lt or err:
+                    divergences.append({
+                        "problem": e["prob_dir"].name, "solution": e["name"], "model": "function",
+                        "classification": "lean_wrong_expected_right",
+                        "lean": f"{lp}/{lt}", "python": "skipped",
+                        "lean_error": err, "harness": "native", "failures": fail_list[:5],
+                    })
                 with lock:
                     done[0] += 1
                     tag = "" if err is None else f" [{err}]"
@@ -1656,6 +1676,7 @@ class CPastaEval:
                     agg["lean_pass"] += lp; agg["lean_total"] += lt; agg["solutions"] += 1
 
         report["_summary"] = agg
+        report["_divergences"] = divergences
         (self.dataset / "eval_report.json").write_text(json.dumps(report, indent=2))
         restore_idle()  # drop the generated modules; keep valid placeholders for `lake build`
         try:
@@ -1676,7 +1697,9 @@ class CPastaEval:
         if not self.interpret:
             report = self._evaluate_native(all_probs)
             agg = report.get("_summary", agg)
-            self._print_eval_summary(agg, [])
+            divergences = report.pop("_divergences", [])
+            self._write_divergences(divergences)
+            self._print_eval_summary(agg, divergences)
             return report
         n_workers = max(1, min(self.workers, total))
         print(f"[*] Evaluating {total} problem(s) across {n_workers} warm backend(s) "
@@ -1731,7 +1754,10 @@ class CPastaEval:
         by_class = {}
         for d in divergences:
             by_class[d["classification"]] = by_class.get(d["classification"], 0) + 1
-        api_bugs = [d for d in divergences if d["classification"] == "lean_wrong_python_right"]
+        # "Lean wrong" against whichever oracle ran: CPython (python model / stdio) or the dataset's
+        # expected answers (LeetCode function model, where Python is skipped).
+        api_bugs = [d for d in divergences
+                    if d["classification"] in ("lean_wrong_python_right", "lean_wrong_expected_right")]
         # A `lean_error` (timeout / crash) is a runtime bug; otherwise Lean ran and answered wrong.
         runtime_error = [d for d in api_bugs if d.get("lean_error")]
         wrong_output = [d for d in api_bugs if not d.get("lean_error")]
@@ -1743,7 +1769,7 @@ class CPastaEval:
             },
             # Most actionable first: wrong-output API bugs, then runtime errors, then the rest.
             "divergences": wrong_output + runtime_error
-            + [d for d in divergences if d["classification"] != "lean_wrong_python_right"],
+            + [d for d in divergences if d not in api_bugs],
         }, indent=2))
         self._api_bugs = (api_bugs, wrong_output, runtime_error)
 
@@ -1757,14 +1783,14 @@ class CPastaEval:
         if agg["py_total"]:
             print(f"Python pass rate: {agg['py_pass']}/{agg['py_total']} "
                   f"({agg['py_pass'] / agg['py_total']:.1%})")
-        if not self.skip_python:
-            print(f"Lean-vs-Python divergences: {len(divergences)} "
-                  f"(API bugs — Lean wrong, Python right: {len(api_bugs)} "
-                  f"= {len(wrong_output)} wrong-output + {len(runtime_error)} runtime-error)")
-            for d in wrong_output[:20]:
-                print(f"    {d['problem']}/{d['solution']} {d['test']}")
-            if len(wrong_output) > 20:
-                print(f"    … and {len(wrong_output) - 20} more (see eval_divergences.json)")
+        oracle = "Python" if not self.skip_python else "expected-answer"
+        print(f"Lean-vs-{oracle} divergences: {len(divergences)} "
+              f"(Lean wrong: {len(api_bugs)} "
+              f"= {len(wrong_output)} wrong-output + {len(runtime_error)} runtime-error/timeout)")
+        for d in wrong_output[:20]:
+            print(f"    {d['problem']}/{d['solution']}  ({d['lean']})")
+        if len(wrong_output) > 20:
+            print(f"    … and {len(wrong_output) - 20} more (see eval_divergences.json)")
         print(f"Report written to {self.dataset / 'eval_report.json'}")
 
     # -- plot --------------------------------------------------------------------------

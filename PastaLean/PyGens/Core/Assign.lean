@@ -429,7 +429,16 @@ def assignSyntax : (kind : SyntaxNodeKind) → Json →
               || ((jsonNodeType? value == some "Tuple" || jsonNodeType? value == some "Call")
                   && target.getObjValAs? Bool "_list_unpack" != .ok true)
             let mut binds : Array (TSyntax `doElem) := #[bindValueTmp, bindUnpackTmp]
-            for i in List.range n do
+            -- A threaded combined-assign `(userTarget, ...threadedNames) = helper(...)` (ClosureConvert)
+            -- puts the user target at index 0 and the threaded-state restores after it. When the user
+            -- target is `p[x]` on a threaded container `p`, the restore `p := snd` must land BEFORE the
+            -- subscript write `p[x] := fst` — else it clobbers the compression (`p[x]=find(p[x])` in a
+            -- union-find `find`). Both read the already-bound tmp, so restoring first is safe. Emit the
+            -- threaded restores (indices ≥ 1) ahead of the user target (index 0).
+            let order : List Nat :=
+              if target.getObjValAs? Bool "_thread_unpack" == .ok true && n ≥ 2
+              then (List.range n).drop 1 ++ [0] else List.range n
+            for i in order do
               let acc ← unpackAccessTerm isTuple unpackTmpIdent i n
               binds := binds.push (← tupleElementAssignDoElem nestedIsTuple elts[i]! acc)
             -- Return the bindings as siblings (a flattened null-node), NOT wrapped in a
