@@ -285,13 +285,14 @@ private def isValueMutateCall (j : Json) : Bool :=
   jsonNodeType? j == some "Call" &&
     (match (j.getObjVal? "func").toOption with
      | some f =>
-         -- METHOD form on a plain receiver: `xs.pop(i)`, `dq.popleft()`.
+         -- METHOD form on a Name or single-subscript receiver: `xs.pop(i)`, `dq.popleft()`,
+         -- `g[f].pop()` — the subscript-receiver assign form lowers via `popCallSubscriptParts?`.
          (jsonNodeType? f == some "Attribute"
            && (match f.getObjValAs? String "attr" with
                | .ok a => #["pop", "popleft"].contains a
                | _ => false)
            && (match (f.getObjVal? "value").toOption with
-               | some r => jsonNodeType? r == some "Name"
+               | some r => #["Name", "Subscript"].contains (jsonNodeType? r |>.getD "")
                | none => false))
          -- LIBRARY form: `heapq.heappop(h)` etc, read from the `Libraries` mutator spec so the set
          -- stays in one place — anything declaring `valueRest?` both yields a value and mutates.
@@ -318,6 +319,11 @@ private partial def hoistMutatingExpr (expr : Json) : DesugarM (Json × Array Js
       if isValueMutateCall expr then
         let tmp ← freshVar "__popv_"
         return (nameLoad tmp, #[assignStmt (nameLoad tmp) expr])
+      -- Never hoist a mutation out of a context that evaluates its operands conditionally or
+      -- per-element (a comprehension pops once per item; a BoolOp/IfExp branch may not run at all).
+      -- Leave the whole sub-tree intact — codegen reports it clearly rather than us mis-hoisting.
+      if conditionalContexts.contains (jsonNodeType? expr |>.getD "") then
+        return (expr, #[])
       let mut rewritten := []; let mut prelude := #[]
       for (key, value) in fields.toList do
         let (value, pre) ← hoistMutatingExpr value

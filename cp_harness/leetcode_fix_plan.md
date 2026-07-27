@@ -167,3 +167,14 @@ container rebuild). Fixes number-of-matching-subsequences, sort-the-matrix-diago
 STILL open (distinct mechanisms, not this fix): pop() as a call-ARG `dfs(g[f].pop())`
 (reconstruct-itinerary), in a list-comp (find-anagram-mappings), or as a subscript INDEX
 `ans[q[st].popleft()]=t` (time-taken-to-cross-the-door) — each needs a statement-level sub-expr hoist.
+
+### Value+mutate hoist extended to subscript receivers + call-arg/index positions (+2 more)
+`hoistMutatingCalls` (Desugar) already lifts `x.pop()` from eager sub-expression positions into a
+preceding `_popv = x.pop()`. Extended `isValueMutateCall` to recognise a SUBSCRIPT receiver
+(`g[f].pop()`), so `dfs(g[f].pop())` (call-arg) and `ans[q[st].popleft()] = t` (subscript index) now
+hoist and compose with the subscript-receiver assign lowering. Fixes reconstruct-itinerary,
+time-taken-to-cross-the-door. Hardened `hoistMutatingExpr` to NOT descend into conditional contexts
+(comprehension/BoolOp/IfExp/lambda) — a mutation there is per-element/conditional and must not be
+hoisted to once (find-anagram-mappings' list-comp pop correctly stays unsupported, valid-parentheses'
+short-circuited `or` stays guarded). Total pop cluster this turn: +4 (num-matching-subseq,
+sort-matrix-diagonally, reconstruct-itinerary, time-taken); still open: pop in a comprehension.
