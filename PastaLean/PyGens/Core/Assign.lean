@@ -257,9 +257,12 @@ partial def tupleElementAssignDoElem (isTuple : Bool) (elt : Json) (acc : TSynta
       -- Without it the `Option C` ascription back-unifies the polymorphic `Prod.fst`, forcing the whole
       -- tuple to `Option C × …` which the `C × C` RHS can't match. `↑` is a no-op if the element is
       -- already `Option C`.
-      let isOptClass := match (jsonFieldOption elt "_ty").map TypeInfer.ofAnnotation with
-        | some (.opt (.cls _)) => true | _ => false
-      let acc ← if isOptClass then `(↑$acc) else pure acc
+      -- Also coerce a numeric-WIDENED element (`_ty = float`/ℚ from `left,right = (0, 1e8)` then
+      -- `left = mid : ℚ`): the same back-unification would otherwise force the tuple to `ℚ × …`. The
+      -- int-sentinel case (`ans, mi = (0, inf)` → `mi : Int`) keeps the pinning ascription (not float).
+      let coerceElem := match (jsonFieldOption elt "_ty").map TypeInfer.ofAnnotation with
+        | some (.opt (.cls _)) | some (.float) => true | _ => false
+      let acc ← if coerceElem then `(↑$acc) else pure acc
       bindOrAssignLocal (← getCode elt `ident) acc (ty? := ← stampedTypeSyntax? elt)
     | some "Attribute" =>
       -- `a.val, b.val = b.val, a.val` (a value swap on tree nodes): rebuild each receiver record.

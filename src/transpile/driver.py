@@ -45,6 +45,7 @@ TYPE_ONLY_IMPORTS = {"typing", "typing_extensions", "__future__"}
 # Numeric lowering mode sent to the Lean backend: "exact" → Python float becomes Lean ℚ
 # (provable + computable); "approx" → Float (fast, runnable). Set per backend send.
 _NUMERIC_MODE = "exact"
+_BEST_EFFORT = False
 # Run-twin suffix (`--mode both`): "'rn" while emitting the runnable twin of a declaration, "" for
 # the single-version modes. `_USER_NAMES` lists the user functions/classes whose references the
 # backend suffixes in a twin (so `foo'rn` calls `bar'rn`, builds `CNN'rn`).
@@ -1100,6 +1101,7 @@ def invoke_lean_backend(ast_json, target, check=True, client=None):
             numeric_mode=_NUMERIC_MODE,
             run_suffix=_RUN_SUFFIX,
             user_names=_USER_NAMES,
+            best_effort=_BEST_EFFORT,
         )
     except Exception as err:
         return {"result": False, "error": str(err)}
@@ -1478,8 +1480,9 @@ def translate_to_lean(source_code, target="term", filepath = None, imports_add =
 
     `client` is the `LeanBackendClient` to translate through; defaults to the process-wide one. Pass
     an explicit client to reuse a single warm Lean process across many files."""
-    global _NUMERIC_MODE, _RUN_SUFFIX, _USER_NAMES
+    global _NUMERIC_MODE, _RUN_SUFFIX, _USER_NAMES, _BEST_EFFORT
     _NUMERIC_MODE = "approx" if mode == "run" else "exact"
+    _BEST_EFFORT = best_effort
     _RUN_SUFFIX, _USER_NAMES = "", []
     json_ir = translate_to_json(source_code, filepath, best_effort=best_effort)
     ast_json = json.loads(json_ir)

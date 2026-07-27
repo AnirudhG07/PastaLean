@@ -1237,6 +1237,27 @@ partial def stampKeyLambdas (sigs : Sigs) (env : Env) (json : Json) : Json :=
     | .obj fs => Json.mkObj (fs.toList.map (fun (k, v) => (k, stampKeyLambdas sigs env v)))
     | _ => json
 
+/-- Stamp each NUMERIC `Name` element of a tuple-unpack target with its ENV type (`_ty`), so a var
+seeded one numeric type by the tuple element but WIDENED by a later reassignment (`left, right =
+(0, 1e8)` then `left = mid : ℚ`) is ascribed the joined type — otherwise codegen infers the narrow
+element type and the widened reassignment fails. Numeric-only + absent-`_ty`-only keeps containers /
+nodes on their existing (shape-driven) path. -/
+private partial def stampNumericTupleElemTys (env : Env) (target : Json) : Json :=
+  match nodeTypeOf target with
+  | some "Name" =>
+      if (getField target "_ty").isSome then target
+      else match (nameId? target).bind env.get? with
+        | some (.int) | some (.bool) | some (.float) =>
+            match (nameId? target).bind env.get? |>.bind toAnnotation? with
+            | some ann => target.setObjVal! "_ty" ann
+            | none => target
+        | _ => target
+  | some "Tuple" | some "List" =>
+      match target.getObjValAs? (Array Json) "elts" with
+      | .ok elts => target.setObjVal! "elts" (Json.arr (elts.map (stampNumericTupleElemTys env)))
+      | _ => target
+  | _ => target
+
 /-- Stamp one statement: its target, its nested blocks, and any nested def. -/
 partial def stampStmt (sigs : Sigs) (env : Env) (roots : Array Json) (s : Json) : Json :=
   if nodeTypeOf s == some "FunctionDef" then
@@ -1302,7 +1323,7 @@ partial def stampStmt (sigs : Sigs) (env : Env) (roots : Array Json) (s : Json) 
       match getField s "target", getField s "value" with
       | some target, some value =>
           if nodeTypeOf target == some "Tuple" then
-            s := s.setObjVal! "target" (stampUnpackShape target (typeOfExpr sigs env value))
+            s := s.setObjVal! "target" (stampNumericTupleElemTys env (stampUnpackShape target (typeOfExpr sigs env value)))
       | _, _ => pure ()
     -- A name a branch/try leaks out (Python has no block scope; Lean does) is hoisted by codegen to
     -- `let mut x : T := default` before the block. Stamp its type T so the hoist is ascribed — PyAny

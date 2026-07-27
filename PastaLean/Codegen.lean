@@ -92,6 +92,11 @@ initialize runSuffixRef : IO.Ref String ← IO.mkRef ""
 in a run-twin so `foo'rn` calls `bar'rn` / builds `CNN'rn`, not the `prove` `bar`/`CNN`. -/
 initialize userNamesRef : IO.Ref (List String) ← IO.mkRef []
 
+/-- Best-effort mode (set from the translate task's `best_effort`): a single statement whose codegen
+throws is degraded to a `pyUnsupported` placeholder — keeping the REST of the function — instead of the
+whole `FunctionDef` collapsing. Off by default (strict). -/
+initialize bestEffortRef : IO.Ref Bool ← IO.mkRef false
+
 /-- The suffix to append to a top-level def name being emitted (empty unless in a run-twin). -/
 def getRunSuffix : IO String := runSuffixRef.get
 

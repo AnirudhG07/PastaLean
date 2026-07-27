@@ -358,7 +358,7 @@ def stateRunBlock (prelude : Array (TSyntax `doElem)) (bodyElems : Array Json)
     (names : Array String) : PygenM (TSyntax `term) := do
   let mut doElems := prelude
   for elem in bodyElems do
-    doElems := appendDoElems doElems (← getCode elem `doElem)
+    doElems := appendDoElems doElems (← getStmtDoElem elem)
   let returnTuple ← buildNameTuple (names.map (mkIdent ·.toName))
   doElems := doElems.push (← `(doElem| return $returnTuple))
   let idRunIdent := mkIdent ``Id.run
@@ -459,7 +459,7 @@ def loopWithElseDoElem (breakFlag? : Option Name) (coreElems : Array (TSyntax `d
       let elseStxArray ← withFixedVariables do
         let mut arr : Array (TSyntax `doElem) := #[]
         for elem in orelseElems do
-          arr := appendDoElems arr (← getCode elem `doElem)
+          arr := appendDoElems arr (← getStmtDoElem elem)
         pure arr
       let noop ← noopDoElemSyntax
       let elseCheck ← `(doElem| if (!$flagIdent) then
@@ -516,7 +516,7 @@ def whileSyntax : (kind : SyntaxNodeKind) → Json →
         let bodyStxArray ← withFixedVariables do withBreakFlag breakFlag? do
           let mut bodyStxArray := #[]
           for elem in bodyElems do
-              let elemStx ← getCode elem `doElem
+              let elemStx ← getStmtDoElem elem
               bodyStxArray := appendDoElems bodyStxArray elemStx
           pure bodyStxArray
         -- Parenthesize the test so its last token never glues to the `do` keyword.
@@ -565,7 +565,7 @@ def forSyntax : (kind : SyntaxNodeKind) → Json →
           let (targetIdent, preludeElems) ← forTargetBinder targetJson bodyElems
           let mut bodyStxArray := preludeElems
           for elem in bodyElems do
-            let elemStx ← getCode elem `doElem
+            let elemStx ← getStmtDoElem elem
             bodyStxArray := appendDoElems bodyStxArray elemStx
           pure (targetIdent, bodyStxArray)
         -- Parenthesize the iterable so its last token never glues to the `do` keyword
@@ -638,12 +638,12 @@ def ifSyntax : (kind : SyntaxNodeKind) → Json →
         let bodyStxArray ← withFixedVariables do
           let mut arr : Array (TSyntax `doElem) := #[]
           for elem in bodyElems do
-            arr := appendDoElems arr (← getCode elem `doElem)
+            arr := appendDoElems arr (← getStmtDoElem elem)
           pure arr
         let orelseStxArray ← withFixedVariables do
           let mut arr : Array (TSyntax `doElem) := #[]
           for elem in orelseElems do
-            arr := appendDoElems arr (← getCode elem `doElem)
+            arr := appendDoElems arr (← getStmtDoElem elem)
           pure arr
         let ifStx ←
           if orelseStxArray.isEmpty then
@@ -679,7 +679,7 @@ def ifSyntax : (kind : SyntaxNodeKind) → Json →
           s!"If node does not have a 'body' field or it is not a JSON array: {json}"
         let mut bodyStxArray := #[]
         for elem in bodyElems do
-          let elemStx ← getCode elem `doElem
+          let elemStx ← getStmtDoElem elem
           bodyStxArray := appendDoElems bodyStxArray elemStx
         -- Run-twin (`--mode both`): the entry wrapper is emitted as `main'rn` (and its body call to
         -- `main'` is suffixed to `main''rn` by the Name pygen), leaving the prove `main` as the file's

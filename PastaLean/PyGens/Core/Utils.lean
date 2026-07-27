@@ -217,13 +217,28 @@ partial def stmtHasReachableReturn (json : Json) : Bool :=
     | .obj fs => fs.toList.any (fun (_, v) => stmtHasReachableReturn v)
     | _ => false
 
+/-- Lower ONE body statement to a `doElem`. In best-effort mode a statement whose codegen throws is
+degraded to a `pyUnsupported` placeholder (naming the failing node + the error) instead of propagating
+the error up to collapse the whole enclosing block / function. Used by EVERY statement-list site (the
+function body and each loop/branch body), so a single bad line anywhere degrades just that line. Strict
+mode (default) re-raises. -/
+def getStmtDoElem (elem : Json) : PygenM (TSyntax `doElem) := do
+  if ← PastaLean.bestEffortRef.get then
+    try
+      getCode elem `doElem
+    catch e =>
+      let nt := (elem.getObjValAs? String "node_type").toOption.getD "statement"
+      let emsg := ((← e.toMessageData.toString).replace "\n" " ").take 100
+      `(doElem| let _ := PastaLean.pyUnsupported $(Syntax.mkStrLit s!"degraded {nt}: {emsg}"))
+  else
+    getCode elem `doElem
+
 /-- Compile a function body statement-by-statement into `doElem`s for the monadic fallback path. -/
 def monadicFunctionBodySyntax (bodyElems : Array Json) : PygenM (Array (TSyntax `doElem)) := do
   let mut bodyStxArray := #[]
   let mut broke := false
   for elem in bodyElems do
-    let elemStx ← withoutCheck do
-      getCode elem `doElem
+    let elemStx ← withoutCheck do getStmtDoElem elem
     bodyStxArray := appendDoElems bodyStxArray elemStx
     if statementDefinitelyReturns elem then
       broke := true

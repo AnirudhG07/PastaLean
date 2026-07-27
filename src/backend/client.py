@@ -153,7 +153,8 @@ class LeanBackendClient:
     def _recent_stderr(self):
         return "\n".join(self._stderr_lines)
 
-    def _task_payload(self, ast_json, target, check, numeric_mode, run_suffix, user_names):
+    def _task_payload(self, ast_json, target, check, numeric_mode, run_suffix, user_names,
+                      best_effort=False):
         return json.dumps(
             {
                 "task": "translate",
@@ -163,6 +164,7 @@ class LeanBackendClient:
                 "numericMode": numeric_mode,
                 "runSuffix": run_suffix,
                 "userNames": list(user_names),
+                "best_effort": best_effort,
             },
             separators=(",", ":"),
         )
@@ -249,13 +251,15 @@ class LeanBackendClient:
         numeric_mode="exact",
         run_suffix="",
         user_names=(),
+        best_effort=False,
     ):
         """Send one translation request to the persistent Lean backend."""
         self.start()
         assert self.proc is not None
         assert self.proc.stdin is not None
 
-        json_task = self._task_payload(ast_json, target, check, numeric_mode, run_suffix, user_names)
+        json_task = self._task_payload(ast_json, target, check, numeric_mode, run_suffix, user_names,
+                                       best_effort=best_effort)
         logger.debug("Sending request to Lean backend: target=%s check=%s", target, check)
         try:
             self.proc.stdin.write(json_task + "\n")

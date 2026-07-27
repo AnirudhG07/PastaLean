@@ -47,6 +47,8 @@ def runTranslateTask (jsonTask : Json) (ctx : Core.Context) (env : Environment) 
   -- `userNames` lists the user's functions/classes whose references should also be suffixed.
   PastaLean.runSuffixRef.set (jsonTask.getObjValAs? String "runSuffix" |>.toOption.getD "")
   PastaLean.userNamesRef.set ((jsonTask.getObjValAs? (Array String) "userNames" |>.toOption.getD #[]).toList)
+  -- Best-effort: degrade a single failing statement to `pyUnsupported` (keep the rest of the function).
+  PastaLean.bestEffortRef.set (jsonTask.getObjValAs? Bool "best_effort" |>.toOption.getD false)
   -- `getObjVal?`, not `getObjValAs? Json`: the latter reads a missing key as `null` and defers the
   -- failure to codegen, which then reports a confusing "no 'node_type' field" instead.
   let .ok json := jsonTask.getObjVal? "ast"

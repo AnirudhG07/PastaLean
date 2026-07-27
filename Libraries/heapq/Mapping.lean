@@ -28,8 +28,10 @@ def heapqBehaviour? (member : String) : Option Behaviour :=
                             mutator := some { stmtFn := ``pyHeapreplaceRest, valueRest? := some (``pyHeapreplaceVal, ``pyHeapreplaceRest) } }
   | "heappushpop" => some { elementOf 0 with teaches? := (push 0 1).teaches? }
   -- `nlargest(n, iterable)` / `nsmallest(...)` return a LIST of the iterable's (arg 1) elements —
-  -- so `x, y = nlargest(2, nums)` unpacks by index, not as a `Prod`.
-  | "nlargest" | "nsmallest" => some (listOf 1)
+  -- so `x, y = nlargest(2, nums)` unpacks by index, not as a `Prod`. With a `key=` callback, route to
+  -- the keyed shim variant (the code generator swaps the callee and passes `key` by name).
+  | "nlargest"  => some { listOf 1 with keyedVariant := some ``Libraries.heapq.pyNlargestKey }
+  | "nsmallest" => some { listOf 1 with keyedVariant := some ``Libraries.heapq.pyNsmallestKey }
   | _ => none
 
 end Libraries.heapq

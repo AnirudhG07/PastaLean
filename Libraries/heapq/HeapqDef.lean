@@ -39,4 +39,12 @@ def pyNsmallest {α β : Type} [PastaLean.PyIterable α β] [Ord β] (n : Int) (
 def pyNlargest {α β : Type} [PastaLean.PyIterable α β] [Ord β] (n : Int) (xs : α) : List β :=
   ((PastaLean.pyIter xs).mergeSort (fun a b => (compare b a).isLE)).take n.toNat
 
+/-- `heapq.nsmallest(n, iterable, key=f)`: the `n` elements with smallest `key`. -/
+def pyNsmallestKey {α β γ : Type} [PastaLean.PyIterable α β] [Ord γ] (n : Int) (xs : α) (key : β → γ) : List β :=
+  ((PastaLean.pyIter xs).mergeSort (fun a b => (compare (key a) (key b)).isLE)).take n.toNat
+
+/-- `heapq.nlargest(n, iterable, key=f)`: the `n` elements with largest `key`. -/
+def pyNlargestKey {α β γ : Type} [PastaLean.PyIterable α β] [Ord γ] (n : Int) (xs : α) (key : β → γ) : List β :=
+  ((PastaLean.pyIter xs).mergeSort (fun a b => (compare (key b) (key a)).isLE)).take n.toNat
+
 end Libraries.heapq

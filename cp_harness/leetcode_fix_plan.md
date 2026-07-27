@@ -122,3 +122,20 @@ math-const binder e/pi (2). Medium: `none : Option ?m` nullable inference (bigge
    `PyAny` + `node.attr` mutation on an `Option` — the biggest remaining bucket (~15+, several coupled).
 2. type-changing reassignment `s = list(s)` shadow (5) — needs a rename pass.
 3. user `def max/min/insert` clash (3); value-and-mutate sub-expression hoist (~12, one mechanism).
+
+### Numeric tuple-unpack widening (+3)
+- `left, right = (0, 1e8)` then `left = mid : ℚ` — the int-seeded unpack element is widened by a later
+  reassignment. `stampNumericTupleElemTys` (TypeInfer) ascribes each numeric unpack element its
+  ENV-joined `_ty`, and `tupleElementAssignDoElem` (Assign) coerces (`↑`) the projection so the ℚ
+  ascription doesn't back-unify the `ℤ × ℚ` tuple. minimize-max-distance-to-gas-station,
+  maximum-average-subarray-ii, pour-water-…. (Plain-assign / memoized-dfs numeric widening remains.)
+
+### Best-effort: per-statement degradation (user request)
+`pyUnsupported` degradation is now **per-statement at every nesting level** (function body + each
+loop/branch body via a shared `getStmtDoElem`), not per-whole-function. A single bad line (e.g.
+`d[y].sort()` inside a `for`) degrades to `pyUnsupported "degraded <NodeType>: <error>"` — clearer,
+naming the failing node + error — while the REST of the function compiles. Plumbed a `best_effort`
+flag through the translate task (`bestEffortRef`); strict mode (default `--strict`) re-raises unchanged.
+NOTE: structural errors thrown DURING closure-conversion (before body lowering, e.g. the "Unknown
+constant null" threaded-tuple-unpack bug) still collapse the whole function — those need the underlying
+bug fixed, not degradation.
