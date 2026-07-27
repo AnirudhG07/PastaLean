@@ -153,11 +153,44 @@ def popCallParts? (value : Json) :
   let argCodes ← args.mapM (getCode · `term)
   return some ((valueFn, restFn), receiverIdent, argCodes, argCodes.extract 0 restArgc)
 
+/-- Like `popCallParts?` but for a receiver that is a single-level subscript on a mutable Name
+(`d[c].popleft()`, `g[f].pop()`): returns the runtime pair, the base container ident, the index
+term, and the value/rest args. The update must rebuild `base[idx]` via `pySetItem`, not reassign a
+plain ident. -/
+def popCallSubscriptParts? (value : Json) :
+    PygenM (Option ((Lean.Name × Lean.Name) × TSyntax `ident × TSyntax `term × Array (TSyntax `term) × Array (TSyntax `term))) := do
+  unless jsonNodeType? value == some "Call" do return none
+  let .ok funcJson := value.getObjVal? "func" | return none
+  unless jsonNodeType? funcJson == some "Attribute" do return none
+  let .ok attr := funcJson.getObjValAs? String "attr" | return none
+  let args := (value.getObjValAs? (Array Json) "args").toOption.getD #[]
+  let some (valueFn, restFn, restArgc) := valueAndMutateMethod? attr args.size | return none
+  let .ok receiverJson := funcJson.getObjVal? "value" | return none
+  unless jsonNodeType? receiverJson == some "Subscript" do return none
+  let .ok baseJson := receiverJson.getObjVal? "value" | return none
+  let .ok sliceJson := receiverJson.getObjVal? "slice" | return none
+  -- Only a plain `base[idx]` with `base` a mutable Name (not a slice, not a nested subscript).
+  unless jsonNodeType? baseJson == some "Name" do return none
+  if jsonNodeType? sliceJson == some "Slice" then return none
+  let baseIdent ← getCode baseJson `ident
+  unless (← hasVar baseIdent.getId) do return none
+  let idxTerm ← getCode sliceJson `term
+  let argCodes ← args.mapM (getCode · `term)
+  return some ((valueFn, restFn), baseIdent, idxTerm, argCodes, argCodes.extract 0 restArgc)
+
 /-- Lower a call that both mutates its receiver and yields a value into a `(value, update)`
 pair. They each read the *original* container, so the caller binds `value` first, then runs
-`update`. Covers `container.pop(idx?)` and `deque.popleft()`. -/
+`update`. Covers `container.pop(idx?)` and `deque.popleft()`, on a Name or `base[idx]` receiver. -/
 def mutatingCallRhsLowering? (value : Json) :
     PygenM (Option (TSyntax `term × TSyntax `doElem)) := do
+  if let some ((valueFn, restFn), baseIdent, idxTerm, valueArgs, restArgs) ← popCallSubscriptParts? value then
+    -- `d[c].popleft()`: read the list at `d[c]`, take its value, and rebuild `d` with the rest.
+    let getIdent := mkIdent ``PastaLean.pyGetItem
+    let setIdent := mkIdent ``PastaLean.pySetItem
+    let recvTerm ← `($getIdent $baseIdent $idxTerm)
+    let valueTerm ← `($(mkIdent valueFn) $recvTerm $valueArgs*)
+    let update ← `(doElem| $baseIdent:ident := $setIdent $baseIdent $idxTerm ($(mkIdent restFn) $recvTerm $restArgs*))
+    return some (valueTerm, update)
   match ← popCallParts? value with
   | none =>
       -- A library member that both mutates its first arg and returns a value (`x = heapq.heappop(h)`),

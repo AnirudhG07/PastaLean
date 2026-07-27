@@ -157,3 +157,13 @@ stays open on its source via its own typeclass, so a new source is just another 
 (`pyConvertExt`) is consulted as a fallback in `builtinMappedName?` after the built-in tables, so it
 can't shadow `int`/`str`/`list`; composes with the SSA-rename so the retyped assignment stitches.
 Regression test: PALC/PyAPI/TestPyConvert.lean.
+
+### Value+mutate on a SUBSCRIPT receiver (+2 so far)
+`t = d[c].popleft()` / `mat[i][j] = g[k].pop()`: the value+mutate lowering only handled a Name
+receiver. Added `popCallSubscriptParts?` (CallShared) for a `base[idx]` receiver on a mutable Name —
+value = `valFn (pyGetItem base idx) args`, update = `base := pySetItem base idx (restFn (pyGetItem
+base idx) restArgs)`. Assign now hoists a mutating RHS for a SUBSCRIPT target too (temp + update +
+container rebuild). Fixes number-of-matching-subsequences, sort-the-matrix-diagonally.
+STILL open (distinct mechanisms, not this fix): pop() as a call-ARG `dfs(g[f].pop())`
+(reconstruct-itinerary), in a list-comp (find-anagram-mappings), or as a subscript INDEX
+`ans[q[st].popleft()]=t` (time-taken-to-cross-the-door) — each needs a statement-level sub-expr hoist.

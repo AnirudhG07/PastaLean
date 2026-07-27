@@ -486,6 +486,14 @@ def assignSyntax : (kind : SyntaxNodeKind) → Json →
               if let some (valueTerm, update) ← mutatingCallRhsLowering? value then
                 let bindTarget ← bindOrAssignLocal (← getCode target `ident) valueTerm
                 return ⟨mkNullNode #[bindTarget.raw, update.raw]⟩
+            -- `mat[i][j] = g[k].pop()`: the RHS both mutates and yields, and the target is a subscript.
+            -- Hoist the value to a temp, run the receiver update, then rebuild the target container.
+            if jsonNodeType? target == some "Subscript" then
+              if let some (valueTerm, update) ← mutatingCallRhsLowering? value then
+                let tmpIdent := mkIdent (← freshRenameName `_popval)
+                let bindTmp ← `(doElem| let $tmpIdent:ident := $valueTerm)
+                if let some setStx ← nestedSubscriptSetDoElem? target tmpIdent then
+                  return ⟨mkNullNode #[bindTmp.raw, update.raw, setStx.raw]⟩
             let rhs ←
               -- `x = a or b` binds the deciding *value*, not a `Bool` (`x = s or '0'` → the string).
               if jsonNodeType? value == some "BoolOp" then boolOpValueTerm value
