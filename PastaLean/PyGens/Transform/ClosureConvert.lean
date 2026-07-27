@@ -87,6 +87,25 @@ partial def bodyBoundNames (stmts : Array Json) : Array String :=
     if jsonNodeType? stmt == some "FunctionDef" then acc
     else (nestedBlocks stmt).foldl (fun a block => appendUnique a (bodyBoundNames block)) acc) #[]
 
+/-- Every comprehension / generator / lambda target-name anywhere in `json` (`[v for v in xs]` binds
+`v`; `lambda a: …` binds `a`). These are LOCAL to the comprehension/lambda, so a nested def that uses
+one (`sum(v for v in arr)` in its body) must NOT capture it as a free variable — otherwise it is lifted
+as a spurious untyped parameter. -/
+partial def comprehensionBoundNames (json : Json) : Array String :=
+  let here : Array String :=
+    match jsonNodeType? json with
+    | some "ListComp" | some "SetComp" | some "DictComp" | some "GeneratorExp" =>
+        ((json.getObjValAs? (Array Json) "generators").toOption.getD #[]).foldl (fun acc g =>
+          appendUnique acc ((g.getObjVal? "target").toOption.elim #[] targetBoundNames)) #[]
+    | some "Lambda" =>
+        (((json.getObjVal? "args").toOption.bind fun a => (a.getObjValAs? (Array Json) "args").toOption).getD #[]).foldl
+          (fun acc p => match p.getObjValAs? String "arg" with | .ok n => appendUnique acc #[n] | _ => acc) #[]
+    | _ => #[]
+  match json with
+  | .arr xs => xs.foldl (fun acc e => appendUnique acc (comprehensionBoundNames e)) here
+  | .obj fs => fs.toList.foldl (fun acc (_, v) => appendUnique acc (comprehensionBoundNames v)) here
+  | _ => here
+
 /-- The declared parameter names of a `FunctionDef`, in order. -/
 def functionParamNames (fnJson : Json) : Array String := Id.run do
   let .ok args := fnJson.getObjVal? "args" | return #[]
@@ -163,8 +182,13 @@ private partial def targetRootName (target : Json) : Option String :=
       | _ => none
   | _ => none
 
-/-- Does `json` mutate `name`: rebind it, assign through it (`x[i] = v`), or call a mutating
-method on it? -/
+/-- Free functions that mutate their FIRST argument in place (heapq's), so `heappush(pq, x)` mutates
+`pq` even though it is not a method call. -/
+private def mutatingFreeFn (name : String) : Bool :=
+  #["heappush", "heappop", "heapify", "heapreplace", "heappushpop"].contains name
+
+/-- Does `json` mutate `name`: rebind it, assign through it (`x[i] = v`), call a mutating method on it,
+or pass it as the first arg of a mutating free function (`heappush(x, …)`)? -/
 partial def jsonMutatesCapture (json : Json) (name : String) : Bool :=
   let here :=
     match jsonNodeType? json with
@@ -175,19 +199,59 @@ partial def jsonMutatesCapture (json : Json) (name : String) : Bool :=
     | some "Call" =>
         match json.getObjVal? "func" with
         | .ok func =>
-            jsonNodeType? func == some "Attribute" &&
+            (jsonNodeType? func == some "Attribute" &&
               (match func.getObjValAs? String "attr" with
                | .ok attr => mutatingMethodName attr
                | _ => false) &&
               (match func.getObjVal? "value" with
                | .ok recv => targetRootName recv == some name
-               | _ => false)
+               | _ => false))
+            || (jsonNodeType? func == some "Name" &&
+                (match func.getObjValAs? String "id" with | .ok id => mutatingFreeFn id | _ => false) &&
+                (match json.getObjValAs? (Array Json) "args" with
+                 | .ok args => (args[0]?).any (targetRootName · == some name)
+                 | _ => false))
         | _ => false
     | _ => false
   if here then true
   else match json with
     | .arr elems => elems.any (jsonMutatesCapture · name)
     | .obj fields => fields.toList.any (fun (_, v) => jsonMutatesCapture v name)
+    | _ => false
+
+/-- Does the assign target `t` mutate `name` IN PLACE — `name[i] = …` / `name.f = …`, or a tuple of
+those (`arr[i], arr[j] = …`)? A bare `name = …` is a local REBIND, which for a parameter never reaches
+the caller, so it is excluded (unlike `jsonMutatesCapture`, where a rebound nonlocal must thread). -/
+private partial def targetInPlaceMutates (target : Json) (name : String) : Bool :=
+  match jsonNodeType? target with
+  | some "Subscript" | some "Attribute" => targetRootName target == some name
+  | some "Tuple" | some "List" =>
+      ((target.getObjValAs? (Array Json) "elts").toOption.getD #[]).any (targetInPlaceMutates · name)
+  | _ => false
+
+/-- Does `json` mutate `name` IN PLACE (`name[i]=v`, `name.append(…)`, `heappush(name,…)`) — the only
+mutations that a mutated PARAMETER propagates to its caller (a bare rebind does not). -/
+partial def jsonMutatesInPlace (json : Json) (name : String) : Bool :=
+  let here :=
+    match jsonNodeType? json with
+    | some "Assign" | some "AugAssign" | some "AnnAssign" =>
+        (json.getObjVal? "target").toOption.any (targetInPlaceMutates · name)
+    | some "Call" =>
+        match json.getObjVal? "func" with
+        | .ok func =>
+            (jsonNodeType? func == some "Attribute" &&
+              (match func.getObjValAs? String "attr" with | .ok a => mutatingMethodName a | _ => false) &&
+              (match func.getObjVal? "value" with | .ok r => targetRootName r == some name | _ => false))
+            || (jsonNodeType? func == some "Name" &&
+                (match func.getObjValAs? String "id" with | .ok id => mutatingFreeFn id | _ => false) &&
+                (match json.getObjValAs? (Array Json) "args" with
+                 | .ok args => (args[0]?).any (targetRootName · == some name) | _ => false))
+        | _ => false
+    | _ => false
+  if here then true
+  else match json with
+    | .arr elems => elems.any (jsonMutatesInPlace · name)
+    | .obj fields => fields.toList.any (fun (_, v) => jsonMutatesInPlace v name)
     | _ => false
 
 /-- A `Name` load node. -/
@@ -334,6 +398,17 @@ partial def containsCallTo (name : String) (json : Json) : Bool :=
     | .obj fields => fields.toList.any (fun (_, v) => containsCallTo name v)
     | _ => false
 
+/-- Is `name` called INSIDE a node whose type is one of `contexts` (a `Lambda`, `ListComp`, …)?
+Distinct from "the statement merely contains such a node" — `for … in sorted(xs, key=lambda …): …
+find(u) …` has a lambda AND a `find`, but the `find` is in the loop body, not the lambda, so it threads
+fine and must NOT be rejected. -/
+partial def callInsideContexts (name : String) (contexts : List String) (json : Json) : Bool :=
+  (contexts.contains ((jsonNodeType? json).getD "") && containsCallTo name json)
+  || (match json with
+      | .arr elems => elems.any (callInsideContexts name contexts)
+      | .obj fields => fields.toList.any (fun (_, v) => callInsideContexts name contexts v)
+      | _ => false)
+
 /-- `Return` nodes carrying a value, anywhere outside a nested definition. -/
 partial def hasValuedReturn (json : Json) : Bool :=
   if jsonNodeType? json == some "FunctionDef" then false
@@ -426,6 +501,28 @@ private def ifNode (test : Json) (body : Array Json) : Json :=
   Json.mkObj [("node_type", Json.str "If"), ("test", test), ("body", Json.arr body),
     ("orelse", Json.arr #[])]
 
+private def ifElseNode (test : Json) (body orelse : Array Json) : Json :=
+  Json.mkObj [("node_type", Json.str "If"), ("test", test), ("body", Json.arr body),
+    ("orelse", Json.arr orelse)]
+
+private def notNode (operand : Json) : Json :=
+  Json.mkObj [("node_type", Json.str "UnaryOp"), ("op", Json.str "not"), ("operand", operand)]
+
+private def breakNode : Json := Json.mkObj [("node_type", Json.str "Break")]
+
+private def trueNode : Json := Json.mkObj [("node_type", Json.str "Constant"), ("value", Json.bool true)]
+
+private def whileNode (test : Json) (body : Array Json) : Json :=
+  Json.mkObj [("node_type", Json.str "While"), ("test", test), ("body", Json.arr body),
+    ("orelse", Json.arr #[])]
+
+private def ifExpNode (test body orelse : Json) : Json :=
+  Json.mkObj [("node_type", Json.str "IfExp"), ("test", test), ("body", body), ("orelse", orelse)]
+
+private def boolOpNode (op : String) (values : Array Json) : Json :=
+  if values.size == 1 then values[0]!
+  else Json.mkObj [("node_type", Json.str "BoolOp"), ("op", Json.str op), ("values", Json.arr values)]
+
 private def subscriptNode (value slice : Json) : Json :=
   Json.mkObj [("node_type", Json.str "Subscript"), ("value", value), ("slice", slice)]
 
@@ -481,14 +578,82 @@ private def comprShapeOf? (value : Json) : Option ComprShape :=
         (fun items => callNode func #[items]))
   | _ => none
 
+/-- The short-circuit op (`and`/`or`) of a single-element comprehension `A and dfs(…)` / `A or dfs(…)`
+where the threaded call is in the SECOND, guarded operand (first `dfs`-free), else `none`. -/
+private def shortCircuitOpOf? (old : String) (shape : ComprShape) : Option String :=
+  if shape.elts.size != 1 || jsonNodeType? shape.elts[0]! != some "BoolOp" then none else
+  match (shape.elts[0]!.getObjValAs? String "op").toOption with
+  | some op =>
+      let vals := (shape.elts[0]!.getObjValAs? (Array Json) "values").toOption.getD #[]
+      if vals.size == 2 && !containsCallTo old vals[0]! && containsCallTo old vals[1]! then some op else none
+  | none => none
+
+/-- A conditional element `X if (A or … or dfs_expr) else Y` whose threaded call sits ONLY in the
+condition — an `and`/`or`-chain with `old` in its LAST operand — lowered into per-item statements that
+preserve the short-circuit: bind `cond` to the (dfs-free) prefix, run the threaded last operand only in
+the guarded branch (`if not cond`/`if cond`), then append `X if cond else Y`. `none` if it isn't this
+shape (e.g. `old` in a branch, or not a chain), leaving it on the rejecting path. -/
+private def ifExpCondLower? (old : String) (elt items : Json) : Option (Array Json) :=
+  if jsonNodeType? elt != some "IfExp" then none else
+  match elt.getObjVal? "test", elt.getObjVal? "body", elt.getObjVal? "orelse" with
+  | .ok cond, .ok x, .ok y =>
+      if containsCallTo old x || containsCallTo old y || !containsCallTo old cond then none
+      else if jsonNodeType? cond != some "BoolOp" then none
+      else match (cond.getObjValAs? String "op").toOption, (cond.getObjValAs? (Array Json) "values").toOption with
+        | some op, some vals =>
+            if vals.size < 2 || vals.pop.any (containsCallTo old) || !containsCallTo old vals.back! then none
+            else
+              let condName := nameNode s!"{(items.getObjValAs? String "id").toOption.getD "__cc"}cond"
+              let guardTest := if op == "or" then notNode condName else condName
+              some #[assignNode condName (boolOpNode op vals.pop),
+                     ifNode guardTest #[assignNode condName vals.back!],
+                     exprStmt (callNode (attrNode items "append") #[ifExpNode condName x y])]
+        | _, _ => none
+  | _, _, _ => none
+
+/-- The per-item accumulator STATEMENTS. A short-circuit element `A and dfs(…)` becomes an `if A` that
+runs the threaded call only in its branch; a conditional `X if (… or dfs) else Y` is lowered by
+`ifExpCondLower?`; anything else uses the shape's own append body. -/
+private def comprPerItem (old : String) (shape : ComprShape) (items : Json) : Array Json :=
+  match shortCircuitOpOf? old shape with
+  | some op =>
+      let vals := (shape.elts[0]!.getObjValAs? (Array Json) "values").toOption.getD #[]
+      let a := vals[0]!; let b := vals[1]!
+      let append := fun (x : Json) => exprStmt (callNode (attrNode items "append") #[x])
+      -- `A and B` → B if A truthy else A; `A or B` → A if A truthy else B.
+      if op == "and" then #[ifElseNode a #[append b] #[append a]]
+      else #[ifElseNode a #[append a] #[append b]]
+  | none =>
+      match (if shape.elts.size == 1 then ifExpCondLower? old shape.elts[0]! items else none) with
+      | some stmts => stmts
+      | none => #[shape.body items]
+
+/-- A comprehension whose threaded call can be lowered to an accumulator loop: the call is
+UNCONDITIONAL (no `and`/`or`/`if-else`), a supported short-circuit, or a supported `IfExp`-condition;
+and no generator filter calls `old` (a filter would change *when* the mutation runs). -/
+private def comprThreadable (old : String) (shape : ComprShape) : Bool :=
+  shape.elts.any (containsCallTo old)
+    && ((shortCircuitOpOf? old shape).isSome
+        || (shape.elts.size == 1 && (ifExpCondLower? old shape.elts[0]! (nameNode "__x")).isSome)
+        || !shape.elts.any (jsonContainsNodeType · ["BoolOp", "IfExp"]))
+    && !shape.gens.any (fun g =>
+        ((g.getObjValAs? (Array Json) "ifs").toOption.getD #[]).any (containsCallTo old))
+
+/-- Seed + per-item loop for a comprehension's accumulator (the shared spine of both the top-level
+expand and the nested hoist); the caller finishes with the result/rebuild step. -/
+private def comprLoopStmts (old : String) (shape : ComprShape) (items : Json) : Array Json :=
+  let loop := shape.gens.foldr (fun g inner =>
+    let target := (g.getObjVal? "target").toOption.getD (nameNode "_")
+    let iter := (g.getObjVal? "iter").toOption.getD emptyListNode
+    let ifs := (g.getObjValAs? (Array Json) "ifs").toOption.getD #[]
+    let guarded := ifs.foldr (fun cond acc => #[ifNode cond acc]) inner
+    #[forNode target iter guarded]) (comprPerItem old shape items)
+  #[assignNode items shape.init] ++ loop
+
 /-- `<return/assign> <comprehension>` whose per-item expression calls the threaded helper `old` →
 rewrite the comprehension to its explicit accumulator loop, so the threaded call lands in statement
 position where the existing hoist/thread machinery carries the mutated state across iterations. A
-comprehension is exactly this loop by definition, so the rewrite is semantics-preserving.
-
-Applied only when `old`'s call is UNCONDITIONAL (no `and`/`or`/`if-else` around it) and no generator
-filter calls `old` — otherwise the loop would change *when* the mutation runs, so the original
-(rejecting) path is left. -/
+comprehension is exactly this loop by definition, so the rewrite is semantics-preserving. -/
 private def expandThreadedComprehension? (old : String) (counter : IO.Ref Nat) (stmt : Json) :
     IO (Option (Array Json)) := do
   let rebuild? : Option ((Json → Json) × Json) :=
@@ -501,28 +666,10 @@ private def expandThreadedComprehension? (old : String) (counter : IO.Ref Nat) (
     | _ => none
   let some (rebuild, value) := rebuild? | return none
   let some shape := comprShapeOf? value | return none
-  unless shape.elts.any (containsCallTo old) do return none
-  if shape.elts.any (jsonContainsNodeType · ["BoolOp", "IfExp"]) then return none
-  if shape.gens.any (fun g =>
-      ((g.getObjValAs? (Array Json) "ifs").toOption.getD #[]).any (containsCallTo old)) then
-    return none
+  unless comprThreadable old shape do return none
   let n ← counter.modifyGet (fun n => (n, n + 1))
   let items := nameNode s!"__cc{n + 1}"
-  let loop := shape.gens.foldr (fun g inner =>
-    let target := (g.getObjVal? "target").toOption.getD (nameNode "_")
-    let iter := (g.getObjVal? "iter").toOption.getD emptyListNode
-    let ifs := (g.getObjValAs? (Array Json) "ifs").toOption.getD #[]
-    let guarded := ifs.foldr (fun cond acc => #[ifNode cond acc]) inner
-    #[forNode target iter guarded]) #[shape.body items]
-  return some (#[assignNode items shape.init] ++ loop ++ #[rebuild (shape.result items)])
-
-/-- Whether a comprehension `value` may be hoisted for `old`: its per-item expression calls `old`
-unconditionally and no generator filter does. -/
-private def hoistableCompr (old : String) (shape : ComprShape) : Bool :=
-  shape.elts.any (containsCallTo old)
-    && !shape.elts.any (jsonContainsNodeType · ["BoolOp", "IfExp"])
-    && !shape.gens.any (fun g =>
-        ((g.getObjValAs? (Array Json) "ifs").toOption.getD #[]).any (containsCallTo old))
+  return some (comprLoopStmts old shape items ++ #[rebuild (shape.result items)])
 
 /-- Replace every comprehension sub-expression of `expr` that calls the threaded helper `old` with a
 fresh temporary, returning the accumulator-loop statements that must run first — the nested version
@@ -534,17 +681,11 @@ private partial def hoistThreadedComprs (old : String) (counter : IO.Ref Nat) (e
   if jsonNodeType? expr == some "BoolOp" || jsonNodeType? expr == some "IfExp" then
     return (expr, #[])
   if let some shape := comprShapeOf? expr then
-    if hoistableCompr old shape then
+    if comprThreadable old shape then
       let n ← counter.modifyGet (fun n => (n, n + 1))
       let items := nameNode s!"__cc{n + 1}"
       let tmp := nameNode s!"__cv{n + 1}"
-      let loop := shape.gens.foldr (fun g inner =>
-        let target := (g.getObjVal? "target").toOption.getD (nameNode "_")
-        let iter := (g.getObjVal? "iter").toOption.getD emptyListNode
-        let ifs := (g.getObjValAs? (Array Json) "ifs").toOption.getD #[]
-        let guarded := ifs.foldr (fun cond acc => #[ifNode cond acc]) inner
-        #[forNode target iter guarded]) #[shape.body items]
-      return (tmp, #[assignNode items shape.init] ++ loop ++ #[assignNode tmp (shape.result items)])
+      return (tmp, comprLoopStmts old shape items ++ #[assignNode tmp (shape.result items)])
   match expr with
   | .arr xs =>
       let mut out := #[]; let mut pre := #[]
@@ -560,18 +701,49 @@ private partial def hoistThreadedComprs (old : String) (counter : IO.Ref Nat) (e
       return (Json.mkObj rewritten, pre)
   | _ => return (expr, #[])
 
+/-- What a lifted, state-threading helper looks like to its CALLERS: a call to `name` becomes a call
+to `helperName` with `ordered` extra capture args, rebinding `threaded` (a `hasValue` helper also
+yields a value). A sibling that calls it (union-find's `union` → `find`) uses this to thread it. -/
+structure ThreadedSpec where
+  name : String
+  helperName : String
+  ordered : Array String
+  threaded : Array String
+  /-- The helper's ORIGINAL parameter names (before capture params are appended). A threaded name that
+  is one of these is a mutated *parameter* (`push(pq,x)` mutates `pq`): at a call site it rebinds the
+  ARGUMENT in that position (`heap := _push heap x`), not a same-named capture. -/
+  origParams : Array String
+  hasValue : Bool
+
+/-- The rebind targets for a threaded call: a threaded name that is an original parameter rebinds the
+call's argument at that position (a mutated param maps to its caller's argument); any other threaded
+name is a shared capture, rebound by its own name. -/
+def threadedTargetsFor (threaded origParams : Array String) (callArgs : Array Json) : Array Json :=
+  threaded.map fun name =>
+    match origParams.findIdx? (· == name) with
+    | some i =>
+        match callArgs[i]? with
+        -- Only an lvalue (Name / Subscript / Attribute) can be rebound. A threaded parameter passed a
+        -- FRESH value (`dfs(deque(s))`, `dfs(src, tgt, set())`) discards its mutation into `_` — matches
+        -- Python, where mutating a freshly-constructed argument never reaches the caller.
+        | some arg =>
+            if #["Name", "Subscript", "Attribute"].contains ((jsonNodeType? arg).getD "") then arg
+            else nameNode "_"
+        | none => nameNode name
+    | none => nameNode name
+
 mutual
 
 /-- Replace each threaded call inside an expression with a temporary, returning the assignments
 that must run first. A helper with no return value cannot appear in a value position. -/
-partial def hoistThreadedCalls (old new : String) (captures threaded : Array String)
+partial def hoistThreadedCalls (old new : String) (captures threaded origParams : Array String)
     (hasValue : Bool) (counter : IO.Ref Nat) (expr : Json) : PygenM (Json × Array Json) := do
   if isCallTo old expr then
     let args := (expr.getObjValAs? (Array Json) "args").toOption.getD #[]
     let mut rewrittenArgs := #[]
     let mut prelude := #[]
     for arg in args do
-      let (arg, pre) ← hoistThreadedCalls old new captures threaded hasValue counter arg
+      let (arg, pre) ← hoistThreadedCalls old new captures threaded origParams hasValue counter arg
       rewrittenArgs := rewrittenArgs.push arg
       prelude := prelude ++ pre
     let call := retargetCall new captures expr rewrittenArgs
@@ -579,14 +751,14 @@ partial def hoistThreadedCalls (old new : String) (captures threaded : Array Str
       throwError s!"nested function '{old}' returns no value but is used as one."
     let n ← counter.modifyGet (fun n => (n, n + 1))
     let temp := s!"__thread_t{n + 1}"
-    let target := tupleNode (#[nameNode temp] ++ threaded.map nameNode)
+    let target := tupleNode (#[nameNode temp] ++ threadedTargetsFor threaded origParams rewrittenArgs)
     return (nameNode temp, prelude.push (assignNode target call))
   match expr with
   | .arr elems =>
       let mut out := #[]
       let mut prelude := #[]
       for elem in elems do
-        let (elem, pre) ← hoistThreadedCalls old new captures threaded hasValue counter elem
+        let (elem, pre) ← hoistThreadedCalls old new captures threaded origParams hasValue counter elem
         out := out.push elem
         prelude := prelude ++ pre
       return (Json.arr out, prelude)
@@ -594,17 +766,22 @@ partial def hoistThreadedCalls (old new : String) (captures threaded : Array Str
       let mut rewritten := []
       let mut prelude := #[]
       for (key, value) in fields.toList do
-        let (value, pre) ← hoistThreadedCalls old new captures threaded hasValue counter value
+        let (value, pre) ← hoistThreadedCalls old new captures threaded origParams hasValue counter value
         prelude := prelude ++ pre
         rewritten := rewritten ++ [(key, value)]
       return (Json.mkObj rewritten, prelude)
   | _ => return (expr, #[])
 
 /-- Rewrite the calls to `old` in a statement list, rebinding the threaded names at each one. -/
-partial def rewriteThreadedStmts (old new : String) (captures threaded : Array String)
+partial def rewriteThreadedStmts (old new : String) (captures threaded origParams : Array String)
     (hasValue : Bool) (counter : IO.Ref Nat) (stmts : Array Json) : PygenM (Array Json) := do
   let mut out := #[]
   for stmt in stmts do
+    -- A sibling nested `def` is a separate scope: leave it verbatim (its own calls to `old` are
+    -- threaded when IT is lifted, via its `ThreadedSpec`), never thread through it here.
+    if jsonNodeType? stmt == some "FunctionDef" then
+      out := out.push stmt
+      continue
     unless containsCallTo old stmt do
       out := out.push stmt
       continue
@@ -612,7 +789,7 @@ partial def rewriteThreadedStmts (old new : String) (captures threaded : Array S
     -- …): expand the comprehension to its accumulator loop so the call lands in statement position,
     -- then thread the expansion.
     if let some expanded ← expandThreadedComprehension? old counter stmt then
-      out := out ++ (← rewriteThreadedStmts old new captures threaded hasValue counter expanded)
+      out := out ++ (← rewriteThreadedStmts old new captures threaded origParams hasValue counter expanded)
       continue
     -- The comprehension nested inside a larger expression (`return 1 + sum(dfs(j) for j)`): hoist it
     -- to a temporary, threading the accumulator loop, then process the simplified statement.
@@ -621,23 +798,42 @@ partial def rewriteThreadedStmts (old new : String) (captures threaded : Array S
         let (value', prelude) ← hoistThreadedComprs old counter value
         if !prelude.isEmpty then
           let stmt := stmt.setObjVal! "value" value'
-          out := out ++ (← rewriteThreadedStmts old new captures threaded hasValue counter
+          out := out ++ (← rewriteThreadedStmts old new captures threaded origParams hasValue counter
             (prelude ++ #[stmt]))
           continue
+    -- An `if any(dfs(v) for v):` test: hoist the comprehension to a temp BEFORE the `if` (its
+    -- accumulator loop threads the state once), then the simplified `if <temp>:` recurses normally.
+    -- A `while` test can't (it re-evaluates each iteration) — that stays rejected below.
+    if jsonNodeType? stmt == some "If" then
+      if let .ok test := stmt.getObjVal? "test" then
+        let (test', prelude) ← hoistThreadedComprs old counter test
+        if !prelude.isEmpty then
+          let stmt := stmt.setObjVal! "test" test'
+          out := out ++ (← rewriteThreadedStmts old new captures threaded origParams hasValue counter
+            (prelude ++ #[stmt]))
+          continue
+    -- `while find(a) != find(b):` — the test threads state and re-runs each iteration, so it can't be
+    -- hoisted ONCE. Rewrite to `while True: <hoist test>; if not test': break; <body>`, so the threaded
+    -- calls run (and rebind) at the top of every iteration.
     if jsonNodeType? stmt == some "While" then
-      if (stmt.getObjVal? "test").toOption.any (containsCallTo old) then
-        throwError s!"call to '{old}' in a `while` test cannot rebind the threaded state."
-    for context in ["Lambda", "ListComp", "SetComp", "DictComp", "GeneratorExp"] do
-      if jsonContainsNodeType stmt [context] then
-        throwError s!"call to '{old}' inside a {context} cannot rebind the threaded state."
+      if let .ok test := stmt.getObjVal? "test" then
+        if containsCallTo old test then
+          let (test', prelude) ← hoistThreadedCalls old new captures threaded origParams hasValue counter test
+          let body := (stmt.getObjValAs? (Array Json) "body").toOption.getD #[]
+          let newBody := prelude ++ #[ifNode (notNode test') #[breakNode]] ++ body
+          let newBody ← rewriteThreadedStmts old new captures threaded origParams hasValue counter newBody
+          out := out.push (whileNode trueNode newBody)
+          continue
+    if callInsideContexts old ["Lambda", "ListComp", "SetComp", "DictComp", "GeneratorExp"] stmt then
+      throwError s!"call to '{old}' inside a comprehension or lambda cannot rebind the threaded state."
 
-    let threadedNodes := threaded.map nameNode
     -- `dfs(i, j)` as a statement: keep only the rebinding.
     if jsonNodeType? stmt == some "Expr" then
       if let .ok value := stmt.getObjVal? "value" then
         if isCallTo old value then
           let args := (value.getObjValAs? (Array Json) "args").toOption.getD #[]
           let call := retargetCall new captures value args
+          let threadedNodes := threadedTargetsFor threaded origParams args
           let targets ←
             if hasValue then do
               let n ← counter.modifyGet (fun n => (n, n + 1))
@@ -654,9 +850,10 @@ partial def rewriteThreadedStmts (old new : String) (captures threaded : Array S
           let .ok target := stmt.getObjVal? "target" | throwError "Assign is missing a 'target'"
           -- A subscript target may itself contain a threaded call in its index (`p[find(x)] = find(y)`);
           -- hoist those to temporaries first so the index is threaded too, not left as a bare call.
-          let (target, tgtPre) ← hoistThreadedCalls old new captures threaded hasValue counter target
+          let (target, tgtPre) ← hoistThreadedCalls old new captures threaded origParams hasValue counter target
           let args := (value.getObjValAs? (Array Json) "args").toOption.getD #[]
           let call := retargetCall new captures value args
+          let threadedNodes := threadedTargetsFor threaded origParams args
           -- The threaded return is a fully-`Prod` tuple, so a nested target (`(ls, ln), ans`) unpacks
           -- with `Prod` at every level; `_thread_unpack` tells codegen to use `Prod`, not list access.
           let tgt := (tupleNode (#[target] ++ threadedNodes)).setObjVal! "_thread_unpack" (Json.bool true)
@@ -670,12 +867,12 @@ partial def rewriteThreadedStmts (old new : String) (captures threaded : Array S
     for (key, value) in (stmt.getObj?.toOption.getD ∅).toList do
       unless blockFields.contains key || key == "handlers" do
         if containsCallTo old value then
-          let (value, pre) ← hoistThreadedCalls old new captures threaded hasValue counter value
+          let (value, pre) ← hoistThreadedCalls old new captures threaded origParams hasValue counter value
           prelude := prelude ++ pre
           stmt := stmt.setObjVal! key value
     for key in blockFields do
       if let .ok block := stmt.getObjValAs? (Array Json) key then
-        let block ← rewriteThreadedStmts old new captures threaded hasValue counter block
+        let block ← rewriteThreadedStmts old new captures threaded origParams hasValue counter block
         stmt := stmt.setObjVal! key (Json.arr block)
     out := out ++ prelude
     out := out.push stmt
@@ -689,8 +886,9 @@ outer function.
 Captures the helper only reads become extra parameters. Captures it rebinds (`nonlocal`) or mutates
 in place are **threaded**: extra parameters that the helper also returns, with each call site
 rebinding them. -/
-private def liftHelper (outerName : String) (outerJson innerJson : Json) :
-    PygenM (Json × Json) := do
+private def liftHelper (outerName : String) (outerJson innerJson : Json)
+    (siblingSpecs : Array ThreadedSpec := #[]) :
+    PygenM (Json × Json × Option ThreadedSpec) := do
   let .ok innerName := innerJson.getObjValAs? String "name" | throwError
     s!"nested FunctionDef is missing a 'name': {innerJson}"
   let .ok outerBody := outerJson.getObjValAs? (Array Json) "body" | throwError
@@ -704,15 +902,33 @@ private def liftHelper (outerName : String) (outerJson innerJson : Json) :
   -- outer scope keeps builtins (`len`, `range`) and globals out of the parameter list. A `nonlocal`
   -- name is rebound inside the helper, so it looks local — add it back explicitly.
   let outerBound := appendUnique (functionParamNames outerJson) (bodyBoundNames outerBody)
-  let innerBound := appendUnique (functionParamNames inner) (bodyBoundNames innerBody)
+  let innerBound := appendUnique (appendUnique (functionParamNames inner) (bodyBoundNames innerBody))
+    (comprehensionBoundNames (Json.arr innerBody))
   let innerUsed := jsonNameIds inner
-  let captures := outerBound.filter fun name =>
+  let directCaptures := outerBound.filter fun name =>
     name != innerName &&
       ((innerUsed.contains name && !innerBound.contains name) || declaredNonlocal.contains name)
 
-  let threaded := captures.filter fun c => declaredNonlocal.contains c || jsonMutatesCapture inner c
-  let readOnly := captures.filter fun c => !threaded.contains c
-  let ordered := readOnly ++ threaded
+  -- Siblings this helper CALLS (union-find's `union` calls `find`; `eval` calls `parseVar`). It must
+  -- ALSO capture every capture of a called sibling, even ones it never names directly, to FORWARD them
+  -- (`eval` passes `parseVar`'s `n`). Their threaded captures (`p`, `i`) are threaded through here too
+  -- — a rebind from a sibling call has to land somewhere.
+  let calledSiblings := siblingSpecs.filter fun s => containsCallTo s.name inner
+  let siblingCaps := calledSiblings.foldl (fun acc s => appendUnique acc (s.ordered.filter outerBound.contains)) #[]
+  let captures := appendUnique directCaptures siblingCaps
+  let siblingThreaded := calledSiblings.foldl (fun acc s => appendUnique acc (s.threaded.filter captures.contains)) #[]
+  -- Threaded CAPTURES: nonlocal / mutated-in-place captures, plus a called sibling's threaded state.
+  let threadedCaptures := (captures.filter fun c => declaredNonlocal.contains c || jsonMutatesCapture inner c)
+    |> (appendUnique · siblingThreaded)
+  -- Threaded PARAMETERS: an original parameter the body mutates in place (`push(pq, x)` heappushes pq).
+  -- Already a parameter, so threaded only on the RETURN — callers rebind the matching argument.
+  let origParamNames := functionParamNames inner
+  let threadedParams := origParamNames.filter fun p => jsonMutatesInPlace inner p
+  let readOnly := captures.filter fun c => !threadedCaptures.contains c
+  -- Extra params appended = read-only + threaded CAPTURES (mutated params are already parameters).
+  let ordered := readOnly ++ threadedCaptures
+  -- Names handed back on the threaded return tuple: mutated params, then threaded captures.
+  let threaded := threadedParams ++ threadedCaptures
 
   -- A helper used as a value (`sort(key=f)`): capture-free → a plain reference; read-only captures →
   -- a `fun p ↦ new p caps` wrapper (in `rewriteHelperCalls`). Only a THREADED (mutated) capture used
@@ -759,13 +975,19 @@ private def liftHelper (outerName : String) (outerJson innerJson : Json) :
 
   let origParams := functionParamTypedNames inner
   let counter ← IO.mkRef 0
+  -- Thread calls to already-lifted threaded siblings (`union`'s `find(a)`) into rebinding statements
+  -- first; the self-threading below then flows the shared state through them. A helper that calls
+  -- such a sibling always threads (its shared capture was folded into `threaded` above).
+  let mut innerBody := innerBody
+  for s in calledSiblings do
+    innerBody ← rewriteThreadedStmts s.name s.helperName s.ordered s.threaded s.origParams s.hasValue counter innerBody
   let (helperBody, rewrittenOuter) ←
     if threaded.isEmpty then do
       let body ← rewriteHelperCalls innerName helperName origParams ordered (Json.arr innerBody)
       let outer ← rewriteHelperCalls innerName helperName origParams ordered (Json.arr remaining)
       pure (body, outer)
     else do
-      let body ← rewriteThreadedStmts innerName helperName ordered threaded hasValue counter innerBody
+      let body ← rewriteThreadedStmts innerName helperName ordered threaded origParamNames hasValue counter innerBody
       let body := threadReturns threaded hasValue (Json.arr body)
       -- A helper that returns nothing still has to hand the threaded state back on every path.
       let body := match body with
@@ -773,48 +995,61 @@ private def liftHelper (outerName : String) (outerJson innerJson : Json) :
             if statementListDefinitelyReturns stmts.toList then Json.arr stmts
             else Json.arr (stmts.push (returnNode (tupleNode (threaded.map nameNode))))
         | other => other
-      let outer ← rewriteThreadedStmts innerName helperName ordered threaded hasValue counter remaining
+      let outer ← rewriteThreadedStmts innerName helperName ordered threaded origParamNames hasValue counter remaining
       pure (body, Json.arr outer)
 
   let helper := ((inner.setObjVal! "name" (Json.str helperName)).setObjVal! "args" innerArgs)
     |>.setObjVal! "body" helperBody
   -- Threading changes the result into a tuple, so the declared return annotation no longer holds.
   let helper := if threaded.isEmpty then helper else helper.setObjVal! "returns" Json.null
-  return (helper, outerJson.setObjVal! "body" rewrittenOuter)
+  let spec? : Option ThreadedSpec :=
+    if threaded.isEmpty then none
+    else some { name := innerName, helperName, ordered, threaded, origParams := origParamNames, hasValue }
+  return (helper, outerJson.setObjVal! "body" rewrittenOuter, spec?)
 
-/-- Group nested defs that reference one another into one cluster each (weakly-connected components
-of the sibling-reference graph, in first-seen order). A cluster of size ≥ 2 needs a `mutual` block;
-a lone def is its own singleton. Ordering within a cluster is source order. -/
+/-- Group nested defs into clusters that each become one lift. A cluster is a **strongly-connected
+component** of the DIRECTED sibling-*call* graph (`i → j` if def `i` references def `j`'s name) — so
+only a genuine reference *cycle* (`a` calls `b` and `b` calls `a`) forms a multi-member cluster needing
+a `mutual` block. A one-directional reference (union-find's `union` calls `find`, `find` never calls
+`union`) is a DAG, not a cycle, so each stays its own singleton and lifts through the normal
+threading-capable path. Clusters come out callee-before-caller (topological on the condensation) so a
+lifted helper referencing a sibling sees it already emitted; ties break by source order. -/
 def nestedRefComponents (nested : Array Json) : Array (Array Json) := Id.run do
   let names := nested.filterMap (·.getObjValAs? String "name" |>.toOption)
-  -- Undirected adjacency: `i — j` if def i references def j's name (or vice versa).
-  let refs := nested.map fun n => Id.run do
-    let used := jsonNameIds n
-    return names.filter (used.contains ·)
-  let adj := (Array.range nested.size).map fun i => Id.run do
-    let mut nbrs : Array Nat := #[]
-    for j in [0:nested.size] do
-      if i != j && (refs[i]!.contains names[j]! || refs[j]!.contains names[i]!) then
-        nbrs := nbrs.push j
-    return nbrs
-  let mut comp : Array (Option Nat) := Array.replicate nested.size none
-  let mut groups : Array (Array Json) := #[]
-  for i in [0:nested.size] do
+  let n := nested.size
+  if names.size != n then return nested.map (#[·])   -- an unnamed def: no grouping, all singletons
+  -- Directed reachability: `reach i j` iff def `i` can reach def `j` through the call graph.
+  let used := nested.map jsonNameIds
+  let mut reach : Array (Array Bool) := (Array.range n).map fun i =>
+    (Array.range n).map fun j => i == j || (i != j && used[i]!.contains names[j]!)
+  for k in [0:n] do
+    for i in [0:n] do
+      if (reach[i]!)[k]! then
+        for j in [0:n] do
+          if (reach[k]!)[j]! then reach := reach.modify i (·.set! j true)
+  -- SCC: `i`, `j` share a cluster iff each reaches the other. Group in first-seen (source) order.
+  let mut comp : Array (Option Nat) := Array.replicate n none
+  let mut rawGroups : Array (Array Nat) := #[]
+  for i in [0:n] do
     if comp[i]!.isNone then
-      -- BFS the component rooted at `i`.
-      let mut members : Array Nat := #[i]
-      comp := comp.set! i (some groups.size)
-      let mut queue := #[i]
-      while !queue.isEmpty do
-        let u := queue.back!
-        queue := queue.pop
-        for v in adj[u]! do
-          if comp[v]!.isNone then
-            comp := comp.set! v (some groups.size)
-            members := members.push v
-            queue := queue.push v
-      groups := groups.push ((members.qsort (· < ·)).map (nested[·]!))
-  return groups
+      let members := (Array.range n).filter fun j => (reach[i]!)[j]! && (reach[j]!)[i]!
+      for j in members do comp := comp.set! j (some rawGroups.size)
+      rawGroups := rawGroups.push members
+  -- Emit callee-clusters before caller-clusters: cluster A precedes B if A calls into B (A depends on
+  -- B, so B must exist first). Repeatedly take a cluster none of whose UNEMITTED peers it still calls.
+  let callsGroup := fun (a b : Nat) => (rawGroups[a]!).any fun i => (rawGroups[b]!).any fun j => (reach[i]!)[j]!
+  let mut order : Array Nat := #[]
+  let mut done : Array Bool := Array.replicate rawGroups.size false
+  for _ in [0:rawGroups.size] do
+    let mut pick : Option Nat := none
+    for g in [0:rawGroups.size] do
+      if !done[g]! && pick.isNone then
+        let blocked := (Array.range rawGroups.size).any fun h => h != g && !done[h]! && callsGroup g h
+        if !blocked then pick := some g
+    match pick with
+    | some g => order := order.push g; done := done.set! g true
+    | none => for g in [0:rawGroups.size] do if !done[g]! then order := order.push g; done := done.set! g true
+  return order.map fun g => rawGroups[g]!.map (nested[·]!)
 
 /-- Lift a cluster of mutually-referencing nested defs together. Every member gets the *shared*
 capture set (the union of the members' captures) as extra parameters, so a call to any sibling can
@@ -888,11 +1123,22 @@ partial def closureConvertFunction (fnJson : Json) : PygenM (Array (Array Json) 
 
   let mut groups : Array (Array Json) := #[]
   let mut current := fnJson
+  -- Specs of already-lifted threaded siblings, so a later cluster (union-find's `union`) threads its
+  -- calls to an earlier one (`find`). Clusters arrive callee-before-caller, so the spec exists in time.
+  let mut threadedSpecs : Array ThreadedSpec := #[]
   for cluster in nestedRefComponents nested do
+    -- Re-read each cluster member from `current`, not from the stale `nested` snapshot: an earlier
+    -- cluster's lift already rewrote calls to it inside THIS cluster's still-nested body (a read-only
+    -- sibling `check` became `_solve'check` in `dfs`), and that edit lives only in `current`.
+    let curBody := (current.getObjValAs? (Array Json) "body").toOption.getD #[]
+    let cluster := cluster.filterMap fun m =>
+      (m.getObjValAs? String "name").toOption.bind fun nm =>
+        curBody.find? (fun s => jsonNodeType? s == some "FunctionDef" && s.getObjValAs? String "name" == .ok nm)
     if cluster.size == 1 then
       -- Outermost-first: lift `inner` here, so the names it captures from *this* scope become its
       -- parameters. Only then convert its own nested defs, which can now capture those parameters.
-      let (helper, rewritten) ← liftHelper outerName current cluster[0]!
+      let (helper, rewritten, spec?) ← liftHelper outerName current cluster[0]! threadedSpecs
+      if let some spec := spec? then threadedSpecs := threadedSpecs.push spec
       let (subGroups, helper) ← closureConvertFunction helper
       groups := (groups ++ subGroups).push #[helper]
       current := rewritten

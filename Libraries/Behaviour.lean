@@ -135,6 +135,9 @@ def builtinBehaviour? (name : String) : Option Behaviour :=
   | "enumerate"                    => some enumerated
   | "min" | "max"                  => some elementOrJoin
   | "sum"                          => some elementOrFirst
+  -- `map(f, xs)` is a list (of `f`'s results — element type left open); knowing it is a LIST is what
+  -- lets `a, b = map(int, s.split())` unpack by index instead of as a `Prod`.
+  | "map"                          => some (const (.list .unknown))
   | _                              => none
 
 /-- Behaviour of a builtin-type **method** `recv.m(args)`, with the RECEIVER as argument 0 — so

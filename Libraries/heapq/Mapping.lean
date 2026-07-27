@@ -27,6 +27,9 @@ def heapqBehaviour? (member : String) : Option Behaviour :=
   | "heapreplace" => some { elementOf 0 with
                             mutator := some { stmtFn := ``pyHeapreplaceRest, valueRest? := some (``pyHeapreplaceVal, ``pyHeapreplaceRest) } }
   | "heappushpop" => some { elementOf 0 with teaches? := (push 0 1).teaches? }
+  -- `nlargest(n, iterable)` / `nsmallest(...)` return a LIST of the iterable's (arg 1) elements —
+  -- so `x, y = nlargest(2, nums)` unpacks by index, not as a `Prod`.
+  | "nlargest" | "nsmallest" => some (listOf 1)
   | _ => none
 
 end Libraries.heapq

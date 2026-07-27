@@ -791,6 +791,21 @@ def _function_arg_names(fn_node):
     return names
 
 
+def _comprehension_target_names(node):
+    """Names bound by a comprehension/lambda target (`Name`, or the elements of a tuple/list target)."""
+    names = set()
+    def walk(n):
+        if not isinstance(n, dict):
+            return
+        if n.get("node_type") == "Name":
+            names.add(n.get("id"))
+        elif n.get("node_type") in ("Tuple", "List"):
+            for elt in n.get("elts", []) or []:
+                walk(elt)
+    walk(node)
+    return names
+
+
 def _annotate_library_refs_in_expr(node, import_env):
     if isinstance(node, list):
         for item in node:
@@ -800,6 +815,23 @@ def _annotate_library_refs_in_expr(node, import_env):
         return
 
     node_type = node.get("node_type")
+    # A comprehension/lambda binder is a LOCAL name that SHADOWS any star-imported member of the same
+    # name (`[e for e in xs]` / `lambda e: …` under `from math import *` must not rewrite `e` to the
+    # math constant). Recurse into the sub-expression with those names removed from the import env.
+    if node_type in ("ListComp", "SetComp", "DictComp", "GeneratorExp", "Lambda"):
+        bound = set()
+        if node_type == "Lambda":
+            for arg in (node.get("args", {}) or {}).get("args", []) or []:
+                if arg.get("arg"):
+                    bound.add(arg.get("arg"))
+        else:
+            for gen in node.get("generators", []) or []:
+                bound |= _comprehension_target_names(gen.get("target"))
+        sub_env = {k: v for k, v in import_env.items() if k not in bound} if bound else import_env
+        for value in node.values():
+            _annotate_library_refs_in_expr(value, sub_env)
+        return
+
     if node_type == "Name":
         binding = import_env.get(node.get("id"))
         if binding and binding.get("kind") == "member":
@@ -826,6 +858,12 @@ def _library_star_members(root):
     precise "unsupported member" error rather than as an unresolved Lean identifier."""
     if root == "passta":
         return frozenset(PASSTA_STAR_MEMBERS)
+    # `operator` re-exports many builtins (abs, pow, eq, …); `from operator import *` is in every
+    # dataset preamble, so binding all of them would SHADOW those builtins corpus-wide. Bind only the
+    # members the Lean registry actually maps (the operator-specific/arith/bitwise ones); everything
+    # else falls through to its builtin (`abs`, `pow`, …).
+    if root == "operator":
+        return frozenset({"xor", "or_", "and_", "add", "sub", "mul", "mod", "floordiv"})
     try:
         module = importlib.import_module(root)
     except ImportError:

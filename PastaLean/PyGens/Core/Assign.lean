@@ -369,10 +369,18 @@ def assignSyntax : (kind : SyntaxNodeKind) → Json →
             -- into subscripts and never reach here, so a `Call` here means a `Prod` result).
             -- `_list_unpack` (stamped when the RHS is list-typed, e.g. `np.shape(x)` returns a list)
             -- forces list-index access even for a `Call` RHS that would otherwise be read as a `Prod`.
-            -- `_tuple_unpack` (TypeInfer saw a `tuple[...]`-typed RHS) settles it directly.
-            let isTuple := target.getObjValAs? Bool "_tuple_unpack" == .ok true
-              || ((jsonNodeType? value == some "Tuple" || jsonNodeType? value == some "Call")
-                  && target.getObjValAs? Bool "_list_unpack" != .ok true)
+            -- Unpack shape is decided by the INFERRED RHS type (authoritative): `_list_unpack` (RHS a
+            -- `list` — `sorted`/`map`/a `list[...]` value) → index access; `_tuple_unpack` (RHS a
+            -- `tuple[...]`) → `Prod`. The syntactic checks are ONLY the fallback when inference stamped
+            -- neither (an inference gap, or best-effort inference disabled): a literal `Tuple` is
+            -- exactly a `Prod`; a residual `Call` defaults to `Prod` (an un-inferred call is usually a
+            -- user function returning a tuple — a list-returning builtin carries a return-shape
+            -- `Behaviour` so it is stamped `_list_unpack` instead). To fix a mis-shaped case, extend
+            -- inference, not this fallback.
+            let isTuple :=
+              if target.getObjValAs? Bool "_list_unpack" == .ok true then false
+              else if target.getObjValAs? Bool "_tuple_unpack" == .ok true then true
+              else jsonNodeType? value == some "Tuple" || jsonNodeType? value == some "Call"
             let mut cmds : Array (TSyntax `command) := #[cmd0]
             for i in List.range n do
               let acc ← unpackAccessTerm isTuple unpackTmpIdent i n
@@ -408,9 +416,13 @@ def assignSyntax : (kind : SyntaxNodeKind) → Json →
             if let some (valueTerm, update) ← mutatingCallRhsLowering? value then
               let valueTmpIdent := mkIdent (← freshName `__unpack_value)
               let bindValueTmp ← `(doElem| let $valueTmpIdent:ident := $valueTerm)
+              -- The popped value may be a tuple (`d, node = heappop(h)`) OR a list element
+              -- (`_, i, j = heappop(q)` on a list-of-lists) — a `_list_unpack` stamp forces list access;
+              -- otherwise default to a `Prod` (the popped element is usually a tuple).
+              let isTuple := target.getObjValAs? Bool "_list_unpack" != .ok true
               let mut binds : Array (TSyntax `doElem) := #[bindValueTmp, update]
               for i in List.range n do
-                let acc ← unpackAccessTerm true valueTmpIdent i n
+                let acc ← unpackAccessTerm isTuple valueTmpIdent i n
                 binds := binds.push (← tupleElementAssignDoElem nestedIsTuple elts[i]! acc)
               return ⟨mkNullNode (binds.map TSyntax.raw)⟩
             let valueStx ← getCode value `term
@@ -433,10 +445,18 @@ def assignSyntax : (kind : SyntaxNodeKind) → Json →
             -- into subscripts and never reach here, so a `Call` here means a `Prod` result).
             -- `_list_unpack` (stamped when the RHS is list-typed, e.g. `np.shape(x)` returns a list)
             -- forces list-index access even for a `Call` RHS that would otherwise be read as a `Prod`.
-            -- `_tuple_unpack` (TypeInfer saw a `tuple[...]`-typed RHS) settles it directly.
-            let isTuple := target.getObjValAs? Bool "_tuple_unpack" == .ok true
-              || ((jsonNodeType? value == some "Tuple" || jsonNodeType? value == some "Call")
-                  && target.getObjValAs? Bool "_list_unpack" != .ok true)
+            -- Unpack shape is decided by the INFERRED RHS type (authoritative): `_list_unpack` (RHS a
+            -- `list` — `sorted`/`map`/a `list[...]` value) → index access; `_tuple_unpack` (RHS a
+            -- `tuple[...]`) → `Prod`. The syntactic checks are ONLY the fallback when inference stamped
+            -- neither (an inference gap, or best-effort inference disabled): a literal `Tuple` is
+            -- exactly a `Prod`; a residual `Call` defaults to `Prod` (an un-inferred call is usually a
+            -- user function returning a tuple — a list-returning builtin carries a return-shape
+            -- `Behaviour` so it is stamped `_list_unpack` instead). To fix a mis-shaped case, extend
+            -- inference, not this fallback.
+            let isTuple :=
+              if target.getObjValAs? Bool "_list_unpack" == .ok true then false
+              else if target.getObjValAs? Bool "_tuple_unpack" == .ok true then true
+              else jsonNodeType? value == some "Tuple" || jsonNodeType? value == some "Call"
             let mut binds : Array (TSyntax `doElem) := #[bindValueTmp, bindUnpackTmp]
             -- A threaded combined-assign `(userTarget, ...threadedNames) = helper(...)` (ClosureConvert)
             -- puts the user target at index 0 and the threaded-state restores after it. When the user

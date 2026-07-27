@@ -40,9 +40,28 @@ def noneDefaultParamNames (initJson : Json) : List String := Id.run do
         if let .ok nm := args[i]!.getObjValAs? String "arg" then names := nm :: names
   return names
 
+/-- A `None` literal (`Constant` whose value is JSON null). -/
+private def isNoneConstJson (j : Json) : Bool :=
+  j.getObjValAs? String "node_type" == .ok "Constant" && (j.getObjVal? "value").toOption == some Json.null
+
+/-- A list whose elements are all `None` — `[None, None]` or `[None] * k` (`[None for _ in …]`) — the
+initial value of a recursive node's children array (a Trie's `children`, a segment tree's kids). -/
+private partial def isListOfNoneJson (j : Json) : Bool :=
+  match j.getObjValAs? String "node_type" with
+  | .ok "List" =>
+      let elts := (j.getObjValAs? (Array Json) "elts").toOption.getD #[]
+      !elts.isEmpty && elts.all isNoneConstJson
+  | .ok "BinOp" =>
+      j.getObjValAs? String "op" == .ok "mul"
+        && ((j.getObjVal? "left").toOption.any isListOfNoneJson
+            || (j.getObjVal? "right").toOption.any isListOfNoneJson)
+  | .ok "ListComp" => (j.getObjVal? "elt").toOption.any isNoneConstJson
+  | _ => false
+
 /-- One structure field `name : Type [:= default]` from a `{name, annotation?, default?}` entry. A
-field with no annotation whose `__init__` param is in `noneParams` (defaults to `None`) is typed
-`Option className` — the recursive node pattern. -/
+field with no annotation whose `__init__` param is in `noneParams` (defaults to `None`) — or which is
+directly assigned `None` / `[None]*k` — is typed `Option className` / `List (Option className)` (the
+recursive node pattern). -/
 def classStructFieldSyntax (className : String) (noneParams : List String) (fieldJson : Json) :
     PygenM (TSyntax ``Lean.Parser.Command.structSimpleBinder) := do
   let .ok fname := fieldJson.getObjValAs? String "name" | throwError
@@ -65,7 +84,13 @@ def classStructFieldSyntax (className : String) (noneParams : List String) (fiel
     | some (.null) | none =>
         if initFromNoneParam then `(Option $(mkIdent className.toName))
         else match (fieldJson.getObjVal? "init").toOption with
-          | some initJson => pure ((← pyTypeSyntax? (TypeInfer.ofValue initJson)).getD intTy)
+          -- A DIRECT `self.x = None` (not via a None-default param) is `Option ClassName`, and
+          -- `self.children = [None]*k` is `List (Option ClassName)` — the recursive-node pattern. Both
+          -- otherwise mis-infer to `Unit` / `List Unit` from the bare `None` literal.
+          | some initJson =>
+              if isNoneConstJson initJson then `(Option $(mkIdent className.toName))
+              else if isListOfNoneJson initJson then `(List (Option $(mkIdent className.toName)))
+              else pure ((← pyTypeSyntax? (TypeInfer.ofValue initJson)).getD intTy)
           | none => pure intTy
     | some annJson => pure ((← functionArgTypeSyntax? annJson).getD intTy)
   match (fieldJson.getObjVal? "default").toOption with

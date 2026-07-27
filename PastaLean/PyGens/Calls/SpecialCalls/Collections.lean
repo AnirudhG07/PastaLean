@@ -45,6 +45,14 @@ def lowerCollectionsCallTerm? (funcJson : Json) (argsArray : Array Json)
         throwError "defaultdict() keyword arguments are not supported yet."
       let some argJson := argsArray[0]?
         | throwError "defaultdict() expects a default-factory argument, e.g. `defaultdict(list)`."
+      -- `defaultdict(lambda: <expr>)`: each missing key reads as `<expr>` (`lambda: 1`, `lambda: inf`,
+      -- `lambda: [0]*m`). Modelled by `PyDefaultDict.empty <expr>` — the default is evaluated once at
+      -- construction rather than lazily per key, which agrees for a constant/closed default.
+      if jsonNodeType? argJson == some "Lambda" then
+        let .ok body := argJson.getObjVal? "body"
+          | throwError "defaultdict(lambda …) is missing a 'body'."
+        let bodyCode ← getCode body `term
+        return some (← `($(mkIdent ``Libraries.collections.PyDefaultDict.empty) $bodyCode))
       match factoryName? argJson with
       -- Sets and deques are `List`-backed in the runtime, so they share the empty-list default
       -- (`defaultdict(deque)` — each missing key starts an empty deque `[]`, e.g. `pos[a].append(b)`).

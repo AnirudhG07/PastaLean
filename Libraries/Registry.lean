@@ -7,6 +7,7 @@ import Libraries.functools.Mapping
 import Libraries.heapq.Mapping
 import Libraries.itertools.Mapping
 import Libraries.math.Mapping
+import Libraries.operator.Mapping
 import Libraries.string.Mapping
 import Libraries.numpy.Mapping
 import Libraries.passta.Mapping
@@ -30,6 +31,7 @@ def pythonLibraryMap? (moduleName member : String) : Option Lean.Name :=
   | "heapq" => heapq.pythonHeapqMemberMap? member
   | "itertools" => itertools.pythonItertoolsMemberMap? member
   | "math" => math.pythonMathMemberMap? member
+  | "operator" => operator.pythonOperatorMemberMap? member
   | "string" => string.pythonStringMemberMap? member
   | "numpy" => numpy.pythonNumpyMemberMap? member
   | "passta" => passta.pythonPasstaMemberMap? member

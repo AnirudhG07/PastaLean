@@ -205,6 +205,29 @@ def hoistWalrus (stmts : Array Json) : DesugarM (Array Json) := do
     out := out.push stmt
   return out
 
+/-! ### Full-slice assignment on a non-name container -/
+
+/-- `c[i][:] = V` (a full-slice assign whose container is not a plain `Name`) → `c[i] = V`. A full
+slice replaces the whole sequence, which under our value semantics is exactly a plain
+subscript/attribute assign; only the `name[:] = V` case still routes through `pySliceSet`. -/
+def rewriteFullSliceAssign (stmts : Array Json) : DesugarM (Array Json) := do
+  let noneField (j : Json) (k : String) : Bool :=
+    match j.getObjVal? k with | .ok v => v.isNull | _ => true
+  return stmts.map fun stmt =>
+    if jsonNodeType? stmt != some "Assign" then stmt else
+    match stmt.getObjVal? "target" with
+    | .ok target =>
+        if jsonNodeType? target == some "Subscript" then
+          match target.getObjVal? "slice", target.getObjVal? "value" with
+          | .ok sliceJ, .ok containerJ =>
+              let isFullSlice := jsonNodeType? sliceJ == some "Slice"
+                && noneField sliceJ "lower" && noneField sliceJ "upper" && noneField sliceJ "step"
+              if isFullSlice && jsonNodeType? containerJ != some "Name" then stmt.setObjVal! "target" containerJ
+              else stmt
+          | _, _ => stmt
+        else stmt
+    | _ => stmt
+
 /-! ### Chained assignment -/
 
 /-- `a = b = expr` (an `Assign` carrying a `targets` list) → evaluate `expr` once into a temporary,
@@ -414,6 +437,7 @@ def unrollInfiniteIter (stmts : Array Json) : DesugarM (Array Json) := do
 /-- Run every desugaring over one translation request's AST. -/
 def desugarAst (json : Json) : Except String Json := do
   let pass : DesugarM Json := do
+    let json ← rewriteStatementLists rewriteFullSliceAssign json
     let json ← rewriteStatementLists splitChainedAssign json
     let json ← rewriteStatementLists flattenForTargets json
     let json ← rewriteStatementLists unrollInfiniteIter json

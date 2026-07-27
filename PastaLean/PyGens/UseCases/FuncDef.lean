@@ -1081,7 +1081,12 @@ def assignHeadSyntax : (kind : SyntaxNodeKind) → Json →
             let n := elts.size
             let valueStx ← getCode value `term
             let unpackTmpIdent := mkIdent (← freshName `__unpack_pair)
-            let isTuple := jsonNodeType? value == some "Tuple" || jsonNodeType? value == some "Call"
+            -- Inference-first (see `Core/Assign.lean`): `_list_unpack` (RHS a `list`, `a,b = map(…)`) →
+            -- index; `_tuple_unpack` → `Prod`; else the syntactic `Tuple`/`Call` fallback.
+            let isTuple :=
+              if target.getObjValAs? Bool "_list_unpack" == .ok true then false
+              else if target.getObjValAs? Bool "_tuple_unpack" == .ok true then true
+              else jsonNodeType? value == some "Tuple" || jsonNodeType? value == some "Call"
             let nestedIsTuple := target.getObjValAs? Bool "_thread_unpack" == .ok true
             let mut result := tailCode
             for i in (List.range n).reverse do

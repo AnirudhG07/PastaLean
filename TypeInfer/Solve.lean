@@ -251,6 +251,19 @@ def paramNames (fn : Json) : Array String := Id.run do
 private def isNoneConst (j : Json) : Bool :=
   nodeTypeOf j == some "Constant" && (getField j "value" == some Json.null)
 
+/-- A list of all `None` — `[None, None]` or `[None] * k` — the initial value of a recursive node's
+child array (a Trie's `children`, a segment tree's kids). -/
+private partial def isListOfNone (j : Json) : Bool :=
+  match nodeTypeOf j with
+  | some "List" =>
+      let elts := (j.getObjValAs? (Array Json) "elts").toOption.getD #[]
+      !elts.isEmpty && elts.all isNoneConst
+  | some "BinOp" =>
+      j.getObjValAs? String "op" == .ok "mul"
+        && ((getField j "left").any isListOfNone || (getField j "right").any isListOfNone)
+  | some "ListComp" => (getField j "elt").any isNoneConst
+  | _ => false
+
 /-- Does the body test `name` against `None` (`x is None`, `x == None`, `if not x`)? Such a test
 proves the parameter is nullable, so a bare node-class annotation (LeetCode writes `root: TreeNode`
 but the base case `if root is None: return` means `Optional[TreeNode]`) should widen to `Optional`. -/
@@ -757,6 +770,35 @@ partial def refsListName (v : String) (j : Json) : Bool :=
      | .obj fs => fs.toList.any (fun (_, x) => refsListName v x)
      | _ => false)
 
+/-- Does the assignment target `t` have root name `v` (`v = …`, `v[i] = …`, `v.f = …`, or a tuple
+unpack binding `v`)? -/
+private partial def targetRootIs (v : String) (t : Json) : Bool :=
+  match nodeTypeOf t with
+  | some "Name" => nameId? t == some v
+  | some "Subscript" | some "Attribute" => (getField t "value").any (targetRootIs v)
+  | some "Tuple" | some "List" => ((t.getObjValAs? (Array Json) "elts").toOption.getD #[]).any (targetRootIs v)
+  | _ => false
+
+/-- Is `v` MUTATED anywhere in `json` — reassigned/`v[i]=`/`v.f=`, or the receiver of a mutating method
+(`append`/`pop`/…)? Used to keep a captured-and-mutated list off `Array` backing: such a var is
+THREADED through nested defs as a `List`, so an `Array` binder would clash. -/
+private partial def mutatesNameWithin (v : String) (json : Json) : Bool :=
+  let here : Bool := match nodeTypeOf json with
+    | some "Assign" | some "AugAssign" | some "AnnAssign" =>
+        (getField json "target").any (targetRootIs v)
+    | some "Call" =>
+        (getField json "func").any fun f =>
+          nodeTypeOf f == some "Attribute"
+            && ((getField f "value").bind nameId? == some v)
+            && ["append", "extend", "pop", "insert", "remove", "sort", "reverse", "appendleft",
+                "popleft", "add", "clear", "discard", "update"].contains
+                  ((f.getObjValAs? String "attr").toOption.getD "")
+    | _ => false
+  here || (match json with
+    | .arr xs => xs.any (mutatesNameWithin v)
+    | .obj fs => fs.toList.any (fun (_, x) => mutatesNameWithin v x)
+    | _ => false)
+
 /-- A use of list variable `v` that `Array`-backing supports with the identical generated surface:
 integer-index `v[i]` (read/write), `len(v)`, `for _ in v`, `(re)binding v`, and — only when
 `allowAppend` — a bare `v.append(x)`. Returns `false` on ANY other use — a slice `v[a:b]`, another
@@ -768,7 +810,9 @@ every child and a bare `Name v` reached there fails. Skips nested defs/lambdas (
 partial def listUsePorted (v : String) (allowAppend : Bool) (json : Json) : Bool :=
   match nodeTypeOf json with
   | some "Name" => nameId? json != some v
-  | some "FunctionDef" | some "ClassDef" | some "Lambda" => true
+  -- A nested def that only READS `v` keeps it portable (the capture is forwarded at its own type);
+  -- one that MUTATES `v` threads it as a `List`, so `v` must not be `Array`-backed.
+  | some "FunctionDef" | some "ClassDef" | some "Lambda" => !(mutatesNameWithin v json)
   | some "Subscript" =>
       let val := (getField json "value").getD Json.null
       let slice := (getField json "slice").getD Json.null
@@ -1438,9 +1482,15 @@ private def classFieldSigs (module : Json) : Sigs := Id.run do
               match nameId? init with
               | some p =>
                   if noneParams.contains p then .opt (.cls cls) else (ptype.get? p).getD .unknown
-              -- Otherwise type the initialiser itself, under the `__init__` params
-              -- (`self.p = list(range(n))` → `list[int]`, which `ofValue` alone cannot see).
-              | none => typeOfExpr {} ptype init
+              -- A DIRECT `self.x = None` → `Option C`; `self.x = [None]*k` → `List (Option C)` — the
+              -- recursive-node child pointer / children array. (These stay class-mentioning so
+              -- `stampClassFields` leaves them unannotated for the struct codegen to type.)
+              | none =>
+                  if isNoneConst init then .opt (.cls cls)
+                  else if isListOfNone init then .list (.opt (.cls cls))
+                  -- Otherwise type the initialiser itself, under the `__init__` params
+                  -- (`self.p = list(range(n))` → `list[int]`, which `ofValue` alone cannot see).
+                  else typeOfExpr {} ptype init
           | none => .unknown
         if t != .unknown then out := out.insert s!"{cls}.{fname}" t
   return out
