@@ -541,6 +541,17 @@ def assignSyntax : (kind : SyntaxNodeKind) → Json →
                 -- shadowed, and a `PyAny` slot coerces the new value in).
                 let conflicting := (jsonFieldOption target "_ty").any
                   (fun t => t.getObjValAs? String "id" == .ok "PyAny")
+                -- A type-changing rebind (`s = list(s)`: str → List) of a name that is already a
+                -- `let mut` can't re-`let mut` it (Lean forbids shadowing a mut var) nor plain-reassign
+                -- (the types differ). Bind a fresh `let mut s'rbN` and SSA-rename every later `s`
+                -- reference, keeping concrete types (vs. widening the slot to PyAny).
+                if conflicting && (← hasVar nameIdent.getId) && (← isMutVar nameIdent.getId) then
+                  let fresh ← freshRenameName nameIdent.getId
+                  addRename nameIdent.getId fresh
+                  addVar fresh
+                  setMutVar fresh
+                  setSetVar fresh (← jsonIsSetExpr value)
+                  return ← `(doElem| let mut $(mkIdent fresh):ident := $rhs)
                 let shadow := conflicting && (← hasVar nameIdent.getId) && !(← isMutVar nameIdent.getId)
                 let ty? ← if shadow then pure none else stampedTypeSyntax? target
                 let bound ← bindOrAssignLocal nameIdent rhs ty? shadow

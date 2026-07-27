@@ -125,6 +125,13 @@ structure State where
   /-- Variables bound with `let mut` (reassignable in place). An immutable `let` loop var that a body
   reassigns to a different type is shadowed instead; a `let mut` (incl. a `PyAny` slot) is not. -/
   mutVars : HashSet Name := HashSet.emptyWithCapacity 32
+  /-- SSA renames for type-changing rebinds. When `s = list(s)` reassigns an existing `let mut s`
+  (a `str`) to a `List`, we can neither re-`let mut s` (Lean forbids shadowing a mut var) nor
+  reassign (types differ), so we bind a fresh `let mut s'rbN` and map `s ↦ s'rbN` here; every later
+  reference to `s` resolves through this map. Scoped per top-level statement (fresh state) and
+  saved/restored around each block (a branch-local rebind stays branch-local). -/
+  renames : Std.HashMap Name Name := {}
+  renameCounter : Nat := 0
   checkExr : Bool := true
   useArrow : Bool := false
   /-- When the innermost enclosing loop has a Python `else` clause, this holds the name of the
@@ -262,7 +269,8 @@ def withRealIfMarked {α : Type} (json : Lean.Json) (x : PygenM α) : PygenM α 
 def withFixedVariables {α : Type} (x : PygenM α) : PygenM α := do
   withPygenStateField (·.varNames) (fun st varNames => { st with varNames := varNames }) (← get).varNames <|
     withPygenStateField (·.setVars) (fun st setVars => { st with setVars := setVars }) (← get).setVars <|
-      withPygenStateField (·.mutVars) (fun st mutVars => { st with mutVars := mutVars }) (← get).mutVars x
+      withPygenStateField (·.renames) (fun st renames => { st with renames := renames }) (← get).renames <|
+        withPygenStateField (·.mutVars) (fun st mutVars => { st with mutVars := mutVars }) (← get).mutVars x
 
 /-- Run `x` with the current loop's break-flag set to `flag?`. A loop body always overrides the
 flag (to its own `else` flag, or `none`) so a `break` binds to the innermost loop only. -/
@@ -290,6 +298,21 @@ def isMutVar (name : Name) : PygenM Bool := do
 
 def setMutVar (name : Name) : PygenM Unit := do
   modify fun st => { st with mutVars := st.mutVars.insert name }
+
+/-- Resolve a local name through the SSA rename map (identity if unrenamed). -/
+def applyRename (name : Name) : PygenM Name := do
+  return (← get).renames.getD name name
+
+/-- Register `name ↦ fresh`: every later reference to `name` resolves to `fresh`. Keyed by the
+original name, so a second type-change on the same variable overwrites cleanly. -/
+def addRename (name fresh : Name) : PygenM Unit := do
+  modify fun st => { st with renames := st.renames.insert name fresh }
+
+/-- A fresh rename target for `name`, containing `'` so it can never collide with a Python name. -/
+def freshRenameName (name : Name) : PygenM Name := do
+  let n := (← get).renameCounter
+  modify fun st => { st with renameCounter := n + 1 }
+  return (name.toString ++ "'rb" ++ toString n).toName
 
 def isSetVar (name : Name) : PygenM Bool := do
   return (← get).setVars.contains name
@@ -500,6 +523,36 @@ elab "#map_names" "[" nms:nameMapEntry,* "]" : command => do
 def leanName (pyName: Name) : CoreM Name := do
   let leanName := (funcMapExt.getState (← getEnv)).getD pyName pyName
   return leanName
+
+/-- Registry mapping a Python *conversion / callable name* to the Lean function it lowers to,
+populated by the `@[py_convert "name"]` attribute. Lets a user support a new conversion
+`a = myconv(s)` by tagging ONE Lean function — no edit to `pythonBuiltinMap?`. The Python name pins
+the target type (Lean can't infer it backwards at an untyped `let mut`); the tagged function stays
+open on its *source* via its own typeclass (`def pyMyConv {α} [MyConvCast α] (x : α) : T`), so adding
+a new source type is just another instance. Consulted as a fallback after the built-in tables, so a
+user entry cannot silently shadow `int`/`str`/`list`. Composes with the SSA-rename of a
+type-changing rebind, so the retyped assignment stitches automatically. -/
+initialize pyConvertExt :
+    SimpleScopedEnvExtension (String × Name) (Std.HashMap String Name) ←
+  registerSimpleScopedEnvExtension {
+    addEntry := fun m (key, n) => m.insert key n
+    initial := {}
+  }
+
+syntax (name := pyConvert) "py_convert" str : attr
+
+initialize registerBuiltinAttribute {
+  name := `pyConvert
+  descr := "Register a Lean function as the lowering of a Python conversion/callable name"
+  add := fun decl stx _ => MetaM.run' do
+    match stx with
+    | `(attr| py_convert $s:str) => pyConvertExt.add (s.getString, decl)
+    | _ => throwUnsupportedSyntax
+}
+
+/-- Resolve a `@[py_convert]`-registered conversion name to its Lean function. -/
+def pyConvertRegistered? (name : String) : CoreM (Option Name) := do
+  return (pyConvertExt.getState (← getEnv)).get? name
 
 /--
 Get the code generation functions for a given key. The key is a string that identifies the function. If no function is found for the key, an error is thrown.

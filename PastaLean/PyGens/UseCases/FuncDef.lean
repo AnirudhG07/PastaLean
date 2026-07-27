@@ -363,6 +363,9 @@ def functionValueSyntax (argInfos : Array (TSyntax `ident × Option (TSyntax `te
   for (argIdent, _) in argInfos do
     if bodyElems.any (fun b => jsonMutatesName b argIdent.getId.toString) then
       addVar argIdent.getId
+      -- The shadow below is a real `let mut`, so record it as mutable: a later type-changing rebind
+      -- (`s = list(s)`) must SSA-rename rather than illegally re-`let mut` the same name.
+      setMutVar argIdent.getId
       -- A node param the body treats as nullable (`while head; head = head.next`, marked `_mut_opt` by
       -- TypeInfer) seeds its mut shadow as `Option c` (`some p`), so `Option`-unwrap field access and
       -- truthiness line up while the param itself stays a plain `c` (callers unaffected).

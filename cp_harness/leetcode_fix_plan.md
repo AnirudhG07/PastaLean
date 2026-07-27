@@ -139,3 +139,21 @@ flag through the translate task (`bestEffortRef`); strict mode (default `--stric
 NOTE: structural errors thrown DURING closure-conversion (before body lowering, e.g. the "Unknown
 constant null" threaded-tuple-unpack bug) still collapse the whole function — those need the underlying
 bug fixed, not degradation.
+
+### Type-changing reassignment SSA-rename (+4 of 5)
+`s = list(s)` (str→List) on a mutated PARAM: the param's mutable shadow (`let mut s := s`) pins `s` to
+`String`, so the retype can neither re-`let mut s` (Lean forbids shadowing a mut var) nor reassign
+(types differ). Fix = SSA-rename: a type-changing rebind of an existing `let mut` binds a fresh
+`let mut s'rbN := rhs` and renames every later `s` reference (rename map in codegen State, applied in
+`nameSyntax`, saved/restored per block). FuncDef now `setMutVar`s the param shadow so codegen sees it
+as a real mut var and takes the rename path. Fixes shifting-letters, movement-of-robots,
+replace-all-digits-with-characters, replace-all-s-…; open-the-lock hits a separate `PyIntCast PyAny`.
+
+### `@[py_convert "name"]` extension point (design deliverable)
+A user can now support a new Python conversion `a = name(s)` by tagging ONE Lean function
+`@[py_convert "name"] def pyMyConv {α} [MyConvCast α] (x : α) : T` — no `pythonBuiltinMap?` edit. The
+name pins the target type (Lean can't infer it backwards at an untyped `let mut`); the tagged function
+stays open on its source via its own typeclass, so a new source is just another instance. Registry
+(`pyConvertExt`) is consulted as a fallback in `builtinMappedName?` after the built-in tables, so it
+can't shadow `int`/`str`/`list`; composes with the SSA-rename so the retyped assignment stitches.
+Regression test: PALC/PyAPI/TestPyConvert.lean.

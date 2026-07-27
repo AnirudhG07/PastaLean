@@ -175,10 +175,13 @@ def libraryMutatorOf? (funcJson : Json) : Option Libraries.LibraryMutator :=
 /-- Resolve a Python builtin name to its Lean runtime name, honouring the numeric mode: in exact
 mode the `pythonBuiltinMapExact?` overrides (e.g. `float` → `pyRat`) win over the regular table. -/
 def builtinMappedName? (name : String) : PygenM (Option Lean.Name) := do
+  -- User conversions registered via `@[py_convert "name"]` are a fallback: the built-in tables win,
+  -- so a user entry never silently shadows `int`/`str`/`list`.
+  let registered ← pyConvertRegistered? name
   if (← getNumericMode) == .exact then
-    return pythonBuiltinMapExact? name <|> pythonBuiltinMap? name
+    return pythonBuiltinMapExact? name <|> pythonBuiltinMap? name <|> registered
   else
-    return pythonBuiltinMap? name
+    return pythonBuiltinMap? name <|> registered
 
 /-- The literal of a non-finite `float('inf')` / `float('-inf')` / `float('nan')` call. -/
 def nonFiniteFloatLiteral? (funcJson : Json) (argsArray : Array Json) : Option String := do
@@ -210,8 +213,10 @@ def nameSyntax : (kind : SyntaxNodeKind) → Json →
     match ← jsonLibraryMappedName? json with
     | some leanName => pure (mkIdent leanName)
     | none =>
-        let .ok id := json.getObjValAs? String "id" | throwError
+        let .ok id0 := json.getObjValAs? String "id" | throwError
           s!"Name node does not have an 'id' field or it is not a string: {json}"
+        -- Resolve SSA renames first (a type-changing rebind `s = list(s)` renamed later `s` refs).
+        let id := (← applyRename id0.toName).toString
         -- In a run-twin, a reference to a user function/class is suffixed (`bar` → `bar'rn`,
         -- `CNN` → `CNN'rn`); locals and library names are left as-is.
         let suffixed ← suffixIfUserName id
@@ -229,8 +234,9 @@ def nameSyntax : (kind : SyntaxNodeKind) → Json →
     match ← jsonLibraryMappedName? json with
     | some leanName => pure (mkIdent leanName)
     | none =>
-        let .ok id := json.getObjValAs? String "id" | throwError
+        let .ok id0 := json.getObjValAs? String "id" | throwError
           s!"Name node does not have an 'id' field or it is not a string: {json}"
+        let id := (← applyRename id0.toName).toString
         -- In a run-twin, a reference to a user function/class is suffixed (`bar` → `bar'rn`,
         -- `CNN` → `CNN'rn`); locals and library names are left as-is.
         return mkIdent (← suffixIfUserName id).toName
