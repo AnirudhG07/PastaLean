@@ -16,19 +16,35 @@ structure Point where
   y : Int
   deriving Inhabited, Repr, BEq
 
+structure Point'rn where
+  x : Int
+  y : Int
+  deriving Inhabited, Repr, BEq
+
 structure Line where
+  p1 : PastaLean.Ref Point
+  p2 : PastaLean.Ref Point
+  deriving Inhabited, Repr, BEq
+
+structure Line'rn where
   p1 : PastaLean.Ref Point
   p2 : PastaLean.Ref Point
   deriving Inhabited, Repr, BEq
 
 inductive Val where
   | point (x : Int) (y : Int)
+  | point'rn (x : Int) (y : Int)
   | line (p1 : PastaLean.Ref Point) (p2 : PastaLean.Ref Point)
+  | line'rn (p1 : PastaLean.Ref Point) (p2 : PastaLean.Ref Point)
   deriving Repr, Inhabited
 
 derive_storable% Point
 
+derive_storable% Point'rn
+
 derive_storable% Line
+
+derive_storable% Line'rn
 
 -- A class whose fields are OTHER user classes (nested value structs, HeapSL's Point/Line).
 -- Exercises: prelude emission ORDER (Point must precede Line, and both precede Val, which
@@ -38,8 +54,19 @@ def Point.new := fun x ↦ fun y ↦
       PastaLean.alloc ({ x := x, y := y } : Point)) :
     PastaLean.HeapM Val (PastaLean.Ref Point))
 
+def Point'rn.new := fun x ↦ fun y ↦
+  ((do
+      PastaLean.alloc ({ x := x, y := y } : Point'rn)) :
+    PastaLean.HeapM Val (PastaLean.Ref Point'rn))
+
 def Line.new : PastaLean.Ref Point → PastaLean.Ref Point → PastaLean.HeapM Val (PastaLean.Ref Line) :=
   fun (p1 : PastaLean.Ref Point) ↦ fun (p2 : PastaLean.Ref Point) ↦
   ((do
       PastaLean.alloc ({ p1 := p1, p2 := p2 } : Line)) :
     PastaLean.HeapM Val (PastaLean.Ref Line))
+
+def Line'rn.new : PastaLean.Ref Point → PastaLean.Ref Point → PastaLean.HeapM Val (PastaLean.Ref Line'rn) :=
+  fun (p1 : PastaLean.Ref Point) ↦ fun (p2 : PastaLean.Ref Point) ↦
+  ((do
+      PastaLean.alloc ({ p1 := p1, p2 := p2 } : Line'rn)) :
+    PastaLean.HeapM Val (PastaLean.Ref Line'rn))

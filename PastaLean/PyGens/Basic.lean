@@ -554,6 +554,14 @@ def unaryOpSyntax : (kind : SyntaxNodeKind) → Json →
     else unaryOpApplyTerm op operandCode
   | _, _ => throwError s!"Unsupported syntax category for UnaryOp node"
 
+/-- Does `stx` contain a `(← e)` await anywhere? A value-position `and`/`or` whose operands carry
+one (heap derefs, IO) cannot lower to a pure `if`-term — its branches would host `←`, which is only
+legal inside a `do`. -/
+partial def syntaxHasLift : Syntax → Bool
+  | .node _ ``Lean.Parser.Term.liftMethod _ => true
+  | .node _ _ args => args.any syntaxHasLift
+  | _ => false
+
 /-- Python `and`/`or` as a VALUE (not a truthiness test): they return the deciding *operand*, not a
 `Bool` — `x or '0'` yields the string. `a or b … = <first truthy, else last>`, `a and b … = <first
 falsy, else last>`, lowered to nested `if pyTruthy … then … else …`. Only valid when the operands
@@ -565,10 +573,21 @@ def boolOpValueTerm (json : Json) : PygenM (TSyntax `term) := do
     s!"BoolOp is missing 'values': {json}"
   let codes ← valuesJson.mapM (getCode · `term)
   let some last := codes.back? | throwError s!"BoolOp has no operands: {json}"
+  let t := mkIdent ``PastaLean.pyTruthy
+  -- When an operand carries a `←` (heap deref, IO) we are necessarily inside a `do`, and the
+  -- `if pyTruthy … then … else …` must be a `do`-if so each await lifts into its own branch; a pure
+  -- `if`-term forbids `←` in its branches. Binding the guard once (hygienic `bopGuard`) keeps
+  -- Python's short-circuit: evaluate the guard, then only the chosen operand. Pure operands keep the
+  -- plain `if`-term, which is also valid in non-`do` positions (top-level `def`s).
+  let monadic := codes.any (fun c => syntaxHasLift c.raw)
   -- Fold the operands before the last from right to left.
   (codes.pop.reverse).foldlM (init := last) fun acc c =>
-    let t := mkIdent ``PastaLean.pyTruthy
-    if op == "and" then `(if $t $c then $acc else $c) else `(if $t $c then $c else $acc)
+    if monadic then
+      if op == "and" then
+        `((← do let bopGuard := $c; if $t bopGuard then pure $acc else pure bopGuard))
+      else
+        `((← do let bopGuard := $c; if $t bopGuard then pure bopGuard else pure $acc))
+    else if op == "and" then `(if $t $c then $acc else $c) else `(if $t $c then $c else $acc)
 
 @[pygen "BoolOp"]
 def boolOpSyntax : (kind : SyntaxNodeKind) → Json →

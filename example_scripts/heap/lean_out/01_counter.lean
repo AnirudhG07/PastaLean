@@ -15,11 +15,18 @@ structure Counter where
   count : Int
   deriving Inhabited, Repr, BEq
 
+structure Counter'rn where
+  count : Int
+  deriving Inhabited, Repr, BEq
+
 inductive Val where
   | counter (count : Int)
+  | counter'rn (count : Int)
   deriving Repr, Inhabited
 
 derive_storable% Counter
+
+derive_storable% Counter'rn
 
 -- Simplest case: one Int field + a getter method.
 -- Exercises: struct with a single primitive field, `Val.counter (count : Int)`,
@@ -30,6 +37,17 @@ def Counter.new : PastaLean.HeapM Val (PastaLean.Ref Counter) :=
     PastaLean.HeapM Val (PastaLean.Ref Counter))
 
 def Counter.value (self : PastaLean.Ref Counter) :=
+  ((do
+      let __py_ret_1 := (← self ~> count)
+      return __py_ret_1) :
+    PastaLean.HeapM Val _)
+
+def Counter'rn.new : PastaLean.HeapM Val (PastaLean.Ref Counter'rn) :=
+  ((do
+      PastaLean.alloc ({ count := (0 : Int) } : Counter'rn)) :
+    PastaLean.HeapM Val (PastaLean.Ref Counter'rn))
+
+def Counter'rn.value (self : PastaLean.Ref Counter'rn) :=
   ((do
       let __py_ret_1 := (← self ~> count)
       return __py_ret_1) :

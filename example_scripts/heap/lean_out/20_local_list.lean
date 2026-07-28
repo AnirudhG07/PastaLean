@@ -25,13 +25,28 @@ instance : Storable Val (List Int) where
 -- `ys = xs` shares the same heap list, so `ys.append` is visible via `xs`. Returns 7.
 def demo :=
   ((do
-      let mut xs := (← PastaLean.alloc [(1 : Int)])
-      PastaLean.modifyRef xs (fun __hc_l => PastaLean.pyAppend __hc_l (2 : Int))
+      let mut xs := (← PastaLean.allocM [(1 : Int)])
+      PastaLean.modifyRefM xs (fun __hc_l => PastaLean.pyAppend __hc_l (2 : Int))
       let mut ys := xs
-      PastaLean.modifyRef ys (fun __hc_l => PastaLean.pyAppend __hc_l (3 : Int))
+      PastaLean.modifyRefM ys (fun __hc_l => PastaLean.pyAppend __hc_l (3 : Int))
       let mut total : Int := (0 : Int)
-      for v in (PastaLean.pyIter (← PastaLean.readRef xs))do
+      for v in (PastaLean.pyIter (← PastaLean.readRefM xs))do
         total := total +ₚ v
-      let __py_ret_1 := total +ₚ (← PastaLean.readRef xs)⦋(0 : Int)⦌
+      let __py_ret_1 := total +ₚ (← PastaLean.readRefM xs)⦋(0 : Int)⦌
+      return __py_ret_1) :
+    (PastaLean.HeapM Val) _)
+
+attribute [simp, taste_ingr] demo
+
+def demo'rn :=
+  ((do
+      let mut xs := (← PastaLean.allocM [(1 : Int)])
+      PastaLean.modifyRefM xs (fun __hc_l => PastaLean.pyAppend __hc_l (2 : Int))
+      let mut ys := xs
+      PastaLean.modifyRefM ys (fun __hc_l => PastaLean.pyAppend __hc_l (3 : Int))
+      let mut total : Int := (0 : Int)
+      for v in (PastaLean.pyIter (← PastaLean.readRefM xs))do
+        total := total +ₚ v
+      let __py_ret_1 := total +ₚ (← PastaLean.readRefM xs)⦋(0 : Int)⦌
       return __py_ret_1) :
     (PastaLean.HeapM Val) _)
