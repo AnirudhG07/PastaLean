@@ -1,0 +1,13 @@
+{
+  "problem": "time-needed-to-buy-tickets",
+  "module": "TimeNeededToBuyTickets",
+  "method": "timeRequiredToBuy",
+  "params": [
+    "tickets",
+    "k"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 100
+}

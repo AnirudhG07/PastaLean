@@ -1,0 +1,12 @@
+{
+  "problem": "minimum-moves-to-equal-array-elements",
+  "module": "MinimumMovesToEqualArrayElements",
+  "method": "minMoves",
+  "params": [
+    "nums"
+  ],
+  "difficulty": "Medium",
+  "bucket": "term",
+  "feature": "term",
+  "n_tests": 77
+}

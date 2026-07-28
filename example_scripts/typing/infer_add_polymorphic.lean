@@ -14,11 +14,11 @@ set_option maxHeartbeats 0
 -- One `add` definition, called at int and str in the same program: the params are used at genuinely
 -- different types (`.any`), so they box to PyAny and dispatch on the runtime tag. Runs off a single
 -- definition -> prints 7 then xy.
-def add := fun (a : PyAny) ↦ fun (b : PyAny) ↦ a +ₚ b
+def add := fun (a : PyAny) ↦ fun (b : PyAny) ↦ (a +ₚ b : PastaLean.PyAny)
 
-attribute [simp, taste_ingr] add
+attribute [simp] add
 
-def add'rn := fun (a : PyAny) ↦ fun (b : PyAny) ↦ a +ₚ b
+def add'rn := fun (a : PyAny) ↦ fun (b : PyAny) ↦ (a +ₚ b : PastaLean.PyAny)
 
 def main : IO Unit := do
   let inputText ← IO.getStdin >>= fun h => h.readToEnd

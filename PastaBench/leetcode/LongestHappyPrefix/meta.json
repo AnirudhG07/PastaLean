@@ -1,0 +1,12 @@
+{
+  "problem": "longest-happy-prefix",
+  "module": "LongestHappyPrefix",
+  "method": "longestPrefix",
+  "params": [
+    "s"
+  ],
+  "difficulty": "Hard",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 162
+}

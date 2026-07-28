@@ -1,0 +1,12 @@
+{
+  "problem": "minimum-right-shifts-to-sort-the-array",
+  "module": "MinimumRightShiftsToSortTheArray",
+  "method": "minimumRightShifts",
+  "params": [
+    "nums"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 129
+}

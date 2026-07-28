@@ -1,0 +1,12 @@
+{
+  "problem": "1-bit-and-2-bit-characters",
+  "module": "N1BitAnd2BitCharacters",
+  "method": "isOneBitCharacter",
+  "params": [
+    "bits"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 95
+}

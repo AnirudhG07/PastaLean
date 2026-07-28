@@ -16,7 +16,7 @@ and Shed Skin.
 
 namespace TypeInfer
 
-/-- What PastaLean knows about a Python value. -/
+/-- Inductive type for representing all supported Python Types in PastaLean -/
 inductive PyType where
   /-- Nothing known yet — the lattice bottom. -/
   | unknown
@@ -37,6 +37,9 @@ inductive PyType where
   | opt   (inner : PyType)
   /-- A user class, `TreeNode`, `ListNode`, … -/
   | cls   (name : String)
+  /-- A function type — `Callable[[A, B], R]`. The type of a decorator's wrapped parameter, and of
+  a function passed as a value. -/
+  | fn    (args : List PyType) (ret : PyType)
   deriving Inhabited, Repr
 
 namespace PyType
@@ -49,6 +52,8 @@ partial def beq : PyType → PyType → Bool
   | .cls a, .cls b => a == b
   | .tuple as, .tuple bs =>
       as.length == bs.length && (as.zip bs).all fun (a, b) => beq a b
+  | .fn as r₁, .fn bs r₂ =>
+      as.length == bs.length && (as.zip bs).all (fun (a, b) => beq a b) && beq r₁ r₂
   | _, _ => false
 
 instance : BEq PyType := ⟨beq⟩
@@ -67,8 +72,16 @@ def toString : PyType → String
   | .opt i => s!"Optional[{toString i}]"
   | .cls n => n
   | .tuple es => "tuple[" ++ String.intercalate ", " (es.map toString) ++ "]"
+  | .fn as r => "Callable[[" ++ String.intercalate ", " (as.map toString) ++ s!"], {toString r}]"
 
 instance : ToString PyType := ⟨toString⟩
+
+/-- The class a field access projects from. An `Option`-wrapped node still projects its class's
+fields (`root.left` where `root : Optional[TreeNode]`) — codegen inserts the unwrap. -/
+def classNameOf? : PyType → Option String
+  | .cls n => Option.some n
+  | .opt (.cls n) => Option.some n
+  | _ => Option.none
 
 /-- True when the type is fully determined, so a Lean type can be emitted for it. -/
 partial def isKnown : PyType → Bool
@@ -76,6 +89,7 @@ partial def isKnown : PyType → Bool
   | .list e | .set e | .opt e => isKnown e
   | .dict k v => isKnown k && isKnown v
   | .tuple es => es.all isKnown
+  | .fn as r => as.all isKnown && isKnown r
   | _ => true
 
 /-- Should a *local* binding of this type be ascribed at all? Only discrete scalars, where an
@@ -83,13 +97,23 @@ unascribed literal would otherwise default (`5` → `ℚ` in exact mode). Contai
 Lean to infer from the assignment RHS, so an ascription never *forces* an element type (e.g. `ℚ`)
 against what the RHS actually elaborates to (e.g. a numpy `Float`). Parameters are ascribed
 separately — this governs only locals. -/
-def needsAscription : PyType → Bool
+partial def needsAscription : PyType → Bool
   | .int | .bool | .str => true
   -- A container of concrete scalars (`list[int]`, `set[str]`, `list[list[int]]`) is unambiguous, so
   -- ascribing it is safe *and* needed: without it a `List Int` local can be silently unified up to
   -- `List ℚ` by a cross-variable link (`vk = stk.pop()` with `vk` a float), which then fails when the
   -- element is read as an `Int`. `float`/`unknown` elements stay unascribed (the numpy-`Float` hazard).
   | .list e | .set e => needsAscription e
+  -- Same reasoning for a dict of concrete scalars (`graph = {}` refined to `dict[int, int]`): it is
+  -- unambiguous, and without the ascription a captured dict is lifted as an untyped parameter and
+  -- `PyGetItem ?m …` goes stuck. A `float`/`unknown` side stays unascribed, as above.
+  | .dict k v => needsAscription k && needsAscription v
+  -- A tuple of concrete scalars is unambiguous too (`t = []; t.append((i, j))` → `list[(int,int)]`),
+  -- and without it a captured list-of-pairs is lifted untyped.
+  | .tuple es => !es.isEmpty && es.all needsAscription
+  -- The known-dynamic top type materialises as `PyAny`, which Lean cannot infer from a heterogeneous
+  -- literal's first element — so a container wrapping it (`list[any]` → `List PyAny`) must be ascribed.
+  | .any => true
   | _ => false
 
 /-- Least upper bound.
@@ -118,6 +142,9 @@ partial def join : PyType → PyType → PyType
   | .tuple as, .tuple bs =>
       if as.length == bs.length then .tuple ((as.zip bs).map fun (a, b) => join a b)
       else .any
+  | .fn as r₁, .fn bs r₂ =>
+      if as.length == bs.length then .fn ((as.zip bs).map fun (a, b) => join a b) (join r₁ r₂)
+      else .any
   | a, b => if a.beq b then a else .any
 
 /-- Join a whole list, starting from `unknown`. -/
@@ -137,6 +164,8 @@ partial def consistent : PyType → PyType → Bool
   | .dict k₁ v₁, .dict k₂ v₂ => consistent k₁ k₂ && consistent v₁ v₂
   | .tuple as, .tuple bs =>
       as.length == bs.length && (as.zip bs).all fun (a, b) => consistent a b
+  | .fn as r₁, .fn bs r₂ =>
+      as.length == bs.length && (as.zip bs).all (fun (a, b) => consistent a b) && consistent r₁ r₂
   | a, b => a.beq b
 
 /-- Is this a number Python arithmetic accepts? -/
@@ -150,6 +179,8 @@ def elemType : PyType → PyType
   | .str => .str
   | .dict k _ => k
   | .tuple es => joinAll es
+  -- Indexing/iterating a boxed value yields a boxed value.
+  | .any => .any
   | _ => .unknown
 
 /-- What to do when a value of type `actual` reaches a position expecting `expected`: the small

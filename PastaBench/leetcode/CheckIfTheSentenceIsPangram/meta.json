@@ -1,0 +1,12 @@
+{
+  "problem": "check-if-the-sentence-is-pangram",
+  "module": "CheckIfTheSentenceIsPangram",
+  "method": "checkIfPangram",
+  "params": [
+    "sentence"
+  ],
+  "difficulty": "Easy",
+  "bucket": "term",
+  "feature": "term",
+  "n_tests": 98
+}

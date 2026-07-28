@@ -250,6 +250,21 @@ def classInitConstructor (className : String) (initJson : Json) (hasRealField : 
       | none => if hasRealField then `(command| noncomputable def $mkIdentC := $valueStx)
                 else `(command| def $mkIdentC := $valueStx)
 
+/-- True when the method's body calls itself (`self.find(…)`). Lean cannot show termination for
+path-compression / DFS recursion, so such a method is emitted `partial` — and without `@[simp]`,
+which on a recursive def is an unfolding hazard. -/
+partial def methodIsSelfRecursive (mName : String) (json : Json) : Bool :=
+  let selfCall :=
+    jsonNodeType? json == some "Attribute"
+    && json.getObjValAs? String "attr" == .ok mName
+    && (match (json.getObjVal? "value").toOption with
+        | some v => jsonNodeType? v == some "Name" && v.getObjValAs? String "id" == .ok "self"
+        | none => false)
+  selfCall || (match json with
+    | .arr xs => xs.any (methodIsSelfRecursive mName)
+    | .obj fs => fs.toList.any (fun (_, v) => methodIsSelfRecursive mName v)
+    | _ => false)
+
 /-- One method `def C.method …`. A getter is a pure `functionValueSyntax`; a mutator returns the
 rebuilt `self`. Static/class methods drop the leading `self`/`cls`. -/
 def classMethodDef (className : String) (info : ClassInfo) (m : Json) : PygenM (Array (TSyntax `command)) := do
@@ -278,19 +293,22 @@ def classMethodDef (className : String) (info : ClassInfo) (m : Json) : PygenM (
   -- A method the per-variable pass stamped `_real_fn` (produces/handles an `ℝ` transcendental)
   -- must be `noncomputable` in exact mode, exactly like a free function.
   let nc := (← getNumericMode) == .exact && m.getObjValAs? Bool "_real_fn" == .ok true
+  let isRecursive := bodyElems.any (methodIsSelfRecursive mName)
   let cmd ← match binders? with
     | some binders =>
-        if nc then `(command| noncomputable def $defIdent $binders* := $valueStx)
+        if isRecursive then `(command| partial def $defIdent $binders* := $valueStx)
+        else if nc then `(command| noncomputable def $defIdent $binders* := $valueStx)
         else `(command| def $defIdent $binders* := $valueStx)
     | none =>
-        if nc then `(command| noncomputable def $defIdent := $valueStx)
+        if isRecursive then `(command| partial def $defIdent := $valueStx)
+        else if nc then `(command| noncomputable def $defIdent := $valueStx)
         else `(command| def $defIdent := $valueStx)
   let finalCmd ← applyPrivacy mName cmd
   -- Prove-version (exact) methods get `@[simp]` (and `taste_ingr` when a pure, computable, non-
   -- `assert` value method), so `taste?` can unfold them — mirroring free functions in `FuncDef`.
   -- Never the `'rn` twin (approx mode is skipped). Methods are emitted as plain `def`s, not
   -- `partial`, so there's no recursive-`@[simp]` hazard.
-  if (← getNumericMode) == .exact then
+  if (← getNumericMode) == .exact && !isRecursive then
     let isEffectful := bodyNeedsExceptionMonad bodyElems || bodyNeedsIOMonad bodyElems
     let hasAssert := bodyElems.any (jsonNodeType? · == some "Assert")
     let attrCmd ← if !isEffectful && !hasAssert && !nc

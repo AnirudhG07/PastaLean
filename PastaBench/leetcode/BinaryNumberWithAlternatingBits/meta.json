@@ -1,0 +1,12 @@
+{
+  "problem": "binary-number-with-alternating-bits",
+  "module": "BinaryNumberWithAlternatingBits",
+  "method": "hasAlternatingBits",
+  "params": [
+    "n"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 72
+}

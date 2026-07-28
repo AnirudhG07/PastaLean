@@ -76,15 +76,21 @@ def BX :=
 def total₀ :=
   (0 : Int)
 
-def __py_for_9d7acb :=
-  List.foldl
-    (fun _state_1 i =>
-      Id.run
-        (do
-          let mut total := _state_1
-          total := total +ₚ i
-          return total))
-    total₀ (PastaLean.pyRange (5 : Int))
+def i₀ :=
+  (0 : Int)
+
+def __py_while_958610 :=
+  Id.run
+    (do
+      let mut i := i₀
+      let mut total := total₀
+      while (i < (5 : Int)) do
+        total := total +ₚ i
+        i := i +ₚ (1 : Int)
+      return (i, total))
+
+def i :=
+  Prod.fst __py_while_958610
 
 def total :=
-  __py_for_9d7acb
+  Prod.snd __py_while_958610

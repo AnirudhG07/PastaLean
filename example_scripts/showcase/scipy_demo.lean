@@ -40,7 +40,8 @@ def variance'rn := fun (xs : List Float) ↦
 noncomputable def main' :=
   ((do
       let mut data :=
-        [(2.0 : Rat), (4.0 : Rat), (4.0 : Rat), (4.0 : Rat), (5.0 : Rat), (5.0 : Rat), (7.0 : Rat), (9.0 : Rat)]
+        ([(2.0 : Rat), (4.0 : Rat), (4.0 : Rat), (4.0 : Rat), (5.0 : Rat), (5.0 : Rat), (7.0 : Rat), (9.0 : Rat)] :
+          List Rat)
       let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg "=== scipy.special ==="]
       let _ ←
         PastaLean.ProofMode.pyPrintProof
@@ -65,7 +66,7 @@ noncomputable def main' :=
         PastaLean.ProofMode.pyPrintProof [pyPrintArg "hmean     =", pyPrintArg (Libraries.scipy.pyScipyHmean data)]
       let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg "variance  =", pyPrintArg (variance data)]
       let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg "=== scipy.linalg ==="]
-      let mut matrix := [[(4.0 : Rat), (3.0 : Rat)], [(6.0 : Rat), (3.0 : Rat)]]
+      let mut matrix := ([[(4.0 : Rat), (3.0 : Rat)], [(6.0 : Rat), (3.0 : Rat)]] : List (List Rat))
       let _ ←
         PastaLean.ProofMode.pyPrintProof [pyPrintArg "det       =", pyPrintArg (Libraries.scipy.pyScipyDet matrix)]
       let _ ←
@@ -78,8 +79,9 @@ attribute [simp] main'
 def main''rn :=
   ((do
       let mut data :=
-        [(2.0 : Float), (4.0 : Float), (4.0 : Float), (4.0 : Float), (5.0 : Float), (5.0 : Float), (7.0 : Float),
-          (9.0 : Float)]
+        ([(2.0 : Float), (4.0 : Float), (4.0 : Float), (4.0 : Float), (5.0 : Float), (5.0 : Float), (7.0 : Float),
+            (9.0 : Float)] :
+          List Float)
       let _ ← pyPrintIO [pyPrintArg "=== scipy.special ==="]
       let _ ← pyPrintIO [pyPrintArg "5!        =", pyPrintArg (Libraries.scipy.pyScipyFactorial (5 : Int))]
       let _ ← pyPrintIO [pyPrintArg "C(8,3)    =", pyPrintArg (Libraries.scipy.pyScipyComb (8 : Int) (3 : Int))]
@@ -94,7 +96,7 @@ def main''rn :=
       let _ ← pyPrintIO [pyPrintArg "hmean     =", pyPrintArg (Libraries.scipy.pyScipyHmean data)]
       let _ ← pyPrintIO [pyPrintArg "variance  =", pyPrintArg (variance'rn data)]
       let _ ← pyPrintIO [pyPrintArg "=== scipy.linalg ==="]
-      let mut matrix := [[(4.0 : Float), (3.0 : Float)], [(6.0 : Float), (3.0 : Float)]]
+      let mut matrix := ([[(4.0 : Float), (3.0 : Float)], [(6.0 : Float), (3.0 : Float)]] : List (List Float))
       let _ ← pyPrintIO [pyPrintArg "det       =", pyPrintArg (Libraries.scipy.pyScipyDet matrix)]
       let _ ←
         pyPrintIO [pyPrintArg "norm[3,4] =", pyPrintArg (Libraries.scipy.pyScipyNorm [(3.0 : Float), (4.0 : Float)])]) :

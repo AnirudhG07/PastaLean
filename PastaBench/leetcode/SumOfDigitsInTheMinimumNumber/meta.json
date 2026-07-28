@@ -1,0 +1,12 @@
+{
+  "problem": "sum-of-digits-in-the-minimum-number",
+  "module": "SumOfDigitsInTheMinimumNumber",
+  "method": "sumOfDigits",
+  "params": [
+    "nums"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 121
+}

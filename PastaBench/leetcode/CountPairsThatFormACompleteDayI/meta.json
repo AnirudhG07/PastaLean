@@ -1,0 +1,12 @@
+{
+  "problem": "count-pairs-that-form-a-complete-day-i",
+  "module": "CountPairsThatFormACompleteDayI",
+  "method": "countCompleteDayPairs",
+  "params": [
+    "hours"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 83
+}

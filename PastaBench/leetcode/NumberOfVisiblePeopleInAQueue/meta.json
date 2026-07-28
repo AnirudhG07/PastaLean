@@ -1,0 +1,12 @@
+{
+  "problem": "number-of-visible-people-in-a-queue",
+  "module": "NumberOfVisiblePeopleInAQueue",
+  "method": "canSeePersonsCount",
+  "params": [
+    "heights"
+  ],
+  "difficulty": "Hard",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 123
+}

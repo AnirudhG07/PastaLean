@@ -1,0 +1,12 @@
+{
+  "problem": "minimum-moves-to-convert-string",
+  "module": "MinimumMovesToConvertString",
+  "method": "minimumMoves",
+  "params": [
+    "s"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 166
+}

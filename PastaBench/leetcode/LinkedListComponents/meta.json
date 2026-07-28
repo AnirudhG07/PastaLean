@@ -1,0 +1,13 @@
+{
+  "problem": "linked-list-components",
+  "module": "LinkedListComponents",
+  "method": "numComponents",
+  "params": [
+    "head",
+    "nums"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "class",
+  "n_tests": 106
+}

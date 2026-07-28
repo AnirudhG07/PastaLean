@@ -1,0 +1,12 @@
+{
+  "problem": "binary-tree-postorder-traversal",
+  "module": "BinaryTreePostorderTraversal",
+  "method": "postorderTraversal",
+  "params": [
+    "root"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "class",
+  "n_tests": 91
+}

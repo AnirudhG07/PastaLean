@@ -1,0 +1,12 @@
+{
+  "problem": "minimum-one-bit-operations-to-make-integers-zero",
+  "module": "MinimumOneBitOperationsToMakeIntegersZero",
+  "method": "minimumOneBitOperations",
+  "params": [
+    "n"
+  ],
+  "difficulty": "Hard",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 71
+}

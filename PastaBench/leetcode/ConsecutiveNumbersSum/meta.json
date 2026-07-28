@@ -1,0 +1,12 @@
+{
+  "problem": "consecutive-numbers-sum",
+  "module": "ConsecutiveNumbersSum",
+  "method": "consecutiveNumbersSum",
+  "params": [
+    "n"
+  ],
+  "difficulty": "Hard",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 54
+}

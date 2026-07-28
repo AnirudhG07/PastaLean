@@ -1,0 +1,12 @@
+{
+  "problem": "armstrong-number",
+  "module": "ArmstrongNumber",
+  "method": "isArmstrong",
+  "params": [
+    "n"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 56
+}

@@ -1,0 +1,13 @@
+{
+  "problem": "find-a-value-of-a-mysterious-function-closest-to-target",
+  "module": "FindAValueOfAMysteriousFunctionClosestToTarget",
+  "method": "closestToTarget",
+  "params": [
+    "arr",
+    "target"
+  ],
+  "difficulty": "Hard",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 119
+}

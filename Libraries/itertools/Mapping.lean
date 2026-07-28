@@ -1,4 +1,5 @@
 import Libraries.itertools.ItertoolsDef
+import Libraries.Mutator
 
 namespace Libraries.itertools
 
@@ -19,6 +20,15 @@ def pythonItertoolsMemberMap? (member : String) : Option Lean.Name :=
   | "tee"           => some ``Libraries.itertools.pyTee
   | "repeat"        => some ``Libraries.itertools.pyRepeat
   | "islice"        => some ``Libraries.itertools.pyIslice
+  | _ => none
+
+/-- The `itertools` iterators that never end. `repeat` is here only in its 1-argument form; with a
+count it is finite and uses `pyRepeat` above, so the desugaring checks the arity. -/
+def itertoolsInfiniteIter? (member : String) : Option Libraries.InfiniteIter :=
+  match member with
+  | "count"  => some .counter
+  | "cycle"  => some .cyclic
+  | "repeat" => some .constant
   | _ => none
 
 end Libraries.itertools

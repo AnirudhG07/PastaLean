@@ -1,0 +1,13 @@
+{
+  "problem": "alice-and-bob-playing-flower-game",
+  "module": "AliceAndBobPlayingFlowerGame",
+  "method": "flowerGame",
+  "params": [
+    "n",
+    "m"
+  ],
+  "difficulty": "Medium",
+  "bucket": "term",
+  "feature": "term",
+  "n_tests": 66
+}

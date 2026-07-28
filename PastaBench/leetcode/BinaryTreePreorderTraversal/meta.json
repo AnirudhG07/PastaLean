@@ -1,0 +1,12 @@
+{
+  "problem": "binary-tree-preorder-traversal",
+  "module": "BinaryTreePreorderTraversal",
+  "method": "preorderTraversal",
+  "params": [
+    "root"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "class",
+  "n_tests": 87
+}

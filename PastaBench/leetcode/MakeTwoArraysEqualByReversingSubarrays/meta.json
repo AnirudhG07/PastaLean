@@ -1,0 +1,13 @@
+{
+  "problem": "make-two-arrays-equal-by-reversing-subarrays",
+  "module": "MakeTwoArraysEqualByReversingSubarrays",
+  "method": "canBeEqual",
+  "params": [
+    "target",
+    "arr"
+  ],
+  "difficulty": "Easy",
+  "bucket": "term",
+  "feature": "term",
+  "n_tests": 122
+}

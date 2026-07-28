@@ -1,0 +1,12 @@
+{
+  "problem": "global-and-local-inversions",
+  "module": "GlobalAndLocalInversions",
+  "method": "isIdealPermutation",
+  "params": [
+    "nums"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 109
+}

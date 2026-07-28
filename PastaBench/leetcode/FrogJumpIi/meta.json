@@ -1,0 +1,12 @@
+{
+  "problem": "frog-jump-ii",
+  "module": "FrogJumpIi",
+  "method": "maxJump",
+  "params": [
+    "stones"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 106
+}

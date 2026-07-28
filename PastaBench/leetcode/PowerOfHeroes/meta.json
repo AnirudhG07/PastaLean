@@ -1,0 +1,12 @@
+{
+  "problem": "power-of-heroes",
+  "module": "PowerOfHeroes",
+  "method": "sumOfPower",
+  "params": [
+    "nums"
+  ],
+  "difficulty": "Hard",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 93
+}

@@ -1,0 +1,13 @@
+{
+  "problem": "build-an-array-with-stack-operations",
+  "module": "BuildAnArrayWithStackOperations",
+  "method": "buildArray",
+  "params": [
+    "target",
+    "n"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 113
+}

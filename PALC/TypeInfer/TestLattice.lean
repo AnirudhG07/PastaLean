@@ -138,7 +138,8 @@ private def mulBy (left right : Json) : Json :=
 -- Plain arithmetic is not a list.
 #guard ofValue (mulBy (const (.num 2)) (name "n")) == PyType.unknown
 
--- A mixed list is not typeable, so it stays unannotated rather than being guessed wrong.
+-- A mixed list joins to `.list .any`: the elements genuinely conflict, so it materialises as
+-- `List PyAny` (below) rather than being guessed at one element's type.
 #guard ofValue (listOf [const (.num 0), const (.str "a")]) == .list .any
 #guard ofValue (listOf []) == .list .unknown
 
@@ -147,13 +148,18 @@ private def mulBy (left right : Json) : Json :=
 
 /-! ### `toAnnotation?` — writing an annotation back
 
-A round-trip on every fully-known type, and `none` for the ones that are not. -/
+A round-trip on every fully-known type; `none` for `.unknown` (no information); and the concrete
+`PyAny` fallback for `.any` (a genuine conflict), which reads back as the class `PyAny`. -/
 
 #guard sample.all fun t =>
-  if t.isKnown then (toAnnotation? t).map ofAnnotation == some t else toAnnotation? t == none
+  if t.isKnown then (toAnnotation? t).map ofAnnotation == some t
+  else if t == .any then (toAnnotation? t).map ofAnnotation == some (PyType.cls "PyAny")
+  else toAnnotation? t == none
 
 #guard toAnnotation? (.list .unknown) == none
-#guard toAnnotation? .any == none
+-- `.any` and a container of it materialise as `PyAny` / `List PyAny`, so heterogeneous literals box.
+#guard (toAnnotation? .any).map ofAnnotation == some (PyType.cls "PyAny")
+#guard (toAnnotation? (.list .any)).map ofAnnotation == some (PyType.list (.cls "PyAny"))
 
 /-! ### `toTypeSyntax?` — emitting the Lean type -/
 

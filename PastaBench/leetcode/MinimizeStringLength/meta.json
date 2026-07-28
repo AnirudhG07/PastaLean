@@ -1,0 +1,12 @@
+{
+  "problem": "minimize-string-length",
+  "module": "MinimizeStringLength",
+  "method": "minimizedStringLength",
+  "params": [
+    "s"
+  ],
+  "difficulty": "Easy",
+  "bucket": "term",
+  "feature": "term",
+  "n_tests": 112
+}

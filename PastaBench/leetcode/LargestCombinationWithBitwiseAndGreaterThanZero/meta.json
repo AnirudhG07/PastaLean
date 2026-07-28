@@ -1,0 +1,12 @@
+{
+  "problem": "largest-combination-with-bitwise-and-greater-than-zero",
+  "module": "LargestCombinationWithBitwiseAndGreaterThanZero",
+  "method": "largestCombination",
+  "params": [
+    "candidates"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 92
+}

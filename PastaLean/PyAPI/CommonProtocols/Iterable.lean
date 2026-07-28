@@ -55,4 +55,13 @@ their elements as a two-element list.
 instance : PyIterable (α × α) α where
   toPyList p := [p.1, p.2]
 
+/-- A homogeneous n-tuple `(a, b, c, …)` is the nested product `α × (α × …)`; iterate it by prepending
+the head to the iterated tail. With the 2-tuple base above this flattens any all-`α` tuple to a
+`List α`, so `for x in (1, 2, 3)`, `pairwise((-1, 0, 1, 0, -1))`, etc. work without turning the tuple
+into a list. A heterogeneous tuple (`(int, str)`) has no `PyIterable` for its tail, so it is left
+un-iterable — matching that Python only iterates a tuple element-by-element when the caller expects
+one type. -/
+instance [inst : PyIterable β α] : PyIterable (α × β) α where
+  toPyList p := p.1 :: inst.toPyList p.2
+
 end PastaLean

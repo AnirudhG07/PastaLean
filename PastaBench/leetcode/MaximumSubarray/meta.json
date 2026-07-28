@@ -1,0 +1,12 @@
+{
+  "problem": "maximum-subarray",
+  "module": "MaximumSubarray",
+  "method": "maxSubArray",
+  "params": [
+    "nums"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 98
+}

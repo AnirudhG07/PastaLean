@@ -87,6 +87,23 @@ def floatNumToStx (mantissa : Int) (exponent : Nat) (scientific : Bool) :
   else
     pure base
 
+/-- An integer literal emitted at the numeric-mode float type (`(0 : ℚ)`/`ℝ`/`Float`). Used for an
+int literal that TypeInfer stamped `_ty = float` — a float-container element like the `0` in
+`[0]*n` where the list later holds floats, so the list is `List ℚ` not `List Int`. -/
+def intAsFloatStx (n : Int) : MetaM <| TSyntax `term := do
+  let mode ← getNumericMode
+  let real ← getRealContext
+  let ty : Name := match mode with
+    | .approx => ``Float
+    | .exact => if real then ``Real else ``Rat
+  let nAbs := Syntax.mkNumLit (toString n.natAbs)
+  let lit : TSyntax `term ← if n < 0 then `(- $nAbs:num) else pure ⟨nAbs⟩
+  `(($lit : $(mkIdent ty)))
+
+/-- Whether a node's inference stamp (`_ty`) is the scalar `float` annotation. -/
+def stampedFloat (json : Json) : Bool :=
+  (json.getObjVal? "_ty").toOption.any (·.getObjValAs? String "id" == .ok "float")
+
 @[pygen "Constant"]
 def constantSyntax : (kind : SyntaxNodeKind) → Json →
     PygenM (TSyntax kind)
@@ -101,6 +118,8 @@ def constantSyntax : (kind : SyntaxNodeKind) → Json →
     | .num (JsonNumber.mk mantissa exponent) =>
         if isPythonFloat then
           floatNumToStx mantissa exponent isScientific
+        else if exponent == 0 && stampedFloat json then
+          intAsFloatStx mantissa
         else
           numToStx mantissa exponent
     | .str s => return Syntax.mkStrLit s
@@ -158,14 +177,14 @@ def nonFiniteFloatLiteral? (funcJson : Json) (argsArray : Array Json) : Option S
   guard (body == "inf" || body == "infinity" || body == "nan")
   return raw
 
-/-- In exact mode, lower a literal `float('inf')`/`float('nan')` to the `ℚ` sentinel
-`pyRatNonFinite`, because `pyRat` would silently degrade it to `0`. `none` leaves the call on its
-normal path: `--mode run` lowers `float` to `pyFloat`, and `Float` represents these exactly. -/
+/-- Lower a literal `float('inf')`/`float('nan')` to `pyNonFinite`, which takes its numeric type
+from the slot it lands in: `ℤ` inside an integer DP, `Float` in a run-twin float slot, `ℚ` (the
+default instance) otherwise. Plain `pyRat`/`pyFloat` cannot serve all three — `pyRat` degrades
+these to `0`, and a `Float` infinity does not fit an `ℤ` result. -/
 def nonFiniteFloatTerm? (funcJson : Json) (argsArray : Array Json) :
     PygenM (Option (TSyntax `term)) := do
-  unless (← getNumericMode) == .exact do return none
   let some raw := nonFiniteFloatLiteral? funcJson argsArray | return none
-  let nonFiniteIdent := mkIdent ``PastaLean.pyRatNonFinite
+  let nonFiniteIdent := mkIdent ``PastaLean.pyNonFinite
   return some (← `($nonFiniteIdent $(Syntax.mkStrLit raw)))
 
 @[pygen "Name"]
@@ -270,21 +289,36 @@ def starredSyntax : (kind : SyntaxNodeKind) → Json →
 def dictSyntax : (kind : SyntaxNodeKind) → Json →
     PygenM (TSyntax kind)
   | `term, json => do
-    let .ok entriesJson := json.getObjValAs? Json "entries" | throwError
-      s!"Dict node does not have an 'entries' field or it is not a JSON value: {json}"
-    let entryCodes ← match entriesJson with
-      | .arr arr => arr.mapM fun entryJson => do
+    let .ok entries := json.getObjValAs? (Array Json) "entries" | throwError
+      s!"Dict node does not have an 'entries' field or it is not a JSON array: {json}"
+    let ofListIdent := mkIdent ``Std.HashMap.ofList
+    -- `{**d1, 'k': v, **d2}`: each entry contributes a `List (κ × ν)` chunk — a singleton for a
+    -- `key: value` pair, the merged dict's `.toList` for a `**spread`. Concatenating in source
+    -- order and feeding `ofList` gives Python's "later wins" (ofList keeps the last dup key).
+    if entries.any (·.getObjVal? "spread" |>.toOption.isSome) then
+      let chunks ← entries.mapM fun entryJson => do
+        match entryJson.getObjVal? "spread" with
+        | .ok spreadJson => `($(mkIdent ``Std.HashMap.toList) $(← getCode spreadJson `term))
+        | _ =>
           let .ok keyJson := entryJson.getObjValAs? Json "key" | throwError
             s!"Dict entry is missing a 'key' field: {entryJson}"
           let .ok valueJson := entryJson.getObjValAs? Json "value" | throwError
             s!"Dict entry is missing a 'value' field: {entryJson}"
-          let keyCode ← getCode keyJson `term
-          let valueCode ← getCode valueJson `term
-          `(($keyCode, $valueCode))
-      | _ => throwError s!"Dict node 'entries' field is not an array: {entriesJson}"
-    let ofListIdent := mkIdent ``Std.HashMap.ofList
-    let dictTerm ← `($ofListIdent [$entryCodes,*])
-    allocIfHeap dictTerm
+          `([($(← getCode keyJson `term), $(← getCode valueJson `term))])
+      let mut joined := chunks[0]!
+      for chunk in chunks.toList.drop 1 do
+        joined ← `($joined ++ $chunk)
+      let dictTerm ← `($ofListIdent $joined)
+      allocIfHeap dictTerm
+    else
+      let entryCodes ← entries.mapM fun entryJson => do
+        let .ok keyJson := entryJson.getObjValAs? Json "key" | throwError
+          s!"Dict entry is missing a 'key' field: {entryJson}"
+        let .ok valueJson := entryJson.getObjValAs? Json "value" | throwError
+          s!"Dict entry is missing a 'value' field: {entryJson}"
+        `(($(← getCode keyJson `term), $(← getCode valueJson `term)))
+      let dictTerm ← `($ofListIdent [$entryCodes,*])
+      allocIfHeap dictTerm
   | _, _ => throwError s!"Unsupported syntax category for Dict node"
 
 
@@ -418,11 +452,38 @@ membership lowering: a string literal on the left of `in`/`not in` means substri
 pins the element from the container. -/
 def compareApplyTerm (op : String) (leftJson : Json) (leftCode rightCode : TSyntax `term)
     (rightJson : Option Json := none) : PygenM (TSyntax `term) := do
-  -- `x is None` / `x is not None`: lower to `Option.isNone`/`Option.isSome` rather than
-  -- `== none`/`!= none`. Works with unresolved `Option` element types (e.g., `[None] * n`).
-  if (op == "is" || op == "isnot") && (rightJson.any isNoneConstantJson) then
-    if op == "is" then return ← `($(mkIdent ``Option.isNone) $leftCode)
-    else return ← `($(mkIdent ``Option.isSome) $leftCode)
+  -- Set comparisons are order-independent (subset / set-equality), unlike the list-backed `==`/`≤`
+  -- the same `List` value would otherwise select. Fires when either operand is statically a set.
+  if (← jsonIsSetExpr leftJson) || (← (rightJson.mapM jsonIsSetExpr).map (·.getD false)) then
+    let prop ← getPropCondition
+    let call (fn : Name) (a b : TSyntax `term) : PygenM (TSyntax `term) := do
+      let t ← `($(mkIdent fn) $a $b)
+      if prop then `($t = true) else pure t
+    match op with
+    | "eq" => return ← call ``PastaLean.pySetEq leftCode rightCode
+    | "ne" => let t ← `($(mkIdent ``PastaLean.pySetEq) $leftCode $rightCode)
+              return ← (if prop then `($t = false) else `(! $t))
+    | "le" => return ← call ``PastaLean.pySetSubset leftCode rightCode
+    | "lt" => return ← call ``PastaLean.pySetProperSubset leftCode rightCode
+    | "ge" => return ← call ``PastaLean.pySetSubset rightCode leftCode
+    | "gt" => return ← call ``PastaLean.pySetProperSubset rightCode leftCode
+    | _ => pure ()   -- `in`/`is`/`notin` fall through to the normal membership handling
+  -- `x is None` / `x == None` (and their negations) dispatch through `pyIsNone`, which is total over
+  -- every type: an `Option` answers by its tag, the `None` value (`Unit`) is `true`, and any other
+  -- type (`Int`, `String`, …) is `false` — so `y is not None` on a known `int` no longer type-errors
+  -- against `Option.isSome`. When BOTH sides are the literal `None`, the result is a compile-time
+  -- constant (`None is None` → `true`). `is`/`eq` test equality-to-`None`; `isnot`/`ne` negate it.
+  let noneTest := op == "is" || op == "isnot" || op == "eq" || op == "ne"
+  let leftIsNone := isNoneConstantJson leftJson
+  let rightIsNone := rightJson.any isNoneConstantJson
+  if noneTest && (leftIsNone || rightIsNone) then
+    let equalsNone := op == "is" || op == "eq"
+    if leftIsNone && rightIsNone then
+      -- `None is None` / `None == None` are `true`; `None is not None` / `None != None` are `false`.
+      return ← if equalsNone then `(true) else `(false)
+    let operand := if leftIsNone then rightCode else leftCode
+    let test ← `($(mkIdent ``PastaLean.pyIsNone) $operand)
+    return ← if equalsNone then pure test else `(! $test)
   -- *Condition position* (`prop`): comparison yields `Prop` (e.g., `a < b`, `a = b` in exact mode).
   -- *Value position* (`!prop`): comparison yields `Bool` (e.g., `decide (a < b)`, `a == b`).
   let prop ← getPropCondition
@@ -493,6 +554,22 @@ def unaryOpSyntax : (kind : SyntaxNodeKind) → Json →
     else unaryOpApplyTerm op operandCode
   | _, _ => throwError s!"Unsupported syntax category for UnaryOp node"
 
+/-- Python `and`/`or` as a VALUE (not a truthiness test): they return the deciding *operand*, not a
+`Bool` — `x or '0'` yields the string. `a or b … = <first truthy, else last>`, `a and b … = <first
+falsy, else last>`, lowered to nested `if pyTruthy … then … else …`. Only valid when the operands
+share a Lean type (the common `<expr> or <default>` idiom); used by `return`/assignment where the
+result is consumed as a value, not by condition positions (which keep the `Bool` form). -/
+def boolOpValueTerm (json : Json) : PygenM (TSyntax `term) := do
+  let .ok op := json.getObjValAs? String "op" | throwError s!"BoolOp is missing 'op': {json}"
+  let .ok valuesJson := json.getObjValAs? (Array Json) "values" | throwError
+    s!"BoolOp is missing 'values': {json}"
+  let codes ← valuesJson.mapM (getCode · `term)
+  let some last := codes.back? | throwError s!"BoolOp has no operands: {json}"
+  -- Fold the operands before the last from right to left.
+  (codes.pop.reverse).foldlM (init := last) fun acc c =>
+    let t := mkIdent ``PastaLean.pyTruthy
+    if op == "and" then `(if $t $c then $acc else $c) else `(if $t $c then $c else $acc)
+
 @[pygen "BoolOp"]
 def boolOpSyntax : (kind : SyntaxNodeKind) → Json →
     PygenM (TSyntax kind)
@@ -501,8 +578,19 @@ def boolOpSyntax : (kind : SyntaxNodeKind) → Json →
       s!"BoolOp node does not have an 'op' field or it is not a string: {json}"
     let .ok valuesJson := json.getObjValAs? Json "values" | throwError
       s!"BoolOp node does not have a 'values' field or it is not a JSON value: {json}"
+    -- A test position (`while`/`if`/assert) sets this; there `and`/`or` must stay a `Bool`
+    -- connective in every twin, never the value form (a `while` cond needs `Bool`, not `Int`).
+    let inCondition ← getPropCondition
     -- In exact `Prop` positions, `and`/`or` become `∧`/`∨`; otherwise lower to `Bool`.
-    let opProp := (← getPropCondition) && (← numericModeIsExact)
+    let opProp := inCondition && (← numericModeIsExact)
+    -- `a or b` / `a and b` on NON-boolean operands returns the deciding *operand*, not a `Bool`
+    -- (`[…] or [0]` yields the list, `x or 0` the number) — but only in a VALUE position; a
+    -- condition keeps the `Bool` connective. Only all-boolean operands are a real connective.
+    let allBool := match valuesJson with
+      | .arr arr => arr.all conditionIsBoolean
+      | _ => false
+    if !inCondition && !allBool then
+      return ← boolOpValueTerm json
     -- Each `and`/`or` operand is a truthiness context, so non-booleans must be coerced with `pyTruthy`.
     let lowerOperand (valueJson : Json) : PygenM (TSyntax `term) := do
       let code ← withPropCondition opProp (getCode valueJson `term)
@@ -549,7 +637,9 @@ def ifExpSyntax : (kind : SyntaxNodeKind) → Json →
       s!"IfExp node does not have a 'body' field or it is not a JSON value: {json}"
     let .ok orelseJson := json.getObjValAs? Json "orelse" | throwError
       s!"IfExp node does not have an 'orelse' field or it is not a JSON value: {json}"
-    let testCode ← truthyConditionTerm testJson (← getCode testJson `term)
+    -- The ternary test is a boolean context (like `if`/`while`): a `BoolOp` here must lower to the
+    -- `Bool` connective, not the value-form (`x or y` where the operands have different types).
+    let testCode ← truthyConditionTerm testJson (← withPropCondition true (getCode testJson `term))
     let bodyIsNone := isNoneConstantJson bodyJson
     let orelseIsNone := isNoneConstantJson orelseJson
     if bodyIsNone && orelseIsNone then

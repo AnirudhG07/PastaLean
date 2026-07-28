@@ -1,0 +1,13 @@
+{
+  "problem": "longest-arithmetic-subsequence-of-given-difference",
+  "module": "LongestArithmeticSubsequenceOfGivenDifference",
+  "method": "longestSubsequence",
+  "params": [
+    "arr",
+    "difference"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 154
+}

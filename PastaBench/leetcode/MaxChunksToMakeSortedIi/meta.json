@@ -1,0 +1,12 @@
+{
+  "problem": "max-chunks-to-make-sorted-ii",
+  "module": "MaxChunksToMakeSortedIi",
+  "method": "maxChunksToSorted",
+  "params": [
+    "arr"
+  ],
+  "difficulty": "Hard",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 149
+}

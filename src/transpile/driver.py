@@ -15,7 +15,6 @@ from .toplevel_state import (
     annotate_if_assigned_names,
 )
 from .contract_passta import CONTRACT_FUNCS as PASSTA_STAR_MEMBERS
-from .normalize_loops import normalize_counting_loops
 from ..backend import LeanBackendClient
 from ..paths import LIBRARIES_DIR, REPO_ROOT
 
@@ -1116,11 +1115,6 @@ def translate_to_json(source_code, filepath=None, best_effort=False):
         )
         for src in translator.unsupported_log:
             logger.warning("  unsupported: %s", src)
-    # Rewrite canonical counting `while i < bound: …; i += 1` into `for i in range(start, bound)`, under
-    # conservative semantics-preserving guards (see `src/normalize_loops.py`). A non-counting or
-    # guard-failing `while` is left as written and verified directly via `pyWhile` (Track W). Comment
-    # out to keep every `while` a `while`.
-    normalize_counting_loops(data)
     annotate_library_imports(data)
     annotate_exception_effects(data)
     annotate_io_effects(data)

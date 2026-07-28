@@ -20,7 +20,11 @@ def withFreshVariables {α : Type} (x : PygenM α) : PygenM α :=
   withPygenStateField
     (·.heapVarContainers)
     (fun st v => { st with heapVarContainers := v })
-    []
+    [] <|
+  withPygenStateField
+    (·.setVars)
+    (fun st setVars => { st with setVars := setVars })
+    (HashSet.emptyWithCapacity 16)
     x
 
 /--
@@ -437,5 +441,6 @@ def applyPrivacy (name : String) (cmd : TSyntax `command) : PygenM (TSyntax `com
     makeCommandPrivate cmd
   else
     pure cmd
+
 
 end PastaLean

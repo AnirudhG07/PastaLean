@@ -1,0 +1,12 @@
+{
+  "problem": "flip-columns-for-maximum-number-of-equal-rows",
+  "module": "FlipColumnsForMaximumNumberOfEqualRows",
+  "method": "maxEqualRowsAfterFlips",
+  "params": [
+    "matrix"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 88
+}

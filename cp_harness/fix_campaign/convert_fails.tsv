@@ -1,0 +1,115 @@
+problem	theme	reason
+accounts-merge	C3-convert-quickwins	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': Error in 
+add-binary	C3-convert-quickwins	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': Error in 
+avoid-flood-in-the-city	C4-library-gaps	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': Error in 
+beautiful-pairs	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': mutually-
+binary-tree-longest-consecutive-sequence-ii	C3-convert-quickwins	Unknown constant `null`
+binary-trees-with-factors	C3-convert-quickwins	walrus inside BoolOp is evaluated conditionally; hoisting it would change evaluation order.
+block-placement-queries	C4-library-gaps	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': Error in 
+capacity-to-ship-packages-within-d-days	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': nested fu
+check-if-string-is-transformable-with-substring-sort-operations	C4-library-gaps	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': Error in 
+check-if-the-rectangle-corner-is-reachable	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': mutually-
+check-if-there-is-a-valid-path-in-a-grid	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': mutually-
+checking-existence-of-edge-length-limited-paths	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': call to '
+closest-room	C4-library-gaps	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': Error in 
+construct-string-with-minimum-cost	C4-library-gaps	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': Error in 
+contain-virus	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': call to '
+count-nodes-that-are-great-enough	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': mutually-
+count-number-of-rectangles-containing-each-point	C3-convert-quickwins	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': Error in 
+count-the-number-of-complete-components	C3-convert-quickwins	Unknown constant `null`
+count-zero-request-servers	C4-library-gaps	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': Error in 
+create-binary-tree-from-descriptions	C4-library-gaps	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': Error in 
+cut-off-trees-for-golf-event	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': mutually-
+day-of-the-week	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': Error in 
+delete-duplicate-folders-in-system	C4-library-gaps	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': Error in 
+depth-of-bst-given-insertion-order	C4-library-gaps	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': Error in 
+difference-between-maximum-and-minimum-price-sum	C3-convert-quickwins	Unknown constant `null`
+distant-barcodes	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': Error in 
+erect-the-fence	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': Error in 
+escape-the-spreading-fire	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': mutually-
+evaluate-division	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': call to '
+exclusive-time-of-functions	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': Error in 
+find-anagram-mappings	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': Error in 
+find-closest-number-to-zero	C3-convert-quickwins	walrus inside BoolOp is evaluated conditionally; hoisting it would change evaluation order.
+find-critical-and-pseudo-critical-edges-in-minimum-spanning-tree	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': Error in 
+find-k-th-smallest-pair-distance	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': nested fu
+find-latest-group-of-size-m	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': mutually-
+find-right-interval	C3-convert-quickwins	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': Error in 
+find-servers-that-handled-most-number-of-requests	C4-library-gaps	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': Error in 
+find-the-minimum-cost-array-permutation	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': mutually-
+groups-of-strings	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': mutually-
+handling-sum-queries-after-update	C3-convert-quickwins	Error in code generation function PastaLean.classDefSyntax for key 'ClassDef' and syntax category 'command': Error in co
+house-robber-iv	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': nested fu
+kth-smallest-subarray-sum	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': nested fu
+largest-number	C4-library-gaps	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': Error in 
+length-of-longest-fibonacci-subsequence	C3-convert-quickwins	walrus inside BoolOp is evaluated conditionally; hoisting it would change evaluation order.
+lexicographically-minimum-string-after-removing-stars	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': Error in 
+longest-increasing-subsequence-ii	C2-value-mutation	Error in code generation function PastaLean.classDefSyntax for key 'ClassDef' and syntax category 'command': Error in co
+make-array-empty	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': Error in 
+maximum-increasing-triplet-value	C4-library-gaps	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': Error in 
+maximum-number-of-non-overlapping-substrings	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': Error in 
+maximum-segment-sum-after-removals	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': mutually-
+maximum-sum-of-subsequence-with-non-adjacent-elements	C2-value-mutation	Error in code generation function PastaLean.classDefSyntax for key 'ClassDef' and syntax category 'command': Error in co
+median-of-a-row-wise-sorted-matrix	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': nested fu
+minimize-malware-spread	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': Error in 
+minimize-malware-spread-ii	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': Error in 
+minimize-the-maximum-of-two-arrays	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': nested fu
+minimize-the-total-price-of-the-trips	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': call to '
+minimized-maximum-of-products-distributed-to-any-store	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': nested fu
+minimum-cost-to-separate-sentence-into-rows	C3-convert-quickwins	walrus in a `while` test is re-evaluated each iteration and cannot be hoisted.
+minimum-moves-to-get-a-peaceful-board	C3-convert-quickwins	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': Error in 
+minimum-number-of-lines-to-cover-points	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': mutually-
+minimum-number-of-operations-to-sort-a-binary-tree-by-level	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': mutually-
+minimum-number-of-visited-cells-in-a-grid	C4-library-gaps	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': Error in 
+minimum-possible-integer-after-at-most-k-adjacent-swaps-on-digits	C4-library-gaps	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': Error in 
+minimum-substring-partition-of-equal-character-frequency	C3-convert-quickwins	walrus inside BoolOp is evaluated conditionally; hoisting it would change evaluation order.
+minimum-time-to-eat-all-grains	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': nested fu
+next-closest-time	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': mutually-
+next-greater-element-iv	C4-library-gaps	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': Error in 
+number-of-closed-islands	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': call to '
+number-of-matching-subsequences	C4-library-gaps	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': Error in 
+number-of-unique-categories	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': Error in 
+number-of-valid-move-combinations-on-chessboard	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': mutually-
+odd-even-jump	C4-library-gaps	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': Error in 
+parse-lisp-expression	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': mutually-
+parsing-a-boolean-expression	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': Error in 
+path-with-maximum-minimum-value	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': call to '
+possible-bipartition	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': call to '
+preimage-size-of-factorial-zeroes-function	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': mutually-
+rank-teams-by-votes	C4-library-gaps	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': Error in 
+reachable-nodes-with-restrictions	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': call to '
+reconstruct-itinerary	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': Error in 
+recover-binary-search-tree	C3-convert-quickwins	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': Error in 
+rectangle-area-ii	C3-convert-quickwins	Error in code generation function PastaLean.classDefSyntax for key 'ClassDef' and syntax category 'command': Error in co
+redundant-connection-ii	C3-convert-quickwins	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': Error in 
+regions-cut-by-slashes	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': mutually-
+remove-max-number-of-edges-to-keep-graph-fully-traversable	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': Error in 
+restore-ip-addresses	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': mutually-
+reverse-odd-levels-of-binary-tree	C3-convert-quickwins	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': Error in 
+search-suggestions-system	C2-value-mutation	Error in code generation function PastaLean.classDefSyntax for key 'ClassDef' and syntax category 'command': Error in co
+similar-rgb-color	C3-convert-quickwins	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': Error in 
+sliding-puzzle	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': mutually-
+sliding-window-median	C4-library-gaps	Error in code generation function PastaLean.classDefSyntax for key 'ClassDef' and syntax category 'command': Error in co
+smallest-string-with-swaps	C3-convert-quickwins	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': Error in 
+sort-even-and-odd-indices-independently	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': Error in 
+sort-the-matrix-diagonally	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': Error in 
+split-array-into-consecutive-subsequences	C4-library-gaps	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': Error in 
+split-array-largest-sum	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': nested fu
+stone-game-vi	C3-convert-quickwins	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': Error in 
+strange-printer-ii	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': call to '
+subarray-with-elements-greater-than-varying-threshold	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': mutually-
+subarrays-distinct-element-sum-of-squares-ii	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': mutually-
+subsequence-with-the-minimum-score	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': nested fu
+sum-of-imbalance-numbers-of-all-subarrays	C4-library-gaps	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': Error in 
+sum-of-k-mirror-numbers	C3-convert-quickwins	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': Error in 
+sum-of-numbers-with-units-digit-k	C3-convert-quickwins	walrus inside BoolOp is evaluated conditionally; hoisting it would change evaluation order.
+sum-of-remoteness-of-all-cells	C3-convert-quickwins	Unknown constant `null`
+swapping-nodes-in-a-linked-list	C3-convert-quickwins	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': Error in 
+synonymous-sentences	C4-library-gaps	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': Error in 
+tag-validator	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': Error in 
+the-skyline-problem	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': Error in 
+time-taken-to-cross-the-door	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': Error in 
+valid-parentheses	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': Error in 
+web-crawler-multithreaded	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': mutually-
+word-squares	C2-value-mutation	Error in code generation function PastaLean.classDefSyntax for key 'ClassDef' and syntax category 'command': Error in co
+zuma-game	C1-closure-recursion	Error in code generation function PastaLean.funcDefSyntax for key 'FunctionDef' and syntax category 'command': Error in 

@@ -17,4 +17,14 @@ def pyReduce {α β : Type} [inst : PastaLean.PyIterable α β] [Inhabited β] (
   | none, [] => panic! "TypeError: reduce() of empty iterable with no initial value"
   | none, x :: rest => rest.foldl f x
 
+/-- `@cache`/`@lru_cache` is dropped — memoization is semantically transparent, we recompute — so the
+cache-management methods the decorator adds (`f.cache_clear()`, `f.cache_info()`) lower to this
+no-op. Correctness holds because nothing was memoised to go stale.
+
+TODO: real memoization for the RUN twin only — a pure `opaque` signature + `@[implemented_by]` over an
+ST/IO.Ref cache (never a state monad on the prove twin, which would cost provability). That would make
+`cache_clear` a genuine mutation rather than a no-op. A speed feature; build it only if the eval pass
+shows heavy-DP solutions timing out without it. -/
+def pyCacheNoop : Unit := ()
+
 end Libraries.functools

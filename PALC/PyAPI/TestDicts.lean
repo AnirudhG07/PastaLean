@@ -1,6 +1,7 @@
 import PastaLean.PyAPI.Dicts
 import PastaLean.PyAPI.CommonProtocols.Length
 import PastaLean.PyAPI.CommonProtocols.Mapping
+import PastaLean.PyAPI.CommonProtocols.Pop
 
 open PastaLean
 
@@ -60,3 +61,23 @@ private def itemStrings (m : Std.HashMap String Int) : List String :=
 /-- info: 999 -/
 #guard_msgs in
 #eval pyGetD (Std.HashMap.ofList [("apple", 10), ("banana", 20)] : Std.HashMap String Int) "pear" 999
+
+/-- info: 20 -/
+#guard_msgs in
+#eval pyDictPopValue (Std.HashMap.ofList [("apple", 10), ("banana", 20)] : Std.HashMap String Int) "banana" (-1)
+
+/-- info: -1 -/
+#guard_msgs in
+#eval pyDictPopValue (Std.HashMap.ofList [("apple", 10), ("banana", 20)] : Std.HashMap String Int) "pear" (-1)
+
+/-- info: none -/
+#guard_msgs in
+#eval (pyDictPopRest (Std.HashMap.ofList [("apple", 10)] : Std.HashMap String Int) "apple").get? "apple"
+
+/-- info: some 10 -/
+#guard_msgs in
+#eval (pyDictSetdefaultRest (Std.HashMap.ofList [("apple", 10)] : Std.HashMap String Int) "apple" 99).get? "apple"
+
+/-- info: some 99 -/
+#guard_msgs in
+#eval (pyDictSetdefaultRest (Std.HashMap.ofList [("apple", 10)] : Std.HashMap String Int) "pear" 99).get? "pear"

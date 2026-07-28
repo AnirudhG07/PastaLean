@@ -1,0 +1,15 @@
+{
+  "problem": "maximum-number-of-ones",
+  "module": "MaximumNumberOfOnes",
+  "method": "maximumNumberOfOnes",
+  "params": [
+    "width",
+    "height",
+    "sideLength",
+    "maxOnes"
+  ],
+  "difficulty": "Hard",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 110
+}

@@ -1,0 +1,13 @@
+{
+  "problem": "top-k-frequent-words",
+  "module": "TopKFrequentWords",
+  "method": "topKFrequent",
+  "params": [
+    "words",
+    "k"
+  ],
+  "difficulty": "Medium",
+  "bucket": "term",
+  "feature": "term",
+  "n_tests": 92
+}

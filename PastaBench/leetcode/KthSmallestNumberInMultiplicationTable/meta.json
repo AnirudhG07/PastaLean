@@ -1,0 +1,14 @@
+{
+  "problem": "kth-smallest-number-in-multiplication-table",
+  "module": "KthSmallestNumberInMultiplicationTable",
+  "method": "findKthNumber",
+  "params": [
+    "m",
+    "n",
+    "k"
+  ],
+  "difficulty": "Hard",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 95
+}

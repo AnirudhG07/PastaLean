@@ -1,0 +1,12 @@
+{
+  "problem": "find-the-highest-altitude",
+  "module": "FindTheHighestAltitude",
+  "method": "largestAltitude",
+  "params": [
+    "gain"
+  ],
+  "difficulty": "Easy",
+  "bucket": "term",
+  "feature": "term",
+  "n_tests": 110
+}

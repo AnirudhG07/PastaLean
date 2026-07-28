@@ -1,0 +1,13 @@
+{
+  "problem": "cycle-length-queries-in-a-tree",
+  "module": "CycleLengthQueriesInATree",
+  "method": "cycleLengthQueries",
+  "params": [
+    "n",
+    "queries"
+  ],
+  "difficulty": "Hard",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 70
+}

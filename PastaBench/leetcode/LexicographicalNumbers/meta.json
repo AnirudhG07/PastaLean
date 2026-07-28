@@ -1,0 +1,12 @@
+{
+  "problem": "lexicographical-numbers",
+  "module": "LexicographicalNumbers",
+  "method": "lexicalOrder",
+  "params": [
+    "n"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 68
+}

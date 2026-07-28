@@ -15,21 +15,39 @@ def isStringConstant (json : Lean.Json) : Bool :=
 open Lean Elab Term Meta
 open PastaLean
 
+/-- Statically project the `k`-th element (0-based) out of an `n`-element right-nested product
+`(e₀, e₁, …, eₙ₋₁)` = `e₀ × (e₁ × …)`. Descends with `Prod.snd` `k` times to reach the sub-tuple
+starting at `k`, then takes `Prod.fst` unless `k` is the last element (which is the bare tail). This
+gives the exact per-slot type, so it works for heterogeneous tuples where `pyGetItem` cannot. -/
+def tupleProjection (valueCode : TSyntax `term) (k n : Nat) : PygenM (TSyntax `term) := do
+    let mut t := valueCode
+    for _ in [0:k] do
+      t ← `(Prod.snd $t)
+    if k + 1 < n then
+      t ← `(Prod.fst $t)
+    return t
+
 /-- Build the Lean term for `value[slice]` from an *already-lowered* `valueCode`. Factoring this
 out of the `@[pygen]` entry point lets IO inlining/hoisting rebuild a subscript over an awaited
 container (`foo()[i]` where `foo()` is `IO _`) without re-lowering — and re-awaiting — the base. -/
 def subscriptTermFromValue (valueJson sliceJson : Json) (valueCode : TSyntax `term) :
     PygenM (TSyntax `term) := do
-    let isTuple := match valueJson.getObjValAs? String "node_type" with
-    | .ok "Tuple" => true
-    | _ =>
-      -- A `Name` that codegen has marked as a known pair-typed value (e.g. a lambda parameter
-      -- bound to `α × β` and used via `pair[0]`/`pair[1]`) is treated like a tuple literal so a
-      -- constant `0`/`1` index lowers to `Prod.fst`/`Prod.snd` rather than the generic
-      -- `pyGetItem` notation (which has no `PyGetItem` instance for heterogeneous products).
-      match valueJson.getObjValAs? Bool "_PastaLean_pair" with
-      | .ok true => true
-      | _ => false
+    -- The arity of a tuple-typed value, when known: a literal `Tuple` node carries its `elts`, and a
+    -- `Name` bound to a tuple is stamped by TypeInfer (`_PastaLean_tuple_arity`, or the legacy
+    -- `_PastaLean_pair` for the arity-2 case). A constant index into such a value lowers to a static
+    -- `Prod` projection rather than the generic `pyGetItem` notation, which has no `PyGetItem`
+    -- instance for a heterogeneous product.
+    let tupleArity : Option Nat :=
+      match valueJson.getObjValAs? String "node_type" with
+      | .ok "Tuple" => (valueJson.getObjValAs? (Array Json) "elts").toOption.map (·.size)
+      | _ =>
+        match valueJson.getObjValAs? Nat "_PastaLean_tuple_arity" with
+        | .ok n => some n
+        | _ =>
+          match valueJson.getObjValAs? Bool "_PastaLean_pair" with
+          | .ok true => some 2
+          | _ => none
+    let isTuple := tupleArity.isSome
     let isString := isStringConstant valueJson
 
     let sliceType := sliceJson.getObjValAs? String "node_type"
@@ -58,7 +76,10 @@ def subscriptTermFromValue (valueJson sliceJson : Json) (valueCode : TSyntax `te
         let sliceIdent :=
           if isString then mkIdent `PastaLean.pyStringSliceStep
           else mkIdent `PastaLean.pySlice
-        `($sliceIdent $valueCode $startStx $stopStx $stepStx)
+        -- Slicing a homogeneous tuple (`(1, 2, 3)[1:]`) flattens it to a `List α` first: a
+        -- variable-length slice can't be a fixed-arity Lean product, so a list is the honest result.
+        let sliced ← if isTuple && !isString then `(PastaLean.pyIter $valueCode) else pure valueCode
+        `($sliceIdent $sliced $startStx $stopStx $stepStx)
     else if sliceType == .ok "Tuple" then
         -- numpy-style 2-D indexing on a `List (List _)`: `a[i,j]`, `a[:,j]` (column), `a[i,:]` (row).
         match sliceJson.getObjValAs? (Array Json) "elts" with
@@ -81,17 +102,18 @@ def subscriptTermFromValue (valueJson sliceJson : Json) (valueCode : TSyntax `te
                 throwError "Only 2-D tuple subscripts are supported."
         | .error _ => throwError "Tuple subscript is missing its 'elts' field."
     else if isTuple then
-        match sliceJson.getObjValAs? String "node_type", sliceJson.getObjValAs? Json "value" with
-        | .ok "Constant", .ok (.num (JsonNumber.mk 0 0)) =>
-            let fstIdent := mkIdent ``Prod.fst
-            `($fstIdent $valueCode)
-        | .ok "Constant", .ok (.num (JsonNumber.mk 1 0)) =>
-            let sndIdent := mkIdent ``Prod.snd
-            `($sndIdent $valueCode)
+        -- A constant index static-projects to the exact slot (works for heterogeneous tuples); a
+        -- variable index falls back to `pyGetItem`, which dispatches through the homogeneous
+        -- `PyGetItem (α × β) Int α` runtime instance.
+        match sliceJson.getObjValAs? String "node_type",
+              (sliceJson.getObjVal? "value").toOption.bind (·.getNat?.toOption) with
+        | .ok "Constant", some k =>
+            match tupleArity with
+            | some n => tupleProjection valueCode k n
+            | none => tupleProjection valueCode k (k + 2)
         | _, _ =>
             let sliceCode ← getCode sliceJson `term
-            let getIdent := mkIdent `getElem!
-            `($getIdent $valueCode $sliceCode)
+            `($valueCode⦋$sliceCode⦌)
     else if isString then
         -- Indexing a string literal yields a one-character string (Python has no char type),
         -- matching `pyGetItem`/`PyGetItem String Int String` on string variables.

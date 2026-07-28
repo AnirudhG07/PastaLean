@@ -1,0 +1,12 @@
+{
+  "problem": "shortest-unsorted-continuous-subarray",
+  "module": "ShortestUnsortedContinuousSubarray",
+  "method": "findUnsortedSubarray",
+  "params": [
+    "nums"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 158
+}

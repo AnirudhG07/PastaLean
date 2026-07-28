@@ -1,0 +1,12 @@
+{
+  "problem": "minimum-sum-of-four-digit-number-after-splitting-digits",
+  "module": "MinimumSumOfFourDigitNumberAfterSplittingDigits",
+  "method": "minimumSum",
+  "params": [
+    "num"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 83
+}

@@ -1,0 +1,13 @@
+{
+  "problem": "count-the-number-of-k-big-indices",
+  "module": "CountTheNumberOfKBigIndices",
+  "method": "kBigIndices",
+  "params": [
+    "nums",
+    "k"
+  ],
+  "difficulty": "Hard",
+  "bucket": "loop",
+  "feature": "class",
+  "n_tests": 105
+}

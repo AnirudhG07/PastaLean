@@ -1,0 +1,41 @@
+Given a string s. Return all the words vertically in the same order in which they appear in s.\r
+Words are returned as a list of strings, complete with spaces when is necessary. (Trailing spaces are not allowed).\r
+Each word would be put on only one column and that in one column there will be only one word.\r
+\r
+ \r
+Example 1:\r
+\r
+\r
+Input: s = "HOW ARE YOU"\r
+Output: ["HAY","ORO","WEU"]\r
+Explanation: Each word is printed vertically. \r
+ "HAY"\r
+ "ORO"\r
+ "WEU"\r
+\r
+\r
+Example 2:\r
+\r
+\r
+Input: s = "TO BE OR NOT TO BE"\r
+Output: ["TBONTB","OEROOE","   T"]\r
+Explanation: Trailing spaces is not allowed. \r
+"TBONTB"\r
+"OEROOE"\r
+"   T"\r
+\r
+\r
+Example 3:\r
+\r
+\r
+Input: s = "CONTEST IS COMING"\r
+Output: ["CIC","OSO","N M","T I","E N","S G","T"]\r
+\r
+\r
+ \r
+Constraints:\r
+\r
+\r
+	1 <= s.length <= 200\r
+	s contains only upper case English letters.\r
+	It's guaranteed that there is only one space between 2 words.\r

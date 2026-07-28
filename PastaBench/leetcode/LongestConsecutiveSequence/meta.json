@@ -1,0 +1,12 @@
+{
+  "problem": "longest-consecutive-sequence",
+  "module": "LongestConsecutiveSequence",
+  "method": "longestConsecutive",
+  "params": [
+    "nums"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 138
+}

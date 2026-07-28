@@ -1,0 +1,13 @@
+{
+  "problem": "check-whether-two-strings-are-almost-equivalent",
+  "module": "CheckWhetherTwoStringsAreAlmostEquivalent",
+  "method": "checkAlmostEquivalent",
+  "params": [
+    "word1",
+    "word2"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 148
+}

@@ -49,7 +49,9 @@ private def envOf (kvs : List (String × PyType)) : Env :=
 #guard typeOfExpr {} (envOf [("xs", .list .int)]) (call (name "len") [name "xs"]) == PyType.int
 #guard typeOfExpr {} (envOf []) (call (name "range") [const (.num 5)]) == .list .int
 #guard typeOfExpr {} (envOf [("s", .str)]) (call (attr (name "s") "split") [const (.str ",")]) == .list .str
-#guard typeOfExpr {} (envOf [("d", .dict .str .int)]) (call (attr (name "d") "get") [const (.str "k")]) == PyType.int
+-- `d.get(k)` is `Optional[V]` (runtime `pyGetOpt?`); `d.get(k, default)` is `V`.
+#guard typeOfExpr {} (envOf [("d", .dict .str .int)]) (call (attr (name "d") "get") [const (.str "k")]) == PyType.opt .int
+#guard typeOfExpr {} (envOf [("d", .dict .str .int)]) (call (attr (name "d") "get") [const (.str "k"), const (.num 0)]) == PyType.int
 #guard typeOfExpr {} (envOf [("d", .dict .str .int)]) (call (attr (name "d") "items") []) == .list (.tuple [.str, .int])
 
 /-! ### `applyStmt` — how a statement updates the environment -/

@@ -77,14 +77,14 @@ def safe'rn := fun n ↦
           throw caught) :
     PastaLean.PyExcept _)
 
-private def _simple_catch_helper := fun (x : Int) ↦ x +ₚ (1 : Int)
+private def _simple_catch'helper := fun (x : Int) ↦ x +ₚ (1 : Int)
 
-attribute [simp, taste_ingr] _simple_catch_helper
+attribute [simp, taste_ingr] _simple_catch'helper
 
 def simple_catch :=
   ((do
       let mut x : Int := (1 : Int)
-      x := _simple_catch_helper x
+      x := _simple_catch'helper x
       try
         throw (PastaLean.PyException.Raise "Exception" (ToString.toString "boom"))
       catch caught =>
@@ -98,12 +98,12 @@ def simple_catch :=
 
 attribute [simp] simple_catch
 
-private def _simple_catch_helper'rn := fun (x : Int) ↦ x +ₚ (1 : Int)
+private def _simple_catch'helper'rn := fun (x : Int) ↦ x +ₚ (1 : Int)
 
 def simple_catch'rn :=
   ((do
       let mut x : Int := (1 : Int)
-      x := _simple_catch_helper'rn x
+      x := _simple_catch'helper'rn x
       try
         throw (PastaLean.PyException.Raise "Exception" (ToString.toString "boom"))
       catch caught =>

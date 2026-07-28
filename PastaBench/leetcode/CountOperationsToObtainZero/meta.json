@@ -1,0 +1,13 @@
+{
+  "problem": "count-operations-to-obtain-zero",
+  "module": "CountOperationsToObtainZero",
+  "method": "countOperations",
+  "params": [
+    "num1",
+    "num2"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 78
+}

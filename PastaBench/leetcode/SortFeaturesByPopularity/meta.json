@@ -1,0 +1,13 @@
+{
+  "problem": "sort-features-by-popularity",
+  "module": "SortFeaturesByPopularity",
+  "method": "sortFeatures",
+  "params": [
+    "features",
+    "responses"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 52
+}

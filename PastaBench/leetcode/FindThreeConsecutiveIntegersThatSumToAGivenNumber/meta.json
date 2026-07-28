@@ -1,0 +1,12 @@
+{
+  "problem": "find-three-consecutive-integers-that-sum-to-a-given-number",
+  "module": "FindThreeConsecutiveIntegersThatSumToAGivenNumber",
+  "method": "sumOfThree",
+  "params": [
+    "num"
+  ],
+  "difficulty": "Medium",
+  "bucket": "term",
+  "feature": "term",
+  "n_tests": 52
+}

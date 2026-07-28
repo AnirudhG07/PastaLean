@@ -56,6 +56,26 @@ partial def ofValue (json : Json) : PyType :=
             else .unknown
         | _, _ => .unknown
       else .unknown
+  -- A comprehension is a container of its element/key/value type (`[Node() for _ in …]` →
+  -- `list[Node]`), so a class field initialised by one gets the right element type.
+  | some "ListComp" | some "GeneratorExp" =>
+      (json.getObjVal? "elt").toOption.elim .unknown (fun e => .list (ofValue e))
+  | some "SetComp" =>
+      (json.getObjVal? "elt").toOption.elim .unknown (fun e => .set (ofValue e))
+  | some "DictComp" =>
+      match json.getObjVal? "key", json.getObjVal? "value" with
+      | .ok k, .ok v => .dict (ofValue k) (ofValue v)
+      | _, _ => .unknown
+  -- A constructor call to a user class — a capitalized name that is not a builtin collection — is an
+  -- instance of that class (`Node()` → `Node`), so `self.tr = [Node() for …]` becomes `List Node`.
+  | some "Call" =>
+      match (json.getObjVal? "func").toOption.bind (fun f =>
+          if nodeType? f == some "Name" then (f.getObjValAs? String "id").toOption else none) with
+      | some id =>
+          if !id.isEmpty && id.front.isUpper
+             && !["Counter", "OrderedDict", "Fraction", "Decimal"].contains id
+          then .cls id else .unknown
+      | none => .unknown
   | _ => .unknown
 
 end TypeInfer

@@ -14,6 +14,7 @@ import PastaLean.PyAPI.CommonProtocols.Bool
 import PastaLean.PyAPI.CommonProtocols.AnyFunc
 import PastaLean.PyAPI.CommonProtocols.Reversed
 import PastaLean.PyAPI.CommonProtocols.Truthy
+import PastaLean.PyAPI.CommonProtocols.IsNone
 
 /-!
 Intentionally extensible runtime protocols shared by several Lean datatypes.

@@ -29,6 +29,11 @@ name = "TypeInfer"
 [[lean_lib]]
 name = "PALC"
 
+# The shipped verification benchmark. Not a default target: 300 Mathlib-importing modules.
+# Build it explicitly with `lake build PastaBench`.
+[[lean_lib]]
+name = "PastaBench"
+
 [[lean_lib]]
 name = "Slides"
 srcDir = "docs/ppt"
@@ -46,4 +51,14 @@ supportInterpreter = true
 [[lean_exe]]
 name="palc"
 root = "PALC.PastaCheck"
+supportInterpreter = true
+
+[[lean_lib]]
+name = "CpHarness"
+srcDir = "cp_harness/.native"
+
+[[lean_exe]]
+name = "cpharness_run"
+srcDir = "cp_harness/.native"
+root = "CpHarnessMain"
 supportInterpreter = true

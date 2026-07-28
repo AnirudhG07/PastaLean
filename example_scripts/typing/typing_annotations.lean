@@ -32,7 +32,7 @@ def total'rn := fun (xs : List Int) ↦
 def scale := fun (row : List Rat) ↦ fun (k : Rat) ↦
   Id.run
     (do
-      let mut out := []
+      let mut out := ([] : List Rat)
       for v in (PastaLean.pyIter row)do
         out := PastaLean.pyAppend out (v *ₚ k)
       return out)
@@ -42,7 +42,7 @@ attribute [simp, taste_ingr] scale
 def scale'rn := fun (row : List Float) ↦ fun (k : Float) ↦
   Id.run
     (do
-      let mut out := []
+      let mut out := ([] : List Float)
       for v in (PastaLean.pyIter row)do
         out := PastaLean.pyAppend out (v *ₚ k)
       return out)

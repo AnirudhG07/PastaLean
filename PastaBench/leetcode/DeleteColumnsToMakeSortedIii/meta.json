@@ -1,0 +1,12 @@
+{
+  "problem": "delete-columns-to-make-sorted-iii",
+  "module": "DeleteColumnsToMakeSortedIii",
+  "method": "minDeletionSize",
+  "params": [
+    "strs"
+  ],
+  "difficulty": "Hard",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 105
+}

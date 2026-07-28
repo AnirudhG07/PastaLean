@@ -14,39 +14,41 @@ set_option maxHeartbeats 800000
 -- Multiple return types and per-variable type mutation, both handled by inference boxing the slot to
 -- PyAny (the dynamic fallback) and dispatching operations on the runtime tag.
 -- A function whose branches return different types (str vs int) → its result is PyAny.
-def classify := fun (n : Int) ↦ (if decide (n > (0 : Int)) then "positive" else (0 : Int) : PastaLean.PyAny)
+def classify := fun (n : Int) ↦ (if n > (0 : Int) then "positive" else (0 : Int) : PastaLean.PyAny)
 
 attribute [simp] classify
 
-def classify'rn := fun (n : Int) ↦ (if decide (n > (0 : Int)) then "positive" else (0 : Int) : PastaLean.PyAny)
+def classify'rn := fun (n : Int) ↦ (if n > (0 : Int) then "positive" else (0 : Int) : PastaLean.PyAny)
 
 -- A parameter/local rebound to a different type mid-function, with operations on each type.
 def reassigned :=
-  let x := (1 : Int)
-  let x := x +ₚ (5 : Int)
-  let x := "hi"
-  let x := x +ₚ "world"
-  let y := (3 : Int)
-  let y := x
-  x +ₚ y
+  (let x := (1 : Int)
+    let x := x +ₚ (5 : Int)
+    let x := "hi"
+    let x := x +ₚ "world"
+    let y := (3 : Int)
+    let y := x
+    x +ₚ y :
+    PastaLean.PyAny)
 
-attribute [simp, taste_ingr] reassigned
+attribute [simp] reassigned
 
 def reassigned'rn :=
-  let x := (1 : Int)
-  let x := x +ₚ (5 : Int)
-  let x := "hi"
-  let x := x +ₚ "world"
-  let y := (3 : Int)
-  let y := x
-  x +ₚ y
+  (let x := (1 : Int)
+    let x := x +ₚ (5 : Int)
+    let x := "hi"
+    let x := x +ₚ "world"
+    let y := (3 : Int)
+    let y := x
+    x +ₚ y :
+    PastaLean.PyAny)
 
 -- One `add` used at both int and str (the flagship polymorphic case).
-def add := fun (a : PyAny) ↦ fun (b : PyAny) ↦ a +ₚ b
+def add := fun (a : PyAny) ↦ fun (b : PyAny) ↦ (a +ₚ b : PastaLean.PyAny)
 
-attribute [simp, taste_ingr] add
+attribute [simp] add
 
-def add'rn := fun (a : PyAny) ↦ fun (b : PyAny) ↦ a +ₚ b
+def add'rn := fun (a : PyAny) ↦ fun (b : PyAny) ↦ (a +ₚ b : PastaLean.PyAny)
 
 @[taste_ingr]
 theorem add_thm : ∀ a, ∀ b, a +ₚ b +ₚ b = a +ₚ (b +ₚ b) := by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals

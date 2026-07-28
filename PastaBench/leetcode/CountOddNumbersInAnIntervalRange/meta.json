@@ -1,0 +1,13 @@
+{
+  "problem": "count-odd-numbers-in-an-interval-range",
+  "module": "CountOddNumbersInAnIntervalRange",
+  "method": "countOdds",
+  "params": [
+    "low",
+    "high"
+  ],
+  "difficulty": "Easy",
+  "bucket": "term",
+  "feature": "term",
+  "n_tests": 93
+}

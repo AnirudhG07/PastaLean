@@ -1,0 +1,12 @@
+{
+  "problem": "find-a-peak-element-ii",
+  "module": "FindAPeakElementIi",
+  "method": "findPeakGrid",
+  "params": [
+    "mat"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 85
+}

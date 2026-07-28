@@ -1,0 +1,12 @@
+{
+  "problem": "excel-sheet-column-number",
+  "module": "ExcelSheetColumnNumber",
+  "method": "titleToNumber",
+  "params": [
+    "columnTitle"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 201
+}

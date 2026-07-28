@@ -1,0 +1,12 @@
+{
+  "problem": "maximum-element-sum-of-a-complete-subset-of-indices",
+  "module": "MaximumElementSumOfACompleteSubsetOfIndices",
+  "method": "maximumSum",
+  "params": [
+    "nums"
+  ],
+  "difficulty": "Hard",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 63
+}

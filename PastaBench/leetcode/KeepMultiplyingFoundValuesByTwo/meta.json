@@ -1,0 +1,13 @@
+{
+  "problem": "keep-multiplying-found-values-by-two",
+  "module": "KeepMultiplyingFoundValuesByTwo",
+  "method": "findFinalValue",
+  "params": [
+    "nums",
+    "original"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 115
+}

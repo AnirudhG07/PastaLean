@@ -1,0 +1,14 @@
+{
+  "problem": "last-moment-before-all-ants-fall-out-of-a-plank",
+  "module": "LastMomentBeforeAllAntsFallOutOfAPlank",
+  "method": "getLastMoment",
+  "params": [
+    "n",
+    "left",
+    "right"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 127
+}

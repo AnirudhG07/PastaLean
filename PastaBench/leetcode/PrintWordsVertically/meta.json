@@ -1,0 +1,12 @@
+{
+  "problem": "print-words-vertically",
+  "module": "PrintWordsVertically",
+  "method": "printVertically",
+  "params": [
+    "s"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 141
+}

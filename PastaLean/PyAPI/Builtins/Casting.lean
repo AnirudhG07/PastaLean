@@ -45,6 +45,34 @@ instance : PyIntCast String where
 instance : PyIntCast Float where
   pyInt x := if x ≥ 0 then (x.toUInt64.toNat : Int) else -((-x).toUInt64.toNat : Int)
 
+/-- Python `int(s, base)`: parse the string `s` as an integer in `base` (2–36), with an optional
+sign and the usual `0x`/`0b`/`0o` prefix for base 16/2/8. Malformed input yields `0`. -/
+def pyIntBase (s : String) (base : Int) : Int := Id.run do
+  let b := base.toNat
+  if b < 2 then return 0
+  let mut chars := s.trim.toList
+  let mut neg := false
+  match chars with
+  | '-' :: rest => neg := true; chars := rest
+  | '+' :: rest => chars := rest
+  | _ => pure ()
+  match b, chars with
+  | 16, '0' :: c :: rest => if c == 'x' || c == 'X' then chars := rest
+  | 2,  '0' :: c :: rest => if c == 'b' || c == 'B' then chars := rest
+  | 8,  '0' :: c :: rest => if c == 'o' || c == 'O' then chars := rest
+  | _, _ => pure ()
+  if chars.isEmpty then return 0
+  let digit? (c : Char) : Option Nat :=
+    if c.isDigit then some (c.toNat - '0'.toNat)
+    else if c.isAlpha then some (c.toLower.toNat - 'a'.toNat + 10)
+    else none
+  let mut acc : Nat := 0
+  for c in chars do
+    match digit? c with
+    | some d => if d < b then acc := acc * b + d else return 0
+    | none => return 0
+  return if neg then -(acc : Int) else (acc : Int)
+
 /--
 Python-style `str(...)` coercion.
 
@@ -145,11 +173,43 @@ coerce losslessly. `inf`/`nan` have no `ℚ` value, so the string parser degrade
 *literal* `float('inf')` lowers to `pyRatNonFinite` instead, leaving this path reachable only for a
 runtime-computed string. -/
 
-/-- Exact-mode stand-in for a non-finite float literal (`float('inf')`, `float('nan')`), which `ℚ`
-cannot represent. Returns the sentinel `-1`, and keeps `literal` in the emitted code so the
-placeholder is greppable. `--mode run` lowers these to `Float`, which represents them exactly, so
-the runnable `'rn` twin is unaffected. -/
-def pyRatNonFinite (_literal : String) : Rat := -1
+/-- Exact-mode stand-in for a non-finite float literal, which `ℚ` cannot represent. `inf` becomes a
+sentinel far outside any competitive value range (so the `ans = -inf; ans = max(ans, …)` /
+`best = inf; best = min(best, …)` initializer idiom behaves), `nan` becomes `0`. A top-level
+`inf = float('inf')` is a single shared `ℚ` def used by both twins, so this must be a usable value,
+not `-1`. It is NOT a true infinity — returning it verbatim (e.g. from empty input) still mismatches. -/
+def pyRatNonFinite (literal : String) : Rat :=
+  let s := literal.toLower
+  if s.endsWith "nan" then 0
+  else
+    let big : Rat := (10 : Rat) ^ (30 : Nat)
+    if s.startsWith "-" then -big else big
+
+/-- `ℤ` form of the same sentinel, for an integer DP (`ans = -inf; ans = max(ans, …)` where the
+function is annotated `-> int`). Python compares `-inf` against ints happily; Lean needs one type. -/
+def pyIntNonFinite (literal : String) : Int :=
+  let s := literal.toLower
+  if s.endsWith "nan" then 0
+  else
+    let big : Int := (10 : Int) ^ (30 : Nat)
+    if s.startsWith "-" then -big else big
+
+/-- A non-finite float literal takes its type from the slot it lands in, so one `float('inf')`
+serves an `ℚ` table and an `ℤ` one. `ℚ` is the default when the context leaves it open. -/
+class PyNonFinite (α : Type) where
+  nonFinite : String → α
+
+@[default_instance] instance : PyNonFinite Rat where nonFinite := pyRatNonFinite
+instance : PyNonFinite Int where nonFinite := pyIntNonFinite
+instance : PyNonFinite Float where
+  nonFinite s :=
+    let t := s.toLower
+    if t.endsWith "nan" then 0.0
+    else if t.startsWith "-" then -(1.0 / 0.0) else 1.0 / 0.0
+
+/-- Codegen target for a literal `float('inf')` / `float('nan')`. -/
+def pyNonFinite {α : Type} [PyNonFinite α] (literal : String) : α :=
+  PyNonFinite.nonFinite literal
 
 /-- Typeclass for exact-mode `float(...)` coercions producing `ℚ`. -/
 class PyRatCast (α : Type) where

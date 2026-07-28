@@ -1,0 +1,12 @@
+{
+  "problem": "maximum-number-of-consecutive-values-you-can-make",
+  "module": "MaximumNumberOfConsecutiveValuesYouCanMake",
+  "method": "getMaximumConsecutive",
+  "params": [
+    "coins"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 98
+}

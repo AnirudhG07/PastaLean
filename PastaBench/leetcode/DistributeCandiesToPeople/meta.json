@@ -1,0 +1,13 @@
+{
+  "problem": "distribute-candies-to-people",
+  "module": "DistributeCandiesToPeople",
+  "method": "distributeCandies",
+  "params": [
+    "candies",
+    "num_people"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 88
+}

@@ -1,0 +1,12 @@
+{
+  "problem": "next-greater-node-in-linked-list",
+  "module": "NextGreaterNodeInLinkedList",
+  "method": "nextLargerNodes",
+  "params": [
+    "head"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "class",
+  "n_tests": 115
+}

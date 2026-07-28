@@ -56,6 +56,7 @@ and before the regular (`Float`) map. -/
 def pythonLibraryMapExact? (moduleName member : String) : Option Lean.Name :=
   match moduleName with
   | "math" => math.pythonMathMemberMapExact? member
+  | "numpy" => numpy.pythonNumpyMemberMapExact? member
   | _ => none
 
 /-- Return type of a library member, for TypeInfer — the single entry point, so `TypeInfer` names no
@@ -73,6 +74,26 @@ codegen names no specific library. -/
 def libraryMutator? (moduleName member : String) : Option LibraryMutator :=
   match moduleName with
   | "heapq" => heapq.heapqMutator? member
+  | "bisect" => bisect.bisectMutator? member
   | _ => none
+
+/-- The unbounded-iterator spec of a library member, for the core codegen — one entry point, so
+codegen names no specific library. -/
+def libraryInfiniteIter? (moduleName member : String) : Option InfiniteIter :=
+  match moduleName with
+  | "itertools" => itertools.itertoolsInfiniteIter? member
+  | _ => none
+
+/-- A method that a library declares as a no-op, for the core codegen — keyed on the method name
+alone (these come from decorated values, e.g. `f.cache_clear()`, which carry no module tag). One
+entry point, so codegen names no specific library. -/
+def libraryNoopMethod? (member : String) : Option Lean.Name :=
+  functools.functoolsNoopMethod? member
+
+/-- A decorator a library declares transparent — no effect on the transpiled value, so the decorated
+function is emitted unchanged (e.g. functools' `@cache`). One entry point, so codegen names no
+specific library. The caller passes the decorator's last dotted segment (`functools.cache` → `cache`). -/
+def libraryTransparentDecorator? (name : String) : Bool :=
+  functools.functoolsTransparentDecorator? name
 
 end Libraries

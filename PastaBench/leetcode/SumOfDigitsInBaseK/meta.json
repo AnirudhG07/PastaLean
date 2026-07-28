@@ -1,0 +1,13 @@
+{
+  "problem": "sum-of-digits-in-base-k",
+  "module": "SumOfDigitsInBaseK",
+  "method": "sumBase",
+  "params": [
+    "n",
+    "k"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 87
+}

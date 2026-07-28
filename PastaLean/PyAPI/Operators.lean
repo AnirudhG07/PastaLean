@@ -39,6 +39,15 @@ instance : PyHAdd String String String where
 instance : PyHAdd String Char String where
   hAdd := fun s c => s ++ c.toString
 
+-- String indexing yields a `Char` here, so `word[i] + word[j]` / `word[i] + rest` concat as strings.
+instance : PyHAdd Char Char String where hAdd := fun a b => a.toString ++ b.toString
+instance : PyHAdd Char String String where hAdd := fun c s => c.toString ++ s
+
+/-- Python list `+` CONCATENATES. Without this, the generic `[HAdd α β γ]` instance resolves to
+Mathlib's *pointwise* `Add (List α)` (`[1,2]+[3,4] = [4,6]`) — silently wrong; hence high priority. -/
+instance (priority := high) {α : Type} : PyHAdd (List α) (List α) (List α) where
+  hAdd := (· ++ ·)
+
 /-! Mixed numeric `+`. Lean has no heterogeneous `HAdd Nat Int` / `HAdd Rat Int`, so the
 generic `[HAdd α β γ]` instance does not cover these mixed-type sums that arise when one
 operand came from integer division (`Rat`) or a length/count (`Nat`). The result widens to
@@ -54,6 +63,10 @@ instance (priority := high) : PyHAdd Nat Int Int where
 
 instance (priority := high) : PyHAdd Int Nat Int where
   hAdd := fun a b => a + (b : Int)
+
+-- `Nat` (e.g. a raw length) meeting a `bool` predicate, mirroring the `Int`/`Bool` mixes above.
+instance (priority := high) : PyHAdd Nat Bool Int where hAdd a b := (a : Int) + pyBoolToInt b
+instance (priority := high) : PyHAdd Bool Nat Int where hAdd a b := pyBoolToInt a + (b : Int)
 
 class PyHSub (α β : Type) (γ : outParam Type) where
   hSub : α → β → γ
@@ -93,6 +106,8 @@ instance {α β γ} [HMul α β γ] : PyHMul α β γ where
 
 instance (priority := high) : PyHMul Int Bool Int where hMul a b := a * pyBoolToInt b
 instance (priority := high) : PyHMul Bool Int Int where hMul a b := pyBoolToInt a * b
+instance (priority := high) : PyHMul Nat Bool Int where hMul a b := (a : Int) * pyBoolToInt b
+instance (priority := high) : PyHMul Bool Nat Int where hMul a b := pyBoolToInt a * (b : Int)
 
 instance : PyHMul String Nat String where
   hMul := fun s n => String.intercalate "" (List.replicate n s)
@@ -171,6 +186,30 @@ instance (priority := high) : PyModulo Int Int Int where
 instance : PyModulo Nat Nat Nat where
   hMod := fun a b => a % b
 
+-- Integer `%` mixing `Nat` and `Int` (`n % len(xs)`), floored via `pyMod`, result `Int`.
+instance (priority := high) : PyModulo Nat Int Int where hMod a b := pyMod (a : Int) b
+instance (priority := high) : PyModulo Int Nat Int where hMod a b := pyMod a (b : Int)
+
+/-- Python `%` on rationals: the result takes the *divisor's* sign (`a - b·⌊a/b⌋`), unlike Lean's
+truncating `%`. So `(-5.5 : ℚ) % 2 = 0.5`. -/
+def pyRatMod (a b : Rat) : Rat := if b == 0 then a else a - b * ((⌊a / b⌋ : Int) : Rat)
+
+/-- Python `%` on floats (floored, divisor-signed) — see `pyRatMod`. -/
+def pyFloatMod (a b : Float) : Float := if b == 0.0 then a else a - b * (a / b).floor
+
+instance : PyModulo Rat Rat Rat where hMod := pyRatMod
+instance : PyModulo Float Float Float where hMod := pyFloatMod
+
+-- Mixed `%` promotes to the wider computable type (as `/ₚ` does), keeping Python's floor semantics.
+instance (priority := high) : PyModulo Float Int Float where hMod a b := pyFloatMod a (Float.ofInt b)
+instance (priority := high) : PyModulo Int Float Float where hMod a b := pyFloatMod (Float.ofInt a) b
+instance (priority := high) : PyModulo Float Nat Float where hMod a b := pyFloatMod a (Float.ofNat b)
+instance (priority := high) : PyModulo Nat Float Float where hMod a b := pyFloatMod (Float.ofNat a) b
+instance (priority := high) : PyModulo Rat Int Rat where hMod a b := pyRatMod a (b : Rat)
+instance (priority := high) : PyModulo Int Rat Rat where hMod a b := pyRatMod (a : Rat) b
+instance (priority := high) : PyModulo Rat Nat Rat where hMod a b := pyRatMod a (b : Rat)
+instance (priority := high) : PyModulo Nat Rat Rat where hMod a b := pyRatMod (a : Rat) b
+
 @[default_instance]
 instance {α β γ} [HPow α β γ] : PyHPow α β γ where
   hPow := HPow.hPow
@@ -201,6 +240,11 @@ instance (priority := high) : PyHPow Int Float Float where
 instance (priority := high) : PyHPow Float Float Float where
   hPow := fun a b => Float.pow a b
 
+-- Float base with an integer exponent (`x ** 2`); `Nat ** Int` takes the exponent non-negative.
+instance (priority := high) : PyHPow Float Int Float where hPow a b := Float.pow a (Float.ofInt b)
+instance (priority := high) : PyHPow Float Nat Float where hPow a b := Float.pow a (Float.ofNat b)
+instance (priority := high) : PyHPow Nat Int Nat where hPow a b := a ^ b.toNat
+
 @[default_instance]
 instance (priority := high) : Neg Rat where
   neg := fun a => - (a : Rat)
@@ -214,9 +258,8 @@ infixl:70 " /ₚ " => PyHDiv.hDiv
 instance {α β γ} [HDiv α β γ] : PyHDiv α β γ where
   hDiv := HDiv.hDiv
 
--- `@[default_instance 10001]` (as with `PyHAdd Int Int Int`) pins otherwise-unconstrained division
--- operands — e.g. `def divide(a, b): return a / b` with untyped params — to `Int /ₚ Int : Rat`,
--- matching Python's `/` always yielding a float (exact ℚ in prove mode).
+-- `@[default_instance 10001]` (as with `PyHAdd Int Int Int`) pins untyped division operands
+-- (`def divide(a, b): return a / b`) to `Int /ₚ Int : Rat` — Python `/` always yields a float.
 @[default_instance 10001]
 instance (priority := high) : PyHDiv Int Int Rat where
   hDiv := fun a b => (a : Rat) / (b : Rat)
@@ -358,19 +401,30 @@ instance (priority := low) {α β γ} [j : PyNumJoin α β γ] [Div γ] : PyHDiv
 
 
 /-- Python-style floor division: `a // b` truncates toward negative infinity. -/
-def pyFloorDiv (a b : Int) : Int :=
-  if b == 0 then
-    panic! "ZeroDivisionError: integer division or modulo by zero"
-  else
-    Int.fdiv a b
+class PyFloorDiv (α β : Type) (γ : outParam Type) where floorDiv : α → β → γ
+/-- Python `a // b`. -/
+def pyFloorDiv {α β γ : Type} [PyFloorDiv α β γ] (a : α) (b : β) : γ := PyFloorDiv.floorDiv a b
+
+instance : PyFloorDiv Int Int Int where
+  floorDiv a b := if b == 0 then panic! "ZeroDivisionError: integer division or modulo by zero" else Int.fdiv a b
 
 /-!
-Python-style integer bitwise operators.
-
-These assume non-negative operands, which covers competitive-programming use. Python's
-infinite two's-complement semantics for negative integers is intentionally out of scope:
-operands are taken through `Int.toNat`, so a negative operand is treated as `0`.
+Python-style integer bitwise operators, modelling Python's infinite two's-complement (`-1 & 15 = 15`,
+`x & 1` for a negative `x`) at a fixed 64-bit width — ample for competitive-programming values (which
+fit in 63 bits). A negative operand becomes its unsigned 64-bit representative, the `Nat` bitwise op
+runs, and the result is re-signed (negative iff the top bit is set).
 -/
+
+/-- Fixed width for the two's-complement model of Python integer bitwise ops. -/
+private def pyBitWidth : Nat := 64
+/-- Unsigned 64-bit two's-complement representative of `a` (`-1 ↦ 2^64-1`). -/
+private def pyToUnsigned (a : Int) : Nat := (a % ((2 : Int) ^ pyBitWidth)).toNat
+/-- Re-sign a 64-bit result: negative iff the top bit is set. -/
+private def pyFromUnsigned (r : Nat) : Int :=
+  if r ≥ 2 ^ (pyBitWidth - 1) then (r : Int) - (2 : Int) ^ pyBitWidth else (r : Int)
+/-- Apply a `Nat` bitwise op in the two's-complement model, so negatives behave like Python. -/
+private def pyTwosComp (f : Nat → Nat → Nat) (a b : Int) : Int :=
+  pyFromUnsigned (f (pyToUnsigned a) (pyToUnsigned b))
 
 /-- Python `a & b`. -/
 -- `&`, `|`, `^` are bitwise on integers *and* the binary set operations (intersection, union,
@@ -388,15 +442,19 @@ def pyBitOr {α β γ : Type} [PyBitOr α β γ] (a : α) (b : β) : γ := PyBit
 /-- Python `a ^ b` (integer bitwise-xor, or set symmetric difference). -/
 def pyBitXor {α β γ : Type} [PyBitXor α β γ] (a : α) (b : β) : γ := PyBitXor.bitXor a b
 
-instance : PyBitAnd Int Int Int where bitAnd a b := Int.ofNat (Nat.land a.toNat b.toNat)
-instance : PyBitOr Int Int Int where bitOr a b := Int.ofNat (Nat.lor a.toNat b.toNat)
-instance : PyBitXor Int Int Int where bitXor a b := Int.ofNat (Nat.xor a.toNat b.toNat)
+instance : PyBitAnd Int Int Int where bitAnd := pyTwosComp Nat.land
+instance : PyBitOr Int Int Int where bitOr := pyTwosComp Nat.lor
+instance : PyBitXor Int Int Int where bitXor := pyTwosComp Nat.xor
 
+class PyShiftLeft (α β : Type) (γ : outParam Type) where shiftLeft : α → β → γ
+class PyShiftRight (α β : Type) (γ : outParam Type) where shiftRight : α → β → γ
 /-- Python `a << b`. -/
-def pyShiftLeft (a b : Int) : Int := a * (2 ^ b.toNat)
-
+def pyShiftLeft {α β γ : Type} [PyShiftLeft α β γ] (a : α) (b : β) : γ := PyShiftLeft.shiftLeft a b
 /-- Python `a >> b` (floor division by `2 ^ b`). -/
-def pyShiftRight (a b : Int) : Int := Int.fdiv a (2 ^ b.toNat)
+def pyShiftRight {α β γ : Type} [PyShiftRight α β γ] (a : α) (b : β) : γ := PyShiftRight.shiftRight a b
+
+instance : PyShiftLeft Int Int Int where shiftLeft a b := a * (2 ^ b.toNat)
+instance : PyShiftRight Int Int Int where shiftRight a b := Int.fdiv a (2 ^ b.toNat)
 
 /-!
 ## Reduction lemmas — `simp` rewrites the Python operators to the standard ones

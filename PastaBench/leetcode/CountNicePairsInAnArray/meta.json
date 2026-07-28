@@ -1,0 +1,12 @@
+{
+  "problem": "count-nice-pairs-in-an-array",
+  "module": "CountNicePairsInAnArray",
+  "method": "countNicePairs",
+  "params": [
+    "nums"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 107
+}

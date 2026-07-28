@@ -1,0 +1,12 @@
+{
+  "problem": "single-element-in-a-sorted-array",
+  "module": "SingleElementInASortedArray",
+  "method": "singleNonDuplicate",
+  "params": [
+    "nums"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 133
+}

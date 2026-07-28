@@ -1,0 +1,12 @@
+{
+  "problem": "container-with-most-water",
+  "module": "ContainerWithMostWater",
+  "method": "maxArea",
+  "params": [
+    "height"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 116
+}

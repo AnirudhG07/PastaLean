@@ -1,0 +1,12 @@
+{
+  "problem": "maximum-element-after-decreasing-and-rearranging",
+  "module": "MaximumElementAfterDecreasingAndRearranging",
+  "method": "maximumElementAfterDecrementingAndRearranging",
+  "params": [
+    "arr"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 135
+}

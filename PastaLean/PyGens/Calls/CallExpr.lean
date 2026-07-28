@@ -229,22 +229,29 @@ def mappedCallableValueCode (json : Json) : PygenM (TSyntax `term) := do
 def lowerMinMaxCall (which : String) (argsArray : Array Json) (argsCodes : Array (TSyntax `term))
     (keyWordsMap : PyKeywordArgs) : PygenM (TSyntax `term) := do
   for (kwName, _) in keyWordsMap.toList do
-    unless kwName == "key" do
+    unless kwName == "key" || kwName == "default" do
       throwError s!"{which}() keyword argument '{kwName}' is not supported yet."
   unless argsArray.size ≥ 1 do
     throwError s!"{which}() expects at least one argument."
   let keyOpt := keyWordsMap.get? "key"
+  -- `min(xs, default=d)` returns `d` for an empty iterable rather than raising.
+  let defaultCode ← match keyWordsMap.get? "default" with
+    | some d => some <$> getCode d `term
+    | none => pure none
   buildIOPureApplicationFromArgs argsArray argsCodes fun resolvedArgs => do
     let iterable ← if resolvedArgs.size == 1 then pure resolvedArgs[0]!
       else `([$resolvedArgs,*])
-    match keyOpt with
-    | none =>
-        let fn := mkIdent (if which == "min" then ``pyMin else ``pyMax)
-        `($fn $iterable)
-    | some kJson =>
-        let keyCode ← mappedCallableValueCode kJson
-        let fn := mkIdent (if which == "min" then ``pyMinBy else ``pyMaxBy)
-        `($fn $keyCode $iterable)
+    let base ← match keyOpt with
+      | none =>
+          let fn := mkIdent (if which == "min" then ``pyMin else ``pyMax)
+          `($fn $iterable)
+      | some kJson =>
+          let keyCode ← mappedCallableValueCode kJson
+          let fn := mkIdent (if which == "min" then ``pyMinBy else ``pyMaxBy)
+          `($fn $keyCode $iterable)
+    match defaultCode with
+    | some d => `(if $(mkIdent ``PastaLean.pyLen) $iterable == (0 : Int) then $d else $base)
+    | none => pure base
 
 /-- Resolve the class of a method-call receiver `recv.m(...)`: `self` inside a class body resolves
 to the class being lowered; otherwise fall back to the unique registered class that declares a
@@ -293,23 +300,27 @@ def mutatingMethodDoElem (recvJson : Json)
   let recvTerm ← getCode recvJson `term
   assignBackToReceiver recvJson (← mkNewValue recvTerm)
 
-/-- Set methods that mutate the receiver in place, and the runtime function each lowers to. -/
-def setMutatorName? (attr : String) : Option Lean.Name :=
+/-- An in-place mutating method used AS A STATEMENT: the runtime function that rebuilds the receiver
+(`recv := fn recv args…`) and the accepted positional-arg counts. Pure mutators (`append`, `clear`,
+…) and value+rest mutators (`pop`, `popleft`) are handled uniformly — in statement position both
+drop any return value and just rebuild the receiver. The arity guard keeps a user method of the same
+name (`tree.update(i, v)`) from being hijacked. `sort` (kwargs) and dict `get` stay separate. -/
+def statementMutatorRebuild? (attr : String) : Option (Lean.Name × List Nat) :=
   match attr with
-  | "add"     => some ``pySetAdd
-  | "discard" => some ``pySetDiscard
-  | "remove"  => some ``pySetRemove
-  | _         => none
-
-/-- Python methods that mutate the receiver in place and return `None`, with their arity. Their
-runtime functions return a new container, so a statement call must store the result back. `append`
-and the `setMutatorName?` methods have their own branches. -/
-def inPlaceMutatorArity? (attr : String) : Option Nat :=
-  match attr with
-  | "clear" | "reverse"      => some 0
-  | "extend" | "update"      => some 1
-  | "appendleft"             => some 1
-  | _                        => none
+  | "append"     => some (``pyAppend,      [1])
+  | "appendleft" => some (``pyAppendLeft,  [1])
+  | "extend"     => some (``pyExtend,      [1])
+  | "update"     => some (``pyUpdate,      [1])
+  | "clear"      => some (``pyClear,       [0])
+  | "reverse"    => some (``pyReverse,     [0])
+  | "insert"     => some (``pyInsert,      [2])
+  | "add"        => some (``pySetAdd,      [1])
+  | "discard"    => some (``pySetDiscard,  [1])
+  | "remove"     => some (``pySetRemove,   [1])
+  | "pop"        => some (``pyPopRest,     [0, 1])
+  | "popleft"    => some (``pyPopLeftRest, [0])
+  | "setdefault" => some (``pyDictSetdefaultRest, [2])
+  | _            => none
 
 /-- The class to construct for a call `f(...)` whose callee is the `Name` `funcName`: a registered
 class (`C(..)`), or `cls(..)` inside a class body (classmethod sugar). `none` for ordinary calls. -/
@@ -538,12 +549,16 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
         | .ok "Name", .ok "int" => do
             unless keyWordsMap.isEmpty do
               throwError "int() keyword arguments are not supported yet."
-            unless argsArray.size == 1 do
-              throwError "int() expects exactly one positional argument."
-            let pyIntIdent := mkIdent ``pyInt
+            -- `int()` with no argument is Python's `0`.
+            if argsArray.isEmpty then return ← `((0 : Int))
+            unless argsArray.size == 1 || argsArray.size == 2 do
+              throwError "int() expects one or two positional arguments."
             return ← buildIOPureApplicationFromArgs argsArray argsCodes fun resolvedArgs => do
-              let arg0 := resolvedArgs[0]!
-              `($pyIntIdent $arg0)
+              -- `int(s, base)` parses a string in the given radix; `int(x)` is the plain cast.
+              if resolvedArgs.size == 2 then
+                `($(mkIdent ``pyIntBase) $(resolvedArgs[0]!) $(resolvedArgs[1]!))
+              else
+                `($(mkIdent ``pyInt) $(resolvedArgs[0]!))
         | .ok "Name", .ok "str" => do
             unless keyWordsMap.isEmpty do
               throwError "str() keyword arguments are not supported yet."
@@ -626,6 +641,15 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
             | _ => throwError "round() expects one or two arguments."
         | .ok "Name", .ok "min" => return ← lowerMinMaxCall "min" argsArray argsCodes keyWordsMap
         | .ok "Name", .ok "max" => return ← lowerMinMaxCall "max" argsArray argsCodes keyWordsMap
+        | .ok "Name", .ok "next" =>
+            -- `next(it)` / `next(it, default)`. Our comprehensions/`iter(...)` are eager `List`s, so
+            -- this is the first element (or the default when empty).
+            unless keyWordsMap.isEmpty do throwError "next() keyword arguments are not supported."
+            return ← buildIOPureApplicationFromArgs argsArray argsCodes fun r => do
+              let iter ← `($(mkIdent ``PastaLean.pyIter) $(r[0]!))
+              match r[1]? with
+              | some d => `(($iter).headD $d)
+              | none   => `(($iter).headD default)
         | .ok "Name", .ok funcName =>
             -- Under `--heap`, `len(x)` on a container held by reference dereferences it first.
             if funcName == "len" && argsArray.size == 1 then
@@ -655,6 +679,13 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
             if let some (foldFn, dir) := variadicFoldBuiltin? funcName then
               unless keyWordsMap.isEmpty do
                 throwError s!"{funcName}() keyword arguments are not supported yet."
+              -- `zip(*rows)` is a transpose, not a fold over several iterables: one starred arg.
+              if funcName == "zip" && argsArray.size == 1
+                  && jsonNodeType? argsArray[0]! == some "Starred" then
+                let .ok inner := argsArray[0]!.getObjVal? "value" | throwError
+                  s!"Starred argument is missing a 'value': {argsArray[0]!}"
+                let innerCode ← getCode inner `term
+                return ← `($(mkIdent ``PastaLean.pyZipStar) $innerCode)
               unless argsArray.size ≥ 2 do
                 throwError s!"{funcName}() expects at least two arguments."
               let foldIdent := mkIdent foldFn
@@ -671,6 +702,23 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
       allArgs := allArgs.push argCode
     for argJson in argsArray do
       allArgJsons := allArgJsons.push argJson
+
+    -- A 0-arg call `f()` where `f` is a *local* callable (a loop/param/let-bound value holding one of
+    -- the `fun () ↦ …` thunks our lambdas lower to) applies it to `Unit`, so emit `f ()`. A
+    -- 0-parameter top-level `def foo := …` is a value (not a thunk), a class constructor is `C.new`,
+    -- and a builtin has its own lowering — none of those take the `()`, so they stay bare.
+    if argsArray.isEmpty && keyWordsMap.isEmpty then
+      match funcJson.getObjValAs? String "node_type", funcJson.getObjValAs? String "id" with
+      | .ok "Name", .ok nm =>
+          let isCtor := (json.getObjValAs? String "_class_ctor").toOption.isSome
+                        || (← constructorClassOfName? nm).isSome
+          let isUserFn := (← userNamesRef.get).contains nm
+          let isBuiltin := (← builtinMappedName? nm).isSome
+          if !isCtor && !isUserFn && !isBuiltin then allArgs := allArgs.push (← `(()))
+      -- `expr()` where `expr` is itself a call (`make_counter()()`, `build(a,b)()`) applies the
+      -- 0-arg closure `expr` returned — that closure is a `fun () ↦ …` thunk, so pass it `Unit`.
+      | .ok "Call", _ => allArgs := allArgs.push (← `(()))
+      | _, _ => pure ()
 
     let buildApplied : Array (TSyntax `term) → PygenM (TSyntax `term) := fun resolvedArgs => do
       let mut t ← `($funcIdent $resolvedArgs*)
@@ -782,41 +830,16 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
             else
               return ← `(doElem| let _ := $t)
 
-        if attr == "append" then
-          unless keyWordsMap.isEmpty do
-            throwError "append() calls do not support keyword arguments."
-          let some argJson := argsArray[0]? | throwError "append() expects exactly one positional argument."
-          unless argsArray.size == 1 do
-            throwError "append() expects exactly one positional argument."
-          let argCode ← getCode argJson `term
-          let pyAppendIdent := mkIdent ``pyAppend
-          return ← mutatingMethodDoElem valueJson fun recv => `($pyAppendIdent $recv $argCode)
-
-        -- Set mutators rebuild the set and reassign the variable, like `append`.
-        if let some mutName := setMutatorName? attr then
-          unless keyWordsMap.isEmpty do
-            throwError s!"{attr}() calls do not support keyword arguments."
-          let some argJson := argsArray[0]? | throwError s!"{attr}() expects exactly one positional argument."
-          unless argsArray.size == 1 do
-            throwError s!"{attr}() expects exactly one positional argument."
-          let argCode ← getCode argJson `term
-          let mutIdent := mkIdent mutName
-          return ← mutatingMethodDoElem valueJson fun recv => `($mutIdent $recv $argCode)
-
-        -- `d.popleft()` as a statement drops the value but must still shorten the deque.
-        if attr == "popleft" && argsArray.isEmpty && keyWordsMap.isEmpty then
-          return ← mutatingMethodDoElem valueJson fun recv =>
-            `($(mkIdent ``pyPopLeftRest) $recv)
-
-        -- Claim the call only when the shape matches the container mutator; a user method sharing
-        -- the name (`tree.update(i, v)`) has a different arity and belongs on the normal path.
-        if let some arity := inPlaceMutatorArity? attr then
-          if keyWordsMap.isEmpty && argsArray.size == arity then
-            let some methodName := pythonMethodMap? attr
-              | throwError s!"No runtime function is registered for '{attr}'."
-            let methodIdent := mkIdent methodName
-            let mutArgCodes ← argsArray.mapM (fun argJson => getCode argJson `term)
-            return ← mutatingMethodDoElem valueJson fun recv => `($methodIdent $recv $mutArgCodes*)
+        -- Any in-place mutating method as a bare statement (`stk.pop()`, `xs.append(v)`, `s.add(x)`,
+        -- `xs.insert(i, v)`, …): rebuild the receiver and drop the return value. One path for all;
+        -- a value+rest method's `restFn` is the rebuild. Also handles a subscript receiver
+        -- (`g[i].append(v)`) via `mutatingMethodDoElem`. The arity guard avoids claiming a like-named
+        -- user method.
+        if let some (rebuildFn, arities) := statementMutatorRebuild? attr then
+          if keyWordsMap.isEmpty && arities.contains argsArray.size then
+            let argCodes ← argsArray.mapM (fun argJson => getCode argJson `term)
+            let fnIdent := mkIdent rebuildFn
+            return ← mutatingMethodDoElem valueJson fun recv => `($fnIdent $recv $argCodes*)
 
         if attr == "get" then
           unless keyWordsMap.isEmpty do
@@ -835,6 +858,12 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
             | _ =>
                 throwError "get() expects one or two positional arguments."
           return ← `(doElem| let _ := $t)
+
+        -- A library-declared no-op method (e.g. functools' `f.cache_clear()`): lower to the
+        -- library's no-op value. The set lives in the library, not here (see `libraryNoopMethod?`).
+        if let some noopFn := Libraries.libraryNoopMethod? attr then
+          let noopIdent := mkIdent noopFn
+          return ← `(doElem| let _ := $noopIdent)
 
         if attr == "sort" then
           -- In-place `list.sort()`: lower to a reassignment of the (immutable-value) list.
@@ -939,12 +968,13 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
         | .ok "Name", .ok "int" => do
             unless keyWordsMap.isEmpty do
               throwError "int() keyword arguments are not supported yet."
-            unless argsArray.size == 1 do
-              throwError "int() expects exactly one positional argument."
-            let pyIntIdent := mkIdent ``pyInt
+            unless argsArray.size == 1 || argsArray.size == 2 do
+              throwError "int() expects one or two positional arguments."
             let t ← buildIOPureApplicationFromArgs argsArray argsCodes fun resolvedArgs => do
-              let arg0 := resolvedArgs[0]!
-              `($pyIntIdent $arg0)
+              if resolvedArgs.size == 2 then
+                `($(mkIdent ``pyIntBase) $(resolvedArgs[0]!) $(resolvedArgs[1]!))
+              else
+                `($(mkIdent ``pyInt) $(resolvedArgs[0]!))
             if argsArray.toList.any basicJsonUsesMonadicEffect then
               return ← `(doElem| let _ ← $t:term)
             else
@@ -1038,6 +1068,23 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
       allArgs := allArgs.push argCode
     for argJson in argsArray do
       allArgJsons := allArgJsons.push argJson
+
+    -- A 0-arg call `f()` where `f` is a *local* callable (a loop/param/let-bound value holding one of
+    -- the `fun () ↦ …` thunks our lambdas lower to) applies it to `Unit`, so emit `f ()`. A
+    -- 0-parameter top-level `def foo := …` is a value (not a thunk), a class constructor is `C.new`,
+    -- and a builtin has its own lowering — none of those take the `()`, so they stay bare.
+    if argsArray.isEmpty && keyWordsMap.isEmpty then
+      match funcJson.getObjValAs? String "node_type", funcJson.getObjValAs? String "id" with
+      | .ok "Name", .ok nm =>
+          let isCtor := (json.getObjValAs? String "_class_ctor").toOption.isSome
+                        || (← constructorClassOfName? nm).isSome
+          let isUserFn := (← userNamesRef.get).contains nm
+          let isBuiltin := (← builtinMappedName? nm).isSome
+          if !isCtor && !isUserFn && !isBuiltin then allArgs := allArgs.push (← `(()))
+      -- `expr()` where `expr` is itself a call (`make_counter()()`, `build(a,b)()`) applies the
+      -- 0-arg closure `expr` returned — that closure is a `fun () ↦ …` thunk, so pass it `Unit`.
+      | .ok "Call", _ => allArgs := allArgs.push (← `(()))
+      | _, _ => pure ()
 
     let buildApplied : Array (TSyntax `term) → PygenM (TSyntax `term) := fun resolvedArgs => do
       let mut t ← `($funcIdent $resolvedArgs*)

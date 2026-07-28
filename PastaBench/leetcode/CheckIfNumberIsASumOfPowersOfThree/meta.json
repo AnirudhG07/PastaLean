@@ -1,0 +1,12 @@
+{
+  "problem": "check-if-number-is-a-sum-of-powers-of-three",
+  "module": "CheckIfNumberIsASumOfPowersOfThree",
+  "method": "checkPowersOfThree",
+  "params": [
+    "n"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 110
+}

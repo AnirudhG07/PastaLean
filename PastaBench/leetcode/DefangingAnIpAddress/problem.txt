@@ -1,0 +1,17 @@
+Given a valid (IPv4) IP address, return a defanged version of that IP address.\r
+\r
+A defanged IP address replaces every period "." with "[.]".\r
+\r
+ \r
+Example 1:\r
+Input: address = "1.1.1.1"\r
+Output: "1[.]1[.]1[.]1"\r
+Example 2:\r
+Input: address = "255.100.50.0"\r
+Output: "255[.]100[.]50[.]0"\r
+\r
+ \r
+Constraints:\r
+\r
+\r
+	The given address is a valid IPv4 address.\r

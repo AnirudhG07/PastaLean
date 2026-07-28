@@ -1,0 +1,12 @@
+{
+  "problem": "number-of-distinct-substrings-in-a-string",
+  "module": "NumberOfDistinctSubstringsInAString",
+  "method": "countDistinct",
+  "params": [
+    "s"
+  ],
+  "difficulty": "Medium",
+  "bucket": "term",
+  "feature": "term",
+  "n_tests": 84
+}

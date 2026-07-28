@@ -1,0 +1,13 @@
+{
+  "problem": "remove-stones-to-minimize-the-total",
+  "module": "RemoveStonesToMinimizeTheTotal",
+  "method": "minStoneSum",
+  "params": [
+    "piles",
+    "k"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 88
+}
