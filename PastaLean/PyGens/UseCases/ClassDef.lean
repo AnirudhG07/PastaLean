@@ -110,12 +110,61 @@ def classSelfThreadingValue (argInfos : Array (TSyntax `ident × Option (TSyntax
   addVar `self
   let selfDecl ← if selfIsParam then `(doElem| let mut $selfId:ident := $selfId:ident)
                  else `(doElem| let mut $selfId:ident : $classTyTerm := default)
+  -- A mutator method may also reassign/augment its OWN parameters (`x += x & -x` in a Fenwick
+  -- `update`), so each mutated param needs a `let mut` shadow — exactly as free functions do. Without
+  -- it the immutable binder throws "`x` cannot be mutated" and the whole method fails to elaborate.
+  let mut paramPrelude : Array (TSyntax `doElem) := #[]
+  for (argIdent, _) in argInfos do
+    if argIdent.getId != `self && bodyElems.any (fun b => jsonMutatesName b argIdent.getId.toString) then
+      addVar argIdent.getId
+      paramPrelude := paramPrelude.push (← `(doElem| let mut $argIdent:ident := $argIdent))
   let bodyStxArray ← monadicFunctionBodySyntax bodyElems
   let idRun := mkIdent ``Id.run
   let core ← `($idRun do
       $selfDecl:doElem
+      $[$paramPrelude:doElem]*
       $[$bodyStxArray:doElem]*
       return $selfId:term)
+  let mut result := core
+  for (argIdent, ty?) in argInfos.toList.reverse do
+    result ← match ty? with
+      | some ty => `(fun ($argIdent : $ty) ↦ $result)
+      | none => `(fun $argIdent ↦ $result)
+  pure result
+
+/-- Body of a VALUE+MUTATE method — mutates `self` AND returns a value (union-find `union`). Like
+`classSelfThreadingValue` but each `return v` is emitted as `return (v, self)` (via `valueMutatorRef`),
+so the method returns `(result × Self)`; the caller binds both, reassigns the receiver, and uses the
+result. A fall-through returns `(default, self)`. -/
+def classValueMutatorValue (argInfos : Array (TSyntax `ident × Option (TSyntax `term)))
+    (bodyElems : Array Json) : PygenM (TSyntax `term) := withFreshVariables do
+  let selfId := mkIdent `self
+  addVar `self
+  let selfDecl ← `(doElem| let mut $selfId:ident := $selfId:ident)
+  let mut paramPrelude : Array (TSyntax `doElem) := #[]
+  for (argIdent, _) in argInfos do
+    if argIdent.getId != `self && bodyElems.any (fun b => jsonMutatesName b argIdent.getId.toString) then
+      addVar argIdent.getId
+      paramPrelude := paramPrelude.push (← `(doElem| let mut $argIdent:ident := $argIdent))
+  let old ← valueMutatorRef.get
+  valueMutatorRef.set true
+  let bodyStxArray ← monadicFunctionBodySyntax bodyElems
+  valueMutatorRef.set old
+  let idRun := mkIdent ``Id.run
+  -- A trailing `return v` already emits `return (v, self)`; only supply the fall-through terminal
+  -- when the body doesn't itself end in a `return` (else the two returns collide in the do-sequence).
+  let endsInReturn := bodyElems.back?.any (jsonNodeType? · == some "Return")
+  let core ← if endsInReturn then
+      `($idRun do
+        $selfDecl:doElem
+        $[$paramPrelude:doElem]*
+        $[$bodyStxArray:doElem]*)
+    else
+      `($idRun do
+        $selfDecl:doElem
+        $[$paramPrelude:doElem]*
+        $[$bodyStxArray:doElem]*
+        return (default, $selfId:term))
   let mut result := core
   for (argIdent, ty?) in argInfos.toList.reverse do
     result ← match ty? with
@@ -232,6 +281,7 @@ def classMethodDef (className : String) (info : ClassInfo) (m : Json) : PygenM (
   let isStatic := info.staticmethods.contains mName
   let isClassM := info.classmethods.contains mName
   let isMutator := info.mutators.contains mName && !isStatic && !isClassM
+  let isValueMutator := info.valueMutators.contains mName && !isStatic && !isClassM
   let argInfos : Array (TSyntax `ident × Option (TSyntax `term)) :=
     if isStatic then allArgInfos
     else if isClassM then allArgInfos.drop 1
@@ -243,6 +293,8 @@ def classMethodDef (className : String) (info : ClassInfo) (m : Json) : PygenM (
   let valueStx ← withCurrentClass className info.mutators do
     if isMutator then
       classSelfThreadingValue bodyArgInfos classTy bodyElems (selfIsParam := true)
+    else if isValueMutator then
+      classValueMutatorValue bodyArgInfos bodyElems
     else
       functionValueSyntax bodyArgInfos bodyElems
   -- A method the per-variable pass stamped `_real_fn` (produces/handles an `ℝ` transcendental)
@@ -314,6 +366,7 @@ def classDefSyntax : (kind : SyntaxNodeKind) → Json → PygenM (TSyntax kind)
       let .ok methods := json.getObjValAs? (Array Json) "methods" | throwError
         s!"ClassDef node is missing a 'methods' array: {json}"
       let mutators := (json.getObjValAs? (Array String) "mutators").toOption.getD #[]
+      let valueMutators := (json.getObjValAs? (Array String) "value_mutators").toOption.getD #[]
       let staticmethods := (json.getObjValAs? (Array String) "staticmethods").toOption.getD #[]
       let classmethods := (json.getObjValAs? (Array String) "classmethods").toOption.getD #[]
       let bases := (json.getObjValAs? (Array Json) "bases").toOption.getD #[]
@@ -323,6 +376,7 @@ def classDefSyntax : (kind : SyntaxNodeKind) → Json → PygenM (TSyntax kind)
       let info : ClassInfo := {
         methods := methodNames.toList
         mutators := mutators.toList
+        valueMutators := valueMutators.toList
         staticmethods := staticmethods.toList
         classmethods := classmethods.toList }
       registerClass name info

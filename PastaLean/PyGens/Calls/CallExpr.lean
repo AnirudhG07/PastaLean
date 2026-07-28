@@ -810,6 +810,14 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
         -- variable reassigns it (`obj := C.m obj args`); a getter is run/bound like any call.
         if let some cls := (json.getObjValAs? String "_receiver_class").toOption then
           let methodIdent : TSyntax `term := mkIdent (Name.mkStr (← suffixIfUserName cls).toName attr)
+          if (json.getObjValAs? Bool "_is_value_mutator").toOption.getD false then
+            -- Value+mutate method as a bare statement: reassign the receiver, drop the value.
+            if jsonNodeType? valueJson == some "Name" then
+              let targetIdent ← getCode valueJson `ident
+              return ← `(doElem| $targetIdent:ident := ($methodIdent $targetIdent $argsCodes*).2)
+            else
+              throwError s!"Value-mutating method '{attr}' on a non-variable receiver is not \
+                supported under value semantics."
           if (json.getObjValAs? Bool "_is_mutator").toOption.getD false then
             if jsonNodeType? valueJson == some "Name" then
               let targetIdent ← getCode valueJson `ident
@@ -926,7 +934,20 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
                 let isMut ← match (json.getObjValAs? Bool "_is_mutator").toOption with
                   | some b => pure b
                   | none => methodIsMutator cls attr
-                if isMut then
+                let isValMut ← match (json.getObjValAs? Bool "_is_value_mutator").toOption with
+                  | some b => pure b
+                  | none => methodIsValueMutator cls attr
+                if isValMut then
+                  -- Value+mutate method in statement position: reassign the receiver, drop the
+                  -- returned value (`uf.union(a,b)` → `uf := (C.union uf a b).2`).
+                  if jsonNodeType? valueJson == some "Name" then
+                    let targetIdent ← getCode valueJson `ident
+                    let methodIdent := mkIdent (Name.mkStr (← suffixIfUserName cls).toName attr)
+                    return ← `(doElem| $targetIdent:ident := ($methodIdent $targetIdent $argsCodes*).2)
+                  else
+                    throwError s!"Value-mutating method '{attr}' on a non-variable receiver is not \
+                      supported under value semantics."
+                else if isMut then
                   if jsonNodeType? valueJson == some "Name" then
                     let targetIdent ← getCode valueJson `ident
                     let methodIdent := mkIdent (Name.mkStr (← suffixIfUserName cls).toName attr)

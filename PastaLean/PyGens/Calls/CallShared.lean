@@ -178,11 +178,35 @@ def popCallSubscriptParts? (value : Json) :
   let argCodes ← args.mapM (getCode · `term)
   return some ((valueFn, restFn), baseIdent, idxTerm, argCodes, argCodes.extract 0 restArgc)
 
+/-- A user value+mutate method (`x = uf.union(a,b)`): the method returns `(value, self)`, so the
+value is `(C.union uf a b).1` and the mutation reassigns `uf := (C.union uf a b).2`. Both read the
+original receiver (bound-then-updated by the caller), so the pure method is evaluated twice. -/
+def userValueMutatorRhsLowering? (value : Json) :
+    PygenM (Option (TSyntax `term × TSyntax `doElem)) := do
+  unless jsonNodeType? value == some "Call" do return none
+  unless (value.getObjValAs? Bool "_is_value_mutator").toOption.getD false do return none
+  let .ok funcJson := value.getObjVal? "func" | return none
+  unless jsonNodeType? funcJson == some "Attribute" do return none
+  let .ok attr := funcJson.getObjValAs? String "attr" | return none
+  let .ok cls := value.getObjValAs? String "_receiver_class" | return none
+  let .ok receiverJson := funcJson.getObjVal? "value" | return none
+  unless jsonNodeType? receiverJson == some "Name" do return none
+  let receiverIdent ← getCode receiverJson `ident
+  unless (← hasVar receiverIdent.getId) do return none
+  let args := (value.getObjValAs? (Array Json) "args").toOption.getD #[]
+  let argCodes ← args.mapM (getCode · `term)
+  let methodIdent : TSyntax `term := mkIdent (Name.mkStr (← suffixIfUserName cls).toName attr)
+  let call ← `($methodIdent $receiverIdent $argCodes*)
+  let valueTerm ← `($call |>.1)
+  let update ← `(doElem| $receiverIdent:ident := $call |>.2)
+  return some (valueTerm, update)
+
 /-- Lower a call that both mutates its receiver and yields a value into a `(value, update)`
 pair. They each read the *original* container, so the caller binds `value` first, then runs
 `update`. Covers `container.pop(idx?)` and `deque.popleft()`, on a Name or `base[idx]` receiver. -/
 def mutatingCallRhsLowering? (value : Json) :
     PygenM (Option (TSyntax `term × TSyntax `doElem)) := do
+  if let some res ← userValueMutatorRhsLowering? value then return some res
   if let some ((valueFn, restFn), baseIdent, idxTerm, valueArgs, restArgs) ← popCallSubscriptParts? value then
     -- `d[c].popleft()`: read the list at `d[c]`, take its value, and rebuild `d` with the rest.
     let getIdent := mkIdent ``PastaLean.pyGetItem

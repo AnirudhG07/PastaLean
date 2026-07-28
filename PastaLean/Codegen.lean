@@ -97,6 +97,14 @@ throws is degraded to a `pyUnsupported` placeholder — keeping the REST of the 
 whole `FunctionDef` collapsing. Off by default (strict). -/
 initialize bestEffortRef : IO.Ref Bool ← IO.mkRef false
 
+/-- Set while lowering the body of a VALUE+MUTATE class method — one that mutates `self` AND returns a
+value (union-find `union`). Each `return v` is emitted as `return (v, self)` so the caller receives
+BOTH the result and the mutated receiver (which it reassigns). Empty outside such a method. -/
+initialize valueMutatorRef : IO.Ref Bool ← IO.mkRef false
+
+/-- Read whether we're lowering a value+mutate method body (so `return v` → `return (v, self)`). -/
+def getValueMutatorContext : IO Bool := valueMutatorRef.get
+
 /-- The suffix to append to a top-level def name being emitted (empty unless in a run-twin). -/
 def getRunSuffix : IO String := runSuffixRef.get
 
@@ -382,6 +390,7 @@ top-level statements can dispatch instantiation (`C(..)` → `C.mk`) and method 
 structure ClassInfo where
   methods : List String := []
   mutators : List String := []
+  valueMutators : List String := []
   staticmethods : List String := []
   classmethods : List String := []
   deriving Inhabited, Repr
@@ -406,6 +415,11 @@ def classInfo? (name : String) : PygenM (Option ClassInfo) := do
 def methodIsMutator (className method : String) : PygenM Bool := do
   match (← classRegistry.get).get? className with
   | some info => return info.mutators.contains method
+  | none => return false
+
+def methodIsValueMutator (className method : String) : PygenM Bool := do
+  match (← classRegistry.get).get? className with
+  | some info => return info.valueMutators.contains method
   | none => return false
 
 /-- The unique class declaring method `m`, if exactly one does (else `none`: ambiguous or unknown).

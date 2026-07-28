@@ -619,7 +619,8 @@ def returnSyntax : (kind : SyntaxNodeKind) → Json →
         -- A bare `return` (Python `return`, i.e. `None`) → `return default`, which is `()` for a
         -- `Unit`/void function but also matches a (mis-)annotated non-`Unit` return type.
         | .null =>
-            `(doElem| return default)
+            if (← getValueMutatorContext) then `(doElem| return (default, $(mkIdent `self)))
+            else `(doElem| return default)
         | _ =>
             let valueStx ←
               -- `return a or b` returns the deciding *value* (`x or '0'` → the string), not a `Bool`.
@@ -645,6 +646,10 @@ def returnSyntax : (kind : SyntaxNodeKind) → Json →
             let valueStx ← if (← getRetFloatContext) && jsonNodeType? value == some "IfExp"
               then let t := if (← getNumericMode) == .exact then mkIdent ``Rat else mkIdent ``Float
                    `(($valueStx : $t)) else pure valueStx
+            -- In a VALUE+MUTATE method, return BOTH the value and the (mutated) receiver so the caller
+            -- can reassign it — `return v` becomes `return (v, self)`.
+            let valueStx ← if (← getValueMutatorContext)
+              then `(($valueStx, $(mkIdent `self))) else pure valueStx
             -- A simple atom (`return x` / `return 42`) is always narrow, so return it directly.
             -- A wide expression placed directly after `return`, however, can be split onto the
             -- next line by the pretty-printer, which re-parses as `return` (Unit) followed by a

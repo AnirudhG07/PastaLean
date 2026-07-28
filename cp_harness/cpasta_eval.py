@@ -871,7 +871,7 @@ class CPastaEval:
 
     def __init__(self, dataset, *, source=None, timeout=15, max_tests=0, skip_python=False,
                  random_n=None, seed=0, problems=None, max_solutions=3, split="test",
-                 workers=None, interpret=False, jobs=None,
+                 workers=None, interpret=False, jobs=None, native_chunk=500,
                  exclude_file="cp_harness/excluded_problems.txt"):
         self.dataset = Path(dataset)
         self.source = source
@@ -885,6 +885,10 @@ class CPastaEval:
         # `lake build` parallelism. Lake defaults to *every* core, which starves the rest of the
         # machine; leave headroom (~3/4 of cores, hard-capped) unless `--jobs` says otherwise.
         self.jobs = jobs or max(1, min(48, ((os.cpu_count() or 4) * 3) // 4))
+        # Native dispatcher chunk size: harnesses per linked `cpharness_run` binary. One giant binary
+        # over the whole corpus (~2100 harnesses) can fail to link/compile, and that used to zero out
+        # the entire evaluation; chunking bounds the link scale and the blast radius of any failure.
+        self.native_chunk = native_chunk
         self.max_tests = max_tests
         self.skip_python = skip_python
         self.random_n = random_n
@@ -1594,41 +1598,74 @@ class CPastaEval:
 
         # Phase 2: link the dispatcher over the harnesses that compiled. The match has one arm per
         # harness, so at corpus scale it blows the elaborator's recursion depth (default 512) and
-        # then the LCNF compiler's heartbeat budget — both are a function of harness COUNT, not
-        # content, so both guards are lifted here rather than per-harness.
-        (native_dir / "CpHarness.lean").write_text(
-            "\n".join(f"import CpHarness.H{i}" for i in ok_ids) + "\n")
-        dispatch = (["import CpHarness", "",
-                     "set_option maxRecDepth 1000000", "set_option maxHeartbeats 0", "",
-                     "def main (args : List String) : IO UInt32 := do",
-                     "  match args.head? with"]
-                    + [f'  | some "{i}" => CpHarness.H{i}.run' for i in ok_ids]
-                    + ["  | _ => pure ()", "  return 0"])
-        (native_dir / "CpHarnessMain.lean").write_text("\n".join(dispatch) + "\n")
-        proc = subprocess.run(self._lake_build("cpharness_run"), cwd=REPO_ROOT,
-                              capture_output=True, text=True, env=self._lake_env())
-        print(f"[*] compile finished in {time.time() - t0:.0f}s — {len(ok_ids)} ok, "
-              f"{len(bad_ids)} compile_fail (rc={proc.returncode})", flush=True)
-        if proc.returncode != 0:
-            # Surface the actual `error:` lines (head of stderr), not the tail — the tail is Lake's
-            # "targets logged failures" list, which hides the real cause (a maxRecDepth/heartbeat
-            # blow-up on the giant match, say). Keep the modules in place so the dispatcher can be
-            # rebuilt in seconds after a fix, instead of re-running the whole phase-1 compile.
-            out = proc.stderr or proc.stdout or ""
-            errs = [l for l in out.splitlines() if "error:" in l and "logged failures" not in l]
-            print("[!] dispatcher build FAILED:\n" + ("\n".join(errs[:20]) or out[:2000]), flush=True)
+        # then the LCNF compiler's heartbeat budget — both a function of harness COUNT, so both guards
+        # are lifted. But even so, one binary over the whole corpus can fail to link/compile, and that
+        # would zero out the ENTIRE evaluation. So build the dispatcher in CHUNKS: each chunk imports
+        # and matches only its own modules, so link scale is bounded and a failing chunk loses only
+        # itself. A chunk that fails is bisected down to the individual offending module(s), which are
+        # marked `compile_fail`; everything else still runs.
+        dispatch_dir = Path(REPO_ROOT) / ".lake" / "build" / "bin"
+        default_binary = dispatch_dir / "cpharness_run"
+        id_binary = {}          # harness id -> the chunk binary that can run it
+        chunk_tag = [0]
+
+        def build_chunk(chunk_ids):
+            """Build one dispatcher binary over `chunk_ids`; on failure, bisect to isolate the bad
+            module(s) into `bad_ids`. Successful (sub)chunks snapshot their binary and map their ids."""
+            if not chunk_ids:
+                return
+            (native_dir / "CpHarness.lean").write_text(
+                "\n".join(f"import CpHarness.H{i}" for i in chunk_ids) + "\n")
+            dispatch = (["import CpHarness", "",
+                         "set_option maxRecDepth 1000000", "set_option maxHeartbeats 0", "",
+                         "def main (args : List String) : IO UInt32 := do",
+                         "  match args.head? with"]
+                        + [f'  | some "{i}" => CpHarness.H{i}.run' for i in chunk_ids]
+                        + ["  | _ => pure ()", "  return 0"])
+            (native_dir / "CpHarnessMain.lean").write_text("\n".join(dispatch) + "\n")
+            proc = subprocess.run(self._lake_build("cpharness_run"), cwd=REPO_ROOT,
+                                  capture_output=True, text=True, env=self._lake_env())
+            if proc.returncode == 0 and default_binary.exists():
+                tag = chunk_tag[0]; chunk_tag[0] += 1
+                dst = dispatch_dir / f"cpharness_run_{tag}"
+                shutil.copy2(default_binary, dst)
+                for i in chunk_ids:
+                    id_binary[i] = str(dst)
+                return
+            if len(chunk_ids) == 1:
+                out = proc.stderr or proc.stdout or ""
+                errs = [l for l in out.splitlines()
+                        if "error:" in l and "logged failures" not in l]
+                bad_ids.add(chunk_ids[0])
+                print(f"[!] harness H{chunk_ids[0]} failed to link into a dispatcher: "
+                      + (errs[0] if errs else out.strip()[:300] or "build failed"), flush=True)
+                return
+            # Bisect: a scale/link blow-up shrinks away with size; a genuinely-broken module isolates.
+            mid = len(chunk_ids) // 2
+            build_chunk(chunk_ids[:mid])
+            build_chunk(chunk_ids[mid:])
+
+        chunk = max(1, self.native_chunk)
+        n_chunks = (len(ok_ids) + chunk - 1) // chunk
+        for k in range(n_chunks):
+            build_chunk(ok_ids[k * chunk:(k + 1) * chunk])
+        linked = len(id_binary)
+        print(f"[*] compile finished in {time.time() - t0:.0f}s — {linked} linked, "
+              f"{len(bad_ids)} compile_fail (chunk={chunk}, {chunk_tag[0]} binaries)", flush=True)
+        if not id_binary:
+            print("[!] no dispatcher chunk built; nothing to evaluate.", flush=True)
             print("[i] harness modules left in cp_harness/.native for a fast dispatcher rebuild.",
                   flush=True)
             return {"_summary": agg}
 
-        binary = str(Path(REPO_ROOT) / ".lake" / "build" / "bin" / "cpharness_run")
         report, lock, done, total = {}, threading.Lock(), [0], len(entries)
         divergences = []
 
         def run_one(e):
             n, out, timed_out = len(e["cases"]), "", False
-            if e["id"] in bad_ids:
+            if e["id"] in bad_ids or e["id"] not in id_binary:
                 return e, 0, n, "compile_fail", {}
+            binary = id_binary[e["id"]]
             try:
                 r = subprocess.run([binary, str(e["id"])], capture_output=True, text=True,
                                    timeout=self.timeout)
@@ -1679,10 +1716,12 @@ class CPastaEval:
         report["_divergences"] = divergences
         (self.dataset / "eval_report.json").write_text(json.dumps(report, indent=2))
         restore_idle()  # drop the generated modules; keep valid placeholders for `lake build`
-        try:
-            (Path(REPO_ROOT) / ".lake" / "build" / "bin" / "cpharness_run").unlink()
-        except OSError:
-            pass
+        bin_dir = Path(REPO_ROOT) / ".lake" / "build" / "bin"
+        for b in [bin_dir / "cpharness_run", *bin_dir.glob("cpharness_run_*")]:
+            try:
+                b.unlink()
+            except OSError:
+                pass
         return report
 
     def evaluate(self):
@@ -1921,6 +1960,9 @@ def _add_eval_opts(p):
                         "machine usable; lake alone would take every core)")
     p.add_argument("--interpret", action="store_true",
                    help="Use the warm interpreter pool instead of compiling all harnesses natively")
+    p.add_argument("--native-chunk", type=int, default=500,
+                   help="Harnesses per linked dispatcher binary (default 500); a failing chunk is "
+                        "bisected to isolate the bad module rather than sinking the whole eval")
     p.add_argument("--max-tests", type=parse_max_tests, default=0,
                    help="Cap tests per solution (0 or 'max'/'all' = all)")
     p.add_argument("--skip-python", action="store_true", help="Skip the Python baseline run")
@@ -1941,6 +1983,7 @@ def _harness(args):
         workers=getattr(args, "workers", None),
         interpret=getattr(args, "interpret", False),
         jobs=getattr(args, "jobs", None),
+        native_chunk=getattr(args, "native_chunk", 500),
     )
 
 

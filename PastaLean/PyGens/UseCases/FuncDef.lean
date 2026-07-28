@@ -810,12 +810,20 @@ def memoizedRunCommand? (json : Json) (nameIdent : TSyntax `ident) (baseName : S
   let bodyElems := stripResultMarkers (← functionBodyElems json)
   -- A self-call in a ternary/`and`/`or`/lambda/comprehension can't be a monadic `(←…)`; fall back.
   if bodyElems.any (selfCallUnderExpr baseName) then return none
+  -- Params are immutable binders; a body that reassigns/augments a param (`k += …`) needs a
+  -- `let mut p := p` shadow, exactly as the non-memoized path does — else "`p` cannot be mutated".
+  let mut paramPrelude : Array (TSyntax `doElem) := #[]
+  for (argIdent, _) in argInfos do
+    if bodyElems.any (fun b => jsonMutatesName b argIdent.getId.toString) then
+      paramPrelude := paramPrelude.push (← `(doElem| let mut $argIdent:ident := $argIdent))
   let bodyDoElems ← withMemoizeSelf (some (baseName, worker.getId)) (monadicFunctionBodySyntax bodyElems)
   let cacheDo ← `(do
     match (← get)[$keyExpr]? with
     | some v => return v
     | none =>
-        let v ← (do $[$bodyDoElems:doElem]*)
+        let v ← (do
+          $[$paramPrelude:doElem]*
+          $[$bodyDoElems:doElem]*)
         modify (·.insert $keyExpr v)
         return v)
   let mut workerVal : TSyntax `term := cacheDo

@@ -1025,6 +1025,69 @@ def annotate_library_imports(module_json):
         _annotate_library_imports_in_scope(module_json.get("body", []))
 
 
+# Lean/Mathlib globals brought into scope by `open PastaLean`/`open Libraries`/Mathlib. A user
+# top-level `def max(...)` lands in the root namespace alongside core's `max`, so every bare `max`
+# call is "ambiguous identifier `max`: [Max.max, max]". We rename such user functions (and their
+# references) to a name containing `'` (invalid in Python, so it can never collide with a user name).
+_RESERVED_LEAN_GLOBALS = frozenset({"max", "min", "insert", "id", "pred", "succ"})
+
+
+def _scope_binds_name(funcdef, name):
+    """Does this function scope bind `name` locally (a param, or an assignment/for-target anywhere in
+    its own body, not descending into nested defs)? If so, `name` inside refers to the local, not the
+    module-level function, and must not be renamed."""
+    args = funcdef.get("args") or {}
+    for key in ("args", "posonlyargs", "kwonlyargs"):
+        if any(a.get("arg") == name for a in args.get(key, []) or []):
+            return True
+    for va in ("vararg", "kwarg"):
+        if (args.get(va) or {}).get("arg") == name:
+            return True
+    for sub in _walk_json_nodes(funcdef.get("body", []), skip_nested_function_bodies=True):
+        if sub.get("node_type") == "Name" and sub.get("id") == name \
+                and (sub.get("ctx") or {}).get("node_type") == "Store":
+            return True
+    return False
+
+
+def _rename_name_refs(node, old, new):
+    """Rename every `Name`/`arg` reference `old` -> `new`, but stop descending into a nested function
+    scope that rebinds `old` locally (its `old` is a different variable)."""
+    if isinstance(node, list):
+        for x in node:
+            _rename_name_refs(x, old, new)
+        return
+    if not isinstance(node, dict):
+        return
+    if node.get("node_type") in ("FunctionDef", "AsyncFunctionDef") and _scope_binds_name(node, old):
+        return
+    if node.get("node_type") == "Name" and node.get("id") == old:
+        node["id"] = new
+    for v in node.values():
+        _rename_name_refs(v, old, new)
+
+
+def rename_reserved_shadows(module_json):
+    """Rename top-level user functions whose name shadows a Lean/Mathlib global (`max`, `min`, …) so
+    calls to them are unambiguous. Only fires when the module actually defines such a function."""
+    if not (isinstance(module_json, dict) and module_json.get("node_type") == "Module"):
+        return
+    body = module_json.get("body", [])
+    targets = {
+        stmt["name"]: stmt for stmt in body
+        if isinstance(stmt, dict)
+        and stmt.get("node_type") in ("FunctionDef", "AsyncFunctionDef")
+        and stmt.get("name") in _RESERVED_LEAN_GLOBALS
+    }
+    for old in targets:
+        new = f"{old}'usr"
+        # A module-level `def max` makes `max` refer to it throughout the module (Python resolves the
+        # name at call time), except inside a scope that locally rebinds it — `_rename_name_refs` skips
+        # those. The def's own `name` is not a `Name` node, so rename it explicitly.
+        targets[old]["name"] = new
+        _rename_name_refs(body, old, new)
+
+
 def _sanitize_hole_identifiers(ast_tree):
     """Rename Python variables whose name is a single underscore when they are *read*.
 
@@ -1087,6 +1150,7 @@ def translate_to_json(source_code, filepath=None, best_effort=False):
         )
         for src in translator.unsupported_log:
             logger.warning("  unsupported: %s", src)
+    rename_reserved_shadows(data)
     annotate_library_imports(data)
     annotate_exception_effects(data)
     annotate_io_effects(data)
@@ -1268,6 +1332,7 @@ def _collect_class_table(body):
             table[s["name"]] = {
                 "methods": set(m.get("name") for m in s.get("methods", [])),
                 "mutators": set(s.get("mutators", [])),
+                "value_mutators": set(s.get("value_mutators", [])),
                 "fields": set(f.get("name") for f in s.get("fields", [])),
                 "statics": set(s.get("staticmethods", [])) | set(s.get("classmethods", [])),
                 "bases": [b.get("id") for b in s.get("bases", []) if isinstance(b, dict)],
@@ -1277,6 +1342,7 @@ def _collect_class_table(body):
             if base in table:
                 info["methods"] |= table[base]["methods"]
                 info["mutators"] |= table[base]["mutators"]
+                info["value_mutators"] |= table[base]["value_mutators"]
                 info["fields"] |= table[base]["fields"]
     return table
 
@@ -1383,6 +1449,7 @@ def _stamp_class_dispatch(ast_json):
                     if rcls is not None and method in table.get(rcls, {}).get("methods", set()):
                         node["_receiver_class"] = rcls
                         node["_is_mutator"] = method in table[rcls]["mutators"]
+                        node["_is_value_mutator"] = method in table[rcls]["value_mutators"]
         for v in node.values():
             walk_expr(v, scope, current_class)
 

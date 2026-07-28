@@ -283,6 +283,9 @@ def flattenAssignTargets (stmts : Array Json) : DesugarM (Array Json) := do
 ordinary sub-expression (the two effects need separate statements). -/
 private def isValueMutateCall (j : Json) : Bool :=
   jsonNodeType? j == some "Call" &&
+    -- A user value+mutate method (`uf.union(a,b)`) is stamped by py2lean; it returns `(value, self)`
+    -- so a sub-expression occurrence must be hoisted just like `pop`.
+    ((j.getObjValAs? Bool "_is_value_mutator").toOption.getD false ||
     (match (j.getObjVal? "func").toOption with
      | some f =>
          -- METHOD form on a Name or single-subscript receiver: `xs.pop(i)`, `dq.popleft()`,
@@ -299,7 +302,7 @@ private def isValueMutateCall (j : Json) : Bool :=
          || (match f.getObjValAs? String "library_module", f.getObjValAs? String "library_member" with
              | .ok m, .ok mem => (Libraries.libraryMutator? m mem).any (·.valueRest?.isSome)
              | _, _ => false)
-     | none => false)
+     | none => false))
 
 /-! `setdefault` is deliberately NOT hoisted. It yields a *reference* the caller then mutates
 (`d.setdefault(k, []).append(v)`); binding it to a temporary would append to the temporary and
@@ -346,18 +349,82 @@ def hoistMutatingCalls (stmts : Array Json) : DesugarM (Array Json) := do
       ++ (if isAssign then #["target"] else #[])
     for field in fields do
       if let .ok expr := stmt.getObjVal? field then
-        let nestedOnly := !isValueMutateCall expr
+        -- A value+mutate call that IS the whole field expr lowers directly only in `Expr`/`Assign`/
+        -- `Return` value position; elsewhere (an `If`/`Assert` test) even a whole-expr call must be
+        -- hoisted, since those positions expect a plain value, not the `(value, self)` pair.
+        let nodeTy := jsonNodeType? stmt |>.getD ""
+        let directLowerField := field == "value" && #["Expr", "Assign", "Return"].contains nodeTy
+        let leaveWholeExpr := directLowerField && isValueMutateCall expr
         let guarded := conditionalContexts.any (fun c =>
           jsonNodeType? expr == some c
           || (match expr with
               | .obj fs => fs.toList.any (fun (_, v) => jsonNodeType? v == some c)
               | _ => false))
-        if nestedOnly && !guarded then
+        if !leaveWholeExpr && !guarded then
           let (expr', prelude) ← hoistMutatingExpr expr
           if !prelude.isEmpty then
             out := out ++ prelude
             stmt := stmt.setObjVal! field expr'
     out := out.push stmt
+  return out
+
+/-! ### Short-circuit value-and-mutate calls -/
+
+/-- Does a value-and-mutate call (`uf.union(a,b)`, `xs.pop()`) appear anywhere in `j`? -/
+private partial def hasValueMutate (j : Json) : Bool :=
+  isValueMutateCall j ||
+    (match j with
+     | .obj fs => fs.toList.any (fun (_, v) => hasValueMutate v)
+     | .arr xs => xs.any hasValueMutate
+     | _ => false)
+
+private def constBool (b : Bool) : Json :=
+  Json.mkObj [("node_type", Json.str "Constant"), ("value", Json.bool b)]
+
+private def notExpr (j : Json) : Json :=
+  Json.mkObj [("node_type", Json.str "UnaryOp"), ("op", Json.str "not"), ("operand", j)]
+
+private def ifStmt (test : Json) (body : Array Json) : Json :=
+  Json.mkObj [("node_type", Json.str "If"), ("test", test),
+    ("body", Json.arr body), ("orelse", Json.arr #[])]
+
+private def boolOpJoin (op : String) (values : Array Json) : Json :=
+  if values.size == 1 then values[0]!
+  else Json.mkObj [("node_type", Json.str "BoolOp"), ("op", Json.str op), ("values", Json.arr values)]
+
+/-- `if A and M:` / `if A or M:` where `M` (the LAST operand) is a value+mutate call and every earlier
+operand is pure: rewrite into an explicit short-circuit so the mutation runs (and its receiver is
+threaded) ONLY on the branch Python would evaluate it. `A and M` → `sc = False; if A: sc = M; if sc:`;
+`A or M` → `sc = True; if not A: sc = M; if sc:`. A value+mutate call inside a `BoolOp` is otherwise a
+conditional context the plain hoist skips, leaving the `(value, self)` tuple stuck in a truthy position.
+Only the last-operand case is handled; a mutator earlier in the chain is left untouched. -/
+def hoistShortCircuitMutator (stmts : Array Json) : DesugarM (Array Json) := do
+  let mut out := #[]
+  for stmt in stmts do
+    let field? := match jsonNodeType? stmt with
+      | some "If" | some "Assert" => some "test"
+      | _ => none
+    match field? with
+    | none => out := out.push stmt
+    | some field =>
+      match (do
+        let test ← (stmt.getObjVal? field).toOption
+        guard (jsonNodeType? test == some "BoolOp")
+        let op ← (test.getObjValAs? String "op").toOption
+        let values ← (test.getObjValAs? (Array Json) "values").toOption
+        guard (values.size ≥ 2)
+        guard (hasValueMutate values.back!)
+        guard (values.pop.all (fun v => !hasValueMutate v))
+        pure (field, op, values)) with
+      | none => out := out.push stmt
+      | some (field, op, values) =>
+          let scName ← freshVar "__sc'"
+          let guardExpr := boolOpJoin op values.pop
+          let (seed, guardTest) := if op == "and" then (constBool false, guardExpr)
+                                   else (constBool true, notExpr guardExpr)
+          out := out.push (assignStmt (nameLoad scName) seed)
+          out := out.push (ifStmt guardTest #[assignStmt (nameLoad scName) values.back!])
+          out := out.push (stmt.setObjVal! field (nameLoad scName))
   return out
 
 /-! ### Unbounded iterators -/
@@ -448,6 +515,7 @@ def desugarAst (json : Json) : Except String Json := do
     let json ← rewriteStatementLists flattenForTargets json
     let json ← rewriteStatementLists unrollInfiniteIter json
     let json ← rewriteStatementLists hoistWalrus json
+    let json ← rewriteStatementLists hoistShortCircuitMutator json
     rewriteStatementLists hoistMutatingCalls json
   return (← pass.run 0).1
 

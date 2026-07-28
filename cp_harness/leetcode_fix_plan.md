@@ -308,3 +308,153 @@ keys (+5), AugAssign-div (+1), PyAny materialisation (foundation), ord→str (fo
 tail is COUPLED — each failing problem stacks 2-4 blockers (Trie-fields + PyDefaultDict + numeric-join
 + closure-null), so single inference fixes seldom flip a whole problem. Next would need clearing a
 whole coupled cluster (Trie: field-typing + PyAny-local + Option-mutation together), not more single fixes.
+
+### FUNDAMENTAL LIMITATION: value semantics vs reference mutation (Trie / tree-node / DSU / graph-node)
+The Trie cluster (~22) is NOT a typing gap — the typing is largely solved (`children : List (Option
+Trie)`, `node : Option Trie`, `Trie.new`, Option-unwrap all generate correctly). Its real blocker is
+architectural and shared with tree-node, DSU-parent, and graph-adjacency-node clusters:
+
+Python builds these by REFERENCE mutation:
+    node = self               # aliases the shared tree
+    node.children[idx] = X()  # mutates the shared tree in place
+    node = node.children[idx] # descend the reference
+
+The transpiler uses VALUE semantics (classes are Lean `structure`s; `=` copies). So `node = self`
+copies, every mutation lands on a throwaway copy, and the tree is never actually built → the code would
+COMPILE but return WRONG answers (empty trie). Fixing the residual typing (`trie` boxed to PyAny, etc.)
+is therefore pointless here — it makes compile-but-wrong code.
+
+Correct handling needs one of: (a) mutable references (`ST`/`IO.Ref`) for class instances — a major
+class-model redesign; (b) an explicit tree-threading source rewrite; (c) an index/dict-backed
+representation. Each is a large project, not a cluster fix. RECOMMENDATION: do not invest in
+Trie/DSU/graph-node compile fixes; they are semantic dead-ends under value semantics. Target the
+typing/codegen clusters that have no semantic wall (numeric joins, tuple-vs-list, missing library ops).
+
+### #3 Execution verification (compile ≠ correct)
+- SortedList: CORRECT end-to-end (count-smaller-before [5,2,6,1]→[0,0,2,0], dups→[0,0,0], sorted→[0,1,2,3];
+  runtime #eval-verified: sorted insert, bisect_left/right over dups, remove). The ~57 wins are real.
+- pop-cluster (number-of-matching-subsequences, subscript-popleft): 8/8 correct.
+- WARNING: `count-of-range-sum` COMPILES but is WRONG (0/8) — its `BinaryIndexedTree` mutates `self.c[x]`
+  through a method; the value-semantics wall makes class-mutation-through-a-method compile-but-wrong.
+  LESSON: a compile-win on a class that mutates self through a method (BIT/Trie/DSU/segment-tree) is
+  likely a wrong-answer — verify execution, don't count the compile.
+- NOTE: the evaluate harness only runs problems already `ok` in convert_summary.json AND that compile in
+  the __main__-wrapped native harness — some convert-ok problems (classes) don't reach evaluate.
+
+### #1 Numeric List-join — the inf-polymorphic-in-container tension
+`f = [0] + [inf]*n` fails `PyHAdd (List ℤ) (List ℚ)`. Root cause: `inf = float('inf')` is typed `.any`
+(the polymorphic `PyNonFinite` sentinel — deliberately int/float/ℚ per DP so an INTEGER DP using inf as
+a sentinel still works). But `.any` forces any list holding inf to `List PyAny`, so `[0]`(List ℤ) ++
+`[inf]*n`(List PyAny/ℚ) has no concat instance. Typing inf as float would fix float-DPs but break the
+integer-DP sentinel use. This is a genuine coupled tension (not a clean fix) — needs canonical per-DP
+inf typing that unifies the container element AND both twins, OR making list-concat element-coercing.
+Simple `/=`→float (done) and non-inf numeric cases are handled; the inf-in-container cases remain.
+
+### Session close-out: state of the tail
+After extensive work (SortedList +57, convert_fail sweep, TypeInfer engine investment, char-over-boxing,
+numeric `/=`), the remaining ~300 failures are genuinely hard/coupled: (a) value-semantics wall
+(Trie/DSU/tree-node/BIT class mutation — compile-but-wrong, do not chase); (b) inf-polymorphic-in-
+container numeric tension; (c) short-circuit hoist (pop/mutating-call in a conditional); (d) external
+libs (re.sub/datetime/Queue/random); (e) feature-level (chain.from_iterable, cmp_to_key, SortedDict).
+Clean single-fix wins are exhausted. Docs api_fix_checklist.md + array_backing_plan.md rewritten to
+current state. All work verified no-regression; execution-verified where it matters (SortedList, pop).
+
+### Class-method self-attr mutation → mutator (16 WRONG-ANSWER fixes, execution-verified)
+Fenwick/segment-tree/BIT classes mutate `self.c[x] += v` in `update`/`modify`. The mutator detector
+(`_method_mutates_self`, node_visitor.py) only recognised `self.X = v`, NOT `self.X[i] = v` (a Subscript
+target), so these methods were classified non-mutating → `tree.update(...)` was `let _ := …` (result
+discarded), the receiver never reassigned, mutations SILENTLY DROPPED → compiled but WRONG answers.
+Fix: (1) `_mutates_self_attr` walks subscript chains to the self attribute; (2) `classSelfThreadingValue`
+(ClassDef) now `let mut`-shadows mutated PARAMS too (`x += x & -x`), which the mutator path omitted
+(else "`x` cannot be mutated" and the method failed to elaborate). ALL 16 convert-ok candidates now
+80/80 (100%, 0 divergences) — count-of-range-sum 0/8→5/5, count-of-smaller-numbers, create-sorted-array,
+peaks-in-array, … No regression (37/40 seed5). NOTE: does NOT help `node = self` aliasing (Trie) — that
+is the deeper value-semantics wall. Edge case: a void mutator used as an EXPRESSION (`x=tree.update()`)
+now throws "mutating method as expression" (was compile-but-wrong) — rare, acceptable.
+
+### Class-mutator fix — REFINED (value-returning methods excluded) + honest impact
+Refinement: a method that RETURNS a value other than self/None is NOT a pure void mutator
+(`_method_returns_value`) — union-find `find` does path-compression `self.p[x]=…` AND returns the root
+(`r = uf.find(i)`); treating it as a void mutator broke that (regressed 11 union-find, now recovered).
+IMPACT (40 self-attr candidates, 26 evaluated): 20 CORRECT / 6 wrong (84.6%). The 20 correct include
+the 16 BIT/segtree (were compile-but-wrong, now execution-verified) + void-`union` union-find. The 6
+wrong are union-find where `union` RETURNS whether-merged AND mutates self — a value+mutate USER method
+(needs both the return AND the mutation), which the mutator/plain-call binary can't model. This is the
+pre-existing value+mutate-user-method wall (R8), NOT a regression (they were wrong before too). Net:
+~16-20 wrong-answer fixes, execution-verified, no convert regression (37/40 seed5).
+
+### Value+mutate USER methods — DONE (the R8 wall) — execution-verified
+A method that BOTH mutates self AND returns a value (union-find `union` sets parents AND returns
+whether-merged) is now a first-class "value mutator": lowered to return `(returnValue × Self)`, so the
+caller binds both, reassigns the receiver, and uses the value. Pipeline:
+- **node_visitor** `_method_is_value_mutator` = mutates-self-raw AND returns-a-value; emits
+  `value_mutators` per class. **driver** folds base-class value_mutators + stamps `_is_value_mutator`
+  on every stamped Call.
+- **codegen** `classValueMutatorValue` (ClassDef): body built under `valueMutatorRef`, so each `return v`
+  emits `return (v, self)` (Core/Assign returnSyntax); fall-through adds `return (default, self)` ONLY
+  when the body doesn't already end in a `return` (else double-return "must be last element").
+- **call sites**: statement `uf.union(a,b)` → `uf := (C.union uf a b).2` (drop value); expression
+  position (`x = uf.union(a,b)`, `if uf.union(a,b):`, `ans += uf.union(a,b)`) → `userValueMutatorRhsLowering?`
+  gives `(call.1, uf := call.2)`, and a **Desugar hoist** (`isValueMutateCall` now recognises the stamp;
+  whole-expr calls hoist everywhere except direct-lower `Expr`/`Assign`/`Return` value positions) pulls
+  the call out of If/Assert-test and nested positions into a temp first.
+- Recursive value mutators work (`find` path-compression `self.p[x] = self.find(self.p[x])`: threaded self
+  through the recursion + nested-call hoist in the self-attr assign).
+Verified: union_find.py regression test (`if uf.union`, `count -= 1` AND `merges += uf.union`) runs
+2/4 == Python; recursive-find DSU runs 3 == Python. No golden drift (pop_methods, mutating_methods, nn
+showcase all IDENTICAL). Unlocks ~6 union-find problems whose `union` returns whether-merged. Remaining
+union-find gaps are `enumerate`+nested-tuple-unpack (`for i,(x,y) in enumerate(..)`) codegen slowness,
+unrelated to this feature.
+
+### Sweep batch (2026-07-28): 3 robust compile_fail fixes
+Categorized the 280 compile_fails (aggregated from per-problem sol_0.status/.log; ~28 are stale
+py2lean-build-race "object file … does not exist", not real). Three robust wins landed + verified:
+
+1. **Memoized DP mutated params** (`FuncDef.memoizedRunCommand?`): the `@cache`/`@lru_cache` run-twin
+   bound params as immutable binders, so a body that reassigns a param (`k += …`) failed with "`k`
+   cannot be mutated". Added the same `let mut p := p` prelude the non-memoized path uses, inside the
+   `| none =>` cache-miss branch. Fixes number-of-ways-to-divide-a-long-corridor; unblocks the mutation
+   layer for ALL memoized DPs (many then hit the deeper ℚ/Float return-type cluster — separate issue).
+2. **`str.startswith`/`endswith` with start/end** (`PyAPI/Strings.lean`): added `(start stop : Option
+   Int := none)` optParams; `s.startswith(p, i)` slices `s[i:]` first (Lean's core `Coe α (Option α)`
+   lifts the `i` arg). Fixes find-and-replace-in-string. 2-arg calls unchanged (identical branch).
+3. **User functions shadowing Lean globals** (`driver.rename_reserved_shadows` + node_visitor guard):
+   a user `def max(...)` lands in root alongside core `max` → "ambiguous identifier `max`: [Max.max,
+   max]". Rename such top-level defs (and their references, scope-aware — skips nested scopes that
+   rebind the name) to `<name>'usr` (the `'` can't clash with a Python name). RESERVED = max/min/insert/
+   id/pred/succ. Also guarded node_visitor's `min/max(a,b)→min/max([a,b])` iterable-normalization to skip
+   user-shadowed names (else the renamed user fn got called with one list arg). Fixes insert-interval,
+   maximum-sum-of-subsequence-… (max part; that one then hits a separate SegmentTree.build bug).
+
+Regression: str_attributes/decorators goldens IDENTICAL; builtin max/min still normalizes to pyMax when
+unshadowed. New regression tests: example_scripts/general/name_shadows_and_slices.py,
+example_scripts/commands/memo_mutated_param.py (both execution-verified == CPython).
+
+### Short-circuit value+mutate calls (`cond and uf.union(...)`) — DONE
+The value+mutate feature downgraded 5 union-find solutions from compile-ok(wrong) to compile-fail:
+`cond and uf.union(a,b)` sits in a BoolOp (a conditional context the plain hoist skips), leaving the
+`(Bool × UnionFind)` tuple in a truthy position → "PyTruthy (Bool × UnionFind)". New Desugar pass
+`hoistShortCircuitMutator` (runs before hoistMutatingCalls) rewrites an `If`/`Assert` whose test is a
+top-level `and`/`or` whose LAST operand is a value+mutate call and earlier operands are pure:
+`if A and M: BODY` → `sc'=False; if A: sc'=M; if sc': BODY` (`or` → seed True, guard `not A`). The
+`sc'=M` assign lowers via the existing value+rest path (bind bool, reassign receiver) — so the mutation
+runs, and its receiver is threaded, ONLY on the branch Python evaluates. Also covers `A and xs.pop()`.
+Fixes similar-string-groups; execution-verified (short-circuit test: mutation runs only when gate open).
+Regression test extended: example_scripts/commands/union_find.py `count_gated`. Mutator NOT last in the
+chain is left untouched (rare). number-of-provinces also now OK.
+
+### Dead-end noted: `Counter`/`defaultdict` as a TYPE ANNOTATION
+`def dfs(cnt: Counter)` → "Unknown identifier `Counter`" (annotation falls through to `.cls "Counter"`).
+Tried mapping `Counter`→`.dict _ int` in TypeInfer/Annotation baseTypes+containerOf, but: (a) the key
+type stays unknown → "match pattern variable metavariable" (needs interprocedural key inference, P2);
+(b) worse, `Counter(xs)` VALUES emit as `Libraries.collections.PyDefaultDict`, while `.dict`→`Std.HashMap`,
+so a `Counter[str]` param (`Std.HashMap String Int`) mismatches the `PyDefaultDict` argument. The lattice
+can't distinguish Counter/defaultdict dicts from plain dicts, so this needs the TypeInfer investment
+(a runtime-type-carrying dict variant), NOT a sweep fix. REVERTED. `Counter(xs)` as a value still works.
+
+### Batch tally (this session): 7 problems closed, execution-verified
+number-of-ways-to-divide-a-long-corridor, find-and-replace-in-string, insert-interval,
+similar-string-groups, number-of-provinces, capitalize-the-title, brace-expansion-ii — all convert+compile
+OK together. Plus the value+mutate union-find feature (number-of-provinces + others). Remaining
+compile_fails are dominated by the hard numeric-ℚ/Float + type-inference clusters (Application type
+mismatch, PyAny synth, nullable Option, tuple-vs-list) — the TypeInfer plan's territory.

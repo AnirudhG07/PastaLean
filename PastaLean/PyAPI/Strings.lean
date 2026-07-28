@@ -192,13 +192,21 @@ def pyStringIndex (s sub : String) (start : Int := 0) (stop : Int := (s.length :
   | some i => Int.ofNat i
   | none => panic! "ValueError: substring not found"
 
-/-- Concrete string implementation for Python `startswith`. -/
-def pyStringStartswith : String → (pfx : String) → Bool
-  | s, pfx => s.startsWith pfx
+/-- Concrete string implementation for Python `startswith`. Python's optional `start`/`end` restrict
+the check to the slice `s[start:end]` (`s.startswith(pfx, i)` / `s.startswith(pfx, i, j)`). -/
+def pyStringStartswith (s : String) (pfx : String)
+    (start : Option Int := none) (stop : Option Int := none) : Bool :=
+  match start, stop with
+  | none, none => s.startsWith pfx
+  | _, _ => (pyStringSlice s start stop).startsWith pfx
 
-/-- Concrete string implementation for Python `endswith`. -/
-def pyStringEndswith : String → (sfx : String) → Bool
-  | s, sfx => s.endsWith sfx
+/-- Concrete string implementation for Python `endswith`. `s.endswith(sfx, start, end)` checks the
+slice `s[start:end]`. -/
+def pyStringEndswith (s : String) (sfx : String)
+    (start : Option Int := none) (stop : Option Int := none) : Bool :=
+  match start, stop with
+  | none, none => s.endsWith sfx
+  | _, _ => (pyStringSlice s start stop).endsWith sfx
 
 /-- Concrete string implementation for Python `lower`. -/
 def pyStringLower : String → String
