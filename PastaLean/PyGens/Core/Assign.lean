@@ -559,6 +559,7 @@ def assignSyntax : (kind : SyntaxNodeKind) → Json →
                   addVar fresh
                   setMutVar fresh
                   setSetVar fresh (← jsonIsSetExpr value)
+                  setSortedVar fresh (← jsonIsSortedListExpr value)
                   return ← `(doElem| let mut $(mkIdent fresh):ident := $rhs)
                 let shadow := conflicting && (← hasVar nameIdent.getId) && !(← isMutVar nameIdent.getId)
                 let ty? ← if shadow then pure none else stampedTypeSyntax? target
@@ -566,6 +567,7 @@ def assignSyntax : (kind : SyntaxNodeKind) → Json →
                 -- Track whether this name now holds a set, so later `==`/`<=` on it use set semantics
                 -- (order-independent) rather than the list-backed ones.
                 setSetVar nameIdent.getId (← jsonIsSetExpr value)
+                setSortedVar nameIdent.getId (← jsonIsSortedListExpr value)
                 pure bound
     | _, _ => throwError s!"Unsupported syntax category for Assign node"
 

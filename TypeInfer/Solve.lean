@@ -670,6 +670,17 @@ partial def markOptAttrs (sigs : Sigs) (env : Env) (json : Json) : Json :=
           | some (.cls _) | some (.opt (.cls _)) => true
           | _ => false
         if isClassish "left" || isClassish "right" then json.setObjVal! "_class_cmp" (Json.bool true) else json
+      -- `X if c else None` (or `None if c else X`) whose value branch is ALREADY `Option`-typed
+      -- (`l1 = l1.next if l1 else None`, `.next` an `Option` field): mark `_branch_opt` so codegen
+      -- does not re-wrap it in `some`, which would nest to `Option (Option _)`.
+      else if nodeTypeOf json == some "IfExp" then
+        let branchOpt := fun (side : String) => match (getField json side).map (typeOfExpr sigs env) with
+          | some (.opt _) => true
+          | _ => false
+        if ((getField json "orelse").any isNoneConst && branchOpt "body")
+            || ((getField json "body").any isNoneConst && branchOpt "orelse") then
+          json.setObjVal! "_branch_opt" (Json.bool true)
+        else json
       else json
     match json with
     | .arr xs => Json.arr (xs.map (markOptAttrs sigs env))
@@ -1020,11 +1031,11 @@ A function whose returns disagree (`.any`) and that has no return annotation is 
 so codegen boxes its result as `PyAny`. -/
 partial def stampFunction (sigs : Sigs) (outer hints : Env) (fn : Json) : Json :=
   let env1 := inferFunction sigs outer hints fn
+  let body := (fn.getObjValAs? (Array Json) "body").toOption.getD #[]
   -- Second pass: a param that pass 1 leaves `unknown` but that is used in a `PyAny`-dispatch position
   -- WILL be boxed to `PyAny` by codegen. Seed those as `.any` and re-infer, so `PyAny` propagates
   -- through the body (`for x in nums: total += x*2` → `total : PyAny`) and matches what codegen emits;
   -- otherwise `total` stays `Int` and the `total := <PyAny>` reassignment fails to type-check.
-  let body := (fn.getObjValAs? (Array Json) "body").toOption.getD #[]
   let pyAnySeed : Env := (paramNames fn).foldl (fun m name =>
     if (env1.get? name).getD .unknown == .unknown && body.any (usedInPyAnyPosition name)
     then m.insert name .any else m) hints

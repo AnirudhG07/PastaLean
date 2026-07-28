@@ -178,3 +178,47 @@ time-taken-to-cross-the-door. Hardened `hoistMutatingExpr` to NOT descend into c
 hoisted to once (find-anagram-mappings' list-comp pop correctly stays unsupported, valid-parentheses'
 short-circuited `or` stays guarded). Total pop cluster this turn: +4 (num-matching-subseq,
 sort-matrix-diagonally, reconstruct-itinerary, time-taken); still open: pop in a comprehension.
+
+### Nullable Option: `optfield if X else None` double-`some` (+3 so far)
+The linked-list/tree idiom `l1 = l1.next if l1 else None` compiled `some (l1.getD default).next`,
+but `.next` is ALREADY `Option ListNode`, so `some` nested it to `Option (Option _)` → type mismatch
+with `l1 : Option ListNode`. Fix: TypeInfer `markOptAttrs` marks an `X if c else None` IfExp whose
+value branch types as `Option` with `_branch_opt`; codegen's `ifExpSyntax` then emits the branch bare
+(no `some`) — a non-Option branch still gets `some` as before. Flips add-two-numbers,
+closest-binary-search-tree-value, intersection-of-two-linked-lists; no regression (28/30 seed 5). Note:
+the nullable cluster was already ~4/6 working from prior Option work; remaining fails are diverse
+one-offs (PyGetItem-stuck, add-two-numbers-ii), not this pattern.
+
+### defaultdict() empty (prerequisite, flips nothing alone)
+Bare `defaultdict()` (no factory) now lowers to the empty dict `{}` instead of throwing. Correct in
+isolation but the 3 corpus users each have a SECOND blocker (`defaultdict(lambda: [0]*m)` typing,
+untyped-param→PyAny), so none flip on this alone.
+
+### TRIED & REVERTED: nested-def return-type inference (net-negative)
+Seeding nested-def return types into `sigs` + re-inferring the body env (stampFunction) DID fix
+`node = dfs(root)` → `node.left` unwrap (binary-tree-coloring-game). But it REGRESSED add-one-row-to-tree
+and count-univalue-subtrees: a void nested def that mutates an `Option` param (`def dfs(root,d): ...
+root.left = TreeNode(...)`) got its `root` re-typed to `Option`, and the attribute-assign codegen then
+emitted invalid `let root.left := …` + a Unit/Option return mismatch. Reverted. To land it safely, the
+Option-param attribute-assignment codegen (`root.left = v` on an `Option` receiver) must first work
+(unwrap-rebuild-rewrap), and void nested defs must not have their return coerced. Deferred.
+
+### math `pow` star-shadow (+2, same class as the operator fix)
+`from math import *` bound `pow` → `math.pow` (2-arg, float-only), shadowing the builtin `pow`. A
+3-arg `pow(b, e, mod)` (modular exponentiation) then mis-resolved to the 2-arg library function →
+"Function expected at". Fix (driver `_library_star_members`): exclude `pow` from EVERY library's star
+set, so it always falls through to the builtin `pyPow` (which is variadic + modular). Flips
+maximize-number-of-nice-divisors, count-k-subsequences-…; 2-arg `pow` users unaffected (builtin pow
+handles floats). No regression (28/30 seed 5). Generalizes the earlier operator-star-shadow fix.
+
+### sortedcontainers.SortedList (BIG — ~38/45 sampled pass)
+Implemented `SortedList` as an ascending-sorted `List α` (same model as heapq), so subscript / `len` /
+`in` / iteration / `index` / `count` / `pop` all come free from the list protocols; only order
+maintenance + bisection are new runtime (`Libraries/sortedcontainers/SortedListDef.lean`:
+pySortedList[Empty], pySortedAdd, pySortedRemove, pyBisectLeft/Right). Wiring: Mapping + Registry
+(member map + behaviour), Attributes (`bisect_left/right/bisect` → runtime), a `sortedVars` codegen
+flag (mirrors `setVars`) so `add`/`remove`/`discard` on a SortedList maintain order instead of set
+semantics, and an arity-based empty-vs-iterable constructor in the special-call lowerer. 38 of 45
+sampled SortedList problems now convert+compile (7 fails are unrelated: nested-return Option,
+FenwickTree, anon-type). Runtime verified (PALC/Libraries/sortedcontainers/sortedlist_test.lean); no
+regression (28/30 seed 5). Not yet: `.irange()` (rare), SortedDict/SortedSet.

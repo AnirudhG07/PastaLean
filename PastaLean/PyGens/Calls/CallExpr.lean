@@ -826,9 +826,19 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
         if let some (rebuildFn, arities) := statementMutatorRebuild? attr then
           if keyWordsMap.isEmpty && arities.contains argsArray.size then
             let argCodes ← argsArray.mapM (fun argJson => getCode argJson `term)
+            -- A SortedList receiver: `add`/`remove`/`discard` share names with the set methods but must
+            -- maintain sort order (they otherwise default to set semantics — dedup, no ordering).
+            let sortedRecv ← match valueJson.getObjValAs? String "id" with
+              | .ok id => isSortedVar id.toName
+              | _ => pure false
             -- An `array_ok`-stamped receiver (runnable twin) uses the O(1) `Array` variant.
             let rebuildFn ←
-              if (json.getObjValAs? String "_seq" == .ok "array") && (← getNumericMode) == .approx then
+              if sortedRecv then
+                pure (match attr with
+                  | "add"                => `Libraries.sortedcontainers.pySortedAdd
+                  | "remove" | "discard" => `Libraries.sortedcontainers.pySortedRemove
+                  | _ => rebuildFn)
+              else if (json.getObjValAs? String "_seq" == .ok "array") && (← getNumericMode) == .approx then
                 pure (match attr with
                   | "append" => ``PastaLean.pyArrayAppend
                   | "extend" => ``PastaLean.pyArrayExtend

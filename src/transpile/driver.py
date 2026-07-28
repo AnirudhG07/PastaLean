@@ -872,7 +872,10 @@ def _library_star_members(root):
     exported = getattr(module, "__all__", None)
     if exported is None:
         exported = [n for n in dir(module) if not n.startswith("_")]
-    return frozenset(exported)
+    # The builtin `pow` is variadic: `pow(b, e, mod)` is modular exponentiation. A library `pow`
+    # (e.g. `math.pow`, which is 2-arg and float-only) must never shadow it, or a 3-arg `pow(b, e, mod)`
+    # mis-resolves to the 2-arg library function ("Function expected"). Let it fall through to builtin.
+    return frozenset(exported) - {"pow"}
 
 
 def _strip_library_annotation_from_binders(stmt):

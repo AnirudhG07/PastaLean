@@ -13,6 +13,7 @@ import Libraries.numpy.Mapping
 import Libraries.passta.Mapping
 import Libraries.scipy.Mapping
 import Libraries.pandas.Mapping
+import Libraries.sortedcontainers.Mapping
 
 namespace Libraries
 
@@ -37,6 +38,7 @@ def pythonLibraryMap? (moduleName member : String) : Option Lean.Name :=
   | "passta" => passta.pythonPasstaMemberMap? member
   | "scipy" => scipy.pythonScipyMemberMap? member
   | "pandas" => pandas.pythonPandasMemberMap? member
+  | "sortedcontainers" => sortedcontainers.pythonSortedcontainersMemberMap? member
   | _ => none
 
 /--
@@ -74,6 +76,7 @@ def memberBehaviour? (moduleName member : String) : Option Behaviour :=
   | "math"        => math.mathBehaviour? member
   | "scipy"       => scipy.scipyBehaviour? member
   | "numpy"       => numpy.numpyBehaviour? member
+  | "sortedcontainers" => sortedcontainers.sortedcontainersBehaviour? member
   | _ => none
 
 /-- The `Behaviour` of a BARE callable name (a builtin, or a star-imported library member) — the entry

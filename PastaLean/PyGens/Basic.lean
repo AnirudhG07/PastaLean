@@ -664,14 +664,19 @@ def ifExpSyntax : (kind : SyntaxNodeKind) → Json →
     let testCode ← truthyConditionTerm testJson (← withPropCondition true (getCode testJson `term))
     let bodyIsNone := isNoneConstantJson bodyJson
     let orelseIsNone := isNoneConstantJson orelseJson
+    -- The value branch is already `Option`-typed (TypeInfer's `_branch_opt`, e.g. `l1.next` an
+    -- `Option` field), so wrapping it in `some` would nest to `Option (Option _)` — emit it bare.
+    let branchOpt := json.getObjValAs? Bool "_branch_opt" == .ok true
+    let lift (code : TSyntax `term) : PygenM (TSyntax `term) :=
+      if branchOpt then pure code else `(some $code)
     if bodyIsNone && orelseIsNone then
       `(none)
     else if bodyIsNone then
-      let orelseCode ← getCode orelseJson `term
-      `(if $testCode then none else some $orelseCode)
+      let orelseCode ← lift (← getCode orelseJson `term)
+      `(if $testCode then none else $orelseCode)
     else if orelseIsNone then
-      let bodyCode ← getCode bodyJson `term
-      `(if $testCode then some $bodyCode else none)
+      let bodyCode ← lift (← getCode bodyJson `term)
+      `(if $testCode then $bodyCode else none)
     else
       let bodyCode ← getCode bodyJson `term
       let orelseCode ← getCode orelseJson `term

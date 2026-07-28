@@ -122,6 +122,10 @@ structure State where
   operation). Set comparisons (`==`, `<=`, …) are order-independent, unlike the list-backed `==`/`≤`
   the same `List` value would otherwise use — see the `Compare` lowering. -/
   setVars : HashSet Name := HashSet.emptyWithCapacity 16
+  /-- Variables holding a `sortedcontainers.SortedList` (assigned from `SortedList(...)`). Their
+  `add`/`remove`/`discard` maintain sort order instead of set semantics; the value is a plain sorted
+  `List`, so subscript/`len`/`in`/iteration use the ordinary list protocols. -/
+  sortedVars : HashSet Name := HashSet.emptyWithCapacity 8
   /-- Variables bound with `let mut` (reassignable in place). An immutable `let` loop var that a body
   reassigns to a different type is shadowed instead; a `let mut` (incl. a `PyAny` slot) is not. -/
   mutVars : HashSet Name := HashSet.emptyWithCapacity 32
@@ -269,6 +273,7 @@ def withRealIfMarked {α : Type} (json : Lean.Json) (x : PygenM α) : PygenM α 
 def withFixedVariables {α : Type} (x : PygenM α) : PygenM α := do
   withPygenStateField (·.varNames) (fun st varNames => { st with varNames := varNames }) (← get).varNames <|
     withPygenStateField (·.setVars) (fun st setVars => { st with setVars := setVars }) (← get).setVars <|
+     withPygenStateField (·.sortedVars) (fun st sortedVars => { st with sortedVars := sortedVars }) (← get).sortedVars <|
       withPygenStateField (·.renames) (fun st renames => { st with renames := renames }) (← get).renames <|
         withPygenStateField (·.mutVars) (fun st mutVars => { st with mutVars := mutVars }) (← get).mutVars x
 
@@ -320,6 +325,27 @@ def isSetVar (name : Name) : PygenM Bool := do
 /-- Mark (`isSet := true`) or unmark a variable as holding a Python `set`. -/
 def setSetVar (name : Name) (isSet : Bool) : PygenM Unit := do
   modify fun st => { st with setVars := if isSet then st.setVars.insert name else st.setVars.erase name }
+
+def isSortedVar (name : Name) : PygenM Bool := do
+  return (← get).sortedVars.contains name
+
+/-- Mark (`isSorted := true`) or unmark a variable as holding a `sortedcontainers.SortedList`, so its
+`add`/`remove`/`discard` dispatch to the order-maintaining runtime rather than the set versions. -/
+def setSortedVar (name : Name) (isSorted : Bool) : PygenM Unit := do
+  modify fun st => { st with sortedVars := if isSorted then st.sortedVars.insert name else st.sortedVars.erase name }
+
+/-- Whether `json` is a `SortedList(...)` construction (a call whose callee is the `sortedcontainers`
+member `SortedList`), OR a `Name` already known to hold one. Marks the target so its `add`/`remove`/
+`discard` maintain sort order. -/
+partial def jsonIsSortedListExpr (json : Lean.Json) : PygenM Bool := do
+  match (json.getObjValAs? String "node_type").toOption with
+  | some "Name" => match json.getObjValAs? String "id" with
+                   | .ok id => isSortedVar id.toName
+                   | _ => pure false
+  | some "Call" => match json.getObjVal? "func" with
+                   | .ok f => pure (f.getObjValAs? String "library_member" == .ok "SortedList")
+                   | _ => pure false
+  | _ => pure false
 
 /-- Whether `json` denotes a Python `set`: a `set(...)` call, a `{…}` literal / set comprehension, a
 set operation (`&`/`|`/`^`/`-` on a set operand), or a `Name` already known to hold a set. Routes set
