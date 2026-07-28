@@ -72,12 +72,6 @@ def pythonMethodMap? (attr : String) : Option Lean.Name :=
   -- lives in `Libraries`, which `PastaLean` cannot import, but the generated file `open`s it.
   | "most_common" => some `Libraries.collections.pyMostCommon
   | "elements"    => some `Libraries.collections.pyElements
-  -- SortedList (sortedcontainers). `add`/`remove`/`discard` need the receiver typed as a SortedList
-  -- (they collide with set methods), so they dispatch through the codegen `sortedVars` path, not here.
-  -- The bisect readers have unique names, so they map directly.
-  | "bisect_left"  => some `Libraries.sortedcontainers.pyBisectLeft
-  | "bisect_right" => some `Libraries.sortedcontainers.pyBisectRight
-  | "bisect"       => some `Libraries.sortedcontainers.pyBisectRight
   -- Int only
   | "bit_length" => some ``pyBitLength
   | "bit_count"  => some ``pyBitCount

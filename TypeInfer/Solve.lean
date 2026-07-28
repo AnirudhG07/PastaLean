@@ -167,8 +167,12 @@ def applyStmt (sigs : Sigs) (env : Env) (s : Json) : Env :=
   | some "AugAssign" =>
       match getField s "target", getField s "value" with
       | some target, some value =>
+          -- Python's `/=` is TRUE division, so `x /= n` widens `x` to `float` even for integer
+          -- operands (`pre = 1; pre /= 10`); every other augmented op keeps the numeric `arith` result.
+          let augCombine (a b : PyType) : PyType :=
+            if (s.getObjValAs? String "op").toOption == some "div" then .float else arith a b
           match nameId? target with
-          | some name => learn env name (arith (env.get? name |>.getD .unknown) (typeOfExpr sigs env value))
+          | some name => learn env name (augCombine (env.get? name |>.getD .unknown) (typeOfExpr sigs env value))
           -- `counts[k] += 1` teaches both sides of `counts` (a `Counter()` starts fully unknown).
           | none =>
               if nodeTypeOf target == some "Subscript" then
@@ -177,7 +181,7 @@ def applyStmt (sigs : Sigs) (env : Env) (s : Json) : Env :=
                     let vt := typeOfExpr sigs env value
                     let isSlice := (getField target "slice").any (nodeTypeOf · == some "Slice")
                     let learned := match env.get? cname |>.getD .unknown with
-                      | .dict _ v => .dict ((getField target "slice").elim .unknown (typeOfExpr sigs env)) (arith v vt)
+                      | .dict _ v => .dict ((getField target "slice").elim .unknown (typeOfExpr sigs env)) (augCombine v vt)
                       | _ => if isSlice then vt else .list vt
                     learn env cname learned
                 -- Nested `f[h][i][j] += v` widens the deep element (`join` at that depth).
@@ -323,6 +327,17 @@ private def paramSeed (fn : Json) : Env := Id.run do
       | none => pure ()
   return env
 
+/-- Does `ord(name)` appear anywhere in `json`? `ord` demands a one-character string, so its argument
+is a single character (a `str`). -/
+private partial def containsOrdOf (name : String) (json : Json) : Bool :=
+  (nodeTypeOf json == some "Call"
+    && (getField json "func").bind nameId? == some "ord"
+    && ((json.getObjValAs? (Array Json) "args").toOption.getD #[]).any (fun a => nameId? a == some name))
+  || (match json with
+      | .arr xs => xs.any (containsOrdOf name)
+      | .obj fs => fs.toList.any (fun (_, v) => containsOrdOf name v)
+      | _ => false)
+
 /-- What `name`'s usage in one expression unambiguously tells us — enumerated exhaustively over the
 Python signals that pin exactly one type: a type-exclusive method on it (`p.split()` → str), an
 int-only operator over it (`p << 1`, `p >> 1`, `~p` — bitwise `& | ^` are int OR set, so NOT here),
@@ -364,6 +379,16 @@ private partial def usageType (name : String) (json : Json) : PyType :=
     | some "UnaryOp" =>
         if (json.getObjValAs? String "op").toOption == some "invert" && isName (getField json "operand")
         then .int else .unknown
+    -- `for c in p` where the loop variable `c` is fed to `ord(c)` pins `p` to `str`: `ord` requires a
+    -- ONE-character string, so `p` is iterated character by character (the common unannotated-word
+    -- pattern). Only the `ord` signal fires — a general str usage (`c.split()`) would instead mean
+    -- `p : list[str]`, and a nested `for word in words: … ord(c)` must not mis-tag `words`.
+    | some "For" =>
+        match getField json "iter", (getField json "target").bind nameId? with
+        | some it, some c =>
+            if isName (some it) && containsOrdOf c (Json.arr ((json.getObjValAs? (Array Json) "body").toOption.getD #[]))
+            then .str else .unknown
+        | _, _ => .unknown
     | _ => .unknown
   let sub := match json with
     | .arr xs => PyType.joinAll (xs.toList.map (usageType name))
@@ -417,14 +442,52 @@ private def mutationReceiverName? (value : Json) : Option String :=
       else none
   | none => none
 
+/-- Every positional argument list of a call `name(...)` anywhere in `json`. -/
+partial def collectCallArgLists (name : String) (json : Json) : Array (Array Json) :=
+  let here := if nodeTypeOf json == some "Call" && (getField json "func").bind nameId? == some name
+    then #[(json.getObjValAs? (Array Json) "args").toOption.getD #[]] else #[]
+  let rest := match json with
+    | .arr xs => xs.foldl (fun acc e => acc ++ collectCallArgLists name e) #[]
+    | .obj fs => fs.toList.foldl (fun acc (_, v) => acc ++ collectCallArgLists name v) #[]
+    | _ => #[]
+  here ++ rest
+
+/-- Param-type hints for a nested def `fn` from the arg types at every call to it in `roots`. Two
+passes so a recursive arg (`dfs(node.left)`) is re-typed once its param is seeded from the first,
+non-recursive call (`dfs(root)`) — the join is what makes a tree `dfs` param `Optional[TreeNode]`. -/
+def nestedParamHints (sigs : Sigs) (env : Env) (fn : Json) (roots : Array Json) : Env := Id.run do
+  let name := (fn.getObjValAs? String "name").toOption.getD ""
+  let params := paramNames fn
+  if name == "" || params.isEmpty then return {}
+  let callLists := roots.foldl (fun acc r => acc ++ collectCallArgLists name r) #[]
+  if callLists.isEmpty then return {}
+  let mut hints : Env := {}
+  for _ in [0:2] do
+    let env2 := hints.fold (fun m k v => m.insert k v) env
+    for args in callLists do
+      for i in [0:min params.size args.size] do
+        let t := typeOfExpr sigs env2 args[i]!
+        if t != .unknown then
+          hints := hints.insert params[i]! (((hints.get? params[i]!).getD .unknown).join t)
+  return hints
+
+/-- The combined parameter types of every nested `def` in `body`, from their call sites (`roots` is
+the enclosing body). Lets a captured `d[param].append(v)` INSIDE a nested def teach the OUTER `d`'s
+key from `param`'s type — which lives only in the inner scope. -/
+def nestedDefParamEnv (sigs : Sigs) (env : Env) (body : Array Json) (roots : Array Json) : Env :=
+  body.foldl (fun e nf =>
+    if nodeTypeOf nf == some "FunctionDef"
+    then (nestedParamHints sigs env nf roots).fold (fun m k v => m.insert k v) e
+    else e) {}
+
 /-- Apply container-teaching mutations found INSIDE nested defs to the enclosing `env`, so a capture
 learns its element type across scopes (`nums = []` here, `nums.append(x)` in a sibling `def dfs`, then
 `nums[i]` in `def build` — all one `List Int`). A name a nested def binds itself (param or `=`) is a
 shadow, not a capture, so it is skipped; only names already in `env` are refined (join-only, never a
-downgrade). The enclosing scope's own mutations are already handled by `applyStmt`, so refinement only
-fires `insideDef`. -/
-private partial def applyCaptureMutations (sigs : Sigs) (shadowed : List String) (insideDef : Bool)
-    (env : Env) (json : Json) : Env := Id.run do
+downgrade). `paramEnv` carries the enclosing nested def's parameter types so `d[param]` inside it can
+pin the captured `d`'s key. The enclosing scope's own mutations are handled by `applyStmt`. -/
+private partial def applyCaptureMutations (sigs : Sigs) (shadowed : List String) (paramEnv : Env)
+    (insideDef : Bool) (env : Env) (json : Json) : Env := Id.run do
   let entering := nodeTypeOf json == some "FunctionDef"
   let shadowed := if entering then shadowed ++ localAssignNames json else shadowed
   let inside := insideDef || entering
@@ -432,11 +495,45 @@ private partial def applyCaptureMutations (sigs : Sigs) (shadowed : List String)
   if inside then
     if let some cname := mutationReceiverName? json then
       if !shadowed.contains cname && (env.get? cname).isSome then
-        env := applyMutation sigs env json
+        -- Type the mutation with the enclosing nested def's params visible (`d[offset]` needs
+        -- `offset : int`), but write back ONLY the receiver so those inner params never leak out.
+        let typingEnv := paramEnv.fold (fun m k v => m.insert k v) env
+        match (applyMutation sigs typingEnv json).get? cname with
+        | some t => env := env.insert cname t
+        | none => pure ()
   match json with
-  | .arr xs => return xs.foldl (applyCaptureMutations sigs shadowed inside) env
-  | .obj fs => return fs.toList.foldl (fun e (_, v) => applyCaptureMutations sigs shadowed inside e v) env
+  | .arr xs => return xs.foldl (applyCaptureMutations sigs shadowed paramEnv inside) env
+  | .obj fs => return fs.toList.foldl (fun e (_, v) => applyCaptureMutations sigs shadowed paramEnv inside e v) env
   | _ => return env
+
+/-- Every `(container-name, index-type)` from a subscript READ `base[idx]` anywhere in `json` (`base`
+a plain Name, not a slice). Container writes already teach element types (`applyStmt`/`applyMutation`),
+but the KEY of a dict is only pinned by *usage* — `d = defaultdict(int)` knows its value type yet
+leaves the key `unknown` until a `d[k]` read fixes it. This is the read side of Python's
+"infer from all usages". -/
+partial def collectSubscriptKeys (sigs : Sigs) (env : Env) (json : Json) : Array (String × PyType) :=
+  let here : Array (String × PyType) :=
+    if nodeTypeOf json == some "Subscript" then
+      match (getField json "value").bind nameId?, getField json "slice" with
+      | some cname, some slice =>
+          if nodeTypeOf slice == some "Slice" then #[] else #[(cname, typeOfExpr sigs env slice)]
+      | _, _ => #[]
+    else #[]
+  let rest := match json with
+    | .arr xs => xs.foldl (fun acc e => acc ++ collectSubscriptKeys sigs env e) #[]
+    | .obj fs => fs.toList.foldl (fun acc (_, v) => acc ++ collectSubscriptKeys sigs env v) #[]
+    | _ => #[]
+  here ++ rest
+
+/-- Pin a dict's KEY type from every subscript-read `d[k]`, joining `typeof(k)` into the key. Only
+touches names ALREADY typed as a dict (so a list `xs[i]` is never mis-widened to a dict); a genuinely
+undetermined container stays undetermined here — the write side decides list-vs-dict. -/
+def learnFromReads (sigs : Sigs) (env : Env) (json : Json) : Env :=
+  (collectSubscriptKeys sigs env json).foldl (fun e (cname, kt) =>
+    if kt == .unknown then e else
+    match e.get? cname |>.getD .unknown with
+    | .dict k v => e.insert cname (.dict (k.join kt) v)
+    | _ => e) env
 
 /-- Infer a type for every local in `fn`, reflowing to a fixpoint. `outer` seeds the environment
 with the enclosing scope so a nested def's captures start typed; `hints` seeds unannotated
@@ -460,7 +557,9 @@ partial def inferFunction (sigs : Sigs) (outer hints : Env) (fn : Json) : Env :=
     -- shadows an outer variable owns a separate scope (Python-3), so clobbering the outer type (a
     -- loop `v : int` vs a comprehension `v : list[int]` → `any`) would poison it. Fresh-only respects
     -- that: never downgrade an outer binding.
-    let stepped := applyCaptureMutations sigs [] false (stmts.foldl (applyStmt sigs) env) bodyJson
+    let paramEnv := nestedDefParamEnv sigs env body #[bodyJson]
+    let stepped := applyCaptureMutations sigs [] paramEnv false (stmts.foldl (applyStmt sigs) env) bodyJson
+    let stepped := learnFromReads sigs stepped bodyJson
     let next := compBindings sigs stepped bodyJson
     if next.size == env.size && next.fold (fun ok k v => ok && (env.get? k |>.getD .unknown) == v) true then
       env := next
@@ -687,34 +786,6 @@ partial def markOptAttrs (sigs : Sigs) (env : Env) (json : Json) : Json :=
     | .obj fs => Json.mkObj (fs.toList.map (fun (k, v) => (k, markOptAttrs sigs env v)))
     | _ => json
 
-/-- Every positional argument list of a call `name(...)` anywhere in `json`. -/
-partial def collectCallArgLists (name : String) (json : Json) : Array (Array Json) :=
-  let here := if nodeTypeOf json == some "Call" && (getField json "func").bind nameId? == some name
-    then #[(json.getObjValAs? (Array Json) "args").toOption.getD #[]] else #[]
-  let rest := match json with
-    | .arr xs => xs.foldl (fun acc e => acc ++ collectCallArgLists name e) #[]
-    | .obj fs => fs.toList.foldl (fun acc (_, v) => acc ++ collectCallArgLists name v) #[]
-    | _ => #[]
-  here ++ rest
-
-/-- Param-type hints for a nested def `fn` from the arg types at every call to it in `roots`. Two
-passes so a recursive arg (`dfs(node.left)`) is re-typed once its param is seeded from the first,
-non-recursive call (`dfs(root)`) — the join is what makes a tree `dfs` param `Optional[TreeNode]`. -/
-def nestedParamHints (sigs : Sigs) (env : Env) (fn : Json) (roots : Array Json) : Env := Id.run do
-  let name := (fn.getObjValAs? String "name").toOption.getD ""
-  let params := paramNames fn
-  if name == "" || params.isEmpty then return {}
-  let callLists := roots.foldl (fun acc r => acc ++ collectCallArgLists name r) #[]
-  if callLists.isEmpty then return {}
-  let mut hints : Env := {}
-  for _ in [0:2] do
-    let env2 := hints.fold (fun m k v => m.insert k v) env
-    for args in callLists do
-      for i in [0:min params.size args.size] do
-        let t := typeOfExpr sigs env2 args[i]!
-        if t != .unknown then
-          hints := hints.insert params[i]! (((hints.get? params[i]!).getD .unknown).join t)
-  return hints
 
 /-- Stamp an int-literal `Constant` with `_ty = float` (so codegen emits `(0 : ℚ)`). -/
 private def stampIfIntConst (e : Json) : Json :=

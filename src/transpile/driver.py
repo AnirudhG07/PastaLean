@@ -841,10 +841,20 @@ def _annotate_library_refs_in_expr(node, import_env):
     elif node_type == "Attribute":
         value = node.get("value")
         if isinstance(value, dict) and value.get("node_type") == "Name":
-            binding = import_env.get(value.get("id"))
+            vid = value.get("id")
+            binding = import_env.get(vid)
             if binding and binding.get("kind") == "module":
                 node["library_module"] = binding["module"]
                 node["library_member"] = node.get("attr")
+            elif vid in SUPPORTED_LIBRARY_IMPORTS:
+                # `bisect.bisect_left(...)`: a supported-library name used as `X.attr` is the MODULE,
+                # even if `from bisect import *` also bound `bisect` (the function alias) — the attribute
+                # access disambiguates to the module. Clear the receiver's stale member stamp so it is
+                # not itself lowered as a library reference.
+                node["library_module"] = vid
+                node["library_member"] = node.get("attr")
+                value.pop("library_module", None)
+                value.pop("library_member", None)
 
     for key, value in node.items():
         if node_type == "FunctionDef" and key == "body":

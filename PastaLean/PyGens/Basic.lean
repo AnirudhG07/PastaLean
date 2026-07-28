@@ -631,6 +631,25 @@ def boolOpSyntax : (kind : SyntaxNodeKind) → Json →
         if opProp then valuesCodes.foldlM (fun a b => `($a ∨ $b)) (valuesCodes[0]!) (start := 1)
         else valuesCodes.foldlM (fun a b => `($a || $b)) (valuesCodes[0]!) (start := 1)
     | _ => throwError s!"Unsupported boolean operator: {op}"
+  -- A BoolOp as a STATEMENT is a short-circuit side effect: `g and effect` runs `effect` (a mutating
+  -- call like `u != v and uf.union(u, v)`) when the guards hold; `g or effect` runs it when they do
+  -- not. The last operand is the effect (lowered as a statement); the earlier ones are the guard.
+  | `doElem, json => do
+    let .ok op := json.getObjValAs? String "op" | throwError s!"BoolOp node missing 'op': {json}"
+    let values := (json.getObjValAs? (Array Json) "values").toOption.getD #[]
+    if values.size < 2 then
+      throwError s!"BoolOp statement needs at least two operands: {json}"
+    let effectJson := values[values.size - 1]!
+    let guards := values.extract 0 (values.size - 1)
+    let guardTerms ← guards.mapM (fun v => do
+      let c ← getCode v `term
+      let t : TSyntax `term ← if conditionIsBoolean v then pure c else `($(mkIdent ``PastaLean.pyTruthy) $c)
+      match op with
+      | "or" => `(! $t)
+      | _ => pure t)
+    let guard ← guardTerms.foldlM (fun a b => `($a && $b)) guardTerms[0]! (start := 1)
+    let effects : Array (TSyntax `doElem) := #[← getCode effectJson `doElem]
+    `(doElem| if $guard then $[$effects:doElem]*)
   | _, _ => throwError s!"Unsupported syntax category for BoolOp node"
 
 @[pygen "Compare"]

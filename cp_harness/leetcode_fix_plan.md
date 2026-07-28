@@ -222,3 +222,89 @@ semantics, and an arity-based empty-vs-iterable constructor in the special-call 
 sampled SortedList problems now convert+compile (7 fails are unrelated: nested-return Option,
 FenwickTree, anon-type). Runtime verified (PALC/Libraries/sortedcontainers/sortedlist_test.lean); no
 regression (28/30 seed 5). Not yet: `.irange()` (rare), SortedDict/SortedSet.
+
+### SortedList layering fix (follow-up)
+Per feedback: library names must not live in codegen. Moved the SortedList instance-method map to
+`Libraries/sortedcontainers/Mapping.lean` (`sortedListMethod?`) + a `Libraries.sortedListMethod?`
+aggregator; CallExpr now only supplies the `isSortedVar` receiver gate (`sortedVarMethod?`) and calls
+into Libraries. Also fixed a self-inflicted regression: bisect methods were in `pythonMethodMap?`
+(hijacking `bisect.bisect_left` on a plain list) — now scoped to SortedList receivers only.
+
+### AugAssign on a non-self attribute (correct, but coupled)
+`node.count += val` (a local node/record, not `self`) emitted the invalid `node.count := …`. Fixed:
+AugAssign now record-updates a non-self Attribute target (`node := { node with count := … }`), mirroring
+the Assign path. Correct + regression-free (28/30), but flips 0 problems ALONE — every attr-augassign
+user is a Trie/tree with a SECOND blocker (empty-dict `children` typing → `HashMap.ofList []` stuck).
+
+### Landscape (post-SortedList): the coupled tail
+Fresh random-60: 47 ok / 13 compile_fail (78% pass). No cluster of 3+ shares a cause. SortedList was
+the last isolated lever. Remaining fails need WHOLE clusters fixed together (Trie: empty-container
+inference + PyAny class-local + Option-field mutation + AugAssign, all at once), not single fixes.
+
+### convert_fail sweep (one-by-one, +8 codegen-fixed)
+Worked the convert_fail list directly (codegen errors, fast). Fixes (all regression-free, 28/30):
+- **heapq mutators on subscript/attribute receivers**: `heappush(d[v], x)` / `heappop(row[i])` /
+  `heappush(self.small, x)` now rebuild the container (LibraryMutators generalised past Name-only).
+- **assignBackToReceiver attribute**: `self.h.append(v)` etc. now record-update the field.
+- **slice-with-step assignment**: `nums[::2] = a` / `nums[1::2] = b` → new `pySliceSetStep` runtime
+  (positive step); `sliceTargetParts?` returns the step instead of throwing.
+Net: of 38 convert_fails, 4 fully flipped (distant-barcodes, sort-even-and-odd, split-array,
+min-visited-cells) + 4 advanced convert→compile stage. Remaining convert_fails are hard/coupled:
+pop-in-conditional (5), Unknown-constant-null closure bug (4), walrus-short-circuit (4), external
+libs (re.sub/datetime/Queue), value+rest on attribute receiver (sliding-window-median).
+
+### convert_fail sweep round 2 (+ statement-BoolOp, sort-on-subscript, bisect-module)
+- **statement-BoolOp** (`u != v and uf.union(u,v)` as a bare statement → `if guard then effect`):
+  added a `doElem` case to boolOpSyntax. Flips minimize-malware-spread ×2.
+- **sort() on a subscript/attribute receiver** (`d[i].sort(reverse=True)`): routed through
+  `mutatingMethodDoElem` instead of `getCode … ident`. Flips count-number-of-rectangles.
+- **module-qualified library call via star-import** (`bisect.bisect_left(xs,x)` when only
+  `from bisect import *`, so `bisect` was bound as the FUNCTION alias): driver now treats `X.attr`
+  where X is a supported-library name as the MODULE. Corpus-wide (helps re/random/string/etc. too);
+  advances depth-of-bst, odd-even-jump convert→compile. No regression (37/40 seed5, all pre-existing).
+Total: 7 of 38 convert_fails fully flipped + 5 advanced to compile stage.
+
+### TypeInfer engine investment (research-backed)
+Researched Python's approach (mypy/pyrefly: bidirectional + infer-from-all-usages + Any fallback) and
+bucketed 213/250 TI-related compile_fails. Biggest lever = container KEY inference (buckets 3+4+8 ≈ 66):
+the engine learned element types from WRITES but not READS, and — critically — a dict captured by a
+nested def (`d = defaultdict(list)` outer; `d[offset].append(v)` in `dfs`) never pinned its key because
+`offset`'s type lives only in the INNER scope. Two changes:
+- **learnFromReads** (Solve): pin a dict's key from subscript-READ positions (`d[k]`), the read side of
+  "infer from all usages".
+- **cross-scope capture-param inference**: thread each nested def's call-site param types
+  (`nestedDefParamEnv`/`nestedParamHints`) into `applyCaptureMutations`, so a captured `d[param]` pins
+  the outer `d`'s key from the inner `param` — written back to the receiver only (params never leak).
+Flips binary-tree-vertical-order, reorder-routes, +3 defaultdict compile_fails; no regression (37/40).
+Remaining in the cluster need more (node.val/attribute keys, PyDefaultDict-vs-HashMap ascription,
+2-nested-def chains). NEXT engine targets: numeric-ℚ defaulting (bucket 1, ~36) and PyAny materialise
+residual `.any` (bucket 2, ~29 — `toTypeSyntax? .any` currently returns none).
+
+### TypeInfer round 2: numeric-`/` + PyAny materialisation
+- **AugAssign true-division** (`x /= n` widens `x` to float even for ints): AugAssign used generic
+  `arith` (int⊔int=int) while BinOp knew `/`→float. Now op-aware. Flips abbreviating-the-product-of-a-range.
+  The rest of the numeric bucket (~36) is other sub-causes (List ℤ⊔List ℚ, ℝ transcendentals, numpy Float).
+- **PyAny materialisation** (`toTypeSyntax? .any` → `PyAny`, so `list[any]` → `List PyAny`): completes the
+  P3 total fallback for containers-of-any. Correct + NO regression (55/60 seed5, 2 pre-existing), but 0
+  immediate flips — the PyAny compile_fail bucket is dominated by OVER-boxing (a value that should be
+  `str`/`int` boxed to PyAny), which needs the char-vs-String / upstream element inference, not this.
+Net TypeInfer investment (both rounds): cross-scope capture keys (~5) + AugAssign-div (+1), all
+no-regression; PyAny materialisation is a correct foundation. Biggest remaining: char-vs-String
+over-boxing (buckets 2+10 ≈ 36) and the numeric List-join/ℝ sub-causes.
+
+### TypeInfer round 2b: char-over-boxing (ord→str)
+Your point: char IS a str in our model (`PyIterable String String`, `elemType .str = .str` — correct).
+The over-boxing was an UNANNOTATED param: `def insert(self, word)` with `for c in word: ord(c)` left
+`word` unknown → `c` unknown → boxed to PyAny → `ord(PyAny)` fails. Fix: `for c in p` with `ord(c)`
+(needs a 1-char str) pins `p : str` (containsOrdOf; narrowed to `ord` only so a nested
+`for word in words: … ord(c)` doesn't mis-tag `words`). Confirmed `word:str`, `c:str`, no PyAny in
+`insert`; no regression (46/50). Flips ~0 alone — the string problems have SECOND blockers
+(Trie `children` = `List (Option Trie)`, bucket 11). Narrow (most str params are annotated).
+
+### TypeInfer investment — honest summary
+Research-backed, precise diagnosis (213/250), 5 correct no-regression changes: cross-scope capture
+keys (+5), AugAssign-div (+1), PyAny materialisation (foundation), ord→str (foundation), learnFromReads
+(foundation). Total measured flips ~6. The engine is now MORE correct + principled, but the compile_fail
+tail is COUPLED — each failing problem stacks 2-4 blockers (Trie-fields + PyDefaultDict + numeric-join
++ closure-null), so single inference fixes seldom flip a whole problem. Next would need clearing a
+whole coupled cluster (Trie: field-typing + PyAny-local + Option-mutation together), not more single fixes.

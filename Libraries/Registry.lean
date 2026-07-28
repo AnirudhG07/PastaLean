@@ -112,6 +112,12 @@ entry point, so codegen names no specific library. -/
 def libraryNoopMethod? (member : String) : Option Lean.Name :=
   functools.functoolsNoopMethod? member
 
+/-- A `sortedcontainers.SortedList` instance method → its runtime function. Codegen consults this
+only when the receiver is a known SortedList (several names collide with set/list/bisect). One entry
+point, so codegen names no specific library. -/
+def sortedListMethod? (member : String) : Option Lean.Name :=
+  sortedcontainers.sortedListMethod? member
+
 /-- A decorator a library declares transparent — no effect on the transpiled value, so the decorated
 function is emitted unchanged (e.g. functools' `@cache`). One entry point, so codegen names no
 specific library. The caller passes the decorator's last dotted segment (`functools.cache` → `cache`). -/

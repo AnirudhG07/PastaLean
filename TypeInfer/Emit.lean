@@ -20,7 +20,11 @@ open Lean
 `floatTy` is the caller's choice of `ℚ` / `ℝ` / `Float` for Python's `float`. -/
 partial def toTypeSyntax? [Monad m] [MonadQuotation m]
     (floatTy : TSyntax `term) : PyType → m (Option (TSyntax `term))
-  | .unknown | .any => return none
+  -- `unknown` is "no information yet" → no ascription (let Lean infer). `any` is the *known*-dynamic
+  -- top type → the runtime `PyAny`, so a genuinely heterogeneous container (`list[any]` → `List PyAny`)
+  -- materialises as a total, running fallback instead of leaving Lean's instance search stuck.
+  | .unknown => return none
+  | .any => return some (mkIdent `PyAny)
   | .int => return some (mkIdent ``Int)
   | .bool => return some (mkIdent ``Bool)
   | .str => return some (mkIdent ``String)

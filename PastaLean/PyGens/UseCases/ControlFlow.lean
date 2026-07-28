@@ -136,6 +136,14 @@ def augAssignSyntax : (kind : SyntaxNodeKind) → Json →
           -- `self` with the updated field (value semantics). Guarded on a mutable `self` in scope.
           if (selfAttrTarget? targetJson).isSome && (← hasVar `self) then
             selfRecordUpdateDoElem (selfAttrTarget? targetJson).get! updated
+          -- `obj.field += v` for a non-`self` receiver (a local node/record): rebuild via record
+          -- update (`obj := { obj with field := updated }`), like the `Assign` path — a direct
+          -- `obj.field := …` is invalid for an immutable structure field.
+          else if jsonNodeType? targetJson == some "Attribute" then
+            let .ok recv := targetJson.getObjVal? "value" | throwError s!"Attribute target missing 'value': {targetJson}"
+            let .ok attr := targetJson.getObjValAs? String "attr" | throwError s!"Attribute target missing 'attr': {targetJson}"
+            attrRecordUpdateDoElem recv attr updated
+              (targetJson.getObjValAs? Bool "_unwrap_opt" == .ok true)
           else match ← nestedSubscriptSetDoElem? targetJson updated with
             | some setStx =>
                 -- `s[i] += v` (and nested `g[i][j] += v`) rebuild the container with the new element.

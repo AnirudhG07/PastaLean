@@ -321,15 +321,13 @@ def sliceBoundOptTerm (boundJson? : Option Json) : PygenM (TSyntax `term) := do
 and the two optional bound terms. Returns `none` for non-slice subscript targets. A step
 (`name[a:b:c]`) is rejected. -/
 def sliceTargetParts? (target : Json) :
-    PygenM (Option (TSyntax `ident × TSyntax `term × TSyntax `term)) := do
+    PygenM (Option (TSyntax `ident × TSyntax `term × TSyntax `term × Option (TSyntax `term))) := do
   unless jsonNodeType? target == some "Subscript" do
     return none
   let .ok sliceJson := target.getObjValAs? Json "slice" | throwError
     s!"Subscript assignment target is missing a 'slice' field: {target}"
   unless jsonNodeType? sliceJson == some "Slice" do
     return none
-  unless (jsonFieldOption sliceJson "step").isNone do
-    throwError "Slice assignment with a step (`s[a:b:c] = ...`) is not supported yet."
   let .ok containerJson := target.getObjValAs? Json "value" | throwError
     s!"Slice assignment target is missing a 'value' field: {target}"
   unless jsonNodeType? containerJson == some "Name" do
@@ -337,7 +335,11 @@ def sliceTargetParts? (target : Json) :
   let containerIdent ← getCode containerJson `ident
   let lowerTerm ← sliceBoundOptTerm (jsonFieldOption sliceJson "lower")
   let upperTerm ← sliceBoundOptTerm (jsonFieldOption sliceJson "upper")
-  return some (containerIdent, lowerTerm, upperTerm)
+  -- An extended slice `s[a:b:c] = repl` writes every `c`-th element via `pySliceSetStep`.
+  let stepTerm? ← match jsonFieldOption sliceJson "step" with
+    | some s => if s.isNull then pure none else pure (some (← getCode s `term))
+    | none => pure none
+  return some (containerIdent, lowerTerm, upperTerm, stepTerm?)
 
 /-- Simple returned expressions can stay unparenthesized; more complex or effectful ones
 keep parentheses so Lean parses multiline `return` expressions reliably. -/
@@ -532,10 +534,16 @@ def assignSyntax : (kind : SyntaxNodeKind) → Json →
               return ← attrRecordUpdateDoElem recv attr rhs
                 (target.getObjValAs? Bool "_unwrap_opt" == .ok true)
             match ← sliceTargetParts? target with
-            | some (containerIdent, lowerTerm, upperTerm) =>
-                -- `s[a:b] = repl` replaces the slice and reassigns the variable.
-                let sliceSetIdent := mkIdent ``PastaLean.pySliceSet
-                `(doElem| $containerIdent:ident := $sliceSetIdent $containerIdent $lowerTerm $upperTerm $rhs)
+            | some (containerIdent, lowerTerm, upperTerm, stepTerm?) =>
+                match stepTerm? with
+                | none =>
+                    -- `s[a:b] = repl` replaces the slice and reassigns the variable.
+                    let sliceSetIdent := mkIdent ``PastaLean.pySliceSet
+                    `(doElem| $containerIdent:ident := $sliceSetIdent $containerIdent $lowerTerm $upperTerm $rhs)
+                | some stepTerm =>
+                    -- `s[a:b:c] = repl` overwrites every `c`-th element in order.
+                    let sliceSetStepIdent := mkIdent ``PastaLean.pySliceSetStep
+                    `(doElem| $containerIdent:ident := $sliceSetStepIdent $containerIdent $lowerTerm $upperTerm (some $stepTerm) $rhs)
             | none =>
             match ← nestedSubscriptSetDoElem? target rhs with
             | some setStx =>

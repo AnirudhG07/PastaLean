@@ -283,9 +283,18 @@ partial def assignBackToReceiver (recvJson : Json) (newVal : TSyntax `term) :
       let containerTerm ← getCode containerJson `term
       let setItemIdent := mkIdent ``PastaLean.pySetItem
       assignBackToReceiver containerJson (← `($setItemIdent $containerTerm $indexTerm $newVal))
+  | some "Attribute" =>
+      -- `self.small.append(v)` / `heappush(self.small, x)`: rebuild the field via record update
+      -- (`self := { self with small := newVal }`), like an attribute assignment.
+      if (selfAttrTarget? recvJson).isSome && (← hasVar `self) then
+        selfRecordUpdateDoElem (selfAttrTarget? recvJson).get! newVal
+      else
+        let .ok recv := recvJson.getObjVal? "value" | throwError s!"Attribute receiver missing 'value': {recvJson}"
+        let .ok attr := recvJson.getObjValAs? String "attr" | throwError s!"Attribute receiver missing 'attr': {recvJson}"
+        attrRecordUpdateDoElem recv attr newVal (recvJson.getObjValAs? Bool "_unwrap_opt" == .ok true)
   | _ =>
-      throwError "A mutating method needs a variable or subscript receiver (`xs.append(v)`, \
-        `g[i].append(v)`) under value semantics."
+      throwError "A mutating method needs a variable, subscript, or attribute receiver (`xs.append(v)`, \
+        `g[i].append(v)`, `self.h.append(v)`) under value semantics."
 
 /-- Lower an in-place mutator `recv.m(args)` by rebuilding `recv` from `mkNewValue recv` and storing
 it back, so `g[i].append(v)` becomes `g := pySetItem g i (pyAppend g[i] v)` rather than a no-op. -/
@@ -315,6 +324,15 @@ def statementMutatorRebuild? (attr : String) : Option (Lean.Name × List Nat) :=
   | "popleft"    => some (``pyPopLeftRest, [0])
   | "setdefault" => some (``pyDictSetdefaultRest, [2])
   | _            => none
+
+/-- A `SortedList` instance method (`sl.add`, `sl.bisect_left`, `sl.remove`, …) resolved to its
+runtime function when the receiver `recvJson` is a variable flagged as holding a SortedList. `none`
+otherwise — so a plain `bisect.bisect_left(xs, x)` or a set's `add`/`remove` is untouched. The
+name map itself lives in the Libraries layer; codegen only supplies the receiver-type gate. -/
+def sortedVarMethod? (attr : String) (recvJson : Json) : PygenM (Option Lean.Name) := do
+  match recvJson.getObjValAs? String "id" with
+  | .ok id => if ← isSortedVar id.toName then return Libraries.sortedListMethod? attr else return none
+  | _ => return none
 
 /-- The class to construct for a call `f(...)` whose callee is the `Name` `funcName`: a registered
 class (`C(..)`), or `cls(..)` inside a class body (classmethod sugar). `none` for ordinary calls. -/
@@ -461,7 +479,7 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
         allArgs := allArgs.push valCode
         allArgJsons := allArgJsons.push valueJson
 
-        match pythonMethodMap attr with
+        match (← sortedVarMethod? attr valueJson) <|> pythonMethodMap attr with
         | some funcName =>
             funcIdent := mkIdent funcName
         | none =>
@@ -827,17 +845,12 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
           if keyWordsMap.isEmpty && arities.contains argsArray.size then
             let argCodes ← argsArray.mapM (fun argJson => getCode argJson `term)
             -- A SortedList receiver: `add`/`remove`/`discard` share names with the set methods but must
-            -- maintain sort order (they otherwise default to set semantics — dedup, no ordering).
-            let sortedRecv ← match valueJson.getObjValAs? String "id" with
-              | .ok id => isSortedVar id.toName
-              | _ => pure false
+            -- maintain sort order (they otherwise default to set semantics — dedup, no ordering). The
+            -- runtime name comes from the Libraries layer; codegen only supplies the receiver gate.
             -- An `array_ok`-stamped receiver (runnable twin) uses the O(1) `Array` variant.
             let rebuildFn ←
-              if sortedRecv then
-                pure (match attr with
-                  | "add"                => `Libraries.sortedcontainers.pySortedAdd
-                  | "remove" | "discard" => `Libraries.sortedcontainers.pySortedRemove
-                  | _ => rebuildFn)
+              if let some fn ← sortedVarMethod? attr valueJson then
+                pure fn
               else if (json.getObjValAs? String "_seq" == .ok "array") && (← getNumericMode) == .approx then
                 pure (match attr with
                   | "append" => ``PastaLean.pyArrayAppend
@@ -879,11 +892,12 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
               throwError s!"sort() keyword argument '{kwName}' is not supported yet."
           unless argsArray.isEmpty do
             throwError "sort() expects no positional arguments."
-          let targetIdent ← getCode valueJson `ident
+          -- Rebuild the receiver (a Name, `d[i]`, or `self.x`) via `mutatingMethodDoElem`, so
+          -- `d[i].sort()` becomes `d := pySetItem d i (pySort d[i])`, not an invalid `d[i] := …`.
           match keyWordsMap.get? "key", keyWordsMap.get? "reverse" with
           | none, none =>
               let pySortIdent := mkIdent ``pySort
-              return ← `(doElem| $targetIdent:ident := $pySortIdent $targetIdent)
+              return ← mutatingMethodDoElem valueJson (fun recv => `($pySortIdent $recv))
           | keyOpt, revOpt =>
               let keyCode ← match keyOpt with
                 | some kJson => mappedCallableValueCode kJson
@@ -892,13 +906,13 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
                 | some rJson => getCode rJson `term
                 | none => `(false)
               let pySortByIdent := mkIdent ``pySortBy
-              return ← `(doElem| $targetIdent:ident := $pySortByIdent $keyCode $revCode $targetIdent)
+              return ← mutatingMethodDoElem valueJson (fun recv => `($pySortByIdent $keyCode $revCode $recv))
 
         let valCode ← getCode valueJson `term
         allArgs := allArgs.push valCode
         allArgJsons := allArgJsons.push valueJson
 
-        match pythonMethodMap attr with
+        match (← sortedVarMethod? attr valueJson) <|> pythonMethodMap attr with
         | some funcName =>
             funcIdent := mkIdent funcName
         | none =>

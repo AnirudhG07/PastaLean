@@ -111,6 +111,28 @@ def pySliceSet {α : Type} (xs : List α) (start stop : Option Int) (repl : List
   let e := max s e
   xs.take s ++ repl ++ xs.drop e
 
+/-- Walk the extended-slice target indices `i, i+st, …` (while `< e`), writing successive `repl`
+elements. Stops when `repl` runs out or the next index leaves the list. -/
+private def sliceSetStepAux {α : Type} (arr : Array α) (i e st : Int) : List α → Array α
+  | [] => arr
+  | v :: rest =>
+      if i ≥ 0 ∧ i < e ∧ i.toNat < arr.size then
+        sliceSetStepAux (arr.set! i.toNat v) (i + st) e st rest
+      else arr
+
+/-- Python extended slice assignment `xs[start:stop:step] = repl` for a positive `step` (the common
+`xs[::2] = …` / `xs[1::2] = …`): overwrite `xs[start], xs[start+step], …` with `repl` in order. A
+non-positive step is left unmodelled (returns `xs` unchanged). -/
+def pySliceSetStep {α : Type} (xs : List α) (start stop step : Option Int) (repl : List α) : List α :=
+  let st := step.getD 1
+  if st ≤ 0 then xs
+  else
+    let n : Int := xs.length
+    let clamp (b : Int) : Int := let v := if b < 0 then b + n else b; max 0 (min v n)
+    let s := clamp (start.getD 0)
+    let e := clamp (stop.getD n)
+    (sliceSetStepAux xs.toArray s e st repl).toList
+
 
 theorem pyListReverse_involution (xs : List α) : pyReverse (pyReverse xs) = xs := by
   unfold pyReverse pyListReverse
