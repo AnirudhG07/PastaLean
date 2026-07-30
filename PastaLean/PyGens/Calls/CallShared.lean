@@ -150,6 +150,12 @@ def popCallParts? (value : Json) :
   unless jsonNodeType? receiverJson == some "Name" do return none
   let receiverIdent ← getCode receiverJson `ident
   unless (← hasVar receiverIdent.getId) do return none
+  -- `d.pop(key)` (1 arg) on a known dict is the DICT pop, not the 1-arg list pop `valueAndMutateMethod?`
+  -- defaults to (that shares the name).
+  let (valueFn, restFn, restArgc) ←
+    if attr == "pop" && args.size == 1 && (← jsonIsDictExpr receiverJson) then
+      pure (``PastaLean.pyDictKeyPopValue, ``PastaLean.pyDictKeyPopRest, 1)
+    else pure (valueFn, restFn, restArgc)
   let argCodes ← args.mapM (getCode · `term)
   return some ((valueFn, restFn), receiverIdent, argCodes, argCodes.extract 0 restArgc)
 

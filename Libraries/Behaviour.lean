@@ -88,6 +88,12 @@ def elementOrJoin : Behaviour := { returns := fun as => match as with
 /-- One container argument → its element type; several arguments → the first (`sum`). -/
 def elementOrFirst : Behaviour := { returns := fun as => match as with
                                     | [x] => x.containerElemOrSelf | _ => arg as 0 }
+/-- `sum(xs)` / `sum(xs, start)`: the numeric element type, but `bool` counts as `int` (Python's
+`sum([True, False, True]) = 2`), joined with the optional start value (arg 1). -/
+def sumReturn : Behaviour := { returns := fun as =>
+  let e := (arg as 0).containerElemOrSelf
+  let e := if e == .bool then .int else e
+  match as[1]? with | some s => e.join s | none => e }
 
 /-! Dict-method returns — the receiver (a `dict[k, v]`) is argument 0. -/
 
@@ -134,7 +140,7 @@ def builtinBehaviour? (name : String) : Option Behaviour :=
   | "zip"                          => some listOfTuples
   | "enumerate"                    => some enumerated
   | "min" | "max"                  => some elementOrJoin
-  | "sum"                          => some elementOrFirst
+  | "sum"                          => some sumReturn
   -- `map(f, xs)` is a list (of `f`'s results — element type left open); knowing it is a LIST is what
   -- lets `a, b = map(int, s.split())` unpack by index instead of as a `Prod`.
   | "map"                          => some (const (.list .unknown))

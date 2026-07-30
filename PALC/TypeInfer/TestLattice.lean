@@ -182,4 +182,6 @@ private def emitted (t : PyType) : Option String :=
 #guard emitted (.set .int) == some "List Int"
 -- Nothing to emit for an unknown slot; the binder stays untyped (P3 will box it).
 #guard emitted .unknown == none
-#guard emitted (.list .any) == none
+-- `any` is the KNOWN-dynamic top type → the runtime `PyAny`, so a `list[any]` materialises as a total
+-- running fallback rather than leaving instance search stuck.
+#guard emitted (.list .any) == some "List PyAny"

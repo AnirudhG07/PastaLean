@@ -17,5 +17,7 @@ def pyOperatorSub {α β γ : Type} [PyHSub α β γ] (a : α) (b : β) : γ := 
 def pyOperatorMul {α β γ : Type} [PyHMul α β γ] (a : α) (b : β) : γ := a *ₚ b
 def pyOperatorMod {α β γ : Type} [PyModulo α β γ] (a : α) (b : β) : γ := a %ₚ b
 def pyOperatorFloorDiv {α β γ : Type} [PyFloorDiv α β γ] (a : α) (b : β) : γ := PyFloorDiv.floorDiv a b
+def pyOperatorTrueDiv {α β γ : Type} [PyHDiv α β γ] (a : α) (b : β) : γ := a /ₚ b
+def pyOperatorPow {α β γ : Type} [PyHPow α β γ] (a : α) (b : β) : γ := a ^ₚ b
 
 end Libraries.operator

@@ -458,3 +458,158 @@ similar-string-groups, number-of-provinces, capitalize-the-title, brace-expansio
 OK together. Plus the value+mutate union-find feature (number-of-provinces + others). Remaining
 compile_fails are dominated by the hard numeric-ℚ/Float + type-inference clusters (Application type
 mismatch, PyAny synth, nullable Option, tuple-vs-list) — the TypeInfer plan's territory.
+
+### Next-2-easiest batch: memo type-changing param + dict.pop(key)
+1. **Memoized-DP param reassigned same-type** (`sort-integers-by-the-power-value`): completes the
+   earlier memo mut-shadow fix — the shadow loop in `memoizedRunCommand?` emitted `let mut p := p` but
+   never `addVar`/`setMutVar`'d `p`, so a later plain assign (`x = 3*x+1`) lowered to a FRESH `let mut x`
+   → "mutable variable `x` cannot be shadowed". Added the two registrations (mirrors the non-memoized
+   path). → sort-integers OK.
+2. **`dict.pop(key)` misrouted to list pop** (`find-the-median-of-the-uniqueness-array`): 1-arg
+   `d.pop(k)` shares its name with `list.pop(i)`, and `valueAndMutateMethod?` defaulted argc≤1 to LIST
+   pop (`pyPopRest` → returns a List → type error). Added a `dictVars` codegen registry (mirrors
+   `setVars`/`sortedVars`, populated from `{…}`/dict-comp/`dict()`/`defaultdict()`/`Counter()` via
+   `jsonIsDictExpr`) and routed `d.pop(k)` on a dict receiver to a new polymorphic `PyDictKeyPop`
+   protocol (`pyDictKeyPopValue`/`pyDictKeyPopRest`, instances for `Std.HashMap` AND `PyDefaultDict`) —
+   one call site handles plain dicts and Counters/defaultdicts. → find-the-median OK.
+Regression test: example_scripts/commands/dict_pop_and_memo.py (dict.pop on plain dict + Counter, memo
+collatz reassigning its param) — execution-verified 50/7/8 == CPython. No golden drift (pop_methods,
+mutating_methods identical); 80/80 codegen sweep clean.
+
+### Fresh re-measure (2026-07-29, random-70 seed 13): 64 ok / 6 compile_fail (91%)
+Up from the 85.6% overnight baseline — the accumulated sweep fixes moved the needle. Categorized ALL 6
+fresh fails; every one is coupled/TypeInfer-bound, NOT a mechanical win:
+- **name-reuse type conflict** (2: detect-cycles-in-2d-grid, minimum-cost-to-convert-string-i): Python
+  reuses `x` as `str` in one loop and `int` in another; TypeInfer joins the conflicting uses to `PyAny`
+  → `grid[PyAny]` / `str×str×int` unpack mismatch. Needs per-scope/SSA inference (not just codegen SSA).
+- **`key=` callback param inference** (1: subsequence-with-the-minimum-score): `bisect_left(range(n+1),
+  True, key=check)` — `check`'s param is `PyAny` because the range's `int` element type isn't propagated
+  into the callback. Same class as the `nlargest(key=…)` item. Medium TypeInfer (call-graph) work.
+- **nullable tree mutation** (1: increasing-order-search-tree): `root.left = None` + `prev.right = root`
+  threaded through a nested def → value-semantics wall + `@none : Option ?m` + closure-threading, all at
+  once. Hard.
+- **inf-in-container numeric** (1: egg-drop-…): `PyHAdd (List ℤ) (List ℚ)` — the documented inf-poly
+  tension. **random lib** (1: sort-an-array `randint`) — only 2 corpus users, not worth a shim.
+CONCLUSION (confirms the close-out above): clean single-fix wins are exhausted. The next real levers are
+MEDIUM TypeInfer investments — (a) per-scope typing for name-reuse, (b) `key=`/callback param inference,
+(c) tuple-element inference for list-of-tuples — each spanning the inference engine, not a sweep fix.
+
+### Medium TypeInfer lever DONE: `key=` callback param inference
+The `key=<named def>` case (`bisect_left(range(n), True, key=check)` / `sorted(xs, key=f)` /
+`min(xs, key=f)`): the callback is never called by name, so `nestedParamHints` (positional-call hints)
+left its param `unknown` → boxed to `PyAny` → `check`'s body (`k + x`) went `ℤ × PyAny`, unpack failed.
+`stampKeyLambdas` already handled `key=lambda` inline; extended the same collection-finding
+(`keyCallbackColl?`, covers sorted/min/max/bisect_*/nlargest/nsmallest/.sort) to NAMED defs:
+`keyCallbackElemTypes` collects the element type at every `key=<name>` site, `keyCallbackHints` hints the
+def's FIRST param with the joined element type, merged (join, not override) into `stampStmt`'s nested-def
+hints. Fixes subsequence-with-the-minimum-score. Regression: random-70 seed13 64→65 (only this flipped,
+0 new fails); 80/80 example codegen; execution-verified via example_scripts/commands/key_callback_infer.py
+(named annotated + named unannotated + lambda control, all == CPython).
+
+### Codegen bug DONE: nested tuple-unpack of a threaded call in a `do` block leaked `null` (+4)
+The "Unknown constant `null`" convert_fail (our own ClosureConvert code, TIER 1). A nested def that
+mutates a capture (state-THREADED) AND returns a tuple, tuple-unpacked (`a, b = dfs(i)`), rewrites to
+`((a, b), vis) = dfs'(i, vis)` — a NESTED tuple target. In a PURE `let`-chain (top-level, no loop) it
+lowered fine; but inside a `do` block (e.g. a `for` loop), the nested `tupleElementAssignDoElem`
+produces a nested `mkNullNode`, and `appendDoElems` flattened only ONE level, so the inner wrapper
+leaked into the do-sequence and elaborated as a stray `null`. Root fix (robust, any depth):
+`appendDoElems` (Core/Utils.lean) now flattens `nullKind` RECURSIVELY (`getArgs.foldl appendDoElems`).
+Flips brace-expansion, count-the-number-of-complete-components, difference-between-maximum-and-minimum-
+price-sum, sum-of-remoteness-of-all-cells (binary-tree-longest-consecutive-sequence-ii progresses to a
+separate `List ℤ × ℤ` threaded-tree tuple mismatch). Regression: 90/90 example codegen, goldens
+(pop_methods/mutating_methods) IDENTICAL (existing cases had one nesting level → unchanged);
+execution-verified (threaded tuple-unpack in a loop == CPython). Regression test:
+example_scripts/commands/threaded_tuple_unpack.py.
+
+### API wrong-answer fixes (from eval_divergences.json) — 3 systematic runtime bugs
+Above 90% convert now; turned to the eval divergences (Lean compiles but WRONG output). Three
+systematic API bugs fixed (each affects any problem using that op), all regression-free (PALC runtime
+#guards pass; random-40 eval 91.8%, no NEW divergences — the 1 wrong-output `last-day-…` pre-existed,
+3 others are DP timeouts):
+1. **Integer bitwise was fixed 64-bit two's-complement** (`PyAPI/Operators.lean` `pyTwosComp`,
+   `pyBitWidth := 64`): a non-negative `&`/`|`/`^` result ≥ 2^63 got RE-SIGNED to negative
+   (`reduce(or_, nums)` → -1 instead of 2^64-1) and anything wider than 64 bits truncated. Python ints
+   are arbitrary-precision. Fix: DYNAMIC width = `(max magnitude).log2 + 2` (strictly > either operand),
+   so a non-negative result never sets the sign bit and nothing truncates; negatives still round-trip
+   (`-1 & 5 = 5`). Fixes maximum-xor-after-operations, maximum-xor-product (10/10 each).
+2. **`str.split()`/`strip()` whitespace set** (`Strings.lean` `isPyWhitespace`): only `' \t\n\r'`.
+   Added `\v \f` + Unicode NEL/NBSP (`\x0b\x0c\x1c-\x1f\x85\xa0  `) so `"a\xa0b".split()`
+   drops the non-breaking space like CPython. Fixes reverse-words-in-a-string.
+3. **Format-spec radix `{:02x}`/`{:o}`/`{:b}`** (`Core.lean` `pyFmtApply` + new `pyIntToRadix`):
+   `str.format` pre-renders args to DECIMAL, so `'{:02x}'.format(153)` gave `"153"` not `"99"`. Now
+   `pyFmtApply` converts an integer arg to the type char's radix (covers BOTH `str.format` and
+   f-strings, which both route through it). Fixes similar-rgb-color, convert-a-number-to-hexadecimal.
+Regression tests: PALC/PyAPI/TestOperators.lean (new, bitwise), TestStrings.lean (+split/format guards).
+Also corrected a stale PALC lattice #guard (`emitted (.list .any)` → `List PyAny`, from the committed
+PyAny-materialization). Deferred (fiddly, pathological inputs): large-float `.2f` UInt64 overflow
+(apply-discount); CPython set-hash iteration ORDER (intersection/find-the-difference — inherent to the
+list-backed set model, not a clean fix).
+
+### API wrong-answer fixes, batch 2 — 4 systematic semantic bugs (+~10 problems)
+More eval-divergence fixes (execution-verified 100% on the affected problems; 95/95 codegen sweep,
+pop/mutator goldens identical). NOTE: `evaluate` reads the on-disk `sol_0.lean`, so a codegen fix needs
+a RE-CONVERT before the eval reflects it (a stale-`.lean` eval misled me mid-session).
+1. **`for x in q` where the body GROWS `q`** (BFS/topological idiom, `q.append(...)`): a Lean `for`
+   snapshots the iterable, so appended items were never visited → BFS processed only the seed queue.
+   `ControlFlow`: when the body grows the iterated Name (`bodyGrowsListVar`), lower to an index `while`
+   re-reading `pyLen q`, advancing at the TOP so `continue` re-checks the grown length. Fixes
+   course-schedule, bus-routes, detonate-the-maximum-bombs, minimum-genetic-mutation, find-all-recipes.
+2. **Nested `and`/`or` with a non-bool operand lost its condition context in `'rn`** (`Basic.boolOpSyntax`):
+   `a or (b and n)` in a condition — the outer `or`'s operand was lowered with `withPropCondition opProp`,
+   but `opProp = propCond && exact` is FALSE in approx mode, so the nested `and` fell to the VALUE form
+   (`if pyTruthy b then n_int else b`) and the `Int` operand was mis-coerced. Fix: lower operands under
+   `withTruthinessContext true` so nested BoolOps stay in the Bool/Prop connective form. Fixes
+   day-of-the-year (`y%4==0 and y%100`).
+3. **`sum(<bools>)` typed as `bool`** (`Libraries.Behaviour` `sum`): Python `sum([True,False,True])=2`
+   (int). `sum` returned the element type; a `sum(c in vowels for …)` counting idiom typed the chained
+   temp `Bool`, corrupting the count. New `sumReturn` widens `bool`→`int` (`min`/`max` keep bool). Fixes
+   maximum-number-of-vowels.
+4. **`for row in C: <mutate row in place>` lost the mutation** (value-semantics element mutation):
+   the loop var is a value copy, so `row[i]=v` / `row.sort()` never reached `C`. `ControlFlow`:
+   `forElemWriteback?` detects it (target mutated in place, no break/continue, C a Name) and lowers to an
+   index `while` that WRITES the mutated element back (`C := pySetItem C idx row`); `jsonMutatesName`
+   (FuncDef) now recognises the pattern so `C` becomes a `let mut`. Fixes flipping-an-image,
+   sum-in-a-matrix, delete-greatest-value-in-each-row.
+Regression test: example_scripts/commands/api_iteration_semantics.py (all 4 patterns, == CPython).
+STILL DEFERRED: CPython set-hash iteration ORDER (intersection/find-the-difference/powerful-integers —
+inherent to list-backed sets); large-float `.2f` UInt64 overflow (apply-discount); assorted per-problem
+logic bugs (count-number-of-teams, path-with-maximum-gold, least-operators, …).
+
+### API batch 3 — sum-bool auto-fixed ~10 more; + enumerate-container-mutation
+Re-evaluating the ~24 remaining divergent "logic bugs" (after re-convert!) showed the systematic fixes —
+especially `sum(<bool>)`→int — had ALREADY auto-fixed ~10 of them: maximum-height-by-stacking-cuboids,
+count-number-of-teams, maximum-rows-covered-by-columns, last-day-where-you-can-still-cross,
+maximum-star-sum-of-a-graph, sum-of-digit-differences-of-all-pairs, task-scheduler,
+projection-area-of-3d-shapes, sum-of-remoteness-of-all-cells, maximum-total-reward-using-operations-ii.
+One more systematic codegen fix landed:
+- **`for i, x in enumerate(C): <mutate C[i+1]>`** (`ControlFlow.forEnumerateContainerMut?`): Python's
+  live `enumerate` sees a later-index mutation on the next iteration; a snapshot `for` misses it. Lower to
+  an index `while` re-reading `C[i]` (binds `(i, C[i])` fresh each step). `jsonMutatesName` already makes
+  `C` mutable (subscript assign). Fixes minimum-operations-to-make-binary-array-elements-equal-to-one-i.
+Regression test extended (api_iteration_semantics.py `greedy_flips`).
+
+REMAINING divergent (genuinely hard, ~12): backtracking flood-fill grid mutation in a recursive `dfs`
+inside a `max(... for ...)` comprehension (path-with-maximum-gold 3/12, number-of-distinct-islands 8/12 —
+value-semantics of a captured 2D grid restored between recursive calls); walrus+defaultdict+heapq
+(split-array 6/12); memoized `@cache` DFS + `vis.add` side-effect (all-paths 11/12); 1-edge-case ones
+(check-if-the-rectangle-corner-is-reachable 11/12, find-a-good-subset 11/12); factor-combinations 4/12,
+modify-graph 2/12, number-of-beautiful-integers 7/12, before-and-after 2/12, lexicographically-smallest
+0/12, least-operators 9/12 — assorted per-problem. Plus the always-deferred set-hash-order + float-2^64.
+
+### Compile_fail mechanical batch — operator lib, polymorphic 2-arg pop, index(start)
+Fresh random-120 (seed 3): ~86% convert. The compile_fails are dominated by HARD clusters (numeric-ℚ,
+value-semantics Trie/SegmentTree ~24 "don't chase", PyAny over-boxing, nullable Option, tuple-vs-list).
+Mechanical wins landed (all regression-safe; PALC runtime tests + dict_pop test pass):
+- **`operator.truediv`/`operator.pow`** (Libraries/operator): added the missing members (`pyOperatorTrueDiv`
+  via `/ₚ`, `pyOperatorPow` via `^ₚ`). evaluate-reverse-polish now converts (then hits a numeric int/float
+  stack-type wall — separate).
+- **2-arg dict pop `d.pop(k, default)` was `Std.HashMap`-only** → made `pyDictPopValue`/`pyDictPopRest`
+  polymorphic over the `PyDictKeyPop` protocol (added `keyGetOr`; instances for `Std.HashMap` AND
+  `PyDefaultDict`), so `Counter`/`defaultdict.pop(k, dflt)` work. Fixes count-of-sub-multisets, jump-game-iv.
+- **`str.index(sub, start)` / `list.index(x, start)`** — the `PyIndex` protocol was 2-arg (couldn't take
+  Python's optional `start`); added a `start` param (string routes to `pyStringIndex`'s optParams; list
+  searches from `start`). Fixes repeated-substring-pattern.
+Regression tests: PALC/PyAPI/TestStrings.lean (+pyIndex-start guards). HONEST NOTE: the mechanical
+compile_fail vein is now largely exhausted (operator lib, polymorphic pop, index/startswith start-args
+all done); the remaining ~200 compile_fails need TypeInfer (numeric/nullable/PyAny) or an architectural
+value-semantics change (Trie/SegmentTree/tree-node reference mutation) — NOT one-by-one sweeps.

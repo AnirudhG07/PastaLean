@@ -193,6 +193,87 @@ partial def bodyReassignsName (target : String) (json : Json) : Bool :=
     | .obj fields => fields.toList.any (fun (_, v) => bodyReassignsName target v)
     | _ => false
 
+/-- Does the loop body GROW `name` — `name.append(x)` / `name.extend(xs)` / `name += …` — so Python's
+`for x in name` would visit the appended items (the BFS/topological-sort idiom)? Such a loop must be
+lowered as an index `while` that re-reads the list, since a Lean `for` snapshots the iterable. -/
+partial def bodyGrowsListVar (name : String) (json : Json) : Bool :=
+  let attrGrows (f : Json) : Bool :=
+    jsonNodeType? f == some "Attribute"
+      && ((f.getObjValAs? String "attr").toOption.any (["append", "extend"].contains ·))
+      && ((f.getObjVal? "value").toOption.bind (·.getObjValAs? String "id" |>.toOption) == some name)
+  let here :=
+    match jsonNodeType? json with
+    | some "Call" => (json.getObjVal? "func").toOption.any attrGrows
+    | some "AugAssign" =>
+        (json.getObjVal? "target").toOption.bind (·.getObjValAs? String "id" |>.toOption) == some name
+    | _ => false
+  here || (match json with
+    | .arr xs => xs.any (bodyGrowsListVar name)
+    | .obj fs => fs.toList.any (fun (_, v) => bodyGrowsListVar name v)
+    | _ => false)
+
+/-- The root `Name` of an assignment target (`row[i][j]` / `row.attr` → `row`), if any. -/
+partial def targetRootName? (t : Json) : Option String :=
+  match jsonNodeType? t with
+  | some "Name" => (t.getObjValAs? String "id").toOption
+  | some "Subscript" | some "Attribute" => (t.getObjVal? "value").toOption.bind targetRootName?
+  | _ => none
+
+/-- Does `json` MUTATE `name` in place — `name[i] = v`, `name.sort()`/`.append(x)`/…, `name += xs`?
+A `for x in container` whose body mutates `x` in place loses the mutation under value semantics (the
+loop var is a copy), so it must write the element back into `container`. A plain rebind (`x = …`) is
+NOT an in-place mutation. -/
+partial def bodyMutatesElemInPlace (name : String) (json : Json) : Bool :=
+  let mutMethods := ["append", "sort", "extend", "insert", "pop", "remove", "reverse", "clear",
+    "add", "discard", "update", "appendleft", "popleft", "setdefault"]
+  let here :=
+    match jsonNodeType? json with
+    | some "Assign" =>
+        -- `name[i] = v` (subscript/attribute target rooted at `name`); a plain `name = …` is a rebind.
+        (json.getObjVal? "target").toOption.any fun t =>
+          (jsonNodeType? t == some "Subscript" || jsonNodeType? t == some "Attribute")
+            && targetRootName? t == some name
+    | some "AugAssign" =>
+        (json.getObjVal? "target").toOption.any (targetRootName? · == some name)
+    | some "Call" =>
+        (json.getObjVal? "func").toOption.any fun f =>
+          jsonNodeType? f == some "Attribute"
+            && ((f.getObjValAs? String "attr").toOption.any mutMethods.contains)
+            && ((f.getObjVal? "value").toOption.bind (·.getObjValAs? String "id" |>.toOption) == some name)
+    | _ => false
+  here || (match json with
+    | .arr xs => xs.any (bodyMutatesElemInPlace name)
+    | .obj fs => fs.toList.any (fun (_, v) => bodyMutatesElemInPlace name v)
+    | _ => false)
+
+/-- `for x in C:` whose body mutates `x` in place — the element-writeback pattern. Returns `(C, x)`
+(both plain `Name`s) when writeback applies: `C` is the iterated Name, the body mutates `x` in place,
+`C` is not itself grown, and there is no `break`/`continue` (which would skip the bottom writeback). -/
+def forElemWriteback? (iterJson targetJson : Json) (bodyElems : Array Json) : Option String :=
+  if jsonNodeType? iterJson != some "Name" || jsonNodeType? targetJson != some "Name" then none
+  else do
+    let iterName ← (iterJson.getObjValAs? String "id").toOption
+    let tgtName ← (targetJson.getObjValAs? String "id").toOption
+    guard (bodyElems.any (bodyMutatesElemInPlace tgtName))
+    guard (!bodyElems.any (jsonContainsNodeType · ["Break", "Continue"]))
+    guard (!bodyElems.any (bodyGrowsListVar iterName))
+    pure iterName
+
+/-- `for i, x in enumerate(C):` whose body mutates `C` by subscript (`C[i+1] ^= 1`). Python's
+`enumerate` reads `C[i]` live, so a later mutation of `C` is seen by subsequent iterations; a snapshot
+`for` misses it. Returns `C`'s Name when the re-reading index form applies (`C` a Name, body mutates
+`C` in place, no break/continue). -/
+def forEnumerateContainerMut? (iterJson : Json) (bodyElems : Array Json) : Option String := do
+  guard (jsonNodeType? iterJson == some "Call")
+  let f ← (iterJson.getObjVal? "func").toOption
+  guard ((f.getObjValAs? String "id").toOption == some "enumerate")
+  let args ← (iterJson.getObjValAs? (Array Json) "args").toOption
+  guard (args.size == 1 && jsonNodeType? args[0]! == some "Name")
+  let cName ← (args[0]!.getObjValAs? String "id").toOption
+  guard (bodyElems.any (bodyMutatesElemInPlace cName))
+  guard (!bodyElems.any (jsonContainsNodeType · ["Break", "Continue"]))
+  pure cName
+
 /-- Lower a for-loop target into a binder and optional destructuring prelude. A target name the
 `bodyElems` reassign gets a mutable shadow (`let mut`) instead of an immutable binder, so the
 reassignment sticks and the `if` lowering doesn't pre-declare a `let mut … := default` shadowing it. -/
@@ -595,10 +676,62 @@ def forSyntax : (kind : SyntaxNodeKind) → Json →
                 $[$bodyStxArray:doElem]*)
             pure #[bindIt, forLoop]
           else
-            let iterCode ← rangeIterSyntax iterJson
-            let forLoop ← `(doElem| for $targetIdent:ident in ($iterCode) do
-                $[$bodyStxArray:doElem]*)
-            pure #[forLoop]
+            -- `for x in q` where the body GROWS `q` (`q.append(...)`, the BFS/topological idiom):
+            -- Python re-reads the list each step and visits appended items, but a Lean `for` snapshots
+            -- the iterable. Lower to an index `while` that re-reads `pyLen q`. Advance at the TOP so a
+            -- `continue` re-checks the (grown) length instead of skipping the bump and spinning.
+            let growVar? := if jsonNodeType? iterJson == some "Name" then
+                (iterJson.getObjValAs? String "id").toOption.filter (bodyElems.any <| bodyGrowsListVar ·)
+              else none
+            let pyLenId := mkIdent ``PastaLean.pyLen
+            let getId := mkIdent ``PastaLean.pyGetItem
+            let setId := mkIdent ``PastaLean.pySetItem
+            match growVar?, forElemWriteback? iterJson targetJson bodyElems with
+            | some _, _ =>
+                let qIdent ← getCode iterJson `term
+                let idx := mkIdent (← freshName `__fi')
+                let seed ← `(doElem| let mut $idx:ident : Int := -1)
+                let whileLoop ← `(doElem|
+                  while ($idx +ₚ (1 : Int)) < $pyLenId $qIdent do
+                    $idx:ident := $idx +ₚ (1 : Int)
+                    let $targetIdent:ident := $getId $qIdent $idx
+                    $[$bodyStxArray:doElem]*)
+                pure #[seed, whileLoop]
+            | none, some _ =>
+                -- `for row in C: <mutate row in place>` — bind each element, run the body (its prelude
+                -- shadows `row` as a `let mut`), then WRITE the mutated `row` back into `C[idx]`, since
+                -- our loop var is a value copy. `C` is made mutable by `jsonMutatesName` recognising
+                -- this pattern.
+                let cIdent ← getCode iterJson `ident
+                let rowIdent ← getCode targetJson `ident
+                let idx := mkIdent (← freshName `__fi')
+                let seed ← `(doElem| let mut $idx:ident : Int := -1)
+                let whileLoop ← `(doElem|
+                  while ($idx +ₚ (1 : Int)) < $pyLenId $cIdent do
+                    $idx:ident := $idx +ₚ (1 : Int)
+                    let $targetIdent:ident := $getId $cIdent $idx
+                    $[$bodyStxArray:doElem]*
+                    $cIdent:ident := $setId $cIdent $idx $rowIdent)
+                pure #[seed, whileLoop]
+            | none, none =>
+                match forEnumerateContainerMut? iterJson bodyElems with
+                | some cName =>
+                    -- `for i, x in enumerate(C): <mutate C[...]>` — re-read `C[i]` each iteration so a
+                    -- mutation to a later index (`C[i+1] ^= 1`) is seen, matching Python's live enumerate.
+                    let cIdent := mkIdent cName.toName
+                    let idx := mkIdent (← freshName `__fi')
+                    let seed ← `(doElem| let mut $idx:ident : Int := -1)
+                    let whileLoop ← `(doElem|
+                      while ($idx +ₚ (1 : Int)) < $pyLenId $cIdent do
+                        $idx:ident := $idx +ₚ (1 : Int)
+                        let $targetIdent:ident := ($idx, $getId $cIdent $idx)
+                        $[$bodyStxArray:doElem]*)
+                    pure #[seed, whileLoop]
+                | none =>
+                    let iterCode ← rangeIterSyntax iterJson
+                    let forLoop ← `(doElem| for $targetIdent:ident in ($iterCode) do
+                        $[$bodyStxArray:doElem]*)
+                    pure #[forLoop]
         let loopStx ← loopWithElseDoElem breakFlag? coreElems orelseElems
         if hoistDecls.isEmpty then pure loopStx
         -- `loopStx` is itself a null-node (from `loopWithElseDoElem`); splice its children flat rather

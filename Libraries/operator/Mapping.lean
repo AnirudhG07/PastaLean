@@ -15,6 +15,8 @@ def pythonOperatorMemberMap? (member : String) : Option Lean.Name :=
   | "mul"      => some ``pyOperatorMul
   | "mod"      => some ``pyOperatorMod
   | "floordiv" => some ``pyOperatorFloorDiv
+  | "truediv"  => some ``pyOperatorTrueDiv
+  | "pow"      => some ``pyOperatorPow
   | _ => none
 
 end Libraries.operator

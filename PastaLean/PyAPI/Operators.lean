@@ -415,16 +415,16 @@ fit in 63 bits). A negative operand becomes its unsigned 64-bit representative, 
 runs, and the result is re-signed (negative iff the top bit is set).
 -/
 
-/-- Fixed width for the two's-complement model of Python integer bitwise ops. -/
-private def pyBitWidth : Nat := 64
-/-- Unsigned 64-bit two's-complement representative of `a` (`-1 ↦ 2^64-1`). -/
-private def pyToUnsigned (a : Int) : Nat := (a % ((2 : Int) ^ pyBitWidth)).toNat
-/-- Re-sign a 64-bit result: negative iff the top bit is set. -/
-private def pyFromUnsigned (r : Nat) : Int :=
-  if r ≥ 2 ^ (pyBitWidth - 1) then (r : Int) - (2 : Int) ^ pyBitWidth else (r : Int)
-/-- Apply a `Nat` bitwise op in the two's-complement model, so negatives behave like Python. -/
+/-- Apply a `Nat` bitwise op with Python's arbitrary-precision two's-complement semantics. Python
+integers are unbounded, so a FIXED width is wrong: a non-negative result ≥ 2^63 would be re-signed to a
+negative (`reduce(or_, big)` → `-1`) and anything wider than the width truncates. Instead pick a width
+`w` STRICTLY larger than either operand's magnitude — then a non-negative result never sets the sign bit
+(no spurious negative), a negative operand still round-trips (`-1 & 5 = 5`), and nothing truncates. -/
 private def pyTwosComp (f : Nat → Nat → Nat) (a b : Int) : Int :=
-  pyFromUnsigned (f (pyToUnsigned a) (pyToUnsigned b))
+  let w := (max a.natAbs b.natAbs).log2 + 2      -- 2^(w-1) > max magnitude
+  let width : Int := 2 ^ w
+  let r := f (a % width).toNat (b % width).toNat  -- `Int.emod` is non-negative for width > 0
+  if r ≥ 2 ^ (w - 1) then (r : Int) - width else (r : Int)
 
 /-- Python `a & b`. -/
 -- `&`, `|`, `^` are bitwise on integers *and* the binary set operations (intersection, union,

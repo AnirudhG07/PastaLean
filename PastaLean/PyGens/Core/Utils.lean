@@ -34,12 +34,14 @@ def appendCommandSyntax (cmds : Array (TSyntax `command)) (cmd : TSyntax `comman
 Append one generated `doElem` into an accumulator, flattening null-node wrappers that
 represent "many doElems" from a lowering that produced several sibling statements (e.g.
 tuple-unpack assignment). Flattening keeps the bindings as siblings in the enclosing `do`
-rather than scoping them inside a nested `do` block.
+rather than scoping them inside a nested `do` block. A nested tuple-unpack target
+(`(a, b), c = …` in a `do` block) nests null-nodes, so the flatten must recurse — otherwise
+an inner wrapper leaks into the `do` sequence and elaborates as a stray `null`.
 -/
-def appendDoElems (elems : Array (TSyntax `doElem)) (elem : TSyntax `doElem) :
+partial def appendDoElems (elems : Array (TSyntax `doElem)) (elem : TSyntax `doElem) :
     Array (TSyntax `doElem) :=
   if elem.raw.isOfKind nullKind then
-    elems ++ elem.raw.getArgs.map (fun arg => ⟨arg⟩)
+    elem.raw.getArgs.foldl (fun acc arg => appendDoElems acc ⟨arg⟩) elems
   else
     elems.push elem
 

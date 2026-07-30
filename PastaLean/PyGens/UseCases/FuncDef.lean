@@ -291,7 +291,16 @@ partial def jsonMutatesName (json : Json) (name : String) : Bool :=
       | nodeType =>
           let mutatedHere :=
             match nodeType with
-            | .ok "Assign" | .ok "AugAssign" | .ok "AnnAssign" | .ok "For" =>
+            | .ok "For" =>
+                (json.getObjVal? "target").toOption.any (fun t => assignTargetMutatesName t name)
+                -- `for x in name: <mutate x in place>` writes each element back into `name`, so it
+                -- mutates `name` and the container must be a `let mut` — see `forElemWriteback?`.
+                || (match (json.getObjVal? "iter").toOption, (json.getObjVal? "target").toOption,
+                         (json.getObjValAs? (Array Json) "body").toOption with
+                    | some it, some tgt, some body =>
+                        forElemWriteback? it tgt body == some name
+                    | _, _, _ => false)
+            | .ok "Assign" | .ok "AugAssign" | .ok "AnnAssign" =>
                 (json.getObjVal? "target").toOption.any (fun t => assignTargetMutatesName t name)
             | .ok "Delete" =>
                 -- `del name[i]` rebuilds and reassigns the container, so it mutates `name`.
@@ -812,9 +821,13 @@ def memoizedRunCommand? (json : Json) (nameIdent : TSyntax `ident) (baseName : S
   if bodyElems.any (selfCallUnderExpr baseName) then return none
   -- Params are immutable binders; a body that reassigns/augments a param (`k += …`) needs a
   -- `let mut p := p` shadow, exactly as the non-memoized path does — else "`p` cannot be mutated".
+  -- Register each as a mutable var BEFORE building the body, so a later plain assign (`x = 3*x+1`)
+  -- lowers to a reassignment (`x := …`) rather than a fresh `let mut x` that shadows the shadow.
   let mut paramPrelude : Array (TSyntax `doElem) := #[]
   for (argIdent, _) in argInfos do
     if bodyElems.any (fun b => jsonMutatesName b argIdent.getId.toString) then
+      addVar argIdent.getId
+      setMutVar argIdent.getId
       paramPrelude := paramPrelude.push (← `(doElem| let mut $argIdent:ident := $argIdent))
   let bodyDoElems ← withMemoizeSelf (some (baseName, worker.getId)) (monadicFunctionBodySyntax bodyElems)
   let cacheDo ← `(do

@@ -613,8 +613,11 @@ def boolOpSyntax : (kind : SyntaxNodeKind) → Json →
     if !inCondition && !allBool then
       return ← boolOpValueTerm json
     -- Each `and`/`or` operand is a truthiness context, so non-booleans must be coerced with `pyTruthy`.
+    -- Mark it as such while lowering so a NESTED BoolOp operand (`a or (b and c)`) also stays in the
+    -- Bool/Prop connective form instead of falling to the value form — the value form would leave a
+    -- non-`Bool` inner operand (`… and y%100`) to be mis-coerced by the enclosing connective.
     let lowerOperand (valueJson : Json) : PygenM (TSyntax `term) := do
-      let code ← withPropCondition opProp (getCode valueJson `term)
+      let code ← withTruthinessContext true (withPropCondition opProp (getCode valueJson `term))
       if conditionIsBoolean valueJson then pure code
       else if opProp then `($(mkIdent ``PastaLean.pyTruthy) $code = true)
       else `($(mkIdent ``PastaLean.pyTruthy) $code)

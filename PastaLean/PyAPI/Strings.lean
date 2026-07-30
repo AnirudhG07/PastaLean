@@ -4,9 +4,14 @@ import PastaLean.PyAPI.CommonProtocols.Iterable
 
 namespace PastaLean
 
-/-- Treat the most common Python whitespace characters as separators/strip chars. -/
+/-- Python's whitespace set for `str.split()`/`strip()` — ASCII space/tab/newline/CR plus vertical
+tab (`\v`), form feed (`\f`), and the common Unicode blanks NEL (U+0085) and NBSP (U+00A0), so a
+`str.split()` on `"a\xa0b"` (a non-breaking space) drops it as CPython does. -/
 private def isPyWhitespace (c : Char) : Bool :=
   c = ' ' || c = '\t' || c = '\n' || c = '\r'
+    || c.val == 0x0b || c.val == 0x0c || c.val == 0x1c || c.val == 0x1d
+    || c.val == 0x1e || c.val == 0x1f || c.val == 0x85 || c.val == 0xa0
+    || c.val == 0x2028 || c.val == 0x2029
 
 /-- Helper used by `strip` to remove matching characters from the left. -/
 private def stripLeftBy (p : Char → Bool) : List Char → List Char

@@ -859,6 +859,10 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
             let rebuildFn ←
               if let some fn ← sortedVarMethod? attr valueJson then
                 pure fn
+              -- `d.pop(key)` on a dict removes the key (shares the name with 1-arg `list.pop(i)`);
+              -- route it to the polymorphic dict rebuild when the receiver is known to be a dict.
+              else if attr == "pop" && argsArray.size == 1 && (← jsonIsDictExpr valueJson) then
+                pure ``PastaLean.pyDictKeyPopRest
               else if (json.getObjValAs? String "_seq" == .ok "array") && (← getNumericMode) == .approx then
                 pure (match attr with
                   | "append" => ``PastaLean.pyArrayAppend

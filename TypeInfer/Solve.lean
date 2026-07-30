@@ -1319,6 +1319,41 @@ partial def stampKeyLambdas (sigs : Sigs) (env : Env) (json : Json) : Json :=
     | .obj fs => Json.mkObj (fs.toList.map (fun (k, v) => (k, stampKeyLambdas sigs env v)))
     | _ => json
 
+/-- Every element type at which the named callback `name` is passed as a `key=` argument
+(`sorted(xs, key=name)`, `bisect_left(range(n), v, key=name)`, …). The `key=lambda` case is stamped
+inline by `stampKeyLambdas`; this handles the NAMED nested-def case, whose param is typed elsewhere. -/
+partial def keyCallbackElemTypes (sigs : Sigs) (env : Env) (name : String) (json : Json) :
+    Array PyType :=
+  let here : Array PyType :=
+    if nodeTypeOf json == some "Call" then
+      match keyCallbackColl? json, getField json "keywords" with
+      | some coll, some kwObj =>
+          match getField kwObj "key" with
+          | some keyVal =>
+              if nodeTypeOf keyVal == some "Name" && nameId? keyVal == some name
+              then #[(typeOfExpr sigs env coll).elemType] else #[]
+          | none => #[]
+      | _, _ => #[]
+    else #[]
+  let rest := match json with
+    | .arr xs => xs.foldl (fun acc e => acc ++ keyCallbackElemTypes sigs env name e) #[]
+    | .obj fs => fs.toList.foldl (fun acc (_, v) => acc ++ keyCallbackElemTypes sigs env name v) #[]
+    | _ => #[]
+  here ++ rest
+
+/-- Param hint for a nested def used as a `key=` callback: its FIRST param is the element type of the
+collection the key function ranges over (`def check(x): …` + `bisect_left(range(n), True, key=check)`
+⇒ `x : int`). Empty when the def isn't used that way or the element type is unknown. -/
+partial def keyCallbackHints (sigs : Sigs) (env : Env) (fn : Json) (roots : Array Json) : Env :=
+  Id.run do
+    let name := (fn.getObjValAs? String "name").toOption.getD ""
+    let params := paramNames fn
+    if name == "" || params.isEmpty then return {}
+    let elemTys := roots.foldl (fun acc r => acc ++ keyCallbackElemTypes sigs env name r) #[]
+    let joined := elemTys.foldl (fun t e => t.join e) PyType.unknown
+    if joined == .unknown then return {}
+    return (Std.HashMap.emptyWithCapacity 1).insert params[0]! joined
+
 /-- Stamp each NUMERIC `Name` element of a tuple-unpack target with its ENV type (`_ty`), so a var
 seeded one numeric type by the tuple element but WIDENED by a later reassignment (`left, right =
 (0, 1e8)` then `left = mid : ℚ`) is ascribed the joined type — otherwise codegen infers the narrow
@@ -1344,7 +1379,13 @@ private partial def stampNumericTupleElemTys (env : Env) (target : Json) : Json 
 partial def stampStmt (sigs : Sigs) (env : Env) (roots : Array Json) (s : Json) : Json :=
   if nodeTypeOf s == some "FunctionDef" then
     let ownBody := (s.getObjValAs? (Array Json) "body").toOption.getD #[]
-    stampFunction sigs env (nestedParamHints sigs env s (roots ++ ownBody)) s
+    -- Call-site hints from positional calls, plus (join, don't override) the element type at any
+    -- `key=<thisDef>` usage — a callback passed as `key=` is never called by name, so the positional
+    -- pass alone leaves its param `unknown` (→ `PyAny`).
+    let posHints := nestedParamHints sigs env s (roots ++ ownBody)
+    let keyHints := keyCallbackHints sigs env s (roots ++ ownBody)
+    let hints := keyHints.fold (fun m k v => m.insert k (((m.get? k).getD .unknown).join v)) posHints
+    stampFunction sigs env hints s
   else Id.run do
     let mut s := s
     match nodeTypeOf s with

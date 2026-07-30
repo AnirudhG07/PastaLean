@@ -122,3 +122,18 @@ open PastaLean
 /-- info: "*42**" -/
 #guard_msgs in
 #eval pyStringCenter "42" 5 "*"
+
+-- `str.split()` (no separator) treats Unicode blanks (NBSP U+00A0) as whitespace, like CPython.
+#guard pyStringSplit (String.ofList ['a', Char.ofNat 0xa0, 'b', '\t', 'c']) == ["a", "b", "c"]
+
+-- `{:02x}` / `{:X}` / `{:o}` / `{:b}` format specs convert an integer to that radix (shared by
+-- `str.format` and f-strings via `pyFmtApply`).
+#guard pyFmtApply "02x" "153" == "99"
+#guard pyFmtApply "X" "255" == "FF"
+#guard pyFmtApply "o" "8" == "10"
+#guard pyFmtApply "b" "5" == "101"
+
+-- `str.index(sub, start)` searches from `start` (Python's optional 2nd arg).
+#guard pyIndex "ababab" "ab" (2 : Int) == 2
+#guard pyIndex "abcabc" "bc" (2 : Int) == 4
+#guard pyIndex ([1, 2, 3, 2] : List Int) (2 : Int) (2 : Int) == 3

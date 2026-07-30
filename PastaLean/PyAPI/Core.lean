@@ -67,9 +67,16 @@ def pyFmtPad (s : String) (width : Nat) (fill : Char) (align : Char) : String :=
              String.ofList (List.replicate l fill) ++ s ++ String.ofList (List.replicate (total - l) fill)
     | _   => String.ofList (List.replicate total fill) ++ s   -- '>' (default for a numeric field)
 
+/-- `|n|` in `radix` (2/8/16), Python `format`-style: no `0x` prefix, sign kept, `x`/`X` case. -/
+def pyIntToRadix (radix : Nat) (upper : Bool) (n : Int) : String :=
+  let digits := (Nat.toDigits radix n.natAbs).map (if upper then Char.toUpper else id)
+  let s := String.ofList digits
+  if n < 0 then "-" ++ s else s
+
 /-- Apply one Python format spec (the part after `:`) to an already-stringified argument. Handles
-the common `[fill][align][0]width` forms — `{:02d}`, `{:>5}`, `{:<10}`, `{:5d}`. The type char
-(`d`/`s`/…) and any `.precision` are ignored: the argument is already rendered. -/
+the common `[fill][align][0]width` forms — `{:02d}`, `{:>5}`, `{:<10}`, `{:5d}` — plus a radix type
+char (`{:02x}`/`{:o}`/`{:b}`) on an integer arg. Other type chars and any `.precision` are ignored:
+the argument is already rendered. -/
 def pyFmtApply (spec : String) (arg : String) : String :=
   let cs := spec.toList
   -- optional `[fill]align`: an explicit align, possibly preceded by a fill char.
@@ -87,6 +94,15 @@ def pyFmtApply (spec : String) (arg : String) : String :=
     | '0' :: rest => ('0', (if align == ' ' then '>' else align), rest)
     | _ => (fill, align, cs)
   let width := (String.ofList (cs.takeWhile Char.isDigit)).toNat?.getD 0
+  -- A radix type char after the width (`{:02x}` → hex, `{:o}`/`{:b}`) converts an integer arg. Both
+  -- `str.format` (pre-renders args to decimal) and f-strings route here, so the base conversion lives
+  -- here rather than in each formatter.
+  let arg := match (cs.dropWhile Char.isDigit).head?, arg.toInt? with
+    | some 'x', some n => pyIntToRadix 16 false n
+    | some 'X', some n => pyIntToRadix 16 true n
+    | some 'o', some n => pyIntToRadix 8 false n
+    | some 'b', some n => pyIntToRadix 2 false n
+    | _, _ => arg
   pyFmtPad arg width fill align
 
 /-- Python-style list indexing with negative indices and runtime failure on out-of-bounds access. -/

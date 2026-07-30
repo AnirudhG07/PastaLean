@@ -35,6 +35,13 @@ def PyDefaultDict.insert (d : PyDefaultDict κ ν) (k : κ) (v : ν) : PyDefault
 def PyDefaultDict.toPairs (d : PyDefaultDict κ ν) : List (κ × ν) :=
   d.order.filterMap (fun k => (d.map.get? k).map (fun v => (k, v)))
 
+/-- `d.pop(key)` on a `defaultdict`/`Counter`: the value at `key`, and the dict without it (dropped
+from both the map and the insertion order). -/
+instance [Inhabited ν] : PastaLean.PyDictKeyPop (PyDefaultDict κ ν) κ ν where
+  keyPopValue d key := d.map.getD key default
+  keyGetOr d key dflt := (d.map.get? key).getD dflt
+  keyPopRest d key := { d with map := d.map.erase key, order := d.order.filter (· != key) }
+
 /-- Count occurrences of each element: `ofIterable ['a','b','a'] = {'a' ↦ 2, 'b' ↦ 1}`. -/
 def PyDefaultDict.ofIterable {α : Type} [PyIterable α κ] (xs : α) : PyDefaultDict κ Int :=
   (pyIter xs).foldl (fun d k => d.insert k (d.map.getD k 0 + 1)) (PyDefaultDict.empty 0)

@@ -134,6 +134,10 @@ structure State where
   `add`/`remove`/`discard` maintain sort order instead of set semantics; the value is a plain sorted
   `List`, so subscript/`len`/`in`/iteration use the ordinary list protocols. -/
   sortedVars : HashSet Name := HashSet.emptyWithCapacity 8
+  /-- Variables known to hold a dict (assigned from `{…}`, a dict comprehension, or `dict(…)`/
+  `defaultdict(…)`/`Counter(…)`). `d.pop(k)` on a dict is the DICT pop (remove key, return value),
+  which shares the method name with a 1-arg `list.pop(i)`; the receiver's dict-ness disambiguates. -/
+  dictVars : HashSet Name := HashSet.emptyWithCapacity 16
   /-- Variables bound with `let mut` (reassignable in place). An immutable `let` loop var that a body
   reassigns to a different type is shadowed instead; a `let mut` (incl. a `PyAny` slot) is not. -/
   mutVars : HashSet Name := HashSet.emptyWithCapacity 32
@@ -282,7 +286,8 @@ def withFixedVariables {α : Type} (x : PygenM α) : PygenM α := do
   withPygenStateField (·.varNames) (fun st varNames => { st with varNames := varNames }) (← get).varNames <|
     withPygenStateField (·.setVars) (fun st setVars => { st with setVars := setVars }) (← get).setVars <|
      withPygenStateField (·.sortedVars) (fun st sortedVars => { st with sortedVars := sortedVars }) (← get).sortedVars <|
-      withPygenStateField (·.renames) (fun st renames => { st with renames := renames }) (← get).renames <|
+      withPygenStateField (·.dictVars) (fun st dictVars => { st with dictVars := dictVars }) (← get).dictVars <|
+       withPygenStateField (·.renames) (fun st renames => { st with renames := renames }) (← get).renames <|
         withPygenStateField (·.mutVars) (fun st mutVars => { st with mutVars := mutVars }) (← get).mutVars x
 
 /-- Run `x` with the current loop's break-flag set to `flag?`. A loop body always overrides the
@@ -334,6 +339,13 @@ def isSetVar (name : Name) : PygenM Bool := do
 def setSetVar (name : Name) (isSet : Bool) : PygenM Unit := do
   modify fun st => { st with setVars := if isSet then st.setVars.insert name else st.setVars.erase name }
 
+def isDictVar (name : Name) : PygenM Bool := do
+  return (← get).dictVars.contains name
+
+/-- Mark (`isDict := true`) or unmark a variable as holding a dict. -/
+def setDictVar (name : Name) (isDict : Bool) : PygenM Unit := do
+  modify fun st => { st with dictVars := if isDict then st.dictVars.insert name else st.dictVars.erase name }
+
 def isSortedVar (name : Name) : PygenM Bool := do
   return (← get).sortedVars.contains name
 
@@ -375,6 +387,21 @@ partial def jsonIsSetExpr (json : Lean.Json) : PygenM Bool := do
         if l then pure true
         else match json.getObjVal? "right" with | .ok r => jsonIsSetExpr r | _ => pure false
       else pure false
+  | _ => pure false
+
+/-- Does `json` evaluate to a dict? A `{k:v}` literal / dict comprehension, a `dict()`/`defaultdict()`/
+`Counter()` constructor, or a known dict variable. Used to route `d.pop(k)` to the DICT pop. -/
+def jsonIsDictExpr (json : Lean.Json) : PygenM Bool := do
+  match (json.getObjValAs? String "node_type").toOption with
+  | some "Name" => match json.getObjValAs? String "id" with
+                   | .ok id => isDictVar id.toName
+                   | _ => pure false
+  | some "Dict" | some "DictComp" => pure true
+  | some "Call" => match json.getObjVal? "func" with
+                   | .ok f => pure ((f.getObjValAs? String "node_type") == .ok "Name"
+                                    && (#["dict", "defaultdict", "Counter"].contains
+                                        ((f.getObjValAs? String "id").toOption.getD "")))
+                   | _ => pure false
   | _ => pure false
 
 /-- Run `x` while lowering the body of `class name` (with mutator set `mutators`), so `self.m(..)`
