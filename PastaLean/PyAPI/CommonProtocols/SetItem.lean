@@ -50,6 +50,34 @@ instance (priority := high) {α : Type} : PySetItem (List (Option α)) Int α wh
 instance {κ ν : Type} [BEq κ] [Hashable κ] : PySetItem (Std.HashMap κ ν) κ ν where
   setItem m k v := m.insert k v
 
+/-- MODIFY a slot in place — `container[i] = f(container[i])`. Used to lower the OUTER levels of a
+nested assignment `a[i][j] = v` (`a := pyModifyItem a i (fun row => pySetItem row j v)`): on an `Array`
+this is `Array.modify`, which mutates in place when the array is uniquely owned, so a 2D-DP update is
+O(1) instead of the O(n) row-copy that `pySetItem a i (pySetItem a[i] j v)` incurs (the `a[i]` read
+shares the row). `ι`/`β` are `outParam`s of the container, as for `PySetItem`. -/
+class PyModifyItem (α : Type) (ι : outParam Type) (β : outParam Type) where
+  modifyItem : α → ι → (β → β) → α
+
+def pyModifyItem {α ι β : Type} [PyModifyItem α ι β] (c : α) (i : ι) (g : β → β) : α :=
+  PyModifyItem.modifyItem c i g
+
+instance {β : Type} [Inhabited β] : PyModifyItem (List β) Int β where
+  modifyItem xs idx g :=
+    let len : Int := xs.length
+    let t := if idx < 0 then len + idx else idx
+    if t < 0 || t >= len then panic! "IndexError: list assignment index out of range"
+    else xs.set t.toNat (g (xs.getD t.toNat default))
+
+instance {α : Type} : PyModifyItem (List (Option α)) Int (Option α) where
+  modifyItem xs idx g :=
+    let len : Int := xs.length
+    let t := if idx < 0 then len + idx else idx
+    if t < 0 || t >= len then panic! "IndexError: list assignment index out of range"
+    else xs.set t.toNat (g (xs.getD t.toNat default))
+
+instance {κ ν : Type} [BEq κ] [Hashable κ] [Inhabited ν] : PyModifyItem (Std.HashMap κ ν) κ ν where
+  modifyItem m k g := m.insert k (g (m.getD k default))
+
 /--
 Typeclass for Python-style item deletion, `del container[index]`.
 

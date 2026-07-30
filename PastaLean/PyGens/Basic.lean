@@ -541,9 +541,12 @@ def binOpSyntax : (kind : SyntaxNodeKind) → Json →
       s!"BinOp node does not have a 'right' field or it is not a JSON value: {json}"
     let leftCode ←  getCode leftJson `term
     let rightCode ← getCode rightJson `term
-    -- Use `pyListRepeat` for list literals so the result type is fixed immediately.
+    -- `[x] * n`: `pyListRepeat` (or `pyArrayRepeat` when the slot is array-backed, so a sieve/DP-table
+    -- `[0]*n` gets O(1) `a[i]=v`) fixes the result type immediately. The `[x]` operand is emitted as an
+    -- `Array` (`#[x]`) via its own `_seq` stamp, so `pyArrayRepeat` receives an `Array`.
     if op == "mul" then
-      let repeatIdent := mkIdent ``PastaLean.pyListRepeat
+      let arrayBacked := (json.getObjValAs? String "_seq" == .ok "array") && (← getNumericMode) == .approx
+      let repeatIdent := mkIdent (if arrayBacked then ``PastaLean.pyArrayRepeat else ``PastaLean.pyListRepeat)
       if leftJson.getObjValAs? String "node_type" == .ok "List" then
         return ← `($repeatIdent $leftCode $rightCode)
       else if rightJson.getObjValAs? String "node_type" == .ok "List" then

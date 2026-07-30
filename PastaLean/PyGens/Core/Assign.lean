@@ -202,40 +202,56 @@ partial def attrRecordUpdateDoElem (recvJson : Json) (attr : String) (rhs : TSyn
       | _ => throwError "attribute assignment `arr[i].f = v` needs a variable or attribute base container."
   | _ => throwError "attribute assignment `x.f = v` needs a variable or attribute receiver."
 
-/-- Lower a possibly-nested subscript assignment `a[i]…[k] = value` to a reassignment of the
-base variable. Each level is rebuilt innermost-first with `pySetItem`: `a[i][j] = v` becomes
-`a := pySetItem a i (pySetItem (pyGetItem a i) j v)`. This mirrors Python, where mutating the
-inner list and leaving outer bindings pointing at the (now-rebuilt) value is observationally the
-same for the local variable. Returns `none` when the target is not a subscript (or is an outer
-slice, handled by `sliceTargetParts?`); throws if the base is not a variable. -/
+/-- Unwrap a nested subscript `root[i₁]…[iₖ]` into `(root, [slice₁, …, sliceₖ])` (outermost index
+first). `none` if any level is a `Slice` (handled elsewhere) or the root isn't a `Name`/`Attribute`. -/
+partial def subscriptChain? (target : Json) : Option (Json × Array Json) :=
+  let rec go (node : Json) (acc : Array Json) : Option (Json × Array Json) :=
+    match jsonNodeType? node with
+    | some "Subscript" => do
+        let c ← (node.getObjVal? "value").toOption
+        let s ← (node.getObjVal? "slice").toOption
+        guard (jsonNodeType? s != some "Slice")
+        go c (acc.push s)
+    | _ => some (node, acc)
+  match go target #[] with
+  | some (root, slicesInner) =>
+      if slicesInner.isEmpty then none else some (root, slicesInner.reverse)
+  | none => none
+
+/-- Build the RHS of a nested subscript assignment `base[i₁]…[iₖ] = v`. The innermost level is a
+`pySetItem`; every OUTER level is a `pyModifyItem base iₘ (fun row => …)` so an `Array` slot updates in
+place (O(1)) instead of copying the whole row (the `pyGetItem`-then-`pySetItem` form is O(n)). -/
+partial def buildSubscriptSetRhs (base : TSyntax `term) (idxs : List (TSyntax `term))
+    (value : TSyntax `term) : PygenM (TSyntax `term) := do
+  match idxs with
+  | [] => pure value
+  | [last] => `($(mkIdent ``PastaLean.pySetItem) $base $last $value)
+  | i :: rest =>
+      let row := mkIdent (← freshName `__row)
+      let inner ← buildSubscriptSetRhs row rest value
+      `($(mkIdent ``PastaLean.pyModifyItem) $base $i (fun $row => $inner))
+
 partial def nestedSubscriptSetDoElem? (target : Json) (value : TSyntax `term) :
     PygenM (Option (TSyntax `doElem)) := do
-  unless jsonNodeType? target == some "Subscript" do return none
-  let .ok containerJson := target.getObjValAs? Json "value" | throwError
-    s!"Subscript assignment target is missing a 'value' field: {target}"
-  let .ok sliceJson := target.getObjValAs? Json "slice" | throwError
-    s!"Subscript assignment target is missing a 'slice' field: {target}"
-  if jsonNodeType? sliceJson == some "Slice" then return none
-  -- `d[i, j] = v` on a dict is a single tuple-KEY write (`d[(i, j)] = v`); otherwise the plain index.
-  let indexTerm ← (return (← dictTupleKeyTerm? sliceJson).getD (← getCode sliceJson `term))
-  let setItemIdent := mkIdent ``PastaLean.pySetItem
-  let containerCode ← getCode containerJson `term
-  let newContainer ← `($setItemIdent $containerCode $indexTerm $value)
-  match jsonNodeType? containerJson with
+  let some (root, slices) := subscriptChain? target | return none
+  -- `d[i, j] = v` on a dict is a single tuple-KEY write; otherwise each level is a plain index.
+  let idxTerms ← slices.mapM fun s => do return (← dictTupleKeyTerm? s).getD (← getCode s `term)
+  match jsonNodeType? root with
   | some "Name" =>
-      let containerIdent ← getCode containerJson `ident
-      return some (← `(doElem| $containerIdent:ident := $newContainer))
-  | some "Subscript" =>
-      nestedSubscriptSetDoElem? containerJson newContainer
+      let rootIdent ← getCode root `ident
+      let rhs ← buildSubscriptSetRhs rootIdent idxTerms.toList value
+      return some (← `(doElem| $rootIdent:ident := $rhs))
   | some "Attribute" =>
-      -- `recv.c[i] = v` rebuilds the field: `recv := { recv with c := … }` (self or any local, e.g.
+      -- `recv.c[i]… = v` rebuilds the field: `recv := { recv with c := … }` (self or any local, e.g.
       -- a Trie walk-node `node.children[i] = Trie()`).
-      let .ok recv := containerJson.getObjVal? "value" | throwError
-        s!"Attribute container is missing 'value': {containerJson}"
-      let .ok attr := containerJson.getObjValAs? String "attr" | throwError
-        s!"Attribute container is missing 'attr': {containerJson}"
-      return some (← attrRecordUpdateDoElem recv attr newContainer
-        (containerJson.getObjValAs? Bool "_unwrap_opt" == .ok true))
+      let .ok recv := root.getObjVal? "value" | throwError
+        s!"Attribute container is missing 'value': {root}"
+      let .ok attr := root.getObjValAs? String "attr" | throwError
+        s!"Attribute container is missing 'attr': {root}"
+      let rootTerm ← getCode root `term
+      let rhs ← buildSubscriptSetRhs rootTerm idxTerms.toList value
+      return some (← attrRecordUpdateDoElem recv attr rhs
+        (root.getObjValAs? Bool "_unwrap_opt" == .ok true))
   | _ =>
       throwError "Subscript assignment requires the base container to be a variable \
         (`a[i]…[k] = v`); got an unsupported container expression."

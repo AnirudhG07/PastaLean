@@ -38,6 +38,36 @@ def pyBisectRightKey {α β : Type} [Inhabited β] [Ord β]
   let arr := (w.map key).toArray
   Int.ofNat loN + Int.ofNat (bisectSearch false (fun p q => compare p q == Ordering.lt) arr x 0 arr.size)
 
+/-- Number of elements in `range(start, stop, step)`. -/
+private def rangeCount (start stop step : Int) : Nat :=
+  if step > 0 then (max 0 ((stop - start + step - 1) / step)).toNat
+  else if step < 0 then (max 0 ((start - stop + (-step) - 1) / (-step))).toNat
+  else 0
+
+/-- Binary search over `range(start, _, step)` computing `key(start + mid*step)` ON DEMAND — O(log n)
+`key` calls, no materialization. This is the `bisect_left(range(1, 10**9), True, key=check)` idiom;
+materializing that range (or mapping `key` over all of it, as `pyBisectLeftKey` does) is O(n) and OOMs. -/
+private partial def bisectRangeSearch {β : Type} [Inhabited β] (leftMode : Bool) (lt : β → β → Bool)
+    (start step : Int) (key : Int → β) (x : β) (lo hi : Nat) : Nat :=
+  if lo < hi then
+    let mid := (lo + hi) / 2
+    let elem := key (start + Int.ofNat mid * step)
+    let goRight := if leftMode then lt elem x else !(lt x elem)
+    if goRight then bisectRangeSearch leftMode lt start step key x (mid + 1) hi
+    else bisectRangeSearch leftMode lt start step key x lo mid
+  else lo
+
+/-- Keyed `bisect_left`/`bisect_right` over `range(start, stop, step)` without materializing it. -/
+def pyBisectLeftRangeKey {β : Type} [Inhabited β] [Ord β]
+    (start stop step : Int) (x : β) (key : Int → β) : Int :=
+  Int.ofNat (bisectRangeSearch true (fun p q => compare p q == Ordering.lt)
+    start step key x 0 (rangeCount start stop step))
+
+def pyBisectRightRangeKey {β : Type} [Inhabited β] [Ord β]
+    (start stop step : Int) (x : β) (key : Int → β) : Int :=
+  Int.ofNat (bisectRangeSearch false (fun p q => compare p q == Ordering.lt)
+    start step key x 0 (rangeCount start stop step))
+
 /-- `bisect.bisect_left(a, x, lo=0, hi=len(a))`: the leftmost index in `a[lo:hi]` at which `x` keeps
 `a` sorted. `Ord` (not `LinearOrder`) so a LIST of tuples — `bisect_left(sorted((s,i) …), (e, -inf))` —
 resolves via the lexicographic `Ord (α × β)`. `pyBisectLeft [1, 3, 3, 5] 3 = 1`. -/

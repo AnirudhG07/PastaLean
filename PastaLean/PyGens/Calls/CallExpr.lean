@@ -334,6 +334,29 @@ def sortedVarMethod? (attr : String) (recvJson : Json) : PygenM (Option Lean.Nam
   | .ok id => if ← isSortedVar id.toName then return Libraries.sortedListMethod? attr else return none
   | _ => return none
 
+/-- `bisect_left/right(range(a, b, c), x, key=f)` searches the range LAZILY (O(log n) `key` calls)
+instead of materializing it and mapping `key` over every element (O(n), and impossible for a range up
+to `10**9`). Returns the range-variant runtime name and the args with the range replaced by its
+`start, stop, step`; `none` if the first arg isn't a plain `range(...)`. -/
+def bisectRangeKeyed? (member : String) (argsArray : Array Json) (allArgs : Array (TSyntax `term)) :
+    PygenM (Option (Lean.Name × Array (TSyntax `term))) := do
+  let rv? : Option Lean.Name :=
+    if member == "bisect_left" then some ``Libraries.bisect.pyBisectLeftRangeKey
+    else if member == "bisect" || member == "bisect_right" then some ``Libraries.bisect.pyBisectRightRangeKey
+    else none
+  let some rv := rv? | return none
+  let some firstArg := argsArray[0]? | return none
+  -- The pre-pass turns `range(...)` into a `Range` node (func `range`, `args` its bounds).
+  unless jsonNodeType? firstArg == some "Range" do return none
+  let rargs := (firstArg.getObjValAs? (Array Json) "args").toOption.getD #[]
+  let zero ← `((0 : Int)); let one ← `((1 : Int))
+  let (startT, stopT, stepT) ← match rargs.size with
+    | 0 => return none
+    | 1 => pure (zero, ← getCode rargs[0]! `term, one)
+    | 2 => pure (← getCode rargs[0]! `term, ← getCode rargs[1]! `term, one)
+    | _ => pure (← getCode rargs[0]! `term, ← getCode rargs[1]! `term, ← getCode rargs[2]! `term)
+  return some (rv, #[startT, stopT, stepT] ++ allArgs.extract 1 allArgs.size)
+
 /-- The class to construct for a call `f(...)` whose callee is the `Name` `funcName`: a registered
 class (`C(..)`), or `cls(..)` inside a class body (classmethod sugar). `none` for ordinary calls. -/
 def constructorClassOfName? (funcName : String) : PygenM (Option String) := do
@@ -723,7 +746,10 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
     if (keyWordsMap.get? "key").isSome then
       let member := (funcJson.getObjValAs? String "library_member").toOption.getD
         ((funcJson.getObjValAs? String "id").toOption.getD "")
-      if let some keyed := (Libraries.bareBehaviour? member).bind (·.keyedVariant) then
+      if let some (rv, newArgs) ← bisectRangeKeyed? member argsArray allArgs then
+        funcIdent := mkIdent rv
+        allArgs := newArgs
+      else if let some keyed := (Libraries.bareBehaviour? member).bind (·.keyedVariant) then
         funcIdent := mkIdent keyed
     let buildApplied : Array (TSyntax `term) → PygenM (TSyntax `term) := fun resolvedArgs => do
       -- Named args go in the SAME application as the positionals (`f a b (k := v)`), NOT applied to
@@ -1124,7 +1150,10 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
     if (keyWordsMap.get? "key").isSome then
       let member := (funcJson.getObjValAs? String "library_member").toOption.getD
         ((funcJson.getObjValAs? String "id").toOption.getD "")
-      if let some keyed := (Libraries.bareBehaviour? member).bind (·.keyedVariant) then
+      if let some (rv, newArgs) ← bisectRangeKeyed? member argsArray allArgs then
+        funcIdent := mkIdent rv
+        allArgs := newArgs
+      else if let some keyed := (Libraries.bareBehaviour? member).bind (·.keyedVariant) then
         funcIdent := mkIdent keyed
     let buildApplied : Array (TSyntax `term) → PygenM (TSyntax `term) := fun resolvedArgs => do
       -- Named args go in the SAME application as the positionals (`f a b (k := v)`), NOT applied to

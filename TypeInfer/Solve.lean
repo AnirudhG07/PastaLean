@@ -965,9 +965,23 @@ only eligible fully-populated — an empty `[]` that is later appended to can't 
 private partial def litMatchesNesting (full : Bool) (ty : PyType) (v : Json) : Bool :=
   match ty with
   | .list inner =>
-      nodeTypeOf v == some "List"
+      (nodeTypeOf v == some "List"
         && (let elts := (v.getObjValAs? (Array Json) "elts").toOption.getD #[]
-            (!full || !elts.isEmpty) && elts.all (litMatchesNesting full inner))
+            (!full || !elts.isEmpty) && elts.all (litMatchesNesting full inner)))
+      -- `[x] * n` / `n * [x]` — a repeated one-element list is an array-safe init just like a literal
+      -- (the sieve/DP-table idiom `[0]*n`, `[True]*n`): under value semantics it is `n` independent
+      -- copies, so backing it as an `Array` (O(1) `a[i]=v`) is correct and turns O(n²) into O(n).
+      || (nodeTypeOf v == some "BinOp" && (getField v "op").any (· == Json.str "mul") &&
+          (let sides := [getField v "left", getField v "right"]
+           sides.any fun s? => match s? with
+             | some s => nodeTypeOf s == some "List"
+                 && (let elts := (s.getObjValAs? (Array Json) "elts").toOption.getD #[]
+                     elts.size == 1 && litMatchesNesting full inner elts[0]!)
+             | none => false))
+      -- `[<row> for _ in range(n)]` — a comprehension building rows is an array-safe nested init (the
+      -- 2D-DP idiom `[[inf]*(m) for _ in range(n)]`), as long as its element matches the inner nesting.
+      || ((nodeTypeOf v == some "ListComp" || nodeTypeOf v == some "GeneratorExp")
+          && (getField v "elt").any (litMatchesNesting full inner))
   | _ => true
 
 /-- Every bare-`Name` assignment to `name` is a nesting-matching `List` literal (and there is at
@@ -1012,13 +1026,29 @@ private partial def markSeqAnn (ann : Json) : Json :=
     | _ => ann
   else ann
 
-/-- Mark `_seq: "array"` on a nested `List` literal at every level (`[[..],[..]]` → `#[#[..],#[..]]`). -/
+/-- Mark `_seq: "array"` on a nested `List` literal at every level (`[[..],[..]]` → `#[#[..],#[..]]`),
+and on a `[x] * n` repeat (marking the BinOp and its `[x]` operand) so it emits `pyArrayRepeat`. -/
 private partial def markSeqLit (v : Json) : Json :=
   if nodeTypeOf v == some "List" then
     let v := v.setObjVal! "_seq" (Json.str "array")
     match v.getObjValAs? (Array Json) "elts" with
     | .ok elts => v.setObjVal! "elts" (Json.arr (elts.map markSeqLit))
     | _ => v
+  else if nodeTypeOf v == some "BinOp" && (getField v "op").any (· == Json.str "mul") then
+    -- `[x] * n` / `n * [x]`: back the whole repeat as an `Array` and its `[x]` list operand too.
+    let markSide (k : String) (v : Json) : Json :=
+      match getField v k with
+      | some s => if nodeTypeOf s == some "List" then v.setObjVal! k (markSeqLit s) else v
+      | none => v
+    if [getField v "left", getField v "right"].any (fun s? => s?.any (nodeTypeOf · == some "List")) then
+      markSide "right" (markSide "left" (v.setObjVal! "_seq" (Json.str "array")))
+    else v
+  else if nodeTypeOf v == some "ListComp" || nodeTypeOf v == some "GeneratorExp" then
+    -- `[<row> for …]`: back the comprehension result as an `Array` and its element (row) too.
+    let v := v.setObjVal! "_seq" (Json.str "array")
+    match getField v "elt" with
+    | some e => v.setObjVal! "elt" (markSeqLit e)
+    | none => v
   else v
 
 /-- A var assigned inside an `if`/`for`/`while`/`try` block is hoisted to a `let mut x : T := default`

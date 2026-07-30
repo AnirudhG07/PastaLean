@@ -613,3 +613,42 @@ Regression tests: PALC/PyAPI/TestStrings.lean (+pyIndex-start guards). HONEST NO
 compile_fail vein is now largely exhausted (operator lib, polymorphic pop, index/startswith start-args
 all done); the remaining ~200 compile_fails need TypeInfer (numeric/nullable/PyAny) or an architectural
 value-semantics change (Trie/SegmentTree/tree-node reference mutation) — NOT one-by-one sweeps.
+
+### TIMEOUTS — two systematic performance fixes (the overnight had 131 timeouts, mostly these)
+The overnight eval's 141 "runtime-error/timeout" divergences were mostly two SYSTEMATIC perf bugs, not
+slow algorithms — even binary-search problems (valid-perfect-square, koko-eating-bananas) timed out:
+1. **`[x] * n` list-repeat was NOT array-backed** → `a[i] = v` was O(n) (value-semantics copies the whole
+   list), so a sieve/DP-table (`primes = [True]*n; primes[j]=False`) was O(n²). `arrayEligibleVars`
+   required a `List` *literal* init; `[x]*n` is a `BinOp mul`, so it was rejected. Fix: `litMatchesNesting`
+   accepts `[x]*n` (safe — value semantics = n independent copies), `markSeqLit` stamps the repeat +its
+   `[x]` operand `_seq:array`, and the BinOp codegen emits `pyArrayRepeat #[x] n` in the run twin (O(1)
+   `a[i]=v`). Fixes count-primes (1/32 → 32/32).
+2. **`bisect_left/right(range(a,b), x, key=f)` MATERIALIZED the range and mapped `key` over EVERY element
+   (O(n))** — and `range(1, 10**9)` can't be materialized at all. Added lazy `pyBisectLeft/RightRangeKey
+   (start stop step) x key` doing a real O(log n) binary search computing `key(start+mid*step)` on demand;
+   `bisectRangeKeyed?` (CallExpr) detects a `Range` first arg and routes to it, passing the bounds instead
+   of the materialized list. Fixes valid-perfect-square, koko-eating-bananas, minimum-speed-to-arrive-on-time,
+   nth-magical-number, magnetic-force-between-two-balls, minimum-time-to-complete-trips (all timeout → 20/20).
+Both are HIGH-leverage across the 131 timeouts (DP tables/sieves + binary-search-on-answer). Codegen
+sweep clean; no-regression.
+
+### TIMEOUTS 2 — nested (2D/3D+) array-backing for comprehension-built DP tables
+Extended the `[x]*n` array-backing to ANY nesting level built by a COMPREHENSION (`[[inf]*(m) for _ in
+range(n)]`, the 2D-DP idiom) — the biggest remaining timeout cluster:
+- **Eligibility**: `litMatchesNesting` accepts a `ListComp`/`GeneratorExp` whose element matches the inner
+  nesting; `markSeqLit` stamps the comprehension + its element `_seq:array`; the ListComp codegen emits
+  `(… .map …) |>.toArray` (run twin only), rows via `pyArrayRepeat`.
+- **O(1) nested update**: `f[i][j]=v` was `f := pySetItem f i (pySetItem (pyGetItem f i) j v)` — the
+  `pyGetItem f i` SHARES the row, so `pySetItem` copies it (O(n)) → O(m·n²). New polymorphic `pyModifyItem`
+  (Array → `Array.modify`, in-place O(1) when uniquely owned; List → O(n) as before; dict → insert) lets
+  the codegen emit `f := pyModifyItem f i (fun row => pySetItem row j v)` for the OUTER levels of ANY-depth
+  nested subscript-assign (`nestedSubscriptSetDoElem?` rewritten via `subscriptChain?`+`buildSubscriptSetRhs`).
+Fixes coin-change (2/15→15/15), stone-game-v, longest-increasing-path-in-a-matrix, increment-submatrices-by-one;
+perfect-squares/partition-equal-subset-sum improved (still timeout on the very largest 1D-DP cases — a
+different bottleneck). Correct + no-regression: random-45 seed11 97.2%, 0 wrong-output; nested_array_mutation.py
+(2D + 3D + coin-change) execution-verified == CPython. Regression test added.
+
+REMAINING timeouts = inherently EXPONENTIAL backtracking (combination-sum/combinations output ALL combos —
+exponential OUTPUT, not memoizable; matchsticks-to-square exponential-with-pruning). Our value-semantics +
+closure-threading adds constant-factor overhead so we time out where CPython squeaks by; no clean fix
+(memoization can't shrink an exponential output). These are the genuine tail.

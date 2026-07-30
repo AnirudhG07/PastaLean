@@ -64,6 +64,15 @@ instance {β : Type} [Inhabited β] : PyGetItem (Array β) Int β where
 instance {β : Type} : PySetItem (Array β) Int β where
   setItem xs i v := pyArraySetItem xs i v
 
+/-- O(1) in-place nested update — `a[i] = f(a[i])`. `Array.modify` takes the element out (dropping its
+refcount to 1), applies `f`, and puts it back, so `a[i][j] = v` is O(1), not an O(n) row copy. -/
+instance {β : Type} [Inhabited β] : PyModifyItem (Array β) Int β where
+  modifyItem xs idx g :=
+    let sz : Int := xs.size
+    let t := if idx < 0 then sz + idx else idx
+    if t < 0 || t >= sz then panic! "IndexError: list assignment index out of range"
+    else xs.modify t.toNat g
+
 instance {α : Type} : PyLen (Array α) where
   pyLen xs := xs.size
 

@@ -160,7 +160,13 @@ def listCompSyntax : (kind : SyntaxNodeKind) → Json →
       let .ok generatorsJson := json.getObjValAs? Json "generators" | throwError
         s!"ListComp node does not have a 'generators' field: {json}"
       match generatorsJson with
-      | .arr arr => lowerComprehensionClauses eltJson arr.toList
+      | .arr arr =>
+          let listCode ← lowerComprehensionClauses eltJson arr.toList
+          -- An `array_ok` comprehension (a 2D-DP row builder) materialises as an `Array` in the run
+          -- twin, so nested `f[i][j]=v` can update in place; `_seq` is set only in `approx` mode.
+          if (json.getObjValAs? String "_seq" == .ok "array") && (← getNumericMode) == .approx then
+            `($listCode |>.toArray)
+          else pure listCode
       | _ => throwError s!"ListComp node 'generators' field is not an array: {generatorsJson}"
   | _, _ => throwError s!"Unsupported syntax category for ListComp node"
 
