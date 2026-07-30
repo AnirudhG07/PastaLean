@@ -126,6 +126,14 @@ structure State where
   or `ys = xs`) — i.e. are a `Ref (List …)`/`Ref (HashMap …)`. Lets container reads (`xs[i]`, `len xs`,
   `for x in xs`) dereference and mutations (`xs.append`) `modifyRef`. Function-scoped. -/
   heapVarContainers : List Name := []
+  /-- Under `--heap`, local/parameter names promoted to a shared **variable cell** because a nested
+  closure captures and mutates them. A cell presents as `(← readRefM id)` in ordinary value positions
+  and as the raw ref in a `_heap_cell_arg` call arg. Holds both scalar cells (`Ref τ`) and
+  container/object cells (`Ref (Ref T)`). Function-scoped. -/
+  heapCellVars : List Name := []
+  /-- The container/object subset of `heapCellVars` (`Ref (Ref T)`) — these also drive
+  `heapContainerRef?` so `.append`/`len`/`[]` dereference to the inner object. Function-scoped. -/
+  heapCellContainers : List Name := []
   deriving Inhabited, Repr
 
 end PyGen
@@ -254,6 +262,24 @@ def registerHeapVarContainer (n : Name) : PygenM Unit := do
 /-- Whether `n` is a container-ref local/parameter. -/
 def isHeapVarContainer (n : Name) : PygenM Bool := do
   return (← get).heapVarContainers.contains n
+
+/-- Record that local/parameter `n` is a scalar variable cell (`Ref τ`) — captured and mutated by a
+nested closure. -/
+def registerHeapScalarCell (n : Name) : PygenM Unit := do
+  modify fun st => { st with heapCellVars := n :: st.heapCellVars }
+
+/-- Record that local/parameter `n` is a container/object variable cell (`Ref (Ref T)`). -/
+def registerHeapContainerCell (n : Name) : PygenM Unit := do
+  modify fun st => { st with heapCellVars := n :: st.heapCellVars,
+                             heapCellContainers := n :: st.heapCellContainers }
+
+/-- Whether `n` is a variable cell (scalar or container). -/
+def isHeapCellVar (n : Name) : PygenM Bool := do
+  return (← get).heapCellVars.contains n
+
+/-- Whether `n` is a container/object variable cell (`Ref (Ref T)`). -/
+def isHeapCellContainer (n : Name) : PygenM Bool := do
+  return (← get).heapCellContainers.contains n
 
 /-- Run `x` with `self` treated as a `Ref C` (heap method body). Restored on exit. -/
 def withHeapSelfRef {α : Type} (x : PygenM α) : PygenM α := do

@@ -142,7 +142,14 @@ def augAssignSyntax : (kind : SyntaxNodeKind) → Json →
                 pure setStx
             | none =>
                 let targetIdent ← getCode targetJson `ident
-                `(doElem| $targetIdent:ident := $updated)
+                -- A closure-promoted SCALAR cell (`--heap`): `n += k` rebinds the shared cell in
+                -- place (`curTerm` already read it via `(← readRefM n)`). Container cells mutate
+                -- their object, not the binding, so they stay on the ordinary reassignment path.
+                if (← getHeapMode) && (← isHeapCellVar targetIdent.getId)
+                    && !(← isHeapCellContainer targetIdent.getId) then
+                  `(doElem| PastaLean.writeRefM $targetIdent $updated)
+                else
+                  `(doElem| $targetIdent:ident := $updated)
         match mutating? with
         | some (_, update) => pure ⟨mkNullNode #[baseStx.raw, update.raw]⟩
         | none => pure baseStx

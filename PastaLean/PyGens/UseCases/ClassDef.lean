@@ -40,44 +40,6 @@ def noneDefaultParamNames (initJson : Json) : List String := Id.run do
         if let .ok nm := args[i]!.getObjValAs? String "arg" then names := nm :: names
   return names
 
--- Render a `PyType` to its HEAP Lean type (`--heap`): user objects and mutable containers become
--- `Ref`s (recursively), primitives stay inline, tuples stay inline products (immutable, never heap
--- cells), and un-pinnable container elements box to `PyAny`. This is what makes
--- `Node.next : Option (Ref Node)`, `items : Ref (List Int)`, and a generic `Ref (List PyAny)`.
-mutual
-/-- The heap Lean type of a Python type. Object/container slots become `Ref`s; a scalar slot that
-inference can't pin defaults to `Int` (kept concrete so arithmetic/ordering instances still resolve —
-boxing a scalar to `PyAny` here would leave `+ₚ`/`≤` stuck). Container ELEMENTS go through
-`heapElemTypeSyntax`, which boxes an un-pinnable element to `PyAny`. -/
-partial def heapTypeSyntax (t : TypeInfer.PyType) : PygenM (TSyntax `term) := do
-  match t with
-  | .cls n => `(PastaLean.Ref $(mkIdent n.toName))
-  | .list e => `(PastaLean.Ref (List $(← heapElemTypeSyntax e)))
-  | .set e  => `(PastaLean.Ref (List $(← heapElemTypeSyntax e)))
-  | .dict k v => `(PastaLean.Ref (Std.HashMap $(← heapTypeSyntax k) $(← heapElemTypeSyntax v)))
-  | .opt inner => `(Option $(← heapTypeSyntax inner))
-  | .tuple es =>
-      match es with
-      | []        => `(Unit)
-      | e :: rest => do
-          let mut acc ← heapTypeSyntax e
-          for r in rest do
-            acc ← `($acc × $(← heapTypeSyntax r))
-          pure acc
-  | _ => pure ((← pyTypeSyntax? t).getD (mkIdent ``Int))
-
-/-- The Lean type of a container element/value position. An element that holds conflicting types
-(`.any`, ⊤ — e.g. an explicit `list[object]`, or a list mixing `int` and `str`) boxes to `PyAny`, the
-gradual-typing fallback: element ops (`append`/`[]`/`len`/`for`/print) all have `PyAny` instances and
-pushed values auto-box, so a heap container "of any type" is `Ref (List PyAny)`. A merely un-pinned
-element (`.unknown`, ⊥ — e.g. a bare `= []` whose items are all one type) keeps the concrete default,
-so an all-`int` list stays `Ref (List Int)` and its element arithmetic still resolves. -/
-partial def heapElemTypeSyntax (t : TypeInfer.PyType) : PygenM (TSyntax `term) := do
-  match t with
-  | .any => pure (mkIdent ``PastaLean.PyAny)
-  | _ => heapTypeSyntax t
-end
-
 /-- The `PyType` of a class field from its `{annotation?, init?}` entry (a `None`-default param field
 is `Option className`). Used by both the plain and heap field-type renderers. -/
 def classFieldPyType (className : String) (noneParams : List String) (fieldJson : Json) :

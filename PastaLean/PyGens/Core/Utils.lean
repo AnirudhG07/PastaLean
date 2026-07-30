@@ -22,6 +22,14 @@ def withFreshVariables {α : Type} (x : PygenM α) : PygenM α :=
     (fun st v => { st with heapVarContainers := v })
     [] <|
   withPygenStateField
+    (·.heapCellVars)
+    (fun st v => { st with heapCellVars := v })
+    [] <|
+  withPygenStateField
+    (·.heapCellContainers)
+    (fun st v => { st with heapCellContainers := v })
+    [] <|
+  withPygenStateField
     (·.setVars)
     (fun st setVars => { st with setVars := setVars })
     (HashSet.emptyWithCapacity 16)
@@ -337,8 +345,11 @@ def heapContainerRef? (json : Json) : PygenM (Option (TSyntax `term)) := do
   unless ← getHeapMode do return none
   match jsonNodeType? json with
   | some "Name" =>
-      -- A local/parameter that holds a container by reference IS the ref.
       let .ok id := json.getObjValAs? String "id" | return none
+      -- A container variable CELL (`Ref (Ref T)`) presents its inner object-ref via one deref.
+      if ← isHeapCellContainer id.toName then
+        return some (← `((← PastaLean.readRefM $(mkIdent id.toName))))
+      -- A local/parameter that holds a container by reference IS the ref.
       if ← isHeapVarContainer id.toName then return some (mkIdent id.toName) else return none
   | some "Attribute" =>
       -- `self.f`/`obj.f` where `f` is a registered container field → the field value `(← recv ~> f)`.

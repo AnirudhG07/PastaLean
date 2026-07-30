@@ -55,9 +55,11 @@ partial def toTypeSyntax? [Monad m] [MonadQuotation m]
       | ps =>
           let init := ps.getLast!
           return some (← ps.dropLast.foldrM (fun p acc => `($p × $acc)) init)
-  -- `Callable[[A, B], R]` → `A → B → R`.
+  -- `Callable[[A, B], R]` → `A → B → R`. A nullary `Callable[[], R]` is a `fun () ↦ …` thunk in the
+  -- codegen, i.e. `Unit → R` — not bare `R` (which the empty loop would leave).
   | .fn as r => do
       let some ret ← toTypeSyntax? floatTy r | return none
+      if as.isEmpty then return some (← `(Unit → $ret))
       let mut ty := ret
       for a in as.reverse do
         let some aTy ← toTypeSyntax? floatTy a | return none

@@ -7,9 +7,9 @@ Under reference semantics the driver injects one `HeapPrelude` node at the front
 emits, **in this order** (a hard constraint — each part references the previous):
 
 1. every class `structure` (pulled out of `ClassDef`, which skips it in heap mode);
-2. the per-program `Val` inductive — one native constructor per class (fields at their heap types)
-   plus one per distinct heap container cell type, and NO primitive constructors (Python never
-   heap-allocates a bare primitive), so `inject`/`project` round-trip by `rfl`;
+2. the per-program `Val` inductive — one native constructor per class (fields at their heap types),
+   one per distinct heap container cell type, plus (for closure-promoted variable cells) the scalar
+   primitives and the `Ref`-wrapped cell contents; every extra constructor round-trips by `rfl`;
 3. the concrete `Storable Val …` instances and one `derive_storable%` per class.
 
 The `Val` inductive and the `Storable` instances are built as text and parsed (their
@@ -146,6 +146,32 @@ def heapPreludeSyntax : (kind : SyntaxNodeKind) → Json → PygenM (TSyntax kin
           | some cell => unless containers.any (·.1 == cell) do containers := (cell, mangleContainerCtor cell) :: containers
           | none => pure ()
 
+      -- 0b. Cell-storable content types for closure-promoted variable cells (`--heap`). A captured,
+      -- mutated var becomes a `Ref`-cell: a scalar `Ref τ` (stores `τ`) or a container/object
+      -- `Ref (Ref T)` (stores the object-ref `Ref T`). Both need a trivial `Storable Val …` for the
+      -- content type. Promotion is decided later in codegen, so emit these unconditionally.
+      let mut scalarCells : List (String × String) := []   -- (scalarType, ctor), per mode, deduped
+      for (m, sfx) in modes do
+        numericModeRef.set m
+        runSuffixRef.set sfx
+        for pty in [TypeInfer.PyType.int, TypeInfer.PyType.float, TypeInfer.PyType.str, TypeInfer.PyType.bool] do
+          let sc ← renderHeapType (← heapTypeSyntax pty)
+          unless scalarCells.any (·.1 == sc) do scalarCells := (sc, mangleContainerCtor sc) :: scalarCells
+      let mut refCells : List (String × String) := []   -- (Ref-wrapped content, ctor), deduped
+      for (cell, _) in containers do
+        let rc := "Ref " ++ parenIfSpaced cell
+        unless refCells.any (·.1 == rc) do refCells := (rc, mangleContainerCtor rc) :: refCells
+      for c in classes do
+        for (m, sfx) in modes do
+          numericModeRef.set m
+          runSuffixRef.set sfx
+          let .ok rawName := c.getObjValAs? String "name" | throwError "HeapPrelude: class missing 'name'"
+          let rc := "Ref " ++ (← withRunSuffix rawName)
+          unless refCells.any (·.1 == rc) do refCells := (rc, mangleContainerCtor rc) :: refCells
+      -- All types needing a trivial (one-constructor) `Storable Val …`: plain containers, scalar cell
+      -- contents, and the `Ref`-wrapped contents that variable cells store.
+      let trivialCells := containers ++ scalarCells ++ refCells
+
       -- 1. Every class structure (both twins under `emit_twin`), interleaved per class so an
       -- exact/approx twin sits adjacent, and all structs precede `Val`.
       for c in classes do
@@ -155,8 +181,8 @@ def heapPreludeSyntax : (kind : SyntaxNodeKind) → Json → PygenM (TSyntax kin
           cmds := cmds.push (← classStructCommand c)
 
       -- 2. The per-program `Val` universe: one constructor per class×mode (fields at that mode's heap
-      -- types) plus one per distinct container cell type. Python never heap-allocates a bare
-      -- primitive, so `Val` has NO primitive constructors — only objects and mutable containers.
+      -- types) plus one per `trivialCells` entry — container cell types, scalar primitives, and the
+      -- `Ref`-wrapped cell contents that closure-promoted variable cells store.
       let mut valSrc := "inductive Val where\n"
       let mut classCtorCount := 0
       for c in classes do
@@ -170,7 +196,7 @@ def heapPreludeSyntax : (kind : SyntaxNodeKind) → Json → PygenM (TSyntax kin
             fieldStr := fieldStr ++ s!" ({fname} : {← renderHeapType ty})"
           valSrc := valSrc ++ s!"  | {valCtorName name}{fieldStr}\n"
           classCtorCount := classCtorCount + 1
-      for (cell, ctor) in containers do
+      for (cell, ctor) in trivialCells do
         valSrc := valSrc ++ s!"  | {ctor} (c : {cell})\n"
       valSrc := valSrc ++ "  deriving Repr, Inhabited"
       cmds := cmds.push (← parseHeapCommand valSrc)
@@ -185,8 +211,8 @@ def heapPreludeSyntax : (kind : SyntaxNodeKind) → Json → PygenM (TSyntax kin
           let name ← withRunSuffix rawName
           cmds := cmds.push (← parseHeapCommand s!"derive_storable% {name}")
       -- Omit the catch-all `| _ => none` when `Val` has a single constructor (else redundant-alt).
-      let totalCtors := classCtorCount + containers.length
-      for (cell, ctor) in containers do
+      let totalCtors := classCtorCount + trivialCells.length
+      for (cell, ctor) in trivialCells do
         let projArm := if totalCtors == 1 then s!"fun | Val.{ctor} c => some c"
                        else s!"fun | Val.{ctor} c => some c | _ => none"
         cmds := cmds.push (← parseHeapCommand

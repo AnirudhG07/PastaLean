@@ -116,6 +116,20 @@ def functionArgInfos (json : Json) : PygenM (Array (TSyntax `ident × Option (TS
   for arg in argsArray do
     let .ok argName := arg.getObjValAs? String "arg" | throwError
       s!"FuncDef argument does not have an 'arg' field or it is not a string: {arg}"
+    -- A closure-promoted variable CELL param (`--heap`): its Lean type is `Ref (heapTypeSyntax ann)`
+    -- — `Ref Int` for a scalar cell, `Ref (Ref (List Int))` for a container/object cell (one extra
+    -- `Ref` over the ordinary heap type). The annotation rides on the arg (`annotation` or `_ty`).
+    if (← getHeapMode) && arg.getObjValAs? Bool "_heap_cell_param" == .ok true then
+      let annJson? : Option Json :=
+        match jsonFieldOption arg "annotation" with
+        | some a => if a.isNull then jsonFieldOption arg "_ty" else some a
+        | none => jsonFieldOption arg "_ty"
+      let pty := match annJson? with
+        | some ann => TypeInfer.ofAnnotation ann
+        | none => .int
+      let cellTy ← `(PastaLean.Ref $(← heapTypeSyntax pty))
+      argInfos := argInfos.push (mkIdent argName.toName, some cellTy)
+      continue
     -- A parameter the per-variable real-flow pass stamped `_real` receives an `ℝ` value at some
     -- call site → ascribe `ℝ` (exact mode), overriding the annotation. Everything else stays `ℚ`.
     let isRealParam := (← getNumericMode) == .exact && arg.getObjValAs? Bool "_real" == .ok true
@@ -136,6 +150,27 @@ def functionBodyElems (json : Json) : PygenM (Array Json) := do
   let .ok bodyElems := json.getObjValAs? (Array Json) "body" | throwError
     s!"FuncDef node does not have a 'body' field or it is not a JSON value: {json}"
   return bodyElems
+
+/-- The closure-promoted cell parameters of a function (`--heap`): each `_heap_cell_param` arg with
+whether it is a container/object cell (`Ref (Ref T)`, registered so `heapContainerRef?` fires) vs a
+scalar cell (`Ref τ`). Empty for ordinary functions, so callers pass it unconditionally. -/
+def functionHeapCellParams (json : Json) : PygenM (Array (Name × Bool)) := do
+  unless ← getHeapMode do return #[]
+  let .ok args := json.getObjVal? "args" | return #[]
+  let .ok argsArray := args.getObjValAs? (Array Json) "args" | return #[]
+  let mut cells := #[]
+  for arg in argsArray do
+    if arg.getObjValAs? Bool "_heap_cell_param" == .ok true then
+      if let .ok argName := arg.getObjValAs? String "arg" then
+        let annJson? : Option Json :=
+          match jsonFieldOption arg "annotation" with
+          | some a => if a.isNull then jsonFieldOption arg "_ty" else some a
+          | none => jsonFieldOption arg "_ty"
+        let isContainer := match annJson?.map TypeInfer.ofAnnotation with
+          | some (.list _) | some (.set _) | some (.dict _ _) | some (.cls _) => true
+          | _ => false
+        cells := cells.push (argName.toName, isContainer)
+  return cells
 
 /-- Whether the JSON references a library member that lowers to a `noncomputable` `ℝ`
 transcendental (`math.exp`, `math.sqrt`, …). Used to mark a generated `def` as `noncomputable`
@@ -278,8 +313,13 @@ inside a nested function do not leak into the enclosing scope's `let`/`let mut` 
 leak would otherwise cause a later same-named outer assignment to be emitted as a reassignment
 of a variable that was never declared `let mut`. -/
 def functionValueSyntax (argInfos : Array (TSyntax `ident × Option (TSyntax `term))) (bodyElems : Array Json)
-    (boxReturn : Bool := false) (retFloat : Bool := false) :
+    (boxReturn : Bool := false) (retFloat : Bool := false)
+    (heapCellParams : Array (Name × Bool) := #[]) :
     PygenM (TSyntax `term) := withFreshVariables do
+  -- Closure-promoted cell params (`--heap`): register so body reads/mutations deref them (one
+  -- `readRefM`) and container cells feed `heapContainerRef?`. Function-scoped via `withFreshVariables`.
+  for (nm, isContainer) in heapCellParams do
+    if isContainer then registerHeapContainerCell nm else registerHeapScalarCell nm
   let usesExceptions := bodyNeedsExceptionMonad bodyElems
   let usesRealIO := bodyNeedsIOMonad bodyElems
   let useProofMonad ← shouldUseProofMonad
@@ -301,6 +341,9 @@ def functionValueSyntax (argInfos : Array (TSyntax `ident × Option (TSyntax `te
   -- against the mutable shadow. Pure bodies never mutate, so this prelude is empty for them.
   let mut paramPrelude : Array (TSyntax `doElem) := #[]
   for (argIdent, _) in argInfos do
+    -- A cell param is already a `Ref`; its mutations go through `writeRefM`/`modifyRefM`, so it
+    -- needs no `let mut` value shadow (shadowing it would rebind the name to a plain value).
+    if heapCellParams.any (·.1 == argIdent.getId) then continue
     if bodyElems.any (fun b => jsonMutatesName b argIdent.getId.toString) then
       addVar argIdent.getId
       paramPrelude := paramPrelude.push (← `(doElem| let mut $argIdent:ident := $argIdent))
@@ -311,7 +354,9 @@ def functionValueSyntax (argInfos : Array (TSyntax `ident × Option (TSyntax `te
   -- Heap tier (`--heap`): a body that touches the heap runs in `HeapM Val` (or, with IO, the
   -- `PyHeapIO`/`PyHeapProofM` stack). Takes precedence — `HeapM`'s error dimension is `PyException`,
   -- so it already subsumes exceptions. Codomain is ascribed to the body so a `_` return can infer.
-  if ← needsHeapMonad bodyElems then
+  -- A sibling whose body only mutates a captured cell ref carries no heap marker, so `needsHeapMonad`
+  -- alone misses it — force the heap tier when this function takes cell params.
+  if (← needsHeapMonad bodyElems) || ((← getHeapMode) && heapCellParams.size > 0) then
     let bodyStxArray ← monadicFunctionBodySyntax bodyElems
     let heapVal := mkIdent `Val
     let monad ← if usesRealIO then
@@ -674,6 +719,7 @@ def mutualMemberDef (json : Json) : PygenM (TSyntax `command) := do
   let argInfos ← functionArgInfos json
   let bodyElems ← functionBodyElems json
   let valueStx ← functionValueSyntax argInfos bodyElems
+    (heapCellParams := ← functionHeapCellParams json)
   match ← functionReturnTypeSyntax? json with
   | some retTy =>
       match ← functionArrowTypeSyntax? argInfos retTy with
@@ -864,6 +910,7 @@ def funcDefSyntax : (kind : SyntaxNodeKind) → Json →
                   | false, false, _ => `(def $nameIdent $binders* := $body)
               | none =>
               let valueStx ← functionValueSyntax argInfos bodyElems boxReturn retFloat
+                (heapCellParams := ← functionHeapCellParams json)
               -- take care of recursion function Type
               if isRecursive then
                 let fullTy? ← match ← functionReturnTypeSyntax? json with
@@ -898,6 +945,7 @@ def funcDefSyntax : (kind : SyntaxNodeKind) → Json →
         let argInfos ← functionArgInfos json
         let bodyElems ← functionBodyElems json
         functionValueSyntax argInfos bodyElems
+          (heapCellParams := ← functionHeapCellParams json)
     | `doElem, json => do
         let .ok name := json.getObjValAs? String "name" | throwError
           s!"FuncDef node does not have a 'name' field or it is not a string: {json}"
@@ -905,6 +953,7 @@ def funcDefSyntax : (kind : SyntaxNodeKind) → Json →
         let argInfos ← functionArgInfos json
         let bodyElems ← functionBodyElems json
         let valueStx ← functionValueSyntax argInfos bodyElems
+          (heapCellParams := ← functionHeapCellParams json)
         `(doElem| let $nameIdent := $valueStx)
     | kind, _ => throwError s!"Unsupported syntax category `{kind}` for FuncDef node"
 

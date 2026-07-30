@@ -114,6 +114,20 @@ partial def needsAscription : PyType → Bool
   -- The known-dynamic top type materialises as `PyAny`, which Lean cannot infer from a heterogeneous
   -- literal's first element — so a container wrapping it (`list[any]` → `List PyAny`) must be ascribed.
   | .any => true
+  -- A function type must be ascribed whenever it is fully known: a heap `list` of closures builds up
+  -- from an empty `allocM []`, which leaves the element's (function) domain universe stuck unless the
+  -- local's type pins it — `list[Callable[[], str]]` → `List (Unit → String)`.
+  | .fn as r => as.all isKnown && isKnown r
+  | _ => false
+
+/-- Does this type contain a function type anywhere? A container of closures cannot have its element
+(function-domain) universe inferred from an empty `allocM []` literal, so under `--heap` its binding
+must be ascribed even though a plain empty container is normally left for Lean to infer. -/
+partial def containsFn : PyType → Bool
+  | .fn _ _ => true
+  | .list e | .set e | .opt e => containsFn e
+  | .dict k v => containsFn k || containsFn v
+  | .tuple es => es.any containsFn
   | _ => false
 
 /-- Least upper bound.

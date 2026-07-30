@@ -196,6 +196,13 @@ def nameSyntax : (kind : SyntaxNodeKind) → Json →
     | none =>
         let .ok id := json.getObjValAs? String "id" | throwError
           s!"Name node does not have an 'id' field or it is not a string: {json}"
+        -- A closure-promoted variable CELL (`--heap`): raw ref when passed to its capturing sibling
+        -- (`_heap_cell_arg`), else its value/object-ref via one deref in every ordinary position.
+        if (← getHeapMode) && (← isHeapCellVar id.toName) then
+          if (json.getObjValAs? Bool "_heap_cell_arg").toOption.getD false then
+            return mkIdent id.toName
+          else
+            return (← `((← PastaLean.readRefM $(mkIdent id.toName))))
         -- In a run-twin, a reference to a user function/class is suffixed (`bar` → `bar'rn`,
         -- `CNN` → `CNN'rn`); locals and library names are left as-is.
         let suffixed ← suffixIfUserName id

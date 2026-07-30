@@ -6,6 +6,45 @@ open Lean Meta Elab Term Qq Std
 
 namespace PastaLean
 
+-- Render a `PyType` to its HEAP Lean type (`--heap`): user objects and mutable containers become
+-- `Ref`s (recursively), primitives stay inline, tuples stay inline products (immutable, never heap
+-- cells), and un-pinnable container elements box to `PyAny`. This is what makes
+-- `Node.next : Option (Ref Node)`, `items : Ref (List Int)`, and a generic `Ref (List PyAny)`.
+-- (Lives here, upstream of both FuncDef and ClassDef, so closure cell params can reuse it.)
+mutual
+/-- The heap Lean type of a Python type. Object/container slots become `Ref`s; a scalar slot that
+inference can't pin defaults to `Int` (kept concrete so arithmetic/ordering instances still resolve —
+boxing a scalar to `PyAny` here would leave `+ₚ`/`≤` stuck). Container ELEMENTS go through
+`heapElemTypeSyntax`, which boxes an un-pinnable element to `PyAny`. -/
+partial def heapTypeSyntax (t : TypeInfer.PyType) : PygenM (TSyntax `term) := do
+  match t with
+  | .cls n => `(PastaLean.Ref $(mkIdent n.toName))
+  | .list e => `(PastaLean.Ref (List $(← heapElemTypeSyntax e)))
+  | .set e  => `(PastaLean.Ref (List $(← heapElemTypeSyntax e)))
+  | .dict k v => `(PastaLean.Ref (Std.HashMap $(← heapTypeSyntax k) $(← heapElemTypeSyntax v)))
+  | .opt inner => `(Option $(← heapTypeSyntax inner))
+  | .tuple es =>
+      match es with
+      | []        => `(Unit)
+      | e :: rest => do
+          let mut acc ← heapTypeSyntax e
+          for r in rest do
+            acc ← `($acc × $(← heapTypeSyntax r))
+          pure acc
+  | _ => pure ((← pyTypeSyntax? t).getD (mkIdent ``Int))
+
+/-- The Lean type of a container element/value position. An element that holds conflicting types
+(`.any`, ⊤ — e.g. an explicit `list[object]`, or a list mixing `int` and `str`) boxes to `PyAny`, the
+gradual-typing fallback: element ops (`append`/`[]`/`len`/`for`/print) all have `PyAny` instances and
+pushed values auto-box, so a heap container "of any type" is `Ref (List PyAny)`. A merely un-pinned
+element (`.unknown`, ⊥ — e.g. a bare `= []` whose items are all one type) keeps the concrete default,
+so an all-`int` list stays `Ref (List Int)` and its element arithmetic still resolves. -/
+partial def heapElemTypeSyntax (t : TypeInfer.PyType) : PygenM (TSyntax `term) := do
+  match t with
+  | .any => pure (mkIdent ``PastaLean.PyAny)
+  | _ => heapTypeSyntax t
+end
+
 /-- Read all Name idents from a tuple assignment target (any arity ≥ 2). -/
 def tupleAssignTargetNames? (target : Json) : PygenM (Option (Array (TSyntax `ident))) := do
   unless jsonNodeType? target == some "Tuple" do
@@ -516,6 +555,23 @@ def assignSyntax : (kind : SyntaxNodeKind) → Json →
                 pure setStx
             | none =>
                 let nameIdent ← getCode target `ident
+                -- Closure-promoted variable CELLS (`--heap`): a `_heap_cell_def` assignment allocates
+                -- the cell (one extra `allocM` over the ordinary heap RHS — `Ref τ` scalar,
+                -- `Ref (Ref T)` container/object); a plain assignment to an already-promoted cell
+                -- rebinds it in place with `writeRefM`.
+                if ← getHeapMode then
+                  if (json.getObjValAs? Bool "_heap_cell_def").toOption.getD false then
+                    let cls? ← heapClassOfValue? value
+                    let isContainerRhs :=
+                      (match jsonNodeType? value with
+                        | some "List" | some "Dict" | some "Set" => true | _ => false)
+                      || (← heapContainerRef? value).isSome || cls?.isSome
+                    if isContainerRhs then registerHeapContainerCell nameIdent.getId
+                    else registerHeapScalarCell nameIdent.getId
+                    if let some cls := cls? then registerHeapVarClass nameIdent.getId cls
+                    return ← bindOrAssignLocal nameIdent (← `((← PastaLean.allocM $rhs))) none
+                  if ← isHeapCellVar nameIdent.getId then
+                    return ← `(doElem| PastaLean.writeRefM $nameIdent $rhs)
                 -- Under `--heap`, remember that this local now holds a heap object of a known class
                 -- (`p = Point(..)`, or `q = p`), so later `p.x` reads dereference it.
                 if ← getHeapMode then
@@ -532,7 +588,15 @@ def assignSyntax : (kind : SyntaxNodeKind) → Json →
                   let isContainerRhs := isContainerLit || (← heapContainerRef? value).isSome
                   if isContainerRhs then registerHeapVarContainer nameIdent.getId
                   if cls?.isSome || isContainerRhs then
-                    return ← bindOrAssignLocal nameIdent rhs none
+                    -- A heap container of closures is the one case the RHS can't self-infer: an empty
+                    -- `allocM []` leaves the element's function-domain universe stuck, and a later
+                    -- `fun () ↦ …` append does not pin it. Re-apply the stamped heap type there.
+                    let fnAsc? ← match jsonFieldOption target "_ty" with
+                      | some ann =>
+                          let t := TypeInfer.ofAnnotation ann
+                          if t.containsFn then pure (some (← heapTypeSyntax t)) else pure none
+                      | none => pure none
+                    return ← bindOrAssignLocal nameIdent rhs fnAsc?
                 -- A cross-type rebind (`_ty` = `PyAny`) of an immutable `let` (a loop var, `for ch in
                 -- s: ch = ord(ch)`) is shadowed with a fresh `let mut`. But a `let mut` slot — incl. a
                 -- `let mut x : PyAny` from a first binding — is just reassigned (a `let mut` cannot be
