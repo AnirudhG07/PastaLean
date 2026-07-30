@@ -238,6 +238,8 @@ def lowerMinMaxCall (which : String) (argsArray : Array Json) (argsCodes : Array
   let defaultCode ← match keyWordsMap.get? "default" with
     | some d => some <$> getCode d `term
     | none => pure none
+  -- A single container-ref iterable (`min(xs)`) is consumed by value, so deref it under `--heap`.
+  let argsCodes ← derefBuiltinArgCodes argsArray argsCodes
   buildIOPureApplicationFromArgs argsArray argsCodes fun resolvedArgs => do
     let iterable ← if resolvedArgs.size == 1 then pure resolvedArgs[0]!
       else `([$resolvedArgs,*])
@@ -363,7 +365,7 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
       | _ => throwError s!"Call node 'args' field is not an array: {argsJson}"
     if let some nonFinite ← nonFiniteFloatTerm? funcJson argsArray then
       return nonFinite
-    let argsCodes ← argsArray.mapM (fun argJson => getCode argJson `term)
+    let mut argsCodes ← argsArray.mapM (fun argJson => getCode argJson `term)
 
     let .ok keyWordsJson := json.getObjVal? "keywords" | throwError
       s!"Call node does not have a 'keywords' field or it is not json pairs: {json}"
@@ -564,8 +566,9 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
               throwError "str() keyword arguments are not supported yet."
             return ← match argsArray.size with
             | 0 => `("")
-            | 1 =>
+            | 1 => do
                 let pyStrIdent := mkIdent ``pyStr
+                let argsCodes ← derefBuiltinArgCodes argsArray argsCodes
                 buildIOPureApplicationFromArgs argsArray argsCodes fun resolvedArgs => do
                   let arg0 := resolvedArgs[0]!
                   `($pyStrIdent $arg0)
@@ -577,6 +580,7 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
             unless argsArray.size == 1 do
               throwError "list() currently expects exactly one positional argument."
             let pyListIdent := mkIdent ``pyList
+            argsCodes ← derefBuiltinArgCodes argsArray argsCodes
             return ← buildIOPureApplicationFromArgs argsArray argsCodes fun resolvedArgs => do
               let arg0 := resolvedArgs[0]!
               `($pyListIdent $arg0)
@@ -587,7 +591,8 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
               throwError "map() currently expects exactly two positional arguments."
             let pyMapIdent := mkIdent ``pyMap
             let funcCode ← mappedCallableValueCode argsArray[0]!
-            let adjustedCodes := #[funcCode, argsCodes[1]!]
+            let iterCode := (← heapValueDeref? argsArray[1]!).getD argsCodes[1]!
+            let adjustedCodes := #[funcCode, iterCode]
             return ← buildIOPureApplicationFromArgs argsArray adjustedCodes fun resolvedArgs => do
               let f := resolvedArgs[0]!
               let xs := resolvedArgs[1]!
@@ -599,7 +604,8 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
               throwError "filter() currently expects exactly two positional arguments."
             let pyFilterIdent := mkIdent ``pyFilter
             let funcCode ← mappedCallableValueCode argsArray[0]!
-            let adjustedCodes := #[funcCode, argsCodes[1]!]
+            let iterCode := (← heapValueDeref? argsArray[1]!).getD argsCodes[1]!
+            let adjustedCodes := #[funcCode, iterCode]
             return ← buildIOPureApplicationFromArgs argsArray adjustedCodes fun resolvedArgs => do
               let f := resolvedArgs[0]!
               let xs := resolvedArgs[1]!
@@ -612,6 +618,8 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
                 throwError s!"sorted() keyword argument '{kwName}' is not supported yet."
             unless argsArray.size == 1 do
               throwError "sorted() expects exactly one positional argument (the iterable)."
+            -- The iterable is consumed by value; deref a container-ref under `--heap`.
+            argsCodes ← derefBuiltinArgCodes argsArray argsCodes
             match keyWordsMap.get? "key", keyWordsMap.get? "reverse" with
             | none, none =>
                 let pySortIdent := mkIdent ``pySort
@@ -645,6 +653,7 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
             -- `next(it)` / `next(it, default)`. Our comprehensions/`iter(...)` are eager `List`s, so
             -- this is the first element (or the default when empty).
             unless keyWordsMap.isEmpty do throwError "next() keyword arguments are not supported."
+            argsCodes ← derefBuiltinArgCodes argsArray argsCodes
             return ← buildIOPureApplicationFromArgs argsArray argsCodes fun r => do
               let iter ← `($(mkIdent ``PastaLean.pyIter) $(r[0]!))
               match r[1]? with
@@ -684,15 +693,22 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
                   && jsonNodeType? argsArray[0]! == some "Starred" then
                 let .ok inner := argsArray[0]!.getObjVal? "value" | throwError
                   s!"Starred argument is missing a 'value': {argsArray[0]!}"
-                let innerCode ← getCode inner `term
+                let innerCode := (← heapValueDeref? inner).getD (← getCode inner `term)
                 return ← `($(mkIdent ``PastaLean.pyZipStar) $innerCode)
               unless argsArray.size ≥ 2 do
                 throwError s!"{funcName}() expects at least two arguments."
               let foldIdent := mkIdent foldFn
+              argsCodes ← derefBuiltinArgCodes argsArray argsCodes
               return ← buildIOPureApplicationFromArgs argsArray argsCodes fun resolvedArgs => do
                 foldBinaryOverArgs foldIdent dir resolvedArgs
             else match ← builtinMappedName? funcName with
-            | some mappedName => funcIdent := (mkIdent mappedName : TSyntax `term)
+            | some mappedName =>
+                -- A mapped builtin (`sum`, `reversed`, `enumerate`, …) consumes its iterable by value;
+                -- deref container-ref args so it sees contents, not the `Ref` (a user call keeps the
+                -- ref — its `--heap` calling convention). No-op off `--heap` / for non-container args,
+                -- so the shared application tail below is otherwise unchanged.
+                argsCodes ← derefBuiltinArgCodes argsArray argsCodes
+                funcIdent := (mkIdent mappedName : TSyntax `term)
             | none =>
                 funcIdent ← userCallIdent funcName
         | _, _ =>
@@ -747,7 +763,7 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
     let .ok keyWordsMap := keyWordsJson.getObj? | throwError
       s!"Call node 'keywords' field is not a JSON object: {keyWordsJson}"
 
-    let argsCodes ← argsArray.mapM (fun argJson => getCode argJson `term)
+    let mut argsCodes ← argsArray.mapM (fun argJson => getCode argJson `term)
 
     let mut allArgs : Array (TSyntax `term) := #[]
     let mut allArgJsons : Array Json := #[]
@@ -1015,7 +1031,8 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
               throwError "map() currently expects exactly two positional arguments."
             let pyMapIdent := mkIdent ``pyMap
             let funcCode ← mappedCallableValueCode argsArray[0]!
-            let adjustedCodes := #[funcCode, argsCodes[1]!]
+            let iterCode := (← heapValueDeref? argsArray[1]!).getD argsCodes[1]!
+            let adjustedCodes := #[funcCode, iterCode]
             let t ← buildIOPureApplicationFromArgs argsArray adjustedCodes fun resolvedArgs => do
               let f := resolvedArgs[0]!
               let xs := resolvedArgs[1]!
@@ -1031,7 +1048,8 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
               throwError "filter() currently expects exactly two positional arguments."
             let pyFilterIdent := mkIdent ``pyFilter
             let funcCode ← mappedCallableValueCode argsArray[0]!
-            let adjustedCodes := #[funcCode, argsCodes[1]!]
+            let iterCode := (← heapValueDeref? argsArray[1]!).getD argsCodes[1]!
+            let adjustedCodes := #[funcCode, iterCode]
             let t ← buildIOPureApplicationFromArgs argsArray adjustedCodes fun resolvedArgs => do
               let f := resolvedArgs[0]!
               let xs := resolvedArgs[1]!
@@ -1058,7 +1076,11 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
               funcIdent := ctorId
             | none =>
             match ← builtinMappedName? funcName with
-            | some mappedName => funcIdent := (mkIdent mappedName : TSyntax `term)
+            | some mappedName =>
+                -- Deref container-ref args for a mapped builtin (consumed by value); see the term
+                -- handler above. No-op off `--heap` / for non-container args.
+                argsCodes ← derefBuiltinArgCodes argsArray argsCodes
+                funcIdent := (mkIdent mappedName : TSyntax `term)
             | none =>
                 funcIdent ← userCallIdent funcName
         | _, _ =>

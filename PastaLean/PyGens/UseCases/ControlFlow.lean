@@ -136,6 +136,11 @@ def augAssignSyntax : (kind : SyntaxNodeKind) → Json →
           -- `self` with the updated field (value semantics). Guarded on a mutable `self` in scope.
           if (selfAttrTarget? targetJson).isSome && (← hasVar `self) then
             selfRecordUpdateDoElem (selfAttrTarget? targetJson).get! updated
+          -- `c.n += k` where `c : Ref C` (heap object ref: `self` under `--heap`, or an object
+          -- ref param/var): `curTerm` already read the field via `~>`, so write the sum back through
+          -- the pointer. Value-mode / non-heap-object targets fall through to the paths below.
+          else if let some w ← heapAttrWriteTargetDoElem? targetJson updated then
+            pure w
           else match ← nestedSubscriptSetDoElem? targetJson updated with
             | some setStx =>
                 -- `s[i] += v` (and nested `g[i][j] += v`) rebuild the container with the new element.

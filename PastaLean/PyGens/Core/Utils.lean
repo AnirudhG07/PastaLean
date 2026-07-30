@@ -362,6 +362,13 @@ def heapContainerRef? (json : Json) : PygenM (Option (TSyntax `term)) := do
       let some cls := cls? | return none
       unless ← isContainerField cls attr do return none
       return some (← `((← $(mkIdent recvId.toName) ~> $(mkIdent attr.toName))))
+  | some "Call" =>
+      -- A call whose callee returns a mutable container hands back the object-ref (`Ref (List …)`);
+      -- treat it as a container-ref so inline consumption (`len(f())`, `f()[0]`, `for _ in f()`)
+      -- dereferences it. The call self-awaits via `_heap_call`, so `getCode` yields `(← f …)`.
+      if (json.getObjValAs? Bool "_returns_container").toOption.getD false then
+        return some (← getCode json `term)
+      else return none
   | _ => return none
 
 /-- Under `--heap`, if `json` reads a mutable container held by reference, return the dereferenced
@@ -371,6 +378,53 @@ def heapContainerDeref? (json : Json) : PygenM (Option (TSyntax `term)) := do
   match ← heapContainerRef? json with
   | some refCode => return some (← `((← PastaLean.readRefM $refCode)))
   | none => return none
+
+/-- Under `--heap`, the fully-dereferenced VALUE form of an expression that is (or structurally
+contains) container object-refs, for a position that consumes it *by value* — printing, stringifying.
+A container-ref (`Name`/`Attribute`/`Call`) becomes `(← readRefM …)`; a `Tuple`/`List` literal is
+rebuilt with each element value-dereferenced (so `print((xs, ys))` shows contents, not `Ref` addrs).
+`none` when nothing needs dereferencing, so the ordinary lowering (which already yields a value) is
+kept and value mode stays byte-identical. -/
+partial def heapValueDeref? (json : Json) : PygenM (Option (TSyntax `term)) := do
+  unless ← getHeapMode do return none
+  match jsonNodeType? json with
+  | some "Tuple" =>
+      let some elts := (json.getObjValAs? (Array Json) "elts").toOption | return none
+      if elts.isEmpty then return none
+      let mut anyDeref := false
+      let mut outElts : Array (TSyntax `term) := #[]
+      for e in elts do
+        match ← heapValueDeref? e with
+        | some d => anyDeref := true; outElts := outElts.push d
+        | none => outElts := outElts.push (← getCode e `term)
+      unless anyDeref do return none
+      -- Right-nested `Prod`, matching `tupleSyntax`'s `buildTuple`.
+      let mut acc := outElts.back!
+      for e in outElts.pop.toList.reverse do
+        acc ← `(($e, $acc))
+      return some acc
+  | some "List" | some "Dict" | some "Set" =>
+      -- A container LITERAL under `--heap` is `getCode`'d to an allocated `Ref`; in a value position
+      -- (print/stringify) dereference it so the CONTENTS are consumed, not the `Ref` address — uniform
+      -- with a container-ref var, whose value form is likewise `(← readRefM <ref>)`.
+      return some (← `((← PastaLean.readRefM $(← getCode json `term))))
+  | _ => heapContainerDeref? json
+
+/-- Deref every container-ref / container-literal positional arg to its contents. A builtin
+(`sum`, `min`, `sorted`, `zip`, …) consumes its iterable *by value*, so under `--heap` a ref arg
+must be read first; a user function, by contrast, receives the ref (its `--heap` calling
+convention), so this is applied only in builtin lowerings. `argsCodes` is the already-lowered code
+for `argsArray`; a non-container arg (and all of value mode) is returned untouched. -/
+def derefBuiltinArgCodes (argsArray : Array Json) (argsCodes : Array (TSyntax `term)) :
+    PygenM (Array (TSyntax `term)) := do
+  unless ← getHeapMode do return argsCodes
+  let mut out := argsCodes
+  for i in [0:argsArray.size] do
+    if h : i < out.size then
+      if let some argJson := argsArray[i]? then
+        if let some deref ← heapValueDeref? argJson then
+          out := out.set i deref
+  return out
 
 /-- Detect whether a statement list uses translated exceptions and therefore should not run under `Id`. -/
 def bodyNeedsExceptionMonad (bodyElems : Array Json) : Bool :=

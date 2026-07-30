@@ -690,7 +690,15 @@ partial def stampUnpackShape (target : Json) (ty : PyType) : Json :=
         let t := target.setObjVal! "elts" (Json.arr newElts)
         match ty with
         | .list _ => return t.setObjVal! "_list_unpack" (Json.bool true)
-        | .tuple _ => return t.setObjVal! "_tuple_unpack" (Json.bool true)
+        | .tuple _ =>
+            -- Under `--heap` each container element unpacks to its object-ref (`Ref (List …)`); record a
+            -- per-element mask so codegen registers those targets as container-refs (later len/[]/iter deref).
+            let anyContainer := (Array.range elts.size).any (fun i => (childTy i).isContainer)
+            let t := if anyContainer then
+                t.setObjVal! "_unpack_container_mask"
+                  (Json.arr ((Array.range elts.size).map (fun i => Json.bool (childTy i).isContainer)))
+              else t
+            return t.setObjVal! "_tuple_unpack" (Json.bool true)
         | _ => return t
     | _ => target
   else target
@@ -983,6 +991,34 @@ partial def collectSigs (module : Json) : Sigs × ParamSigs := Id.run do
     if stable then break
   return (sigs, params)
 
+/-- Stamp ONLY tuple-unpack shapes (`_tuple_unpack`/`_list_unpack`/`_unpack_container_mask`) across a
+statement tree, driven by interprocedural `sigs`/`env`. Used for the `__main__` guard body: it runs at
+module scope but — unlike a function body — must NOT get the full `stampStmt` treatment, whose
+`stampTarget` value-type ascriptions would perturb byte-identical value-mode output (the guard was
+historically unstamped). Single-value container returns are already handled by the driver's
+`_returns_container` pass; only the per-element unpack mask (nothing else supplies it) is needed so
+`xs, ys = make_pair()` registers each target as a container-ref under `--heap`. -/
+partial def stampUnpackShapes (sigs : Sigs) (env : Env) (s : Json) : Json :=
+  if nodeTypeOf s == some "FunctionDef" then s
+  else Id.run do
+    let mut s := s
+    if nodeTypeOf s == some "For" then
+      match getField s "target", getField s "iter" with
+      | some target, some iter =>
+          if nodeTypeOf target == some "Tuple" then
+            s := s.setObjVal! "target" (stampUnpackShape target (typeOfExpr sigs env iter).elemType)
+      | _, _ => pure ()
+    if nodeTypeOf s == some "Assign" then
+      match getField s "target", getField s "value" with
+      | some target, some value =>
+          if nodeTypeOf target == some "Tuple" then
+            s := s.setObjVal! "target" (stampUnpackShape target (typeOfExpr sigs env value))
+      | _, _ => pure ()
+    for f in #["body", "orelse", "finalbody"] do
+      if let .ok elems := s.getObjValAs? (Array Json) f then
+        s := s.setObjVal! f (Json.arr (elems.map (stampUnpackShapes sigs env)))
+    return s
+
 /-- Stamp `_ty` across one top-level node, resolving calls with `sigs` and seeding each function's
 unannotated params from `params`. The driver sends one statement per request; a `FunctionDef`, a
 `ClassDef` (each method) or a `Module` (a mutual group) is stamped, anything else is unchanged. -/
@@ -1005,6 +1041,20 @@ partial def stampNodeWith (sigs : Sigs) (params : ParamSigs) (globals : Env) (s 
       match s.getObjValAs? (Array Json) "body" with
       | .ok body => s.setObjVal! "body" (Json.arr (body.map (stampNodeWith sigs params globals)))
       | _ => s
+  | some "If" =>
+      -- The `__main__` guard lowers to Lean's `def main`; its body runs at module scope but is only
+      -- reached by the intraprocedural per-request fallback (empty `sigs`), which resolves every call
+      -- to `.unknown` and so misses the tuple-unpack container mask for `xs, ys = make_pair()`. Stamp
+      -- just the unpack shapes here with the full interprocedural `sigs` — NOT the full `stampStmt`,
+      -- whose value-type ascriptions would perturb byte-identical value-mode output.
+      if (s.getObjValAs? Bool "is_main_guard").toOption == some true then
+        let genv := inferFunction sigs globals {} s
+        let stampBlock (key : String) (s : Json) : Json :=
+          match s.getObjValAs? (Array Json) key with
+          | .ok body => s.setObjVal! key (Json.arr (body.map (stampUnpackShapes sigs genv)))
+          | _ => s
+        stampBlock "orelse" (stampBlock "body" s)
+      else s
   | _ => s
 
 /-- Intraprocedural stamping of a single node (no cross-function info). Used per-request as a

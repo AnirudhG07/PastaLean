@@ -77,8 +77,10 @@ instance : Storable Val (Ref (List Int)) where
 -- through `alias`, a second name bound to the SAME object → ([1,2,3,4], [1,2,3,4]).
 -- - a mutable SCALAR capture (`nonlocal count`) → single ref `Ref Int`: only the binding is shared,
 -- so both `bump` calls accumulate into it → 5 + 3 == 8.
--- Both cells are compile-checked here as defs (a scalar-cell function is not yet callable from a
--- non-heap context — the driver can't see the Lean-side cell promotion to stamp `_heap_call`).
+-- A cell-promoting function is itself heap-effectful, so its calls are awaited: `counter_closure()` is
+-- detected via its sibling's `nonlocal` rebind (the driver mirrors the Lean-side promotion) and printed
+-- below. (A program whose ONLY heap use is a scalar cell has no container/class to emit the `Val`
+-- universe, so scalar-cell functions stay callable only alongside a container — here, aliased_list_closure.)
 private def _aliased_list_closure'push := fun (v : Int) ↦ fun (xs : PastaLean.Ref (PastaLean.Ref (List Int))) ↦
   ((do
       PastaLean.modifyRefM (← PastaLean.readRefM xs) (fun __hc_l => PastaLean.pyAppend __hc_l v)
@@ -148,3 +150,38 @@ def counter_closure'rn :=
       let _ ← _counter_closure'bump'rn (3 : Int) count
       return (← PastaLean.readRefM count)) :
     (PastaLean.HeapM Val) _)
+
+def main : IO Unit := do
+  let inputText ← IO.getStdin >>= fun h => h.readToEnd
+  let inputLines := String.splitOn inputText "\n"
+  let inputStream : PastaLean.ProofMode.IOStream :=
+    ⟨0, fun i => PastaLean.ProofMode.IOResult.success (List.getD inputLines i "")⟩
+  let initState : PastaLean.HeapIOState Val := ⟨PastaLean.emptyHeap, ⟨inputStream, []⟩⟩
+  let (result, finalState) :=
+    PastaLean.PyHeapProofM.runProgram (V := Val)
+      (do
+        let _ ← aliased_list_closure
+        let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg (← counter_closure)]
+        pure ())
+      initState
+  let outputLines := finalState.io.output
+  for line in outputLines do
+    IO.print line
+  match result with
+  | .ok _ =>
+    pure ()
+  | .error err =>
+    throw (IO.userError (toString err))
+
+def main'rn : IO Unit := do
+  let (result, _heap) ←
+    PastaLean.PyHeapIO.runProgram (V := Val)
+        (do
+          let _ ← aliased_list_closure'rn
+          let _ ← pyPrintIO [pyPrintArg (← counter_closure'rn)]
+          pure ())
+  match result with
+  | .ok _ =>
+    pure ()
+  | .error err =>
+    throw (IO.userError (toString err))

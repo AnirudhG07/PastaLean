@@ -5,8 +5,10 @@
 #     through `alias`, a second name bound to the SAME object → ([1,2,3,4], [1,2,3,4]).
 #   - a mutable SCALAR capture (`nonlocal count`) → single ref `Ref Int`: only the binding is shared,
 #     so both `bump` calls accumulate into it → 5 + 3 == 8.
-# Both cells are compile-checked here as defs (a scalar-cell function is not yet callable from a
-# non-heap context — the driver can't see the Lean-side cell promotion to stamp `_heap_call`).
+# A cell-promoting function is itself heap-effectful, so its calls are awaited: `counter_closure()` is
+# detected via its sibling's `nonlocal` rebind (the driver mirrors the Lean-side promotion) and printed
+# below. (A program whose ONLY heap use is a scalar cell has no container/class to emit the `Val`
+# universe, so scalar-cell functions stay callable only alongside a container — here, aliased_list_closure.)
 def aliased_list_closure() -> tuple[list[int], list[int]]:
     xs = [1, 2]
     alias = xs
@@ -31,3 +33,8 @@ def counter_closure() -> int:
     bump(5)
     bump(3)
     return count
+
+
+if __name__ == "__main__":
+    aliased_list_closure()
+    print(counter_closure())

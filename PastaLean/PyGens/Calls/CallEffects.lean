@@ -30,6 +30,15 @@ def buildPrintArgsList (argsArray : Array Json) (resolvedArgs : Array (TSyntax `
     match argsArray[i]? with
     | some argJson => argJson.getObjValAs? String "node_type" == .ok "Starred"
     | none => false
+  -- Under `--heap`, a printed container is held by reference; dereference it (recursively through
+  -- tuple/list literals) so `print(xs)`/`print((xs, ys))` show contents, not `Ref` addresses. A
+  -- `*iterable` spread keeps its resolved term. `none` in value mode → `resolvedArgs` unchanged.
+  let mut resolvedArgs := resolvedArgs
+  for i in [0:resolvedArgs.size] do
+    unless isStarred i do
+      if let some argJson := argsArray[i]? then
+        if let some deref ← heapValueDeref? argJson then
+          resolvedArgs := resolvedArgs.set! i deref
   -- Common case: no spread → one clean `[pyArg a, pyArg b, …]` literal.
   if (List.range resolvedArgs.size).all (fun i => !isStarred i) then
     match resolvedArgs.toList with

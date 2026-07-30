@@ -92,6 +92,12 @@ partial def isKnown : PyType → Bool
   | .fn as r => as.all isKnown && isKnown r
   | _ => true
 
+/-- A mutable container that lowers to a `Ref` under `--heap` (list/dict/set). A tuple is an
+immutable value type, so it is excluded — matching the driver's `_CONTAINER_ANN_HEADS`. -/
+def isContainer : PyType → Bool
+  | .list _ | .set _ | .dict _ _ => true
+  | _ => false
+
 /-- Should a *local* binding of this type be ascribed at all? Only discrete scalars, where an
 unascribed literal would otherwise default (`5` → `ℚ` in exact mode). Containers/floats are left for
 Lean to infer from the assignment RHS, so an ascription never *forces* an element type (e.g. `ℚ`)

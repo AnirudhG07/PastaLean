@@ -495,11 +495,81 @@ def _annotate_heap_calls(node, heap_names):
             _annotate_heap_calls(item, heap_names)
 
 
+def _function_own_bound_names(fn):
+    """Names bound in `fn`'s OWN scope: its parameters plus every name assigned directly in its body.
+    Does not descend into nested function bodies — those are separate scopes."""
+    names = set(_function_arg_names(fn))
+    for stmt in fn.get("body", []):
+        for node in _walk_json_nodes(stmt, skip_nested_function_bodies=True):
+            if isinstance(node, dict) and node.get("node_type") in {
+                "Assign", "AnnAssign", "AugAssign", "For", "FunctionDef", "ClassDef",
+            }:
+                names |= _stmt_bound_names(node)
+    return names
+
+
+def _body_promotes_variable_cell(fn):
+    """Whether `fn` promotes one of its locals to a shared `Ref` CELL under `--heap`: some nested
+    closure REBINDS a captured local of `fn` (`nonlocal v; v = …`/`v += …`). Such a var is allocated
+    as a cell in `fn`'s body, so `fn` is heap-effectful even with no direct heap syntax of its own —
+    mirrors ClosureConvert's mutated-capture promotion. In-place container mutation (`v.append(…)`)
+    needs no `nonlocal` and is already caught via the container-literal seed."""
+    own_locals = _function_own_bound_names(fn)
+    if not own_locals:
+        return False
+    for stmt in fn.get("body", []):
+        for nested in _walk_json_nodes(stmt):
+            if not (isinstance(nested, dict) and nested.get("node_type") == "FunctionDef"):
+                continue
+            nonlocal_names = set()
+            for node in _walk_json_nodes(nested.get("body", []), skip_nested_function_bodies=True):
+                if isinstance(node, dict) and node.get("node_type") == "Nonlocal":
+                    nonlocal_names.update(n for n in node.get("names", []) if isinstance(n, str))
+            # Guard against a bare `nonlocal v` (only read, never rebound): that stays a value param,
+            # so flagging `fn` heap-effectful would make callers await a non-`HeapM` value.
+            rebound = nonlocal_names & _function_own_bound_names(nested)
+            if rebound & own_locals:
+                return True
+    return False
+
+
+def _collect_module_class_names(module_json):
+    """Every user-defined class name in the module (a param annotated with one is a heap object)."""
+    names = set()
+    for node in _walk_json_nodes(module_json):
+        if isinstance(node, dict) and node.get("node_type") == "ClassDef":
+            name = node.get("name")
+            if isinstance(name, str):
+                names.add(name)
+    return names
+
+
+def _function_has_ref_param(fn, class_names):
+    """Under `--heap`, whether `fn` takes a parameter passed by `Ref` — a mutable container
+    (`list`/`dict`/`set`) or a user object. Such a param makes `fn` heap-tier (its body derefs the
+    ref) so its callers must await it. Reads the explicit `annotation` or the inferred `_ty`."""
+    args = fn.get("args", {})
+    if not isinstance(args, dict):
+        return False
+    for key in ("posonlyargs", "args", "kwonlyargs"):
+        for arg in args.get(key, []):
+            if not isinstance(arg, dict):
+                continue
+            for ann in (arg.get("annotation"), arg.get("_ty")):
+                if _is_container_annotation(ann):
+                    return True
+                if (isinstance(ann, dict) and ann.get("node_type") == "Name"
+                        and ann.get("id") in class_names):
+                    return True
+    return False
+
+
 def annotate_heap_effects(module_json):
     """Under `--heap`, mark calls to heap-effectful user functions with `_heap_call` (interprocedural
     fixpoint, mirroring `annotate_io_effects`): a function is heap-effectful if its body directly uses
-    the heap or (transitively) calls a heap-effectful function. Codegen then runs such functions in
-    `HeapM` and awaits their calls."""
+    the heap, promotes a closure cell, takes a container/object (`Ref`) parameter, or (transitively)
+    calls a heap-effectful function. Codegen then runs such functions in `HeapM` and awaits their calls."""
+    class_names = _collect_module_class_names(module_json)
     def annotate_scope(body):
         local_functions = {
             fn["name"]: fn
@@ -511,6 +581,8 @@ def annotate_heap_effects(module_json):
 
         heap_effectful = {
             name: _node_has_direct_heap_syntax(fn.get("body", []))
+            or _body_promotes_variable_cell(fn)
+            or _function_has_ref_param(fn, class_names)
             for name, fn in local_functions.items()
         }
         changed = True
@@ -528,6 +600,52 @@ def annotate_heap_effects(module_json):
         for fn in local_functions.values():
             _annotate_heap_calls(fn.get("body", []), heap_names)
         _annotate_heap_calls(body, heap_names)
+
+    if isinstance(module_json, dict) and module_json.get("node_type") == "Module":
+        annotate_scope(module_json.get("body", []))
+
+
+def _annotate_container_return_calls(node, names):
+    """Stamp `_returns_container` on each call (at this scope level) to a container-returning function."""
+    if isinstance(node, dict):
+        if node.get("node_type") == "Call":
+            func = node.get("func")
+            if isinstance(func, dict) and func.get("node_type") == "Name" and func.get("id") in names:
+                node["_returns_container"] = True
+        nt = node.get("node_type")
+        for key, value in node.items():
+            if nt == "FunctionDef" and key == "body":
+                continue
+            _annotate_container_return_calls(value, names)
+    elif isinstance(node, list):
+        for item in node:
+            _annotate_container_return_calls(item, names)
+
+
+def annotate_container_returning_calls(module_json):
+    """Under `--heap`, stamp `_returns_container` on every call to a user function whose declared
+    (`returns`) or inferred (`_ret_ty`) return type is a mutable container. The callee hands back the
+    object-ref (`Ref (List …)`), so the caller must treat the result as a container-ref: a bound
+    target is registered as a heap container (later `len`/subscript/iterate deref) and inline
+    consumption dereferences the call result directly. Scope handling mirrors `annotate_heap_effects`.
+    Runs AFTER type inference so unannotated container returns are caught via `_ret_ty`."""
+    def _returns_container(fn):
+        return _is_container_annotation(fn.get("returns")) or _is_container_annotation(fn.get("_ret_ty"))
+
+    def annotate_scope(body):
+        local_functions = {
+            fn["name"]: fn
+            for fn in _collect_scope_function_defs(body)
+            if isinstance(fn.get("name"), str)
+        }
+        for fn in local_functions.values():
+            annotate_scope(fn.get("body", []))
+        container_returning = {name for name, fn in local_functions.items() if _returns_container(fn)}
+        if not container_returning:
+            return
+        for fn in local_functions.values():
+            _annotate_container_return_calls(fn.get("body", []), container_returning)
+        _annotate_container_return_calls(body, container_returning)
 
     if isinstance(module_json, dict) and module_json.get("node_type") == "Module":
         annotate_scope(module_json.get("body", []))
@@ -1567,10 +1685,6 @@ def translate_to_lean(source_code, target="term", filepath = None, imports_add =
     json_ir = translate_to_json(source_code, filepath, best_effort=best_effort)
     ast_json = json.loads(json_ir)
     _stamp_class_dispatch(ast_json)
-    # Heap-effect propagation must run AFTER class dispatch (it keys off `_class_ctor`/`_receiver_class`),
-    # so calls to heap-effectful user functions are stamped `_heap_call` and later awaited.
-    if heap:
-        annotate_heap_effects(ast_json)
     client = client or _LEAN_BACKEND
 
     # Whole-module type inference (best-effort): stamp `_ty` using interprocedural flow before the
@@ -1578,6 +1692,15 @@ def translate_to_lean(source_code, target="term", filepath = None, imports_add =
     # inference logic lives in Lean (`TypeInfer.inferModule`). On any failure the AST is unchanged.
     if ast_json.get("node_type") == "Module":
         ast_json = client.infer_types(ast_json)
+        if heap:
+            # Heap-effect propagation runs AFTER class dispatch (keys off `_class_ctor`/`_receiver_class`)
+            # AND after inference, so a param inferred (`_ty`) — not just annotated — to be a container/
+            # object is seen, matching the Lean side's ref-typing. Stamps `_heap_call` on calls to
+            # heap-effectful user functions so they are awaited.
+            annotate_heap_effects(ast_json)
+            # Post-inference (so inferred `_ret_ty` is available): stamp calls whose callee returns a
+            # mutable container, so the caller dereferences the returned object-ref.
+            annotate_container_returning_calls(ast_json)
 
     if ast_json.get("node_type") == "Module":
         body = ast_json.get("body", [])
@@ -1588,9 +1711,14 @@ def translate_to_lean(source_code, target="term", filepath = None, imports_add =
             classes = [s for s in body if isinstance(s, dict) and s.get("node_type") == "ClassDef"]
             # Collect every mutable-container type used anywhere (from inferred `_ty` stamps and
             # annotations), so local list/dict/set variables — not just class fields — get a `Val`
-            # constructor. Inject the prelude when the program has classes OR uses any container.
+            # constructor. Inject the prelude when the program has classes OR uses any container OR
+            # promotes a closure-captured scalar to a cell (`nonlocal n; n += k` allocates `Ref n`,
+            # which needs the `Val` universe even when nothing else touches the heap).
             container_types = _collect_container_annotations(ast_json)
-            if classes or container_types:
+            promotes_cell = any(
+                _body_promotes_variable_cell(fn) for fn in _iter_function_defs(ast_json)
+            )
+            if classes or container_types or promotes_cell:
                 # In `both` mode the prelude renders the exact AND the runnable `'rn` twin of every
                 # struct / `Val` constructor / `Storable` into one `Val` (the prelude is not itself
                 # twinned by `node_passes`, so it must emit both halves in a single pass).

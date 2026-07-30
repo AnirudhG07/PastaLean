@@ -18,7 +18,9 @@ boxing a scalar to `PyAny` here would leave `+ₚ`/`≤` stuck). Container ELEME
 `heapElemTypeSyntax`, which boxes an un-pinnable element to `PyAny`. -/
 partial def heapTypeSyntax (t : TypeInfer.PyType) : PygenM (TSyntax `term) := do
   match t with
-  | .cls n => `(PastaLean.Ref $(mkIdent n.toName))
+  -- In a run-twin, an object type names the `'rn` class (`Counter'rn`), matching the twin's
+  -- constructor/fields and its `Storable Val (Ref Counter'rn)`; exact mode leaves the name as-is.
+  | .cls n => `(PastaLean.Ref $(mkIdent (← suffixIfUserName n).toName))
   | .list e => `(PastaLean.Ref (List $(← heapElemTypeSyntax e)))
   | .set e  => `(PastaLean.Ref (List $(← heapElemTypeSyntax e)))
   | .dict k v => `(PastaLean.Ref (Std.HashMap $(← heapTypeSyntax k) $(← heapElemTypeSyntax v)))
@@ -202,6 +204,26 @@ def selfRecordUpdateDoElem (attr : String) (rhs : TSyntax `term) : PygenM (TSynt
     return ⟨mkNode ``PastaLean.ptrWrite #[lhs.raw, mkAtom "<~", rhs.raw]⟩
   let fields := #[← `(Lean.Parser.Term.structInstField| $attrId:ident := $rhs)]
   `(doElem| $selfId:ident := { $selfId:term with $fields:structInstField,* })
+
+/-- `<recv>.attr = rhs` (or the base of `<recv>.attr op= rhs`) when `recv` is a heap OBJECT reference —
+`self` as a `Ref C` param (`heapSelfRef`) or a variable/param registered to hold a heap object of a
+known class (`heapVarClassOf?`). Emits the `recv ~> attr <~ rhs` pointer-write (built directly like
+`selfRecordUpdateDoElem`, since the `<~` LHS can't be an antiquote). Returns `none` when not a heap
+object ref, so callers fall back to the value-semantics record update. -/
+def heapAttrWriteTargetDoElem? (target : Json) (rhs : TSyntax `term) :
+    PygenM (Option (TSyntax `doElem)) := do
+  unless ← getHeapMode do return none
+  unless jsonNodeType? target == some "Attribute" do return none
+  let .ok recv := target.getObjVal? "value" | return none
+  let .ok attr := target.getObjValAs? String "attr" | return none
+  unless jsonNodeType? recv == some "Name" do return none
+  let .ok recvId := recv.getObjValAs? String "id" | return none
+  let isHeapObj ←
+    if recvId == "self" && (← getHeapSelfRef) then pure true
+    else pure (← heapVarClassOf? recvId.toName).isSome
+  unless isHeapObj do return none
+  let lhs ← `($(mkIdent recvId.toName) ~> $(mkIdent attr.toName):ident)
+  return some ⟨mkNode ``PastaLean.ptrWrite #[lhs.raw, mkAtom "<~", rhs.raw]⟩
 
 /-- The class name of a value expression that produces a heap object, if statically known: a
 constructor call (`_class_ctor` stamp) or a variable already known to hold one (`q = p`). -/
@@ -487,9 +509,18 @@ def assignSyntax : (kind : SyntaxNodeKind) → Json →
             let isTuple := target.getObjValAs? Bool "_tuple_unpack" == .ok true
               || ((jsonNodeType? value == some "Tuple" || jsonNodeType? value == some "Call")
                   && target.getObjValAs? Bool "_list_unpack" != .ok true)
+            -- Under `--heap`, a tuple-unpack of a function returning a tuple-of-containers binds each
+            -- container element to its object-ref (`Ref (List …)`); TypeInfer marks which slots are
+            -- containers, so register those `Name` targets — later `len`/subscript/iterate deref them,
+            -- exactly as a directly-bound container does (§ single-target path below).
+            let containerMask? : Option (Array Bool) :=
+              (target.getObjValAs? (Array Bool) "_unpack_container_mask").toOption
             let mut binds : Array (TSyntax `doElem) := #[bindValueTmp, bindUnpackTmp]
             for i in List.range n do
               let acc ← unpackAccessTerm isTuple unpackTmpIdent i n
+              if ← getHeapMode then
+                if (containerMask?.bind (·[i]?)).getD false && jsonNodeType? elts[i]! == some "Name" then
+                  registerHeapVarContainer (← getCode elts[i]! `ident).getId
               binds := binds.push (← tupleElementAssignDoElem nestedIsTuple elts[i]! acc)
             -- Return the bindings as siblings (a flattened null-node), NOT wrapped in a
             -- nested `do` — wrapping would scope the unpacked names away from following
@@ -539,6 +570,9 @@ def assignSyntax : (kind : SyntaxNodeKind) → Json →
             -- `obj.field = v` for a non-`self` receiver (a local record/node): record-update + reassign,
             -- rather than the invalid `let mut obj.field := v`.
             if jsonNodeType? target == some "Attribute" then
+              -- A heap object-ref receiver (`c.n = v` where `c : Ref C`) writes through the pointer;
+              -- a plain local record does the value-semantics rebuild-and-reassign.
+              if let some w ← heapAttrWriteTargetDoElem? target rhs then return w
               let .ok recv := target.getObjVal? "value" | throwError s!"Attribute missing 'value': {target}"
               let .ok attr := target.getObjValAs? String "attr" | throwError s!"Attribute missing 'attr': {target}"
               return ← attrRecordUpdateDoElem recv attr rhs
@@ -583,9 +617,14 @@ def assignSyntax : (kind : SyntaxNodeKind) → Json →
                   -- value-semantics `_ty` ascription and let Lean infer the ref type from the RHS.
                   let isContainerLit := match jsonNodeType? value with
                     | some "List" | some "Dict" | some "Set" => true | _ => false
-                  -- The RHS is a container ref if it's a literal or aliases another container
-                  -- (`ys = xs`, `xs = self.items`); track it so reads/mutations of the target deref.
-                  let isContainerRhs := isContainerLit || (← heapContainerRef? value).isSome
+                  -- The RHS is a container ref if it's a literal, aliases another container
+                  -- (`ys = xs`, `xs = self.items`), or is a call returning a container (`ys = f()`,
+                  -- handing back the object-ref); track it so reads/mutations of the target deref.
+                  let isContainerRhs ←
+                    if isContainerLit
+                        || (value.getObjValAs? Bool "_returns_container").toOption.getD false then
+                      pure true
+                    else pure (← heapContainerRef? value).isSome
                   if isContainerRhs then registerHeapVarContainer nameIdent.getId
                   if cls?.isSome || isContainerRhs then
                     -- A heap container of closures is the one case the RHS can't self-infer: an empty
@@ -604,7 +643,14 @@ def assignSyntax : (kind : SyntaxNodeKind) → Json →
                 let conflicting := (jsonFieldOption target "_ty").any
                   (fun t => t.getObjValAs? String "id" == .ok "PyAny")
                 let shadow := conflicting && (← hasVar nameIdent.getId) && !(← isMutVar nameIdent.getId)
-                let ty? ← if shadow then pure none else stampedTypeSyntax? target
+                -- Under `--heap`, `t = (xs, ys)` where the elements are container object-refs builds a
+                -- `Ref × Ref`; the value-semantics `_ty` stamp (`List × List`) would mismatch, so drop it
+                -- and let Lean infer the ref product from the RHS.
+                let mut heapTupleOfRefs := false
+                if (← getHeapMode) && jsonNodeType? value == some "Tuple" then
+                  for e in (value.getObjValAs? (Array Json) "elts").toOption.getD #[] do
+                    if (← heapContainerRef? e).isSome then heapTupleOfRefs := true
+                let ty? ← if shadow || heapTupleOfRefs then pure none else stampedTypeSyntax? target
                 let bound ← bindOrAssignLocal nameIdent rhs ty? shadow
                 -- Track whether this name now holds a set, so later `==`/`<=` on it use set semantics
                 -- (order-independent) rather than the list-backed ones.
