@@ -338,6 +338,32 @@ def optMutParamsOf (json : Json) : Array (String × String) :=
     | .ok n, .ok c => some (n, c)
     | _, _ => none
 
+/-- Emit a `let mut p := p` shadow for each parameter the body reassigns (a Lean binder is
+immutable, but Python freely mutates params — `i -= 1`, `n >>= 1`, `a.append(x)`). Registers each as
+a mutable var so later reassignments resolve against the shadow. Shared by the plain monadic emission
+(`functionValueSyntax`) and the contracted Track M/`Id _` emission, so both handle param mutation. -/
+def mutatedParamPrelude (argInfos : Array (TSyntax `ident × Option (TSyntax `term)))
+    (bodyElems : Array Json) (optMutParams : Array (String × String) := #[]) :
+    PygenM (Array (TSyntax `doElem)) := do
+  let mut paramPrelude : Array (TSyntax `doElem) := #[]
+  for (argIdent, _) in argInfos do
+    if bodyElems.any (fun b => jsonMutatesName b argIdent.getId.toString) then
+      addVar argIdent.getId
+      -- The shadow below is a real `let mut`, so record it as mutable: a later type-changing rebind
+      -- (`s = list(s)`) must SSA-rename rather than illegally re-`let mut` the same name.
+      setMutVar argIdent.getId
+      -- A node param the body treats as nullable (`while head; head = head.next`, marked `_mut_opt` by
+      -- TypeInfer) seeds its mut shadow as `Option c` (`some p`), so `Option`-unwrap field access and
+      -- truthiness line up while the param itself stays a plain `c` (callers unaffected).
+      match optMutParams.find? (·.1 == argIdent.getId.toString) with
+      | some (_, cls) =>
+          let clsId := mkIdent (← suffixIfUserName cls).toName
+          paramPrelude := paramPrelude.push
+            (← `(doElem| let mut $argIdent:ident : Option $clsId := some $argIdent))
+      | none =>
+          paramPrelude := paramPrelude.push (← `(doElem| let mut $argIdent:ident := $argIdent))
+  return paramPrelude
+
 /-- Build the Lean value for a Python function body, using a pure term when possible and
 falling back to `do` notation for effectful bodies. This helper is reused for top-level
 definitions, nested local functions, and `Head_FunctionDef` threading.
@@ -365,26 +391,10 @@ def functionValueSyntax (argInfos : Array (TSyntax `ident × Option (TSyntax `te
         | none => `(fun $argIdent ↦ $result)
     pure result
   -- A Lean function parameter is an immutable binder, but Python lets a body reassign or
-  -- augment its parameters (`i -= 1`, `a[k] = v`). For each mutated parameter, register it and
-  -- emit a `let mut p := p` shadow at the top of the (monadic) body, then reassignments resolve
-  -- against the mutable shadow. Pure bodies never mutate, so this prelude is empty for them.
-  let mut paramPrelude : Array (TSyntax `doElem) := #[]
-  for (argIdent, _) in argInfos do
-    if bodyElems.any (fun b => jsonMutatesName b argIdent.getId.toString) then
-      addVar argIdent.getId
-      -- The shadow below is a real `let mut`, so record it as mutable: a later type-changing rebind
-      -- (`s = list(s)`) must SSA-rename rather than illegally re-`let mut` the same name.
-      setMutVar argIdent.getId
-      -- A node param the body treats as nullable (`while head; head = head.next`, marked `_mut_opt` by
-      -- TypeInfer) seeds its mut shadow as `Option c` (`some p`), so `Option`-unwrap field access and
-      -- truthiness line up while the param itself stays a plain `c` (callers unaffected).
-      match optMutParams.find? (·.1 == argIdent.getId.toString) with
-      | some (_, cls) =>
-          let clsId := mkIdent (← suffixIfUserName cls).toName
-          paramPrelude := paramPrelude.push
-            (← `(doElem| let mut $argIdent:ident : Option $clsId := some $argIdent))
-      | none =>
-          paramPrelude := paramPrelude.push (← `(doElem| let mut $argIdent:ident := $argIdent))
+  -- augment its parameters (`i -= 1`, `a[k] = v`). Each mutated parameter gets a `let mut p := p`
+  -- shadow at the top of the (monadic) body, then reassignments resolve against the mutable shadow.
+  -- Pure bodies never mutate, so this prelude is empty for them.
+  let paramPrelude ← mutatedParamPrelude argInfos bodyElems optMutParams
   -- The monad codomain: `PyAny` when the returns disagree (`_box_return`), else a hole for Lean to
   -- infer. Without this an effectful boxed function would keep `_`, and Lean would fix the monad's
   -- type from the first `return` — forcing e.g. `Float`, so a later `return 0` (`ℤ`) fails to match.
@@ -611,8 +621,8 @@ the last component being the full `.2`-chain (Lean tuples are right-nested). `n 
 partial def whileTupleProj (base : TSyntax `term) (idx n : Nat) : PygenM (TSyntax `term) := do
   if n ≤ 1 then return base
   let mut t := base
-  for _ in [0:idx] do t ← `(($t).2)
-  if idx == n - 1 then return t else `(($t).1)
+  for _ in [0:idx] do t ← `($t.2)
+  if idx == n - 1 then return t else `($t.1)
 
 /-- Right-nested tuple `(e₀, e₁, …, e_{k-1})` from `elems` (matching `whileTupleProj`). -/
 def whileNestedTuple (elems : Array (TSyntax `term)) : PygenM (TSyntax `term) := do
@@ -623,9 +633,11 @@ def whileNestedTuple (elems : Array (TSyntax `term)) : PygenM (TSyntax `term) :=
     acc ← `(($e, $acc))
   return acc
 
-/-- `fun s => let v₁ := s.<p₁>; … ; <inner>` — a lambda over the loop state tuple that binds each state
-variable name to its projection, so `inner` (built by `getCode` over the original JSON) refers to the
-state variables by name. `inner` is run with those names registered. -/
+/-- `fun s => let v₁ := s.1; let v₂ := s.2.1; … ; <inner>` — a lambda over the loop state tuple that
+binds each state variable to its projection, so `inner` (built by `getCode` over the original JSON)
+refers to them by name. The `let`-projection form (not a `match` pattern) is deliberate: the verified
+`while` proofs `show` the generated def is defeq to their projection-based body lambdas, and `let v :=
+s.1` reduces there where a `match` matcher would not. `inner` runs with the names registered. -/
 def whileStateLambda (stateVars : Array String) (inner : PygenM (TSyntax `term)) :
     PygenM (TSyntax `term) := withFreshVariables do
   for v in stateVars do addVar v.toName
@@ -711,21 +723,15 @@ def buildWhileFunction (name : String) (json : Json) (sh : WhileShape) :
       (fun e => withPropCondition true (getCode (substResultWith sh.retExpr e) `term))))
   let paramIdents := argInfos.map (·.1)
   let nameLemma ← `(Lean.Parser.Tactic.simpLemma| $nameIdent:term)
-  -- Each `pyWhile_correct` side goal (init `I s₀`, step `I(body) ∧ μ' < μ`, exit `Q`) is a conjunction
-  -- mixing nonlinear (`nlinarith`) and `.toNat`-measure (`omega`) facts, which no single closer handles.
-  -- So: introduce, simp with the lambda β/ζ-reductions, split the conjunction (`and_intros`), then run a
-  -- closer portfolio per leaf. (`intros` covers `I s₀`, which has no binders.)
-  -- `try` guards the simplifiers (a trivial obligation can leave `simp_all`/`and_intros` no-progress,
-  -- which would otherwise error); the final `sorry` degrades an INSUFFICIENT contract (invariants that
-  -- don't entail the step) to a localized `sorry`-warning instead of a hard failure of the whole file.
-  let oblTac ← `(tactic|
-    intros <;> (try simp_all (config := { zetaDelta := true })) <;> (try and_intros) <;>
-      first | omega | nlinarith | positivity | grind | sorry)
+  -- Each `pyWhile_correct` side goal (init `I s₀`, step `I(body) ∧ μ' < μ`, exit `Q`) is left to
+  -- `taste?`, so — like the `for`/pure tracks — the prove-and-replace pipeline runs it in the backend
+  -- and splices the single winning tactic back over each `taste?`, giving a clean one-line proof per
+  -- obligation instead of an inlined closer portfolio.
   let thmCmd ← `(command| @[spec] theorem $(mkIdent (name ++ "_spec").toName) :
       ⦃⌜$pre⌝⦄ $nameIdent $paramIdents* ⦃⇓ $rId => ⌜$post⌝⦄ := by
         mvcgen [$nameLemma]
         · exact PastaLean.pyWhile_correct (I := $iLam) (Q := $qLam) $muLam $cLam $bodyLam $s0
-            (by $oblTac:tactic) (by $oblTac:tactic) (by $oblTac:tactic))
+            (by taste?) (by taste?) (by taste?))
   return #[finalDef, thmCmd]
 
 /-- Build `partial def name : <arg tys → ret> := value` for a member of a mutual group. The
@@ -931,7 +937,15 @@ def funcDefSyntax : (kind : SyntaxNodeKind) → Json →
         -- `return`) emits its ordinary runnable `def` (contracts stripped) plus a `<fn>_spec` theorem.
         if let some (cleanBody, letJsons, hypJsons, conclJson) := contractShape? paramNames bodyArr substantive then
           let argInfos ← functionArgInfos json
-          let valueStx ← functionValueSyntax argInfos cleanBody
+          -- A `float`-annotated contracted body whose `return` mixes `int` and true-division
+          -- (`median`) needs its result ascribed to `ℚ`/`Float` so the `int` branch coerces — same
+          -- `retFloat` reconcile the generic path uses below (Track P doesn't reach it).
+          let annFloat := match (jsonFieldOption json "returns").orElse (fun _ => jsonFieldOption json "_ret_ty") with
+            | some r => annotationMentionsFloat r
+            | none => false
+          let retFloatP := ((json.getObjValAs? Bool "_ret_float" == .ok true) || annFloat) &&
+            ((← getNumericMode) != .exact || json.getObjValAs? Bool "_real_fn" != .ok true)
+          let valueStx ← withRetFloatContext retFloatP <| functionValueSyntax argInfos cleanBody false retFloatP
           let finalDef ← applyPrivacy name (← `(command| def $nameIdent := $valueStx))
           if (← getNumericMode) == .approx then
             return ⟨mkNullNode #[finalDef.raw]⟩
@@ -943,11 +957,10 @@ def funcDefSyntax : (kind : SyntaxNodeKind) → Json →
         -- + `Decreases`). Lowered through `pyWhile` + `pyWhile_correct` (the `while` rule), since core
         -- `while` is the opaque `whileM` mvcgen can't reason about. Exact mode only; the `'rn` twin
         -- keeps a real `while`.
-        if (← getNumericMode) == .exact then
-          if let some sh := whileContractShape? paramNames substantive then
-            let cmds ← buildWhileFunction name json sh
-            return ⟨mkNullNode (cmds.map (·.raw))⟩
-        -- Track M: a monadic contracted function (a `for` loop with `Invariant(...)`). Emit the
+        -- (The legacy `pyWhile` combinator track is retired: `mvcgen` now reasons about a native
+        -- `while` loop directly — `Spec.whileM`/`Spec.forIn` over `Lean.Loop` are `@[spec]` — so a
+        -- `while`-contracted function falls through to Track M below and emits a real `while`.)
+        -- Track M: a monadic contracted function (a `for` OR `while` loop with `Invariant(...)`). Emit
         -- function `Id`-typed (so `mvcgen` sees the `do`) with `Requires`/`Assume` stripped to the
         -- precondition, plus a `<fn>_spec` Hoare-triple theorem driven by `mvcgen … with taste?`.
         -- Exact mode only; the runnable `'rn` twin (approx) falls through to normal emission.
@@ -960,9 +973,20 @@ def funcDefSyntax : (kind : SyntaxNodeKind) → Json →
             -- metavariables in `Spec.throw_Except` for an *uncaught* `throw`; `PyExcept` drags in `IO`
             -- (no mvcgen specs). `ExceptT … Id` avoids all three. A pure body stays `Id _`.
             let usesExc := bodyNeedsExceptionMonad info.cleanBody
-            let valueStx ← withFreshVariables do
+            -- A `float`-annotated body whose `return` is a mixed `int`/true-division ternary needs the
+            -- `retFloat` context so the `IfExp`'s `int` branch coerces to `ℚ` (see `Assign.lean`).
+            let annFloatM := match (jsonFieldOption json "returns").orElse (fun _ => jsonFieldOption json "_ret_ty") with
+              | some r => annotationMentionsFloat r
+              | none => false
+            let retFloatM := ((json.getObjValAs? Bool "_ret_float" == .ok true) || annFloatM) &&
+              json.getObjValAs? Bool "_real_fn" != .ok true
+            let valueStx ← withRetFloatContext retFloatM <| withFreshVariables do
+              -- Shadow any mutated parameter with `let mut p := p` (as the runnable twin does via
+              -- `functionValueSyntax`); without it a contracted `while n: … n >>= 1` reassigns the
+              -- immutable binder `n` and fails to elaborate.
+              let prelude ← mutatedParamPrelude argInfos info.cleanBody (optMutParamsOf json)
               let bodyStxArray ← monadicFunctionBodySyntax info.cleanBody
-              let doStx ← `(do $[$bodyStxArray:doElem]*)
+              let doStx ← `(do $[$prelude:doElem]* $[$bodyStxArray:doElem]*)
               let monadTy ← if usesExc then `(ExceptT PastaLean.PyException Id _) else `(Id _)
               let mut v ← `(($doStx : $monadTy))
               for (argIdent, ty?) in argInfos.reverse do
@@ -994,8 +1018,14 @@ def funcDefSyntax : (kind : SyntaxNodeKind) → Json →
         let boxReturn := json.getObjValAs? Bool "_box_return" == .ok true
         -- A float-returning body gets its result pinned to `ℚ`/`Float`, EXCEPT for an `ℝ`-valued
         -- function (`_real_fn`, incl. transitively via a callee) in exact mode — its float is `ℝ`,
-        -- which a `ℚ` ascription would clash with, so it is left for Lean to infer.
-        let retFloat := (json.getObjValAs? Bool "_ret_float" == .ok true) &&
+        -- which a `ℚ` ascription would clash with, so it is left for Lean to infer. This fires on the
+        -- inferred `_ret_float` stamp AND on an explicit `-> float` annotation: a `float`-annotated body
+        -- whose branches mix `int` and true-division (`median`'s `s[k] if odd else (a+b)/2`) needs the
+        -- `ℚ` ascription so the `int` branch coerces — without it the `if` branches disagree in type.
+        let annFloat := match (jsonFieldOption json "returns").orElse (fun _ => jsonFieldOption json "_ret_ty") with
+          | some r => annotationMentionsFloat r
+          | none => false
+        let retFloat := ((json.getObjValAs? Bool "_ret_float" == .ok true) || annFloat) &&
           ((← getNumericMode) != .exact || json.getObjValAs? Bool "_real_fn" != .ok true)
         let argInfos ← functionArgInfos json
         let effectCmd? ← withBoxReturnContext boxReturn <| withRetFloatContext retFloat

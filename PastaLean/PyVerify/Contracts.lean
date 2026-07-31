@@ -63,6 +63,14 @@ partial def jsonMentionsResult (j : Json) : Bool :=
     | .obj kvs => kvs.toList.any (fun (_, v) => jsonMentionsResult v)
     | _ => false
 
+/-- Does this IR subtree *read* the variable `name` (a `Name` node with that `id`)? -/
+partial def jsonRefsName (j : Json) (name : String) : Bool :=
+  (j.getObjValAs? String "node_type" == .ok "Name" && j.getObjValAs? String "id" == .ok name) ||
+    (match j with
+     | .arr a => a.any (jsonRefsName · name)
+     | .obj kvs => kvs.toList.any (fun (_, v) => jsonRefsName v name)
+     | _ => false)
+
 /-- Replace every `Result()`/`ResultT(...)` call in `j` with `repl`. The replacement is a `Name` node
 (the postcondition's return binder, monadic path) or the returned expression itself (pure path). -/
 partial def substResultWith (repl : Json) (j : Json) : Json :=
@@ -77,6 +85,14 @@ partial def substResultWith (repl : Json) (j : Json) : Json :=
 /-- Replace `Result()`/`ResultT(...)` with a `Name` referencing `retId`, so an `Ensures(Result() >= 1)`
 lowers as `retId >= 1`. -/
 def substResult (retId : String) (j : Json) : Json := substResultWith (nameJson retId) j
+
+/-- Replace every `Name` node with id `name` by `repl` in `j`. -/
+partial def substNameWith (name : String) (repl : Json) (j : Json) : Json :=
+  if j.getObjValAs? String "node_type" == .ok "Name" && j.getObjValAs? String "id" == .ok name then repl
+  else match j with
+    | .arr a => Json.arr (a.map (substNameWith name repl))
+    | .obj kvs => Json.mkObj (kvs.toList.map (fun (k, v) => (k, substNameWith name repl v)))
+    | other => other
 
 /-- Drop `Ensures`/`Assert` markers whose predicate mentions `Result()` from a body. Such a marker is
 verification-only: its content becomes the spec postcondition and `Result()` has NO runtime lowering,
@@ -293,6 +309,23 @@ def monadicContractInfo? (body : Array Json) : Option MonadicContract := Id.run 
             if let .ok rid := v.getObjValAs? String "id" then retName := some rid
       clean := clean.push s
   if !sawContract then return none
+  -- Inline pre-loop SNAPSHOT locals into the postcondition. An `Ensures` may name a local defined
+  -- before the loop (`n = len(nums)`; `orig = x`; `base = a//b+1`) — but the Hoare-triple spec binds
+  -- only the parameters + result, so that name is unbound ("Unknown identifier"). A *snapshot* — a
+  -- top-level `x = e` before the first loop, with `x` assigned nowhere else — has a fixed value, so we
+  -- substitute `x ↦ e` into the `Ensures` (mirroring the pure track's `let`-chain). Each snapshot's
+  -- value is first expanded through earlier snapshots, so the result names only params/constants.
+  let firstLoop := body.findIdx? (fun s => jsonNodeType? s == some "For" || jsonNodeType? s == some "While")
+  let preLoop := match firstLoop with | some i => body.extract 0 i | none => body
+  let mut snaps : Array (String × Json) := #[]
+  for s in preLoop do
+    if jsonNodeType? s == some "Assign" then
+      if let .ok tname := (s.getObjVal? "target").bind (·.getObjValAs? String "id") then
+        if let .ok val := s.getObjVal? "value" then
+          if (body.foldl (fun acc st => acc + (if jsonAssignsName st tname then 1 else 0)) 0) == 1 then
+            let val' := snaps.foldl (fun e (n, rv) => substNameWith n rv e) val
+            snaps := snaps.push (tname, val')
+  ensures := ensures.map (fun e => snaps.foldl (fun x (n, rv) => substNameWith n rv x) e)
   return some { cleanBody := clean, requires, ensures, retName, loops }
 
 /-- A contracted function whose loop is a single straight-line `while` carrying an `Invariant` and a
@@ -375,9 +408,29 @@ def whileContractShape? (paramNames : Array String) (substantive : Array Json) :
       bodyAssigns := bodyAssigns.push s
   let some decreases := decreases? | return none      -- need the variant μ
   if invariants.isEmpty then return none
-  -- State vars: those assigned in the loop, each of which must have a pre-loop init. Ordered by init.
-  let stateVars := initOrder.filter (assignedInLoop.contains ·)
-  if stateVars.isEmpty || assignedInLoop.any (!initVals.contains ·) then return none
+  -- Classify each loop-assigned var: CARRIED state vs a per-iteration TEMPORARY. A var is carried if it
+  -- is read in the guard/measure/invariants/return (`liveOut`), OR read in the body before its own first
+  -- write (its previous-iteration value is live). A temporary — written before it is read and dead after
+  -- the loop (e.g. `mid = (lo+hi)//2`) — is NOT threaded through the state; it stays a plain `let` in the
+  -- body lambda, shrinking the state tuple. Only carried vars need a pre-loop init.
+  let liveOut := fun (v : String) =>
+    jsonRefsName test v || jsonRefsName decreases v ||
+      invariants.any (jsonRefsName · v) || jsonRefsName retExpr v
+  let mut carried : Array String := #[]
+  let mut written : Array String := #[]
+  for a in bodyAssigns do
+    let val := (a.getObjVal? "value").toOption.getD Json.null
+    let tgt := (a.getObjVal? "target").toOption.bind (·.getObjValAs? String "id" |>.toOption)
+    let isAug := jsonNodeType? a == some "AugAssign"      -- `v op= e` reads `v`
+    for v in assignedInLoop do
+      if (jsonRefsName val v || (isAug && tgt == some v)) && !written.contains v && !carried.contains v then
+        carried := carried.push v
+    if let some t := tgt then if !written.contains t then written := written.push t
+  for v in assignedInLoop do
+    if liveOut v && !carried.contains v then carried := carried.push v
+  -- State vars = carried, ordered by pre-loop init; each carried var must have a pre-loop init.
+  let stateVars := initOrder.filter (carried.contains ·)
+  if stateVars.isEmpty || carried.any (!initVals.contains ·) then return none
   let inits := stateVars.map (initVals.get! ·)
   return some { requires, ensures, retExpr, stateVars, inits, test, invariants, decreases, bodyAssigns }
 
@@ -444,10 +497,14 @@ def buildMonadicSpec (thmName fnName : TSyntax `ident) (paramIdents : Array (TSy
   -- `c₁; c₂; …` sequence (one closer per goal, in order) — the prove-and-replace splice drops that in
   -- verbatim. If `mvcgen` already discharged every VC, `taste?` runs on no goals and records nothing,
   -- and the splice prunes the dangling `taste?` line, leaving a clean `mvcgen [...]`.
+  -- `try`-guard `mvcgen`: with an `invariants` clause it HARD-ERRORS when the function has a `for`
+  -- loop that carries no `Invariant(...)` (so no bullet) — "Lacking definitions for the following
+  -- invariants". `try` rolls that back to the raw goal, which the trailing `taste? ; all_goals sorry`
+  -- degrades to a compiling `sorry`. Transparent when `mvcgen` succeeds.
   let mv ← if bullets.isEmpty then
       `(tactic| mvcgen [$lemmas,*])
     else
-      `(tactic| mvcgen [$lemmas,*] invariants $[· $bullets:term]*)
+      `(tactic| try mvcgen [$lemmas,*] invariants $[· $bullets:term]*)
 
   -- POSTCONDITION. With no `Result()`-bearing `Ensures` the postcondition stays `True` (any plain
   -- `Ensures`/`Assert` is proved as an in-body checkpoint instead). When the user wrote an
@@ -455,11 +512,16 @@ def buildMonadicSpec (thmName fnName : TSyntax `ident) (paramIdents : Array (TSy
   -- value), so we lift them into the spec *statement* (Nagini-style, modular `@[spec]` reuse): bind the
   -- returned variable as the result, lower each `Ensures` with `Result()` rewritten to that binder, and
   -- tag the theorem `@[spec]`.
+  -- A trailing `all_goals sorry` catch-all: the prove-and-replace splice records closers against the
+  -- goals `taste?` saw in the warm backend, but the final file re-elaborates in a fresh env where
+  -- `mvcgen` can leave a DIFFERENT goal count — so a spliced single `sorry` under-closes. `all_goals
+  -- sorry` mops up any residual; on a fully-closed proof it runs on zero goals (no-op, axiom-clean).
   if info.ensures.isEmpty then
     `(command| theorem $thmName :
         ⦃⌜$pre⌝⦄ $fnName $paramIdents* ⦃⇓ _ => ⌜True⌝⦄ := by
           $mv:tactic
-          taste?)
+          taste?
+          all_goals sorry)
   else
     let retId := info.retName.getD "result"
     let retBinder := mkIdent retId.toName
@@ -470,6 +532,7 @@ def buildMonadicSpec (thmName fnName : TSyntax `ident) (paramIdents : Array (TSy
     `(command| @[spec] theorem $thmName :
         ⦃⌜$pre⌝⦄ $fnName $paramIdents* ⦃⇓ $retBinder => ⌜$post⌝⦄ := by
           $mv:tactic
-          taste?)
+          taste?
+          all_goals sorry)
 
 end PastaLean
