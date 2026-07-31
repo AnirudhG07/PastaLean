@@ -1,0 +1,13 @@
+{
+  "problem": "minimum-deletions-to-make-array-divisible",
+  "module": "MinimumDeletionsToMakeArrayDivisible",
+  "method": "minOperations",
+  "params": [
+    "nums",
+    "numsDivide"
+  ],
+  "difficulty": "Hard",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 158
+}

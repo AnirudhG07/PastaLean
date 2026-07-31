@@ -1,0 +1,12 @@
+{
+  "problem": "final-prices-with-a-special-discount-in-a-shop",
+  "module": "FinalPricesWithASpecialDiscountInAShop",
+  "method": "finalPrices",
+  "params": [
+    "prices"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 117
+}

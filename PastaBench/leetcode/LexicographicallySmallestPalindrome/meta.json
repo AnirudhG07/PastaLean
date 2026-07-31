@@ -1,0 +1,12 @@
+{
+  "problem": "lexicographically-smallest-palindrome",
+  "module": "LexicographicallySmallestPalindrome",
+  "method": "makeSmallestPalindrome",
+  "params": [
+    "s"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 216
+}

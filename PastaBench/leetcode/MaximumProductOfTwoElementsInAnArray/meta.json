@@ -1,0 +1,12 @@
+{
+  "problem": "maximum-product-of-two-elements-in-an-array",
+  "module": "MaximumProductOfTwoElementsInAnArray",
+  "method": "maxProduct",
+  "params": [
+    "nums"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 96
+}

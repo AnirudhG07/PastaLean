@@ -1,0 +1,12 @@
+{
+  "problem": "maximum-length-substring-with-two-occurrences",
+  "module": "MaximumLengthSubstringWithTwoOccurrences",
+  "method": "maximumLengthSubstring",
+  "params": [
+    "s"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 78
+}

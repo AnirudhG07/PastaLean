@@ -1,0 +1,12 @@
+{
+  "problem": "sort-vowels-in-a-string",
+  "module": "SortVowelsInAString",
+  "method": "sortVowels",
+  "params": [
+    "s"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 150
+}

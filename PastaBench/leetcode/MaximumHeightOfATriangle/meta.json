@@ -1,0 +1,13 @@
+{
+  "problem": "maximum-height-of-a-triangle",
+  "module": "MaximumHeightOfATriangle",
+  "method": "maxHeightOfTriangle",
+  "params": [
+    "red",
+    "blue"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 67
+}

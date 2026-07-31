@@ -1,0 +1,12 @@
+{
+  "problem": "count-alternating-subarrays",
+  "module": "CountAlternatingSubarrays",
+  "method": "countAlternatingSubarrays",
+  "params": [
+    "nums"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 110
+}

@@ -1,0 +1,13 @@
+{
+  "problem": "find-the-losers-of-the-circular-game",
+  "module": "FindTheLosersOfTheCircularGame",
+  "method": "circularGameLosers",
+  "params": [
+    "n",
+    "k"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 73
+}

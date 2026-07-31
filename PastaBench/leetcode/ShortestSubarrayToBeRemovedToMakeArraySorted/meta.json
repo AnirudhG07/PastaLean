@@ -1,0 +1,12 @@
+{
+  "problem": "shortest-subarray-to-be-removed-to-make-array-sorted",
+  "module": "ShortestSubarrayToBeRemovedToMakeArraySorted",
+  "method": "findLengthOfShortestSubarray",
+  "params": [
+    "arr"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 189
+}

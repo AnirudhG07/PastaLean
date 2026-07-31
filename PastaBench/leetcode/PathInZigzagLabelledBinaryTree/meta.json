@@ -1,0 +1,12 @@
+{
+  "problem": "path-in-zigzag-labelled-binary-tree",
+  "module": "PathInZigzagLabelledBinaryTree",
+  "method": "pathInZigZagTree",
+  "params": [
+    "label"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 78
+}

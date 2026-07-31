@@ -1,5 +1,4 @@
 import PastaBench.leetcode.SmallestEvenMultiple.Generated
-import PastaBench.Support
 
 /-!
 # smallest-even-multiple — hand-written proofs  (Easy, bucket `term`)
@@ -16,14 +15,15 @@ namespace PastaBench.leetcode.SmallestEvenMultiple
 open PastaLean PastaBench
 
 /-- Python's floored `%` detects evenness just like the mathematical one. -/
-theorem pyMod_two_eq_zero_iff (n : Int) : pyMod n 2 = 0 ↔ 2 ∣ n := by
+theorem pyMod_two_eq_zero_iff (n : Int) : n %ₚ (2 : Int) = 0 ↔ 2 ∣ n := by
+  show pyMod n 2 = 0 ↔ 2 ∣ n
   unfold pyMod; simp; omega
 
 /-- The returned value is even. -/
 theorem even_result (n : Int) : 2 ∣ smallestEvenMultiple n := by
   simp only [smallestEvenMultiple]
   split <;> rename_i h
-  · exact (pyMod_two_eq_zero_iff n).mp (by simpa using h)
+  · exact (pyMod_two_eq_zero_iff n).mp h
   · exact ⟨n, by simp; ring⟩
 
 /-- The returned value is a multiple of `n`. -/
@@ -41,7 +41,7 @@ theorem le_of_common_multiple (n m : Int) (_hn : 0 < n) (hm : 0 < m)
   split <;> rename_i h
   · exact Int.le_of_dvd hm hnm
   · -- `n` is odd. Then the cofactor `k` in `m = n * k` must be even, so `2 * n ∣ m`.
-    have hodd : ¬ (2 ∣ n) := fun hd => h (by simp [(pyMod_two_eq_zero_iff n).mpr hd])
+    have hodd : ¬ (2 ∣ n) := fun hd => h ((pyMod_two_eq_zero_iff n).mpr hd)
     obtain ⟨a, ha⟩ : Odd n := (Int.not_even_iff_odd).mp fun he => hodd he.two_dvd
     obtain ⟨k, hk⟩ := hnm
     obtain ⟨j, hj⟩ : Even k := by

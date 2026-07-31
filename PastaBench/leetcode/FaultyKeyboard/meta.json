@@ -1,0 +1,12 @@
+{
+  "problem": "faulty-keyboard",
+  "module": "FaultyKeyboard",
+  "method": "finalString",
+  "params": [
+    "s"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 171
+}

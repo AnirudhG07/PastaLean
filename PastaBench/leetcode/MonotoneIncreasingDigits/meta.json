@@ -1,0 +1,12 @@
+{
+  "problem": "monotone-increasing-digits",
+  "module": "MonotoneIncreasingDigits",
+  "method": "monotoneIncreasingDigits",
+  "params": [
+    "n"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 111
+}

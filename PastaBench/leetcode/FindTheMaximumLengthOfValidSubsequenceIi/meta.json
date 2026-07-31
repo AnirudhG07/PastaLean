@@ -1,0 +1,13 @@
+{
+  "problem": "find-the-maximum-length-of-valid-subsequence-ii",
+  "module": "FindTheMaximumLengthOfValidSubsequenceIi",
+  "method": "maximumLength",
+  "params": [
+    "nums",
+    "k"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 133
+}

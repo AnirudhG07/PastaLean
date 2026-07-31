@@ -1,0 +1,13 @@
+{
+  "problem": "length-of-the-longest-valid-substring",
+  "module": "LengthOfTheLongestValidSubstring",
+  "method": "longestValidSubstring",
+  "params": [
+    "word",
+    "forbidden"
+  ],
+  "difficulty": "Hard",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 76
+}

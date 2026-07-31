@@ -1,0 +1,12 @@
+{
+  "problem": "minimum-operations-to-make-binary-array-elements-equal-to-one-ii",
+  "module": "MinimumOperationsToMakeBinaryArrayElementsEqualToOneIi",
+  "method": "minOperations",
+  "params": [
+    "nums"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 68
+}

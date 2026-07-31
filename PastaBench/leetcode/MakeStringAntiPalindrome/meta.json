@@ -1,0 +1,12 @@
+{
+  "problem": "make-string-anti-palindrome",
+  "module": "MakeStringAntiPalindrome",
+  "method": "makeAntiPalindrome",
+  "params": [
+    "s"
+  ],
+  "difficulty": "Hard",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 54
+}

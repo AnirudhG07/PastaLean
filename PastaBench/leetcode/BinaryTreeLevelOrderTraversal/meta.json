@@ -1,0 +1,12 @@
+{
+  "problem": "binary-tree-level-order-traversal",
+  "module": "BinaryTreeLevelOrderTraversal",
+  "method": "levelOrder",
+  "params": [
+    "root"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "class",
+  "n_tests": 67
+}

@@ -1,0 +1,13 @@
+{
+  "problem": "shortest-subarray-with-sum-at-least-k",
+  "module": "ShortestSubarrayWithSumAtLeastK",
+  "method": "shortestSubarray",
+  "params": [
+    "nums",
+    "k"
+  ],
+  "difficulty": "Hard",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 127
+}

@@ -1,0 +1,14 @@
+{
+  "problem": "maximum-value-at-a-given-index-in-a-bounded-array",
+  "module": "MaximumValueAtAGivenIndexInABoundedArray",
+  "method": "maxValue",
+  "params": [
+    "n",
+    "index",
+    "maxSum"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 92
+}

@@ -1,0 +1,12 @@
+{
+  "problem": "longest-increasing-subsequence",
+  "module": "LongestIncreasingSubsequence",
+  "method": "lengthOfLIS",
+  "params": [
+    "nums"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 134
+}

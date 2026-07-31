@@ -1,0 +1,12 @@
+{
+  "problem": "course-schedule-iii",
+  "module": "CourseScheduleIii",
+  "method": "scheduleCourse",
+  "params": [
+    "courses"
+  ],
+  "difficulty": "Hard",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 130
+}

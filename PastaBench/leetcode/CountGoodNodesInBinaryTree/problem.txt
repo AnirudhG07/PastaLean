@@ -1,0 +1,40 @@
+Given a binary tree root, a node X in the tree is named good if in the path from root to X there are no nodes with a value greater than X.\r
+\r
+Return the number of good nodes in the binary tree.\r
+\r
+ \r
+Example 1:\r
+\r
+\r
+\r
+\r
+Input: root = [3,1,4,3,null,1,5]\r
+Output: 4\r
+Explanation: Nodes in blue are good.\r
+Root Node (3) is always a good node.\r
+Node 4 -> (3,4) is the maximum value in the path starting from the root.\r
+Node 5 -> (3,4,5) is the maximum value in the path\r
+Node 3 -> (3,1,3) is the maximum value in the path.\r
+\r
+Example 2:\r
+\r
+\r
+\r
+\r
+Input: root = [3,3,null,4,2]\r
+Output: 3\r
+Explanation: Node 2 -> (3, 3, 2) is not good, because "3" is higher than it.\r
+\r
+Example 3:\r
+\r
+\r
+Input: root = [1]\r
+Output: 1\r
+Explanation: Root is considered as good.\r
+\r
+ \r
+Constraints:\r
+\r
+\r
+	The number of nodes in the binary tree is in the range [1, 10^5].\r
+	Each node's value is between [-10^4, 10^4].\r

@@ -1,0 +1,12 @@
+{
+  "problem": "asteroid-collision",
+  "module": "AsteroidCollision",
+  "method": "asteroidCollision",
+  "params": [
+    "asteroids"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 123
+}

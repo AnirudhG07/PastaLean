@@ -1,0 +1,12 @@
+{
+  "problem": "sqrtx",
+  "module": "Sqrtx",
+  "method": "mySqrt",
+  "params": [
+    "x"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 67
+}

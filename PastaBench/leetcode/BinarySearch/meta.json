@@ -1,0 +1,13 @@
+{
+  "problem": "binary-search",
+  "module": "BinarySearch",
+  "method": "search",
+  "params": [
+    "nums",
+    "target"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 116
+}

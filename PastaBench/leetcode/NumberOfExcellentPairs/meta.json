@@ -1,0 +1,13 @@
+{
+  "problem": "number-of-excellent-pairs",
+  "module": "NumberOfExcellentPairs",
+  "method": "countExcellentPairs",
+  "params": [
+    "nums",
+    "k"
+  ],
+  "difficulty": "Hard",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 115
+}

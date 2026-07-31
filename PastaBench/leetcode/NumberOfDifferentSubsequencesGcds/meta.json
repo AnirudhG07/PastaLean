@@ -1,0 +1,12 @@
+{
+  "problem": "number-of-different-subsequences-gcds",
+  "module": "NumberOfDifferentSubsequencesGcds",
+  "method": "countDifferentSubsequenceGCDs",
+  "params": [
+    "nums"
+  ],
+  "difficulty": "Hard",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 103
+}

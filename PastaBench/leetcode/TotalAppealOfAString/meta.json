@@ -1,0 +1,12 @@
+{
+  "problem": "total-appeal-of-a-string",
+  "module": "TotalAppealOfAString",
+  "method": "appealSum",
+  "params": [
+    "s"
+  ],
+  "difficulty": "Hard",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 69
+}

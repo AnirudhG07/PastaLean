@@ -1,0 +1,13 @@
+{
+  "problem": "decode-the-slanted-ciphertext",
+  "module": "DecodeTheSlantedCiphertext",
+  "method": "decodeCiphertext",
+  "params": [
+    "encodedText",
+    "rows"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 112
+}

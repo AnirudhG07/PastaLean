@@ -1,0 +1,13 @@
+{
+  "problem": "counting-words-with-a-given-prefix",
+  "module": "CountingWordsWithAGivenPrefix",
+  "method": "prefixCount",
+  "params": [
+    "words",
+    "pref"
+  ],
+  "difficulty": "Easy",
+  "bucket": "term",
+  "feature": "term",
+  "n_tests": 153
+}

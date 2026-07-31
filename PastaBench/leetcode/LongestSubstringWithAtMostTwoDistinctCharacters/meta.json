@@ -1,0 +1,12 @@
+{
+  "problem": "longest-substring-with-at-most-two-distinct-characters",
+  "module": "LongestSubstringWithAtMostTwoDistinctCharacters",
+  "method": "lengthOfLongestSubstringTwoDistinct",
+  "params": [
+    "s"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 80
+}

@@ -118,7 +118,11 @@ bare Lean term and is provable directly.
 ## Workflow
 
 ```bash
-# choose the problems and record the selection            (rarely — it defines the benchmark)
+# CONTRACT-GATED selection: pick the 300 by whether gemini can state a non-trivial provable
+# property that compiles — not just static heuristics. Defines the benchmark; resumable.
+python3 PastaBench/pastabench.py curate --provider gemini --pool-factor 2.5
+
+# (legacy) choose by static heuristics only — test count + Lean size, no contract gate
 python3 PastaBench/pastabench.py select --dataset cp_harness/dataset_leetcode
 
 # create/refresh the per-problem directories from manifest.json
@@ -140,6 +144,30 @@ lake build PastaBench
 
 `materialize` preserves any `Proofs.lean` that already exists. `--force-proofs` overwrites them
 and is the one destructive flag here.
+
+### `curate` — choosing the 300 by *provability*, not just size
+
+`select` picks the 300 from static heuristics (well-tested, small Lean); it doesn't check that a
+problem yields anything worth proving. `curate` does — it is the pipeline that defines the fixed 300:
+
+1. **Headroom pool.** `_pick(rows, scale=pool_factor)` takes `pool_factor ×` each quota (default 2×),
+   so ~600 stratified candidates enter the gate and ~300 survive it.
+2. **Contract gate** (LLM, parallel, resumable). Runs gemini's `--contracts` pass on each candidate's
+   `solution.py`. A candidate passes only if the rewrite parses, drops no original definition, and
+   states **≥ `--min-ensures` *non-trivial* `Ensures`** — a postcondition that mentions `Result()` and
+   is a real formula, not a vacuous bound. `substantive_ensures_count` rejects `Ensures(Result() >= 0)`
+   but keeps `Ensures(2 * Result() == n * (n + 1))` or
+   `Ensures(Result() == inorderTraversal(root.left) + [root.val] + inorderTraversal(root.right))`.
+3. **Compile gate** (Lean, serial, resumable). Translates the contracted source and compile-checks the
+   emitted Lean — "PastaLean parses the contracts, states the theorem, and it elaborates with its
+   best-effort proof." A `pyUnsupported` degrade counts as a fail. Skip with `--skip-compile` for a
+   fast contracts-only screen.
+4. **Final pick.** Re-runs the *same* stratification (`_pick`, `scale=1`) over the survivors → the fixed
+   300, then `materialize`s them and copies the gate-passing contracts in as `solution_contracts.py`.
+
+Everything caches in `_curate/gate.json` (git-ignored), so an interrupted or `--limit`-ed run resumes
+for free. If fewer than 300 survive, raise `--pool-factor` and re-run — cached verdicts are reused.
+After `curate`, run `regen` then `lake build PastaBench`.
 
 ### Contracts: `solution.py` vs `solution_contracts.py`
 

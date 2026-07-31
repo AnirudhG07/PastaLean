@@ -1,0 +1,13 @@
+{
+  "problem": "paint-fence",
+  "module": "PaintFence",
+  "method": "numWays",
+  "params": [
+    "n",
+    "k"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 103
+}

@@ -1,0 +1,12 @@
+{
+  "problem": "steps-to-make-array-non-decreasing",
+  "module": "StepsToMakeArrayNonDecreasing",
+  "method": "totalSteps",
+  "params": [
+    "nums"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 129
+}

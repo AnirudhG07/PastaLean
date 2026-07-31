@@ -1,0 +1,12 @@
+{
+  "problem": "find-the-k-th-lucky-number",
+  "module": "FindTheKThLuckyNumber",
+  "method": "kthLuckyNumber",
+  "params": [
+    "k"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 111
+}

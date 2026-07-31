@@ -1,0 +1,14 @@
+{
+  "problem": "count-of-range-sum",
+  "module": "CountOfRangeSum",
+  "method": "countRangeSum",
+  "params": [
+    "nums",
+    "lower",
+    "upper"
+  ],
+  "difficulty": "Hard",
+  "bucket": "loop",
+  "feature": "class",
+  "n_tests": 107
+}

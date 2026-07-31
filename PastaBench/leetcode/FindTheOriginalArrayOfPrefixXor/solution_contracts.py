@@ -17,7 +17,6 @@ from contracts import *
 
 
 def findArray(pref: List[int]) -> List[int]:
-    Requires(all(isinstance(x, int) for x in pref))
     Ensures(len(Result()) == len(pref))
     Ensures(all(reduce(xor, Result()[: i + 1], 0) == pref[i] for i in range(len(pref))))
     return [a ^ b for a, b in pairwise([0] + pref)]

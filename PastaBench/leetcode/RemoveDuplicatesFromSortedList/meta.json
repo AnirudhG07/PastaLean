@@ -1,0 +1,12 @@
+{
+  "problem": "remove-duplicates-from-sorted-list",
+  "module": "RemoveDuplicatesFromSortedList",
+  "method": "deleteDuplicates",
+  "params": [
+    "head"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "class",
+  "n_tests": 111
+}

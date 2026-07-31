@@ -1,0 +1,12 @@
+{
+  "problem": "last-substring-in-lexicographical-order",
+  "module": "LastSubstringInLexicographicalOrder",
+  "method": "lastSubstring",
+  "params": [
+    "s"
+  ],
+  "difficulty": "Hard",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 80
+}

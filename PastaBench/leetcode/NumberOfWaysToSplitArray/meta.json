@@ -1,0 +1,12 @@
+{
+  "problem": "number-of-ways-to-split-array",
+  "module": "NumberOfWaysToSplitArray",
+  "method": "waysToSplitArray",
+  "params": [
+    "nums"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 105
+}

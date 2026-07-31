@@ -1,3 +1,11 @@
+from typing import *
+from functools import *
+from collections import *
+from itertools import *
+from heapq import *
+from bisect import *
+from operator import *
+from math import *
 from contracts import *
 
 def maximumBeauty(nums: List[int], k: int) -> int:

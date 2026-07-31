@@ -1,0 +1,12 @@
+{
+  "problem": "find-the-closest-palindrome",
+  "module": "FindTheClosestPalindrome",
+  "method": "nearestPalindromic",
+  "params": [
+    "n"
+  ],
+  "difficulty": "Hard",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 114
+}

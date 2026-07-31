@@ -1,0 +1,13 @@
+{
+  "problem": "smallest-missing-non-negative-integer-after-operations",
+  "module": "SmallestMissingNonNegativeIntegerAfterOperations",
+  "method": "findSmallestInteger",
+  "params": [
+    "nums",
+    "value"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 133
+}

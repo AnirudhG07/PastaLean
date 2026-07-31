@@ -1,0 +1,13 @@
+{
+  "problem": "count-prefixes-of-a-given-string",
+  "module": "CountPrefixesOfAGivenString",
+  "method": "countPrefixes",
+  "params": [
+    "words",
+    "s"
+  ],
+  "difficulty": "Easy",
+  "bucket": "term",
+  "feature": "term",
+  "n_tests": 146
+}

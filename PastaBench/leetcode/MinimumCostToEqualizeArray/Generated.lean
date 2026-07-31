@@ -18,58 +18,58 @@ set_option maxHeartbeats 0
 
 namespace PastaBench.leetcode.MinimumCostToEqualizeArray
 
-private def _minCostToEqualizeArray_getMinCost := fun (target : Int) ↦ fun (cost1 : Int) ↦ fun (cost2 : Int) ↦
+private def _minCostToEqualizeArray'getMinCost := fun (target : Int) ↦ fun (cost1 : Int) ↦ fun (cost2 : Int) ↦
   fun (n : Int) ↦ fun (minNum : Int) ↦ fun (summ : Int) ↦
   /-
   Returns the minimum cost to make all numbers equal to `target`.
   -/
-  let maxGap := target -ₚ minNum
-  let totalGap := target *ₚ n -ₚ summ
-  let pairs := PastaLean.pyMin [PastaLean.pyFloorDiv totalGap (2 : Int), totalGap -ₚ maxGap]
+  let maxGap := (target -ₚ minNum : Int)
+  let totalGap := (target *ₚ n -ₚ summ : Int)
+  let pairs := (PastaLean.pyMin [PastaLean.pyFloorDiv totalGap (2 : Int), totalGap -ₚ maxGap] : Int)
   cost1 *ₚ (totalGap -ₚ (2 : Int) *ₚ pairs) +ₚ cost2 *ₚ pairs
 
-attribute [simp, taste_ingr] _minCostToEqualizeArray_getMinCost
+attribute [simp, taste_ingr] _minCostToEqualizeArray'getMinCost
 
 def minCostToEqualizeArray := fun (nums : List Int) ↦ fun (cost1 : Int) ↦ fun (cost2 : Int) ↦
   let MOD := (1000000007 : Int)
-  let n := PastaLean.pyLen nums
-  let minNum := PastaLean.pyMin nums
-  let maxNum := PastaLean.pyMax nums
-  let summ := PastaLean.pySum nums
-  if decide (cost1 *ₚ (2 : Int) ≤ cost2) || decide (n < (3 : Int)) then
-    let totalGap := maxNum *ₚ n -ₚ summ
+  let n := (PastaLean.pyLen nums : Int)
+  let minNum := (PastaLean.pyMin nums : Int)
+  let maxNum := (PastaLean.pyMax nums : Int)
+  let summ := (PastaLean.pySum nums : Int)
+  if cost1 *ₚ (2 : Int) ≤ cost2 ∨ n < (3 : Int) then
+    let totalGap := (maxNum *ₚ n -ₚ summ : Int)
     cost1 *ₚ totalGap %ₚ MOD
   else
     PastaLean.pyMin
         ((PastaLean.pyRange ((2 : Int) *ₚ maxNum) maxNum).map fun target =>
-          _minCostToEqualizeArray_getMinCost target cost1 cost2 n minNum summ) %ₚ
+          _minCostToEqualizeArray'getMinCost target cost1 cost2 n minNum summ) %ₚ
       MOD
 
 attribute [simp, taste_ingr] minCostToEqualizeArray
 
-private def _minCostToEqualizeArray_getMinCost'rn := fun (target : Int) ↦ fun (cost1 : Int) ↦ fun (cost2 : Int) ↦
+private def _minCostToEqualizeArray'getMinCost'rn := fun (target : Int) ↦ fun (cost1 : Int) ↦ fun (cost2 : Int) ↦
   fun (n : Int) ↦ fun (minNum : Int) ↦ fun (summ : Int) ↦
   /-
   Returns the minimum cost to make all numbers equal to `target`.
   -/
-  let maxGap := target -ₚ minNum
-  let totalGap := target *ₚ n -ₚ summ
-  let pairs := PastaLean.pyMin [PastaLean.pyFloorDiv totalGap (2 : Int), totalGap -ₚ maxGap]
+  let maxGap := (target -ₚ minNum : Int)
+  let totalGap := (target *ₚ n -ₚ summ : Int)
+  let pairs := (PastaLean.pyMin [PastaLean.pyFloorDiv totalGap (2 : Int), totalGap -ₚ maxGap] : Int)
   cost1 *ₚ (totalGap -ₚ (2 : Int) *ₚ pairs) +ₚ cost2 *ₚ pairs
 
 def minCostToEqualizeArray'rn := fun (nums : List Int) ↦ fun (cost1 : Int) ↦ fun (cost2 : Int) ↦
   let MOD := (1000000007 : Int)
-  let n := PastaLean.pyLen nums
-  let minNum := PastaLean.pyMin nums
-  let maxNum := PastaLean.pyMax nums
-  let summ := PastaLean.pySum nums
+  let n := (PastaLean.pyLen nums : Int)
+  let minNum := (PastaLean.pyMin nums : Int)
+  let maxNum := (PastaLean.pyMax nums : Int)
+  let summ := (PastaLean.pySum nums : Int)
   if decide (cost1 *ₚ (2 : Int) ≤ cost2) || decide (n < (3 : Int)) then
-    let totalGap := maxNum *ₚ n -ₚ summ
+    let totalGap := (maxNum *ₚ n -ₚ summ : Int)
     cost1 *ₚ totalGap %ₚ MOD
   else
     PastaLean.pyMin
         ((PastaLean.pyRange ((2 : Int) *ₚ maxNum) maxNum).map fun target =>
-          _minCostToEqualizeArray_getMinCost'rn target cost1 cost2 n minNum summ) %ₚ
+          _minCostToEqualizeArray'getMinCost'rn target cost1 cost2 n minNum summ) %ₚ
       MOD
 
 end PastaBench.leetcode.MinimumCostToEqualizeArray

@@ -1,0 +1,15 @@
+{
+  "problem": "ipo",
+  "module": "Ipo",
+  "method": "findMaximizedCapital",
+  "params": [
+    "k",
+    "w",
+    "profits",
+    "capital"
+  ],
+  "difficulty": "Hard",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 133
+}

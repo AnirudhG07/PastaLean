@@ -1,0 +1,13 @@
+{
+  "problem": "sliding-window-maximum",
+  "module": "SlidingWindowMaximum",
+  "method": "maxSlidingWindow",
+  "params": [
+    "nums",
+    "k"
+  ],
+  "difficulty": "Hard",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 104
+}

@@ -1,0 +1,12 @@
+{
+  "problem": "number-of-times-binary-string-is-prefix-aligned",
+  "module": "NumberOfTimesBinaryStringIsPrefixAligned",
+  "method": "numTimesAllBlue",
+  "params": [
+    "flips"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 91
+}

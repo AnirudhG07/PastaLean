@@ -1,0 +1,12 @@
+{
+  "problem": "remove-palindromic-subsequences",
+  "module": "RemovePalindromicSubsequences",
+  "method": "removePalindromeSub",
+  "params": [
+    "s"
+  ],
+  "difficulty": "Easy",
+  "bucket": "term",
+  "feature": "term",
+  "n_tests": 172
+}

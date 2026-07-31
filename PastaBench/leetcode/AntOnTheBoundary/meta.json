@@ -1,0 +1,12 @@
+{
+  "problem": "ant-on-the-boundary",
+  "module": "AntOnTheBoundary",
+  "method": "returnToBoundaryCount",
+  "params": [
+    "nums"
+  ],
+  "difficulty": "Easy",
+  "bucket": "term",
+  "feature": "term",
+  "n_tests": 123
+}

@@ -1,0 +1,12 @@
+{
+  "problem": "jump-game-iv",
+  "module": "JumpGameIv",
+  "method": "minJumps",
+  "params": [
+    "arr"
+  ],
+  "difficulty": "Hard",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 60
+}

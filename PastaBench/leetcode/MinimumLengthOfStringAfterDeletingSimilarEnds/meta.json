@@ -1,0 +1,12 @@
+{
+  "problem": "minimum-length-of-string-after-deleting-similar-ends",
+  "module": "MinimumLengthOfStringAfterDeletingSimilarEnds",
+  "method": "minimumLength",
+  "params": [
+    "s"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 170
+}

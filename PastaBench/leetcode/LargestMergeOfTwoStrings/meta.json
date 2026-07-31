@@ -1,0 +1,13 @@
+{
+  "problem": "largest-merge-of-two-strings",
+  "module": "LargestMergeOfTwoStrings",
+  "method": "largestMerge",
+  "params": [
+    "word1",
+    "word2"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 138
+}

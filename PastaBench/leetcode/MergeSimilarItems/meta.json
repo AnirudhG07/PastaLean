@@ -1,0 +1,13 @@
+{
+  "problem": "merge-similar-items",
+  "module": "MergeSimilarItems",
+  "method": "mergeSimilarItems",
+  "params": [
+    "items1",
+    "items2"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 100
+}

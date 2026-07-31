@@ -1,0 +1,12 @@
+{
+  "problem": "dota2-senate",
+  "module": "Dota2Senate",
+  "method": "predictPartyVictory",
+  "params": [
+    "senate"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 177
+}

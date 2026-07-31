@@ -1,0 +1,12 @@
+{
+  "problem": "odd-even-linked-list",
+  "module": "OddEvenLinkedList",
+  "method": "oddEvenList",
+  "params": [
+    "head"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "class",
+  "n_tests": 86
+}

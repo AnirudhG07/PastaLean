@@ -1,0 +1,14 @@
+{
+  "problem": "number-of-sub-arrays-of-size-k-and-average-greater-than-or-equal-to-threshold",
+  "module": "NumberOfSubArraysOfSizeKAndAverageGreaterThanOrEqualToThreshold",
+  "method": "numOfSubarrays",
+  "params": [
+    "arr",
+    "k",
+    "threshold"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 108
+}

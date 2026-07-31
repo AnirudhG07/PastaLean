@@ -1,0 +1,13 @@
+{
+  "problem": "search-insert-position",
+  "module": "SearchInsertPosition",
+  "method": "searchInsert",
+  "params": [
+    "nums",
+    "target"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 119
+}

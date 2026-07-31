@@ -1,0 +1,13 @@
+{
+  "problem": "longest-even-odd-subarray-with-threshold",
+  "module": "LongestEvenOddSubarrayWithThreshold",
+  "method": "longestAlternatingSubarray",
+  "params": [
+    "nums",
+    "threshold"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 124
+}

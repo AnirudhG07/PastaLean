@@ -1,0 +1,12 @@
+{
+  "problem": "continuous-subarrays",
+  "module": "ContinuousSubarrays",
+  "method": "continuousSubarrays",
+  "params": [
+    "nums"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 234
+}
