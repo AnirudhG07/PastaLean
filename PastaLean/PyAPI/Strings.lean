@@ -413,7 +413,7 @@ theorem pyFind_eq_pyIndex (s sub : String) : pyStringFind s sub ≠ -1 → pyStr
   intro h
   unfold pyStringFind pyStringIndex
   match hm : (pyMatchPositions s sub 0 (s.length : Int)).head? with
-  | some i => simp [hm]
+  | some i => simp only [Int.ofNat_eq_natCast]
   | none => unfold pyStringFind at h; simp [hm] at h
 
 -- #check String.split

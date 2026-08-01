@@ -309,6 +309,11 @@ def monadicContractInfo? (body : Array Json) : Option MonadicContract := Id.run 
             if let .ok rid := v.getObjValAs? String "id" then retName := some rid
       clean := clean.push s
   if !sawContract then return none
+  -- Nothing to verify monadically — no `Result()`-postcondition and no loop (just a `Requires` on a
+  -- straight-line body) — so decline and let the generic pure/`Id` emission handle it. Otherwise a
+  -- `Requires`-only helper becomes `Id α`, breaking a caller that uses it purely (`min(f x for x in …)`
+  -- needs `Ord α`, not `Ord (Id α)`).
+  if ensures.isEmpty && loops.isEmpty then return none
   -- Inline pre-loop SNAPSHOT locals into the postcondition. An `Ensures` may name a local defined
   -- before the loop (`n = len(nums)`; `orig = x`; `base = a//b+1`) — but the Hoare-triple spec binds
   -- only the parameters + result, so that name is unbound ("Unknown identifier"). A *snapshot* — a

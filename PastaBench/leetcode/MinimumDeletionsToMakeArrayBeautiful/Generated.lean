@@ -71,7 +71,8 @@ def minDeletion := fun (nums : List Int) ↦
 
 @[spec]
 theorem minDeletion_spec :
-    ⦃⌜n ≥ (0 : Int)⌝⦄ minDeletion nums ⦃⇓ans => ⌜((0 : Int) ≤ ans ∧ ans ≤ n) ∧ (n -ₚ ans) %ₚ (2 : Int) = (0 : Int)⌝⦄ :=
+    ⦃⌜n ≥ (0 : Int)⌝⦄ minDeletion nums ⦃⇓ans =>
+      ⌜((0 : Int) ≤ ans ∧ ans ≤ PastaLean.pyLen nums) ∧ (PastaLean.pyLen nums -ₚ ans) %ₚ (2 : Int) = (0 : Int)⌝⦄ :=
   by
   mvcgen [minDeletion, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
   simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry

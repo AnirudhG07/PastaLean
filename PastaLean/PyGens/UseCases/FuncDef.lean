@@ -566,6 +566,16 @@ def functionCommandWithEffectSignature? (nameIdent : TSyntax `ident)
   else
     return none
 
+/-- A comment, a leading `DocString`, or a bare string-literal `Expr` (a docstring in NON-leading
+position, e.g. after a `Requires`). All are no-ops that must be filtered before contract-shape
+analysis, or they wrongly knock a pure function out of the straight-line Track-P shape. -/
+def isDocstringLike (s : Json) : Bool :=
+  jsonNodeType? s == some "Comment" || jsonNodeType? s == some "DocString"
+    || (jsonNodeType? s == some "Expr"
+        && ((s.getObjVal? "value").toOption.any (fun v =>
+              v.getObjValAs? String "node_type" == .ok "Constant"
+              && (v.getObjVal? "value" |>.toOption.bind (·.getStr?.toOption)).isSome)))
+
 /-- A single theorem-shaped obligation → `(hypotheses, conclusion-test)`. A bare `assert C` gives
 `(#[], C)`; `if H: assert C` (no `else`, body a lone assert) gives the guard's conjuncts and `C` (a
 conjunction `H1 and H2` splits into separate hypotheses, so the prover gets named hyps). `none`
@@ -574,8 +584,7 @@ def obligationShape? (stmt : Json) : Option (Array Json × Json) :=
   match jsonNodeType? stmt with
   | some "Assert" => (stmt.getObjValAs? Json "test").toOption.map (fun t => (#[], t))
   | some "If" =>
-      let isSubst := fun (s : Json) =>
-        jsonNodeType? s != some "Comment" && jsonNodeType? s != some "DocString"
+      let isSubst := fun (s : Json) => !isDocstringLike s
       let body := ((stmt.getObjValAs? (Array Json) "body").toOption.getD #[]).filter isSubst
       let orelse := (stmt.getObjValAs? (Array Json) "orelse").toOption.getD #[]
       if orelse.isEmpty && body.size == 1 && jsonNodeType? body[0]! == some "Assert" then
@@ -926,8 +935,7 @@ def funcDefSyntax : (kind : SyntaxNodeKind) → Json →
         -- The run twin (`approx`) drops the obligation. Anything else (≥2 asserts, non-`let` statements)
         -- stays a `def` with anonymous `have`s (see `Head_Assert`).
         let bodyArr := (json.getObjValAs? (Array Json) "body").toOption.getD #[]
-        let substantive := bodyArr.filter fun (s : Json) =>
-          jsonNodeType? s != some "Comment" && jsonNodeType? s != some "DocString"
+        let substantive := bodyArr.filter fun (s : Json) => !isDocstringLike s
         let paramNames := (← functionArgInfos json).map (fun (id, _) => id.getId.toString)
         if let some (letJsons, hypJsons, conclJson) := theoremShape? paramNames bodyArr substantive then
           if (← getNumericMode) == .approx then return ⟨mkNullNode #[]⟩

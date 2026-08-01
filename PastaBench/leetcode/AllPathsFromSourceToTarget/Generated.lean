@@ -134,10 +134,12 @@ theorem allPathsSourceTarget_spec :
       allPathsSourceTarget graph ⦃⇓ans =>
       ⌜PastaLean.pyAll
           ((PastaLean.pyIter ans).map fun p =>
-            decide (PastaLean.pyLen p > (0 : Int)) && p⦋(0 : Int)⦌ == (0 : Int) && p⦋(-1 : Int)⦌ == n -ₚ (1 : Int) &&
+            decide (PastaLean.pyLen p > (0 : Int)) && p⦋(0 : Int)⦌ == (0 : Int) &&
+                  p⦋(-1 : Int)⦌ == PastaLean.pyLen graph -ₚ (1 : Int) &&
                 PastaLean.pyTruthy
                   (PastaLean.pyAll
-                    ((PastaLean.pyIter p).map fun node => decide ((0 : Int) ≤ node) && decide (node < n))) &&
+                    ((PastaLean.pyIter p).map fun node =>
+                      decide ((0 : Int) ≤ node) && decide (node < PastaLean.pyLen graph))) &&
               PastaLean.pyTruthy
                 (PastaLean.pyAll
                   ((PastaLean.pyRange (PastaLean.pyLen p -ₚ (1 : Int))).map fun i =>

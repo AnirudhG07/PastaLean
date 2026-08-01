@@ -47,7 +47,8 @@
       "class": true,
       "recursive": false,
       "bucket": "loop",
-      "feature": "class"
+      "feature": "class",
+      "proved": false
     },
     {
       "problem": "reverse-linked-list",
@@ -66,7 +67,8 @@
       "class": true,
       "recursive": false,
       "bucket": "loop",
-      "feature": "class"
+      "feature": "class",
+      "proved": false
     },
     {
       "problem": "closest-binary-search-tree-value-ii",
@@ -87,7 +89,8 @@
       "class": true,
       "recursive": true,
       "bucket": "loop",
-      "feature": "class"
+      "feature": "class",
+      "proved": false
     },
     {
       "problem": "count-of-range-sum",
@@ -108,7 +111,8 @@
       "class": true,
       "recursive": false,
       "bucket": "loop",
-      "feature": "class"
+      "feature": "class",
+      "proved": false
     },
     {
       "problem": "count-the-number-of-k-big-indices",
@@ -128,7 +132,8 @@
       "class": true,
       "recursive": false,
       "bucket": "loop",
-      "feature": "class"
+      "feature": "class",
+      "proved": false
     },
     {
       "problem": "binary-tree-level-order-traversal",
@@ -147,7 +152,8 @@
       "class": true,
       "recursive": false,
       "bucket": "loop",
-      "feature": "class"
+      "feature": "class",
+      "proved": false
     },
     {
       "problem": "binary-tree-level-order-traversal-ii",
@@ -166,7 +172,8 @@
       "class": true,
       "recursive": false,
       "bucket": "loop",
-      "feature": "class"
+      "feature": "class",
+      "proved": false
     },
     {
       "problem": "binary-tree-right-side-view",
@@ -185,7 +192,8 @@
       "class": true,
       "recursive": false,
       "bucket": "loop",
-      "feature": "class"
+      "feature": "class",
+      "proved": false
     },
     {
       "problem": "count-good-nodes-in-binary-tree",
@@ -204,7 +212,8 @@
       "class": true,
       "recursive": true,
       "bucket": "loop",
-      "feature": "class"
+      "feature": "class",
+      "proved": false
     },
     {
       "problem": "find-nearest-right-node-in-binary-tree",
@@ -224,7 +233,8 @@
       "class": true,
       "recursive": false,
       "bucket": "loop",
-      "feature": "class"
+      "feature": "class",
+      "proved": false
     },
     {
       "problem": "odd-even-linked-list",
@@ -243,7 +253,8 @@
       "class": true,
       "recursive": false,
       "bucket": "loop",
-      "feature": "class"
+      "feature": "class",
+      "proved": false
     },
     {
       "problem": "swapping-nodes-in-a-linked-list",
@@ -263,7 +274,8 @@
       "class": true,
       "recursive": false,
       "bucket": "loop",
-      "feature": "class"
+      "feature": "class",
+      "proved": false
     },
     {
       "problem": "binary-prefix-divisible-by-5",
@@ -282,7 +294,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "check-whether-two-strings-are-almost-equivalent",
@@ -302,7 +315,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "clear-digits",
@@ -321,7 +335,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "convert-integer-to-the-sum-of-two-no-zero-integers",
@@ -340,7 +355,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "count-equal-and-divisible-pairs-in-an-array",
@@ -360,7 +376,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "count-tested-devices-after-test-operations",
@@ -379,7 +396,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "decode-xored-array",
@@ -399,7 +417,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "faulty-keyboard",
@@ -418,7 +437,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "find-common-characters",
@@ -437,7 +457,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "find-maximum-number-of-string-pairs",
@@ -456,7 +477,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "find-the-difference",
@@ -476,7 +498,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "find-the-distance-value-between-two-arrays",
@@ -497,7 +520,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "find-the-encrypted-string",
@@ -517,7 +541,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "find-the-pivot-integer",
@@ -536,7 +561,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "first-letter-to-appear-twice",
@@ -555,7 +581,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "maximum-product-of-two-elements-in-an-array",
@@ -574,7 +601,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "merge-similar-items",
@@ -594,7 +622,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "reverse-bits",
@@ -613,7 +642,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "teemo-attacking",
@@ -633,7 +663,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "earliest-possible-day-of-full-bloom",
@@ -653,7 +684,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "find-a-value-of-a-mysterious-function-closest-to-target",
@@ -673,7 +705,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "find-maximum-non-decreasing-array-length",
@@ -692,7 +725,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "find-the-maximum-sum-of-node-values",
@@ -713,7 +747,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "k-inverse-pairs-array",
@@ -733,7 +768,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "length-of-the-longest-valid-substring",
@@ -753,7 +789,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "longest-happy-prefix",
@@ -772,7 +809,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "maximum-number-of-ones",
@@ -794,7 +832,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "maximum-total-reward-using-operations-ii",
@@ -813,7 +852,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "minimum-deletions-to-make-array-divisible",
@@ -833,7 +873,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "minimum-difficulty-of-a-job-schedule",
@@ -853,7 +894,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "number-of-different-subsequences-gcds",
@@ -872,7 +914,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "number-of-excellent-pairs",
@@ -892,7 +935,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "number-of-subarrays-with-and-value-of-k",
@@ -912,7 +956,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "number-of-unique-good-subsequences",
@@ -931,7 +976,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "russian-doll-envelopes",
@@ -950,7 +996,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "strange-printer",
@@ -969,7 +1016,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "total-appeal-of-a-string",
@@ -988,7 +1036,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "4-keys-keyboard",
@@ -1007,7 +1056,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "apply-operations-to-make-sum-of-array-greater-than-or-equal-to-k",
@@ -1026,7 +1076,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "best-sightseeing-pair",
@@ -1045,7 +1096,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "count-alternating-subarrays",
@@ -1064,7 +1116,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "count-number-of-bad-pairs",
@@ -1083,7 +1136,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "count-number-of-distinct-integers-after-reverse-operations",
@@ -1102,7 +1156,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "find-the-divisibility-array-of-a-string",
@@ -1122,7 +1177,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "find-triangular-sum-of-an-array",
@@ -1141,7 +1197,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "flip-columns-for-maximum-number-of-equal-rows",
@@ -1160,7 +1217,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "frog-jump-ii",
@@ -1179,7 +1237,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "h-index",
@@ -1198,7 +1257,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "largest-combination-with-bitwise-and-greater-than-zero",
@@ -1217,7 +1277,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "largest-element-in-an-array-after-merge-operations",
@@ -1236,7 +1297,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "last-moment-before-all-ants-fall-out-of-a-plank",
@@ -1257,7 +1319,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "longest-arithmetic-subsequence-of-given-difference",
@@ -1277,7 +1340,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "maximize-greatness-of-an-array",
@@ -1296,7 +1360,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "maximum-beauty-of-an-array-after-applying-operation",
@@ -1316,7 +1381,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "maximum-consecutive-floors-without-special-floors",
@@ -1337,7 +1403,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "maximum-linear-stock-score",
@@ -1356,7 +1423,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "maximum-product-after-k-increments",
@@ -1376,7 +1444,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "minimum-add-to-make-parentheses-valid",
@@ -1395,7 +1464,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "minimum-number-of-steps-to-make-two-strings-anagram",
@@ -1415,7 +1485,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "minimum-number-of-steps-to-make-two-strings-anagram-ii",
@@ -1435,7 +1506,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "minimum-suffix-flips",
@@ -1454,7 +1526,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "number-of-sub-arrays-of-size-k-and-average-greater-than-or-equal-to-threshold",
@@ -1475,7 +1548,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "number-of-times-binary-string-is-prefix-aligned",
@@ -1494,7 +1568,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "number-of-ways-to-buy-pens-and-pencils",
@@ -1515,7 +1590,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "number-of-ways-to-split-array",
@@ -1534,7 +1610,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "number-of-zero-filled-subarrays",
@@ -1553,7 +1630,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "paint-fence",
@@ -1573,7 +1651,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "queries-on-a-permutation-with-key",
@@ -1593,7 +1672,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "queue-reconstruction-by-height",
@@ -1612,7 +1692,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "rabbits-in-forest",
@@ -1631,7 +1712,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "remove-stones-to-minimize-the-total",
@@ -1651,7 +1733,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "search-a-2d-matrix-ii",
@@ -1671,7 +1754,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": true
     },
     {
       "problem": "sort-features-by-popularity",
@@ -1691,7 +1775,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "substrings-that-begin-and-end-with-the-same-letter",
@@ -1710,7 +1795,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "task-scheduler-ii",
@@ -1730,7 +1816,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "add-to-array-form-of-integer",
@@ -1750,7 +1837,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "armstrong-number",
@@ -1769,7 +1857,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "binary-number-with-alternating-bits",
@@ -1788,7 +1877,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "binary-search",
@@ -1808,7 +1898,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "calculate-digit-sum-of-a-string",
@@ -1828,7 +1919,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "construct-the-rectangle",
@@ -1847,7 +1939,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "count-operations-to-obtain-zero",
@@ -1867,7 +1960,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "count-substrings-with-only-one-distinct-letter",
@@ -1886,7 +1980,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "distance-between-bus-stops",
@@ -1907,7 +2002,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "distribute-candies-to-people",
@@ -1927,7 +2023,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "final-prices-with-a-special-discount-in-a-shop",
@@ -1946,7 +2043,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "find-the-losers-of-the-circular-game",
@@ -1966,7 +2064,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "harshad-number",
@@ -1985,7 +2084,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "keep-multiplying-found-values-by-two",
@@ -2005,7 +2105,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "length-of-last-word",
@@ -2024,7 +2125,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "longest-even-odd-subarray-with-threshold",
@@ -2044,7 +2146,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "maximum-height-of-a-triangle",
@@ -2064,7 +2167,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "maximum-length-substring-with-two-occurrences",
@@ -2083,7 +2187,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "maximum-number-of-balls-in-a-box",
@@ -2103,7 +2208,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "minimum-moves-to-convert-string",
@@ -2122,7 +2228,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "minimum-right-shifts-to-sort-the-array",
@@ -2141,7 +2248,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "minimum-sum-of-four-digit-number-after-splitting-digits",
@@ -2160,7 +2268,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "next-greater-element-i",
@@ -2180,7 +2289,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "number-of-1-bits",
@@ -2199,7 +2309,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "palindrome-number",
@@ -2218,7 +2329,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "search-insert-position",
@@ -2238,7 +2350,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "sqrtx",
@@ -2257,7 +2370,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "sum-of-digits-in-the-minimum-number",
@@ -2276,7 +2390,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "course-schedule-iii",
@@ -2295,7 +2410,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "cycle-length-queries-in-a-tree",
@@ -2315,7 +2431,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "find-minimum-in-rotated-sorted-array-ii",
@@ -2334,7 +2451,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "find-the-closest-palindrome",
@@ -2353,7 +2471,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "ipo",
@@ -2375,7 +2494,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "jump-game-iv",
@@ -2394,7 +2514,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "kth-smallest-number-in-multiplication-table",
@@ -2415,7 +2536,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "largest-rectangle-in-histogram",
@@ -2434,7 +2556,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "last-substring-in-lexicographical-order",
@@ -2453,7 +2576,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "longest-chunked-palindrome-decomposition",
@@ -2472,7 +2596,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "longest-cycle-in-a-graph",
@@ -2491,7 +2616,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "make-string-anti-palindrome",
@@ -2510,7 +2636,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "maximum-height-by-stacking-cuboids",
@@ -2529,7 +2656,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "maximum-running-time-of-n-computers",
@@ -2549,7 +2677,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "minimum-number-of-increasing-subsequence-to-be-removed",
@@ -2568,7 +2697,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "minimum-one-bit-operations-to-make-integers-zero",
@@ -2587,7 +2717,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "number-of-valid-subarrays",
@@ -2606,7 +2737,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "number-of-valid-words-for-each-puzzle",
@@ -2626,7 +2758,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "poor-pigs",
@@ -2647,7 +2780,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "replace-non-coprime-numbers-in-array",
@@ -2666,7 +2800,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "shortest-subarray-with-sum-at-least-k",
@@ -2686,7 +2821,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "sliding-window-maximum",
@@ -2706,7 +2842,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "all-paths-from-source-to-target",
@@ -2725,7 +2862,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "asteroid-collision",
@@ -2744,7 +2882,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "bitwise-and-of-numbers-range",
@@ -2764,7 +2903,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "boats-to-save-people",
@@ -2784,7 +2924,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "broken-calculator",
@@ -2804,7 +2945,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "build-an-array-with-stack-operations",
@@ -2824,7 +2966,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "container-with-most-water",
@@ -2843,7 +2986,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "continuous-subarrays",
@@ -2862,7 +3006,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "count-good-meals",
@@ -2881,7 +3026,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "count-substrings-without-repeating-character",
@@ -2900,7 +3046,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "cutting-ribbons",
@@ -2920,7 +3067,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "decode-the-slanted-ciphertext",
@@ -2940,7 +3088,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "determine-the-minimum-sum-of-a-k-avoiding-array",
@@ -2960,7 +3109,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "find-a-peak-element-ii",
@@ -2979,7 +3129,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "find-peak-element",
@@ -2998,7 +3149,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "find-the-k-th-lucky-number",
@@ -3017,7 +3169,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "find-the-longest-semi-repetitive-substring",
@@ -3036,7 +3189,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "find-the-maximum-length-of-valid-subsequence-ii",
@@ -3056,7 +3210,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "find-the-most-competitive-subsequence",
@@ -3076,7 +3231,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "incremental-memory-leak",
@@ -3096,7 +3252,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "largest-merge-of-two-strings",
@@ -3116,7 +3273,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "length-of-longest-subarray-with-at-most-k-frequency",
@@ -3136,7 +3294,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "longest-consecutive-sequence",
@@ -3155,7 +3314,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "longest-continuous-subarray-with-absolute-diff-less-than-or-equal-to-limit",
@@ -3175,7 +3335,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "longest-substring-with-at-most-two-distinct-characters",
@@ -3194,7 +3355,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "magical-string",
@@ -3213,7 +3375,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "max-sum-of-a-pair-with-equal-sum-of-digits",
@@ -3232,7 +3395,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "maximum-candies-allocated-to-k-children",
@@ -3252,7 +3416,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "maximum-score-from-removing-stones",
@@ -3273,7 +3438,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "maximum-value-after-insertion",
@@ -3293,7 +3459,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "maximum-value-at-a-given-index-in-a-bounded-array",
@@ -3314,7 +3481,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "minimum-deletions-to-make-array-beautiful",
@@ -3333,7 +3501,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "minimum-garden-perimeter-to-collect-enough-apples",
@@ -3352,7 +3521,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "minimum-length-of-string-after-deleting-similar-ends",
@@ -3371,7 +3541,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "minimum-operations-to-make-binary-array-elements-equal-to-one-ii",
@@ -3390,7 +3561,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "minimum-operations-to-make-the-integer-zero",
@@ -3410,7 +3582,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "monotone-increasing-digits",
@@ -3429,7 +3602,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "nth-digit",
@@ -3448,7 +3622,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "number-of-smooth-descent-periods-of-a-stock",
@@ -3467,7 +3642,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "palindromic-substrings",
@@ -3486,7 +3662,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "path-in-zigzag-labelled-binary-tree",
@@ -3505,7 +3682,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "peak-index-in-a-mountain-array",
@@ -3524,7 +3702,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "reach-a-number",
@@ -3543,7 +3722,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": true
     },
     {
       "problem": "remove-adjacent-almost-equal-characters",
@@ -3562,7 +3742,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "shortest-unsorted-continuous-subarray",
@@ -3581,7 +3762,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "single-element-in-a-sorted-array",
@@ -3600,7 +3782,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "smallest-string-with-a-given-numeric-value",
@@ -3620,7 +3803,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "steps-to-make-array-non-decreasing",
@@ -3639,7 +3823,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "taking-maximum-energy-from-the-mystic-dungeon",
@@ -3659,7 +3844,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "water-bottles-ii",
@@ -3679,7 +3865,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "a-number-after-a-double-reversal",
@@ -3698,7 +3885,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": true
     },
     {
       "problem": "add-digits",
@@ -3717,7 +3905,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": true
     },
     {
       "problem": "add-two-integers",
@@ -3737,7 +3926,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": true
     },
     {
       "problem": "ant-on-the-boundary",
@@ -3756,7 +3946,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "build-array-from-permutation",
@@ -3775,7 +3966,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "check-if-a-string-is-an-acronym-of-words",
@@ -3795,7 +3987,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "check-if-all-as-appears-before-all-bs",
@@ -3814,7 +4007,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": true
     },
     {
       "problem": "check-if-all-characters-have-equal-number-of-occurrences",
@@ -3833,7 +4027,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": true
     },
     {
       "problem": "check-if-binary-string-has-at-most-one-segment-of-ones",
@@ -3852,7 +4047,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": true
     },
     {
       "problem": "check-if-the-sentence-is-pangram",
@@ -3871,7 +4067,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": true
     },
     {
       "problem": "check-if-two-string-arrays-are-equivalent",
@@ -3891,7 +4088,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": true
     },
     {
       "problem": "concatenation-of-array",
@@ -3910,7 +4108,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": true
     },
     {
       "problem": "count-distinct-numbers-on-board",
@@ -3929,7 +4128,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "count-odd-numbers-in-an-interval-range",
@@ -3949,7 +4149,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "count-of-matches-in-tournament",
@@ -3968,7 +4169,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": true
     },
     {
       "problem": "count-prefixes-of-a-given-string",
@@ -3988,7 +4190,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "counting-bits",
@@ -4007,7 +4210,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "counting-words-with-a-given-prefix",
@@ -4027,7 +4231,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "defanging-an-ip-address",
@@ -4046,7 +4251,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "determine-color-of-a-chessboard-square",
@@ -4065,7 +4271,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "determine-if-two-events-have-conflict",
@@ -4085,7 +4292,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "final-value-of-variable-after-performing-operations",
@@ -4104,7 +4312,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": true
     },
     {
       "problem": "find-greatest-common-divisor-of-array",
@@ -4123,7 +4332,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": true
     },
     {
       "problem": "find-numbers-with-even-number-of-digits",
@@ -4142,7 +4352,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "find-the-highest-altitude",
@@ -4161,7 +4372,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": true
     },
     {
       "problem": "find-the-integer-added-to-array-i",
@@ -4181,7 +4393,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": true
     },
     {
       "problem": "find-the-maximum-achievable-number",
@@ -4201,7 +4414,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": true
     },
     {
       "problem": "furthest-point-from-origin",
@@ -4220,7 +4434,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": true
     },
     {
       "problem": "generate-a-string-with-characters-that-have-odd-counts",
@@ -4239,7 +4454,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "goal-parser-interpretation",
@@ -4258,7 +4474,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "hamming-distance",
@@ -4278,7 +4495,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "make-two-arrays-equal-by-reversing-subarrays",
@@ -4298,7 +4516,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": true
     },
     {
       "problem": "minimize-string-length",
@@ -4317,7 +4536,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": true
     },
     {
       "problem": "minimum-bit-flips-to-convert-number",
@@ -4337,7 +4557,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": true
     },
     {
       "problem": "repeated-substring-pattern",
@@ -4356,7 +4577,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "running-sum-of-1d-array",
@@ -4375,7 +4597,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "single-number",
@@ -4394,7 +4617,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "smallest-even-multiple",
@@ -4413,7 +4637,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": true
     },
     {
       "problem": "sort-integers-by-the-number-of-1-bits",
@@ -4432,7 +4657,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "transpose-matrix",
@@ -4451,7 +4677,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "check-if-it-is-a-good-array",
@@ -4470,7 +4697,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "check-if-point-is-reachable",
@@ -4490,7 +4718,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": true
     },
     {
       "problem": "find-xor-sum-of-all-pairs-bitwise-and",
@@ -4510,7 +4739,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "minimum-cost-to-equalize-array",
@@ -4531,7 +4761,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "minimum-number-of-increments-on-subarrays-to-form-a-target-array",
@@ -4550,7 +4781,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "nth-magical-number",
@@ -4571,7 +4803,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "number-of-flowers-in-full-bloom",
@@ -4591,7 +4824,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "subtree-removal-game-with-fibonacci-tree",
@@ -4610,7 +4844,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": true
     },
     {
       "problem": "triples-with-bitwise-and-equal-to-zero",
@@ -4629,7 +4864,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "4sum-ii",
@@ -4651,7 +4887,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "alice-and-bob-playing-flower-game",
@@ -4671,7 +4908,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "angle-between-hands-of-a-clock",
@@ -4691,7 +4929,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "apply-bitwise-operations-to-make-strings-equal",
@@ -4711,7 +4950,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": true
     },
     {
       "problem": "binary-string-with-substrings-representing-1-to-n",
@@ -4731,7 +4971,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "check-if-array-pairs-are-divisible-by-k",
@@ -4751,7 +4992,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "circular-permutation-in-binary-representation",
@@ -4771,7 +5013,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "construct-k-palindrome-strings",
@@ -4791,7 +5034,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "construct-the-longest-new-string",
@@ -4812,7 +5056,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "count-collisions-on-a-road",
@@ -4831,7 +5076,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "count-substrings-starting-and-ending-with-given-character",
@@ -4851,7 +5097,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "custom-sort-string",
@@ -4871,7 +5118,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "determine-if-a-cell-is-reachable-at-a-given-time",
@@ -4894,7 +5142,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "encode-number",
@@ -4913,7 +5162,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "escape-the-ghosts",
@@ -4933,7 +5183,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "find-the-duplicate-number",
@@ -4952,7 +5203,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "find-the-original-array-of-prefix-xor",
@@ -4971,7 +5223,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "find-three-consecutive-integers-that-sum-to-a-given-number",
@@ -4990,7 +5243,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "groups-of-special-equivalent-strings",
@@ -5009,7 +5263,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "maximum-binary-string-after-change",
@@ -5028,7 +5283,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "maximum-number-of-groups-entering-a-competition",
@@ -5047,7 +5303,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "maximum-number-of-weeks-for-which-you-can-work",
@@ -5066,7 +5323,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "maximum-number-that-makes-result-of-bitwise-and-zero",
@@ -5085,7 +5343,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": true
     },
     {
       "problem": "maximum-size-of-a-set-after-removals",
@@ -5105,7 +5364,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "maximum-xor-after-operations",
@@ -5124,7 +5384,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "minimized-maximum-of-products-distributed-to-any-store",
@@ -5144,7 +5405,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "minimum-elements-to-add-to-form-a-given-sum",
@@ -5165,7 +5427,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "minimum-impossible-or",
@@ -5184,7 +5447,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "minimum-limit-of-balls-in-a-bag",
@@ -5204,7 +5468,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "minimum-number-of-changes-to-make-binary-string-beautiful",
@@ -5223,7 +5488,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "minimum-number-of-operations-to-make-array-xor-equal-to-k",
@@ -5243,7 +5509,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "minimum-number-of-operations-to-make-word-k-periodic",
@@ -5263,7 +5530,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "minimum-numbers-of-function-calls-to-make-target-array",
@@ -5282,7 +5550,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "minimum-operations-to-make-array-equal",
@@ -5301,7 +5570,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "minimum-time-to-complete-trips",
@@ -5321,7 +5591,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "mirror-reflection",
@@ -5341,7 +5612,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "number-of-distinct-binary-strings-after-applying-operations",
@@ -5361,7 +5633,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "number-of-distinct-substrings-in-a-string",
@@ -5380,7 +5653,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "partitioning-into-minimum-number-of-deci-binary-numbers",
@@ -5399,7 +5673,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": true
     },
     {
       "problem": "rectangle-area",
@@ -5425,7 +5700,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "reverse-words-in-a-string",
@@ -5444,7 +5720,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "sort-characters-by-frequency",
@@ -5463,7 +5740,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "sort-the-students-by-their-kth-score",
@@ -5483,7 +5761,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "task-scheduler",
@@ -5503,7 +5782,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "top-k-frequent-words",
@@ -5523,7 +5803,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "vowels-game-in-a-string",
@@ -5542,7 +5823,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "water-and-jug-problem",
@@ -5563,7 +5845,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "minimum-number-of-swaps-to-make-the-binary-string-alternating",
@@ -5582,7 +5865,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "lexicographically-smallest-palindrome",
@@ -5601,7 +5885,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "shortest-subarray-to-be-removed-to-make-array-sorted",
@@ -5620,7 +5905,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "masking-personal-information",
@@ -5639,7 +5925,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "cells-in-a-range-on-an-excel-sheet",
@@ -5658,7 +5945,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "student-attendance-record-i",
@@ -5677,7 +5965,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": true
     },
     {
       "problem": "dota2-senate",
@@ -5696,7 +5985,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "remove-palindromic-subsequences",
@@ -5715,7 +6005,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": true
     },
     {
       "problem": "minimum-string-length-after-removing-substrings",
@@ -5734,7 +6025,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "sort-vowels-in-a-string",
@@ -5753,7 +6045,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "while"
+      "feature": "while",
+      "proved": false
     },
     {
       "problem": "find-all-lonely-numbers-in-the-array",
@@ -5772,7 +6065,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "missing-number-in-arithmetic-progression",
@@ -5791,7 +6085,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "sorting-the-sentence",
@@ -5810,7 +6105,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "three-divisors",
@@ -5829,7 +6125,8 @@
       "class": false,
       "recursive": false,
       "bucket": "term",
-      "feature": "term"
+      "feature": "term",
+      "proved": false
     },
     {
       "problem": "ransom-note",
@@ -5849,7 +6146,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "longest-increasing-subsequence",
@@ -5868,7 +6166,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     },
     {
       "problem": "smallest-missing-non-negative-integer-after-operations",
@@ -5888,7 +6187,8 @@
       "class": false,
       "recursive": false,
       "bucket": "loop",
-      "feature": "for"
+      "feature": "for",
+      "proved": false
     }
   ]
 }

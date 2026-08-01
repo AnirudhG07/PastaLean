@@ -35,7 +35,14 @@ def exprSyntax : (kind : SyntaxNodeKind) → Json →
     | `doElem, json => do
         let .ok valueJson := json.getObjValAs? Json "value" | throwError
           s!"Expr node does not have a 'value' field or it is not a JSON value: {json}"
-        exprStmtDoElemSyntax valueJson
+        -- A bare string-literal statement is a docstring in non-leading position (e.g. after a
+        -- `Requires`); it is a no-op, and has no `doElem` value form, so emit a no-op rather than
+        -- trying to lower it (which degrades to `pyUnsupported`).
+        if valueJson.getObjValAs? String "node_type" == .ok "Constant"
+            && (valueJson.getObjVal? "value" |>.toOption.bind (·.getStr?.toOption)).isSome then
+          `(doElem| let _ := ())
+        else
+          exprStmtDoElemSyntax valueJson
     | `command, json => do
         let .ok valueJson := json.getObjValAs? Json "value" | throwError
           s!"Expr node does not have a 'value' field or it is not a JSON value: {json}"

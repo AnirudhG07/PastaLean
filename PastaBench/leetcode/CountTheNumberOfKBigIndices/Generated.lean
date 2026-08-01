@@ -183,8 +183,9 @@ theorem kBigIndices_spec :
                           ((List.filter (fun j => nums⦋j⦌ < v) (PastaLean.pyRange i)).map fun j => (1 : Int)) ≥
                         k ∧
                       PastaLean.pySum
-                          ((List.filter (fun j => nums⦋j⦌ < v) (PastaLean.pyRange n (i +ₚ (1 : Int)))).map fun j =>
-                            (1 : Int)) ≥
+                          ((List.filter (fun j => nums⦋j⦌ < v)
+                                (PastaLean.pyRange (PastaLean.pyLen nums) (i +ₚ (1 : Int)))).map
+                            fun j => (1 : Int)) ≥
                         k)
                   (PastaLean.pyIter (PastaLean.pyEnumerate nums))).map
               fun (_pair_1 : Int × Int) =>

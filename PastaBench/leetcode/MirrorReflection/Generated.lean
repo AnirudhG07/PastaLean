@@ -83,8 +83,43 @@ def mirrorReflection := fun (p : Int) ↦ fun (q : Int) ↦
 @[spec]
 theorem mirrorReflection_spec :
     ⦃⌜p > (0 : Int) ∧ q > (0 : Int)⌝⦄ mirrorReflection p q ⦃⇓result =>
-      ⌜((p = (1 : Int) ∧ q = (1 : Int)) ∧ result = (1 : Int) ∨ (p = (1 : Int) ∧ q ≠ (1 : Int)) ∧ result = (0 : Int)) ∨
-          p ≠ (1 : Int) ∧ result = (2 : Int)⌝⦄ :=
+      ⌜((PastaLean.pyFloorDiv p
+                      (Libraries.math.pyMathGcd p
+                        (PastaLean.pyFloorDiv q
+                            (Libraries.math.pyMathGcd
+                              (PastaLean.pyFloorDiv p (Libraries.math.pyMathGcd p q) %ₚ (2 : Int)) q) %ₚ
+                          (2 : Int))) %ₚ
+                    (2 : Int) =
+                  (1 : Int) ∧
+                PastaLean.pyFloorDiv q
+                      (Libraries.math.pyMathGcd (PastaLean.pyFloorDiv p (Libraries.math.pyMathGcd p q) %ₚ (2 : Int))
+                        q) %ₚ
+                    (2 : Int) =
+                  (1 : Int)) ∧
+              result = (1 : Int) ∨
+            (PastaLean.pyFloorDiv p
+                      (Libraries.math.pyMathGcd p
+                        (PastaLean.pyFloorDiv q
+                            (Libraries.math.pyMathGcd
+                              (PastaLean.pyFloorDiv p (Libraries.math.pyMathGcd p q) %ₚ (2 : Int)) q) %ₚ
+                          (2 : Int))) %ₚ
+                    (2 : Int) =
+                  (1 : Int) ∧
+                PastaLean.pyFloorDiv q
+                      (Libraries.math.pyMathGcd (PastaLean.pyFloorDiv p (Libraries.math.pyMathGcd p q) %ₚ (2 : Int))
+                        q) %ₚ
+                    (2 : Int) ≠
+                  (1 : Int)) ∧
+              result = (0 : Int)) ∨
+          PastaLean.pyFloorDiv p
+                  (Libraries.math.pyMathGcd p
+                    (PastaLean.pyFloorDiv q
+                        (Libraries.math.pyMathGcd (PastaLean.pyFloorDiv p (Libraries.math.pyMathGcd p q) %ₚ (2 : Int))
+                          q) %ₚ
+                      (2 : Int))) %ₚ
+                (2 : Int) ≠
+              (1 : Int) ∧
+            result = (2 : Int)⌝⦄ :=
   by
   mvcgen [mirrorReflection, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
   simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
