@@ -56,6 +56,16 @@ theorem rangeBitwiseAnd_spec :
   all_goals sorry
   all_goals sorry
 
+theorem rangeBitwiseAnd_correct :
+    ∀ (left : Int),
+      ∀ (right : Int),
+        (0 : Int) ≤ left ∧ left ≤ right →
+          let right := (rangeBitwiseAnd left right).run;
+          (0 : Int) ≤ right ∧ right ≤ left :=
+  by
+  intro left right hpre
+  exact rangeBitwiseAnd_spec hpre
+
 def rangeBitwiseAnd'rn := fun (left : Int) ↦ fun (right : Int) ↦
   Id.run
     (do

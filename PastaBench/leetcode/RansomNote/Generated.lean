@@ -64,6 +64,18 @@ theorem canConstruct_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
+theorem canConstruct_correct :
+    ∀ (ransomNote : String),
+      ∀ (magazine : String),
+        let result := (canConstruct ransomNote magazine).run;
+        result =
+          PastaLean.pyAll
+            ((PastaLean.pyIter (PastaLean.pySet ransomNote)).map fun c =>
+              decide (PastaLean.pyCount ransomNote c ≤ PastaLean.pyCount magazine c)) :=
+  by
+  intro ransomNote magazine
+  exact canConstruct_spec True.intro
+
 def canConstruct'rn := fun (ransomNote : String) ↦ fun (magazine : String) ↦
   Id.run
     (do

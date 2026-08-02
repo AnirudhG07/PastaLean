@@ -125,6 +125,52 @@ theorem mirrorReflection_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
+theorem mirrorReflection_correct :
+    ∀ (p : Int),
+      ∀ (q : Int),
+        p > (0 : Int) ∧ q > (0 : Int) →
+          let result := (mirrorReflection p q).run;
+          ((PastaLean.pyFloorDiv p
+                        (Libraries.math.pyMathGcd p
+                          (PastaLean.pyFloorDiv q
+                              (Libraries.math.pyMathGcd
+                                (PastaLean.pyFloorDiv p (Libraries.math.pyMathGcd p q) %ₚ (2 : Int)) q) %ₚ
+                            (2 : Int))) %ₚ
+                      (2 : Int) =
+                    (1 : Int) ∧
+                  PastaLean.pyFloorDiv q
+                        (Libraries.math.pyMathGcd (PastaLean.pyFloorDiv p (Libraries.math.pyMathGcd p q) %ₚ (2 : Int))
+                          q) %ₚ
+                      (2 : Int) =
+                    (1 : Int)) ∧
+                result = (1 : Int) ∨
+              (PastaLean.pyFloorDiv p
+                        (Libraries.math.pyMathGcd p
+                          (PastaLean.pyFloorDiv q
+                              (Libraries.math.pyMathGcd
+                                (PastaLean.pyFloorDiv p (Libraries.math.pyMathGcd p q) %ₚ (2 : Int)) q) %ₚ
+                            (2 : Int))) %ₚ
+                      (2 : Int) =
+                    (1 : Int) ∧
+                  PastaLean.pyFloorDiv q
+                        (Libraries.math.pyMathGcd (PastaLean.pyFloorDiv p (Libraries.math.pyMathGcd p q) %ₚ (2 : Int))
+                          q) %ₚ
+                      (2 : Int) ≠
+                    (1 : Int)) ∧
+                result = (0 : Int)) ∨
+            PastaLean.pyFloorDiv p
+                    (Libraries.math.pyMathGcd p
+                      (PastaLean.pyFloorDiv q
+                          (Libraries.math.pyMathGcd (PastaLean.pyFloorDiv p (Libraries.math.pyMathGcd p q) %ₚ (2 : Int))
+                            q) %ₚ
+                        (2 : Int))) %ₚ
+                  (2 : Int) ≠
+                (1 : Int) ∧
+              result = (2 : Int) :=
+  by
+  intro p q hpre
+  exact mirrorReflection_spec hpre
+
 def mirrorReflection'rn := fun (p : Int) ↦ fun (q : Int) ↦
   Id.run
     (do

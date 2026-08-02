@@ -53,12 +53,7 @@ theorem buildArray_spec :
             ((PastaLean.pyRange (PastaLean.pyLen target -ₚ (1 : Int))).map fun i =>
               decide (target⦋i⦌ < target⦋i +ₚ (1 : Int)⦌))⌝⦄
       buildArray target n ⦃⇓_ => ⌜True⌝⦄ :=
-  by
-  try
-    mvcgen [buildArray, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓⟨cur, cur⟩ => ⌜cur = (cur.prefix.map (fun x => (1 : Int))).sum⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
-  all_goals sorry
+  by apply Std.Do.Triple.of_entails_wp; intro _; exact True.intro
 
 def buildArray'rn := fun (target : List Int) ↦ fun (n : Int) ↦
   Id.run

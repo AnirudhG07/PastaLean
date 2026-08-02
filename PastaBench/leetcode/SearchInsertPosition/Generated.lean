@@ -115,6 +115,22 @@ theorem searchInsert_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
+theorem searchInsert_correct :
+    ∀ (nums : List Int),
+      ∀ (target : Int),
+        PastaLean.pyAll
+            ((PastaLean.pyRange (PastaLean.pyLen nums -ₚ (1 : Int))).map fun i =>
+              decide (nums⦋i⦌ ≤ nums⦋i +ₚ (1 : Int)⦌)) →
+          let l := (searchInsert nums target).run;
+          (((0 : Int) ≤ l ∧ l ≤ PastaLean.pyLen nums) ∧
+              PastaLean.pyAll
+                ((PastaLean.pyIter (PastaLean.pySlice nums none (some l) none)).map fun x => decide (x < target))) ∧
+            PastaLean.pyAll
+              ((PastaLean.pyIter (PastaLean.pySlice nums (some l) none none)).map fun x => decide (x ≥ target)) :=
+  by
+  intro nums target hpre
+  exact searchInsert_spec hpre
+
 def searchInsert'rn := fun (nums : List Int) ↦ fun (target : Int) ↦
   Id.run
     (do

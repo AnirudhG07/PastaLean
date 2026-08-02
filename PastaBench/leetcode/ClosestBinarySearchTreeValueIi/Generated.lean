@@ -158,6 +158,20 @@ theorem closestKValues_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
+theorem closestKValues_correct :
+    ∀ (root : Option TreeNode),
+      ∀ (target : Rat),
+        ∀ (k : Int),
+          k ≥ (0 : Int) ∧ (PastaLean.pyIsNone root ∨ k > (0 : Int)) →
+            let result := (closestKValues root target k).run;
+            PastaLean.pyAll
+                ((PastaLean.pyRange (PastaLean.pyLen result -ₚ (1 : Int))).map fun i =>
+                  decide (result⦋i⦌ ≤ result⦋i +ₚ (1 : Int)⦌)) ∧
+              PastaLean.pyLen result ≤ k :=
+  by
+  intro root target k hpre
+  exact closestKValues_spec hpre
+
 private partial def _closestKValues'dfs'rn := fun (root : Option TreeNode'rn) ↦ fun (target : Float) ↦ fun (k : Int) ↦
   fun (q : List Int) ↦
   Id.run

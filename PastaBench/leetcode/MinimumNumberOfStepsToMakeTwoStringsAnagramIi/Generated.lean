@@ -66,6 +66,18 @@ theorem minSteps_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
+theorem minSteps_correct :
+    ∀ (s : String),
+      ∀ (t : String),
+        let result := (minSteps s t).run;
+        result =
+          PastaLean.pySum
+            ((PastaLean.pyIter (PastaLean.pyBitOr (PastaLean.pySet s) (PastaLean.pySet t))).map fun c =>
+              PastaLean.pyAbs ((Libraries.collections.pyCounter s)⦋c⦌ -ₚ (Libraries.collections.pyCounter t)⦋c⦌)) :=
+  by
+  intro s t
+  exact minSteps_spec True.intro
+
 def minSteps'rn := fun (s : String) ↦ fun (t : String) ↦
   Id.run
     (do

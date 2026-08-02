@@ -121,6 +121,14 @@ theorem longestDecomposition_spec :
   all_goals sorry
   all_goals sorry
 
+theorem longestDecomposition_correct :
+    ∀ (text : String),
+      let ans := (longestDecomposition text).run;
+      ans ≥ (0 : Int) ∧ ans ≤ PastaLean.pyLen text :=
+  by
+  intro text
+  exact longestDecomposition_spec True.intro
+
 def longestDecomposition'rn := fun (text : String) ↦
   Id.run
     (do

@@ -17,12 +17,19 @@ set_option maxHeartbeats 800000
 
 /- Python source converted to produce the Lean below (the exact input to PastaLean):
 
+import random
+import functools
+import collections
+import string
+import math
+import datetime
 from typing import *
 from functools import *
 from collections import *
 from itertools import *
 from heapq import *
 from bisect import *
+from string import *
 from operator import *
 from math import *
 from contracts import *
@@ -30,55 +37,97 @@ from contracts import *
 def maximumBeauty(nums: List[int], k: int) -> int:
     Requires(len(nums) > 0)
     Requires(k >= 0)
-    Requires(min(nums) >= 0)
-    m = max(nums) + 2 * k + 2
+    Requires(all(x >= 0 for x in nums))
+    Ensures(1 <= Result() <= len(nums))
+
+    m = max(nums) + k * 2 + 2
     d = [0] * m
     for x in nums:
-        Invariant(0 <= x)
-        Invariant(x + 2 * k + 1 < m)
+        # This loop populates a difference array `d`. For each number `x` in `nums`,
+        # it marks the start of an interval of influence at `x` and the end at `x + 2*k`.
+        # The invariant is that the sum of differences is always zero, as each `+1`
+        # is paired with a `-1`.
+        Invariant(sum(d) == 0)
         d[x] += 1
-        d[x + 2 * k + 1] -= 1
-    return max(accumulate(d))
+        d[x + k * 2 + 1] -= 1
+
+    # The maximum prefix sum of the difference array `d` gives the maximum number of
+    # overlapping intervals. This value corresponds to the maximum number of elements
+    # from `nums` that can fall within any window of size `2*k`, which is the
+    # definition of the problem's "beauty".
+    res = max(accumulate(d))
+
+    Assert(res <= len(nums))
+    Assert(res >= 1)
+    return res
 -/
 
 namespace PastaBench.leetcode.MaximumBeautyOfAnArrayAfterApplyingOperation
 
 def maximumBeauty := fun (nums : List Int) ↦ fun (k : Int) ↦
   (do
-    let mut m : Int := PastaLean.pyMax nums +ₚ (2 : Int) *ₚ k +ₚ (2 : Int)
+    let mut m : Int := PastaLean.pyMax nums +ₚ k *ₚ (2 : Int) +ₚ (2 : Int)
     let mut d : List Int := PastaLean.pyListRepeat [(0 : Int)] m
     for x in (PastaLean.pyIter nums)do
-      let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ x))
-      let _ := Libraries.passta.pyPassInvariant (decide (x +ₚ (2 : Int) *ₚ k +ₚ (1 : Int) < m))
+      -- This loop populates a difference array `d`. For each number `x` in `nums`,
+      -- it marks the start of an interval of influence at `x` and the end at `x + 2*k`.
+      -- The invariant is that the sum of differences is always zero, as each `+1`
+      -- is paired with a `-1`.
+      let _ := Libraries.passta.pyPassInvariant (PastaLean.pySum d == (0 : Int))
       d := PastaLean.pySetItem d x (d⦋x⦌ +ₚ (1 : Int))
-      d := PastaLean.pySetItem d (x +ₚ (2 : Int) *ₚ k +ₚ (1 : Int)) (d⦋x +ₚ (2 : Int) *ₚ k +ₚ (1 : Int)⦌ -ₚ (1 : Int))
-    let __py_ret_1 := PastaLean.pyMax (Libraries.itertools.pyAccumulate d)
-    return __py_ret_1 : Id _)
+      d := PastaLean.pySetItem d (x +ₚ k *ₚ (2 : Int) +ₚ (1 : Int)) (d⦋x +ₚ k *ₚ (2 : Int) +ₚ (1 : Int)⦌ -ₚ (1 : Int))
+    let mut res : Int := PastaLean.pyMax (Libraries.itertools.pyAccumulate d)
+    let _ := Libraries.passta.pyPassAssert (decide (res ≤ PastaLean.pyLen nums))
+    let _ := Libraries.passta.pyPassAssert (decide (res ≥ (1 : Int)))
+    return res : Id _)
 
+@[spec]
 theorem maximumBeauty_spec :
-    ⦃⌜(PastaLean.pyLen nums > (0 : Int) ∧ k ≥ (0 : Int)) ∧ PastaLean.pyMin nums ≥ (0 : Int)⌝⦄
-      maximumBeauty nums k ⦃⇓_ => ⌜True⌝⦄ :=
+    ⦃⌜(PastaLean.pyLen nums > (0 : Int) ∧ k ≥ (0 : Int)) ∧
+          PastaLean.pyAll ((PastaLean.pyIter nums).map fun x => decide (x ≥ (0 : Int)))⌝⦄
+      maximumBeauty nums k ⦃⇓res => ⌜(1 : Int) ≤ res ∧ res ≤ PastaLean.pyLen nums⌝⦄ :=
   by
   try
     mvcgen [maximumBeauty, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓cur => ⌜(0 : Int) ≤ x ∧ x +ₚ (2 : Int) *ₚ k +ₚ (1 : Int) < m⌝
+    · ⇓cur => ⌜PastaLean.pySum d = (0 : Int)⌝
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
+
+theorem maximumBeauty_correct :
+    ∀ (nums : List Int),
+      ∀ (k : Int),
+        (PastaLean.pyLen nums > (0 : Int) ∧ k ≥ (0 : Int)) ∧
+            PastaLean.pyAll ((PastaLean.pyIter nums).map fun x => decide (x ≥ (0 : Int))) →
+          let res := (maximumBeauty nums k).run;
+          (1 : Int) ≤ res ∧ res ≤ PastaLean.pyLen nums :=
+  by
+  intro nums k hpre
+  exact maximumBeauty_spec hpre
 
 def maximumBeauty'rn := fun (nums : List Int) ↦ fun (k : Int) ↦
   Id.run
     (do
       let _ := Libraries.passta.pyPassRequires (decide (PastaLean.pyLen nums > (0 : Int)))
       let _ := Libraries.passta.pyPassRequires (decide (k ≥ (0 : Int)))
-      let _ := Libraries.passta.pyPassRequires (decide (PastaLean.pyMin nums ≥ (0 : Int)))
-      let mut m : Int := PastaLean.pyMax nums +ₚ (2 : Int) *ₚ k +ₚ (2 : Int)
+      let _ :=
+        Libraries.passta.pyPassRequires (PastaLean.pyAll ((PastaLean.pyIter nums).map fun x => decide (x ≥ (0 : Int))))
+      let mut m : Int := PastaLean.pyMax nums +ₚ k *ₚ (2 : Int) +ₚ (2 : Int)
       let mut d : List Int := PastaLean.pyListRepeat [(0 : Int)] m
       for x in (PastaLean.pyIter nums)do
-        let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ x))
-        let _ := Libraries.passta.pyPassInvariant (decide (x +ₚ (2 : Int) *ₚ k +ₚ (1 : Int) < m))
+        -- This loop populates a difference array `d`. For each number `x` in `nums`,
+        -- it marks the start of an interval of influence at `x` and the end at `x + 2*k`.
+        -- The invariant is that the sum of differences is always zero, as each `+1`
+        -- is paired with a `-1`.
+        let _ := Libraries.passta.pyPassInvariant (PastaLean.pySum d == (0 : Int))
         d := PastaLean.pySetItem d x (d⦋x⦌ +ₚ (1 : Int))
-        d := PastaLean.pySetItem d (x +ₚ (2 : Int) *ₚ k +ₚ (1 : Int)) (d⦋x +ₚ (2 : Int) *ₚ k +ₚ (1 : Int)⦌ -ₚ (1 : Int))
-      let __py_ret_1 := PastaLean.pyMax (Libraries.itertools.pyAccumulate d)
-      return __py_ret_1)
+        d := PastaLean.pySetItem d (x +ₚ k *ₚ (2 : Int) +ₚ (1 : Int)) (d⦋x +ₚ k *ₚ (2 : Int) +ₚ (1 : Int)⦌ -ₚ (1 : Int))
+      -- The maximum prefix sum of the difference array `d` gives the maximum number of
+      -- overlapping intervals. This value corresponds to the maximum number of elements
+      -- from `nums` that can fall within any window of size `2*k`, which is the
+      -- definition of the problem's "beauty".
+      let mut res : Int := PastaLean.pyMax (Libraries.itertools.pyAccumulate d)
+      let _ := Libraries.passta.pyPassAssert (decide (res ≤ PastaLean.pyLen nums))
+      let _ := Libraries.passta.pyPassAssert (decide (res ≥ (1 : Int)))
+      return res)
 
 end PastaBench.leetcode.MaximumBeautyOfAnArrayAfterApplyingOperation

@@ -88,6 +88,16 @@ theorem maxRunTime_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
+theorem maxRunTime_correct :
+    ∀ (n : Int),
+      ∀ (batteries : List Int),
+        n > (0 : Int) ∧ PastaLean.pyAll ((PastaLean.pyIter batteries).map fun x => decide (x ≥ (0 : Int))) →
+          let l := (maxRunTime n batteries).run;
+          PastaLean.pySum ((PastaLean.pyIter batteries).map fun x => PastaLean.pyMin [x, l]) ≥ n *ₚ l :=
+  by
+  intro n batteries hpre
+  exact maxRunTime_spec hpre
+
 def maxRunTime'rn := fun (n : Int) ↦ fun (batteries : List Int) ↦
   Id.run
     (do

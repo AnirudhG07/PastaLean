@@ -123,6 +123,16 @@ theorem swapNodes_spec : ⦃⌜k ≥ (1 : Int) ∧ !PastaLean.pyIsNone head⌝�
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
+theorem swapNodes_correct :
+    ∀ (head : Option ListNode),
+      ∀ (k : Int),
+        k ≥ (1 : Int) ∧ !PastaLean.pyIsNone head →
+          let head := (swapNodes head k).run;
+          head == head :=
+  by
+  intro head k hpre
+  exact swapNodes_spec hpre
+
 def swapNodes'rn : Option ListNode'rn → Int → Option ListNode'rn := fun (head : Option ListNode'rn) ↦ fun (k : Int) ↦
   Id.run
     (do

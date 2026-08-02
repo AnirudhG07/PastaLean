@@ -1,0 +1,202 @@
+[
+  {
+    "input": "dict = {'p': 'pineapple', 'b': 'banana'}",
+    "output": "True"
+  },
+  {
+    "input": "dict = {'p': 'pineapple', 'A': 'banana', 'B': 'banana'}",
+    "output": "False"
+  },
+  {
+    "input": "dict = {'p': 'pineapple', '5': 'banana', 'a': 'apple'}",
+    "output": "False"
+  },
+  {
+    "input": "dict = {'Name': 'John', 'Age': '36', 'City': 'Houston'}",
+    "output": "False"
+  },
+  {
+    "input": "dict = {'STATE': 'NC', 'ZIP': '12345'}",
+    "output": "True"
+  },
+  {
+    "input": "dict = {'fruit': 'Orange', 'taste': 'Sweet'}",
+    "output": "True"
+  },
+  {
+    "input": "dict = {}",
+    "output": "False"
+  },
+  {
+    "input": "dict = {'FIRST_NAME': 'John', 'LAST_NAME': 'DOE', 'AGE': 35, 'CITY': 'NEW YORK', 'INCOME': '$50,000'}",
+    "output": "True"
+  },
+  {
+    "input": "dict = {'first_name': 'John', 'last_name': 'Doe', 'age': 35, 'city': 'New York', 'income': '$50,000'}",
+    "output": "True"
+  },
+  {
+    "input": "dict = {'firstName': 'John', 'LASTNAME': 'DOE', 'Age': 35, 'cItY': 'new york', 'Income': '$50,000'}",
+    "output": "False"
+  },
+  {
+    "input": "dict = {'first_name': 'John', 'Last_Name': 'Doe', 'Age': 35, 'city': 'New York', 'Income': '$50,000', 'FIRST_NAME': 'Jane'}",
+    "output": "False"
+  },
+  {
+    "input": "dict = {'1': 'apple', '2': 'banana', '3': 'cherry'}",
+    "output": "False"
+  },
+  {
+    "input": "dict = {'orange': 'fruit'}",
+    "output": "True"
+  },
+  {
+    "input": "dict = {'8': 'banana'}",
+    "output": "False"
+  },
+  {
+    "input": "dict = {'yellow': 'color'}",
+    "output": "True"
+  },
+  {
+    "input": "dict = {'2019': 'year'}",
+    "output": "False"
+  },
+  {
+    "input": "dict = {'PI': 3.14159}",
+    "output": "True"
+  },
+  {
+    "input": "dict = {'firstName': 'John', 'LASTNAME': 'DOE', 'Age': 35, 'Income': '$50,000'}",
+    "output": "False"
+  },
+  {
+    "input": "dict = {'first_name': 'John', 'Last_Name': 'Doe', 'city': 'New York', 'FIRST_NAME': 'cherry'}",
+    "output": "False"
+  },
+  {
+    "input": "dict = {'first_name': 'John', 'Age': 35, 'city': 'New York', 'Income': '$50,000', 'FIRST_NAME': 'Jane'}",
+    "output": "False"
+  },
+  {
+    "input": "dict = {'2019': 'yeyar'}",
+    "output": "False"
+  },
+  {
+    "input": "dict = {'1': 'apple', '2': 'banana', '3': 'cherry', 'Income': 'chINCEOMEerry'}",
+    "output": "False"
+  },
+  {
+    "input": "dict = {'FIRST_NAME': 'John', 'LAST_NAME': 'DOE', 'AGE': 35, 'CITY': 'NK', 'INCOME': '$50,000'}",
+    "output": "True"
+  },
+  {
+    "input": "dict = {'first_name': 'John', 'Last_Name': 'Dooe', 'Age': 35, 'city': 'New York', 'Income': '$50,000', 'FIRST_NAME': 'Jane', '1': 36, 'Incyellowome': 'INCOMEJohn'}",
+    "output": "False"
+  },
+  {
+    "input": "dict = {'firstName': 'John', 'LASTNAME': 'DOE', 'Age': 'D', 'cItY': 'new york', 'Income': '$50,000'}",
+    "output": "False"
+  },
+  {
+    "input": "dict = {'first_name': 'John', 'Last_Name': 'Dooe', 'Age': 35, 'city': 'New York', 'Income': '$50,000', 'FIRST_NAME': 'Jane', 'Incyellowome': 'INCOMEJohn'}",
+    "output": "False"
+  },
+  {
+    "input": "dict = {'FIRST_NAME': 'John', 'LAST_NAME': 'DOE', 'AGE': 35, 'CITY': 'NEW YORK', 'INCOME': '$50,000', 'COME': '$50,0000'}",
+    "output": "True"
+  },
+  {
+    "input": "dict = {'first_name': 'John', 'Age': 35, 'city': 'New York', 'Income': '$50,000', 'FIRST_NAME': 'Jane', '1': 36, 'Incyellowome': 'INCOMEJohn'}",
+    "output": "False"
+  },
+  {
+    "input": "dict = {'1': 'apple', '2': 'banana', '3': 'cherry', 'Income': 'New York'}",
+    "output": "False"
+  },
+  {
+    "input": "dict = {'yellow': 'color', 'yell': 'clor'}",
+    "output": "True"
+  },
+  {
+    "input": "dict = {'firstName': 'John', 'LASTNAME': 'DOE', 'Age': 35, 'cItY': 'new yorok', 'Income': '$50,000', 'cItIY': 36}",
+    "output": "False"
+  },
+  {
+    "input": "dict = {'firstName': 'John', 'LASTNAME': 'DOE', 'Age': 'D', 'cItY': 'new yorAgek', 'Income': '$50,000'}",
+    "output": "False"
+  },
+  {
+    "input": "dict = {'FIRST_NAME': 'John', 'LAST_NAME': 'DOE', 'AGE': 35, 'INCOME': '$50,000'}",
+    "output": "True"
+  },
+  {
+    "input": "dict = {'2': 'banana', '3': 'cherry', 'Income': 'New York', '$50,000': 'chrerry', 'Inconme': 'bana'}",
+    "output": "False"
+  },
+  {
+    "input": "dict = {'first_name': 'John', 'last_name': 'Doe', 'age': 35, 'city': 'New York', 'income': '$50,000', 'ageage': 'Dooe'}",
+    "output": "True"
+  },
+  {
+    "input": "dict = {'FIRST_NAME': 'John', 'LAST_NAME': 'DOE', 'AGE': 35, 'CITY': 'NK', 'INCOME': '$50,000', '1': 35}",
+    "output": "False"
+  },
+  {
+    "input": "dict = {'firstName': 'John', 'LASTNAME': 'DOE', 'Age': 'D', 'cItY': 'new yorAgek', 'Income': '$50,000', 'IncIome': 'FIRST_NAME'}",
+    "output": "False"
+  },
+  {
+    "input": "dict = {'firstName': 'John', 'LASTNAME': 'DOE', 'Age': 'D', 'cItY': 'new yorAgek', 'Income': '$50,000', 'LASTNAE': 'new yorAgeIncIomek'}",
+    "output": "False"
+  },
+  {
+    "input": "dict = {'2': 'banana', '3': 'cherry', 'Income': 'New York'}",
+    "output": "False"
+  },
+  {
+    "input": "dict = {'first_name': 'John', 'Last_Name': 'Doe', 'Age': 35, 'city': 'new yorAgek', 'Income': '$50,000', 'FIRST_NAME': 'Jane'}",
+    "output": "False"
+  },
+  {
+    "input": "dict = {'firstName': 'John', 'LASTNAME': 'DOE', 'Age': 'D', 'cItY': 'new yorAgek', 'IncIome': 'FIRST_NAME'}",
+    "output": "False"
+  },
+  {
+    "input": "dict = {'first_name': 'John', 'last_name': 'Doe', 'age': 35, 'city': 'New York', 'income': '$50,000', 'ageage': 'Dooe', 'new yorok': '8'}",
+    "output": "True"
+  },
+  {
+    "input": "dict = {'firstName': 'John', 'LASTNAME': 'DDOE', 'Age': 'D', 'cItY': 'new yorAgek', 'Income': '$50,000', 'IncIome': 'FIRST_NAME', 'LASTENAME': 'Anew yorAgek'}",
+    "output": "False"
+  },
+  {
+    "input": "dict = {'first_name': 'John', 'last_name': 'Doe', 'age': 35, 'city': 'New YorNk', 'income': '$50,000'}",
+    "output": "True"
+  },
+  {
+    "input": "dict = {'first_name': 'John', 'Last_Name': 'Doe', 'city': 'New York', 'Income': '$50,000', 'FIRST_NAME': 'Jane'}",
+    "output": "False"
+  },
+  {
+    "input": "dict = {'first_name': 'John', 'Last_Name': 'Doe', 'city': 'New Yoincomerk', 'Income': '$50,000', 'FIRST_NAME': 'Jane'}",
+    "output": "False"
+  },
+  {
+    "input": "dict = {'FIRST_NAME': 'John', 'LAST_NAME': 'OE', 'AGE': 35, 'CITY': 'NEW YORK', 'COME': '$50,0000'}",
+    "output": "True"
+  },
+  {
+    "input": "dict = {'firstName': 'John', 'Age': 35, 'Income': '$50,000', 'Incomeyeyar': 'JoDooehn'}",
+    "output": "False"
+  },
+  {
+    "input": "dict = {'firstName': 'John', 'LASTNAME': 'DOE', 'Age': 35, 'Income': '$50,000', '8': '$0,000'}",
+    "output": "False"
+  },
+  {
+    "input": "dict = {'firstName': 'Johageage', 'Age': 35, 'cItY': 'new york', 'Income': '$50,000'}",
+    "output": "False"
+  }
+]

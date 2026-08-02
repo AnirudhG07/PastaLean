@@ -106,6 +106,18 @@ theorem processQueries_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
+theorem processQueries_correct :
+    ∀ (queries : List Int),
+      ∀ (m : Int),
+        m ≥ (1 : Int) ∧
+            PastaLean.pyAll ((PastaLean.pyIter queries).map fun v => decide ((1 : Int) ≤ v) && decide (v ≤ m)) →
+          let ans := (processQueries queries m).run;
+          PastaLean.pyLen ans = PastaLean.pyLen queries ∧
+            PastaLean.pyAll ((PastaLean.pyIter ans).map fun j => decide ((0 : Int) ≤ j) && decide (j < m)) :=
+  by
+  intro queries m hpre
+  exact processQueries_spec hpre
+
 def processQueries'rn := fun (queries : List Int) ↦ fun (m : Int) ↦
   Id.run
     (do

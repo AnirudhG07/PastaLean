@@ -1,0 +1,202 @@
+[
+  {
+    "input": "string = ''",
+    "output": "0"
+  },
+  {
+    "input": "string = 'abcde'",
+    "output": "5"
+  },
+  {
+    "input": "string = 'abcdecadeCADE'",
+    "output": "5"
+  },
+  {
+    "input": "string = 'aaaaAAAAaaaa'",
+    "output": "1"
+  },
+  {
+    "input": "string = 'Jerry jERRY JeRRRY'",
+    "output": "5"
+  },
+  {
+    "input": "string = 'AbCdEfG'",
+    "output": "7"
+  },
+  {
+    "input": "string = 'banana'",
+    "output": "3"
+  },
+  {
+    "input": "string = '1234567890'",
+    "output": "10"
+  },
+  {
+    "input": "string = 'hello123'",
+    "output": "7"
+  },
+  {
+    "input": "string = 'The quick brown fox jumps over the lazy dog'",
+    "output": "27"
+  },
+  {
+    "input": "string = 'THISISALONGSTRINGWITHNOSPACES'",
+    "output": "14"
+  },
+  {
+    "input": "string = 'aaaabbbbccccddddeeeeffffgggghhhhiiii'",
+    "output": "9"
+  },
+  {
+    "input": "string = 'AaBbCcDdEeFfGgHhIi'",
+    "output": "9"
+  },
+  {
+    "input": "string = 'hello world'",
+    "output": "8"
+  },
+  {
+    "input": "string = '1,2,3... go!'",
+    "output": "9"
+  },
+  {
+    "input": "string = 'The quick brown fox jumps over the lazy doAbCdEfGg'",
+    "output": "27"
+  },
+  {
+    "input": "string = 'hellold'",
+    "output": "5"
+  },
+  {
+    "input": "string = '1,2,3... gog!'",
+    "output": "9"
+  },
+  {
+    "input": "string = 'lhello wworld'",
+    "output": "8"
+  },
+  {
+    "input": "string = '1,2,3... go123hello12345The quick brown fox jumps ovTHISISALONGSTRINGWITHNOSPACESer the lazy doAbCdEfGg67890g!'",
+    "output": "40"
+  },
+  {
+    "input": "string = 'AaBbCcThe quick brown fox jumps over the lazy doAbCdEfGgDdEeFfhello worldGgHhIi'",
+    "output": "27"
+  },
+  {
+    "input": "string = 'AaBbCcThe quichelloldk brown fox jumps over the lazy doAbCdEfGgDdEeFfhello worldGgHhIi'",
+    "output": "27"
+  },
+  {
+    "input": "string = '1,2,3.hellold.. gog!'",
+    "output": "13"
+  },
+  {
+    "input": "string = 'hello wThe quick brown fox jumps over the lazy doAbCdEfGgorld'",
+    "output": "27"
+  },
+  {
+    "input": "string = 'hell1,2,3... go!o world'",
+    "output": "15"
+  },
+  {
+    "input": "string = 'AbCdE'",
+    "output": "5"
+  },
+  {
+    "input": "string = 'hellAbCdE world'",
+    "output": "11"
+  },
+  {
+    "input": "string = '1,2,3.AaBbCcThe quick brown fox jumps over the lazy doAbCdEfGgDdEeFfhello worldGgHhIi.. go!'",
+    "output": "33"
+  },
+  {
+    "input": "string = 'hello wThe quick brown fox jumps over e lazy doAbCdEfGgorld'",
+    "output": "27"
+  },
+  {
+    "input": "string = '1,2,3... go123hello12345The quick bbrown fox jumps ovTHISISALONGSTRINGWITHNOSPACESer the lazy doAbCdEfSGg67890g!'",
+    "output": "40"
+  },
+  {
+    "input": "string = 'THISISALONGSTSRINGWITHNOSPPACES'",
+    "output": "14"
+  },
+  {
+    "input": "string = '1,2,3hellold.hel,lold.. 2gog!'",
+    "output": "13"
+  },
+  {
+    "input": "string = 'AEbCdE'",
+    "output": "5"
+  },
+  {
+    "input": "string = 'The quick brcown fox jumps over the lazy doAbCdEfGg'",
+    "output": "27"
+  },
+  {
+    "input": "string = 'CdE'",
+    "output": "3"
+  },
+  {
+    "input": "string = '1,2,3hellhelhelloldloldold.hel,lold.. 2gog!'",
+    "output": "13"
+  },
+  {
+    "input": "string = '1,2,3... go123hello12345The quick bbrown foxhellAbCdE world jumps ovTHISISALONGSTRINGWITHNOSPACESer the lazy doAbCdEfSGg67890g!'",
+    "output": "40"
+  },
+  {
+    "input": "string = 'The oquick brown fox jumps overg'",
+    "output": "22"
+  },
+  {
+    "input": "string = 'AaBbCcThe qldGgHhIi'",
+    "output": "12"
+  },
+  {
+    "input": "string = 'The quick brown fox jumps over t1,2,3... go123hello12345The quick bbrown foxhellAbCdE world jumps ovTHISISALONGSTRINGWITHNOSPACESer the lazy doAbCdEfSGg67890g!he lazy doAbCdEfGg'",
+    "output": "40"
+  },
+  {
+    "input": "string = 'hello wThe quick brrown fox jumps over e lazy doAbCdEfGgorld'",
+    "output": "27"
+  },
+  {
+    "input": "string = 'Cd1,2,3hellhelhellol.dloldold.hel,lold.. 2gog!E'",
+    "output": "14"
+  },
+  {
+    "input": "string = 'helllold'",
+    "output": "5"
+  },
+  {
+    "input": "string = 'hellr1,2,3... go!o world'",
+    "output": "15"
+  },
+  {
+    "input": "string = 'THISISALONNGSTRINGWITHNOSPACES'",
+    "output": "14"
+  },
+  {
+    "input": "string = 'AahelloldBbCcThe quick brown fox jumps over the lazy doAbCdEfGgDdEeFfhello worldGgHhIi'",
+    "output": "27"
+  },
+  {
+    "input": "string = 'bananCd1,2,3ellhelhellol.dloldold.hel,lold.. 2gog!E'",
+    "output": "17"
+  },
+  {
+    "input": "string = '1,2,3..Cd1,2,3hellhelhellol.dloldold.hel,lold.. 2gog!E. go!'",
+    "output": "14"
+  },
+  {
+    "input": "string = 'lhello wTHISISALONGSTRINGWITHNOSPACES'",
+    "output": "15"
+  },
+  {
+    "input": "string = 'hello wo1,2,3... gog!rld'",
+    "output": "15"
+  }
+]

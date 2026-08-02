@@ -32,33 +32,25 @@ from bisect import *
 from string import *
 from operator import *
 from math import *
-
 from contracts import *
 
 def hammingDistance(x: int, y: int) -> int:
     Requires(x >= 0)
     Requires(y >= 0)
+    Ensures(Result() >= 0)
     return (x ^ y).bit_count()
 -/
 
 namespace PastaBench.leetcode.HammingDistance
 
-def hammingDistance := fun (x : Int) ↦ fun (y : Int) ↦
-  (do
-    let __py_ret_1 := PastaLean.pyBitCount (PastaLean.pyBitXor x y)
-    return __py_ret_1 : Id _)
+def hammingDistance := fun (x : Int) ↦ fun (y : Int) ↦ PastaLean.pyBitCount (PastaLean.pyBitXor x y)
 
-theorem hammingDistance_spec : ⦃⌜x ≥ (0 : Int) ∧ y ≥ (0 : Int)⌝⦄ hammingDistance x y ⦃⇓_ => ⌜True⌝⦄ :=
-  by
-  mvcgen [hammingDistance, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  all_goals sorry
+attribute [simp] hammingDistance
 
-def hammingDistance'rn := fun (x : Int) ↦ fun (y : Int) ↦
-  Id.run
-    (do
-      let _ := Libraries.passta.pyPassRequires (decide (x ≥ (0 : Int)))
-      let _ := Libraries.passta.pyPassRequires (decide (y ≥ (0 : Int)))
-      let __py_ret_1 := PastaLean.pyBitCount (PastaLean.pyBitXor x y)
-      return __py_ret_1)
+@[taste_ingr]
+theorem hammingDistance_correct :
+    ∀ (x : Int), ∀ (y : Int), x ≥ (0 : Int) → y ≥ (0 : Int) → hammingDistance x y ≥ (0 : Int) := by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+
+def hammingDistance'rn := fun (x : Int) ↦ fun (y : Int) ↦ PastaLean.pyBitCount (PastaLean.pyBitXor x y)
 
 end PastaBench.leetcode.HammingDistance

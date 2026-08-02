@@ -59,22 +59,11 @@ def countDistinct := fun (s : String) ↦
 attribute [simp] countDistinct
 
 @[taste_ingr]
-theorem countDistinct_spec :
+theorem countDistinct_correct :
     ∀ (s : String),
       let n := PastaLean.pyLen s
-      PastaLean.pyLen
-            (PastaLean.pySetFromList
-              ((PastaLean.pyRange n).flatMap fun i =>
-                (PastaLean.pyRange (n +ₚ (1 : Int)) (i +ₚ (1 : Int))).map fun j =>
-                  PastaLean.pySlice s (some i) (some j) none)) ≥
-          PastaLean.pyLen s ∧
-        (2 : Int) *ₚ
-            PastaLean.pyLen
-              (PastaLean.pySetFromList
-                ((PastaLean.pyRange n).flatMap fun i =>
-                  (PastaLean.pyRange (n +ₚ (1 : Int)) (i +ₚ (1 : Int))).map fun j =>
-                    PastaLean.pySlice s (some i) (some j) none)) ≤
-          PastaLean.pyLen s *ₚ (PastaLean.pyLen s +ₚ (1 : Int)) :=
+      countDistinct s ≥ PastaLean.pyLen s ∧
+        (2 : Int) *ₚ countDistinct s ≤ PastaLean.pyLen s *ₚ (PastaLean.pyLen s +ₚ (1 : Int)) :=
   by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
 
 def countDistinct'rn := fun (s : String) ↦

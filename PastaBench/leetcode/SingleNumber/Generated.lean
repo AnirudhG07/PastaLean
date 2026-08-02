@@ -54,13 +54,11 @@ def singleNumber := fun (nums : List Int) ↦ Libraries.functools.pyReduce nums 
 attribute [simp] singleNumber
 
 @[taste_ingr]
-theorem singleNumber_spec :
+theorem singleNumber_correct :
     ∀ (nums : List Int),
       PastaLean.pyLen nums > (0 : Int) →
-        Libraries.functools.pyReduce (nums +ₚ [Libraries.functools.pyReduce nums PastaLean.pyBitXor])
-            PastaLean.pyBitXor =
-          (0 : Int) :=
-  by intros; sorry
+        Libraries.functools.pyReduce (nums +ₚ [singleNumber nums]) PastaLean.pyBitXor = (0 : Int) :=
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
 
 def singleNumber'rn := fun (nums : List Int) ↦ Libraries.functools.pyReduce nums PastaLean.pyBitXor
 

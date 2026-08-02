@@ -49,7 +49,11 @@ def listCompTargetLambda (targetJson : Json) (body : TSyntax `term) :
   match jsonNodeType? targetJson with
   | some "Name" =>
       let targetIdent ← getCode targetJson `ident
-      `(fun $targetIdent => $body)
+      -- Ascribe the binder to the iterable's element type (`_ty`, stamped by TypeInfer), so
+      -- `for group in (groups : List String)` yields `group : String`, not the default.
+      match ← (jsonFieldOption targetJson "_ty").mapM (fun ann => pyTypeSyntax? (TypeInfer.ofAnnotation ann)) with
+      | some (some ty) => `(fun ($targetIdent : $ty) => $body)
+      | _ => `(fun $targetIdent => $body)
   | some "Tuple" =>
       -- Bind the lambda parameter directly as the pair and project each position (a flat tuple
       -- unpacks with no extra `let`); nested tuple elements recurse via `destructureCompTarget`.

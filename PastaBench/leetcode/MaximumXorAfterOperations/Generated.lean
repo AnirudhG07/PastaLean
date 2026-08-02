@@ -51,16 +51,14 @@ def maximumXOR := fun (nums : List Int) ↦ Libraries.functools.pyReduce nums Pa
 attribute [simp] maximumXOR
 
 @[taste_ingr]
-theorem maximumXOR_spec :
+theorem maximumXOR_correct :
     ∀ (nums : List Int),
       PastaLean.pyLen nums > (0 : Int) →
         PastaLean.pyAll ((PastaLean.pyIter nums).map fun x => decide (x ≥ (0 : Int))) →
           PastaLean.pyTruthy
-                (PastaLean.pyAll
-                  ((PastaLean.pyIter nums).map fun x =>
-                    PastaLean.pyBitAnd x (Libraries.functools.pyReduce nums PastaLean.pyBitOr) == x)) =
+                (PastaLean.pyAll ((PastaLean.pyIter nums).map fun x => PastaLean.pyBitAnd x (maximumXOR nums) == x)) =
               true ∧
-            Libraries.functools.pyReduce nums PastaLean.pyBitOr ≥ (0 : Int) :=
+            maximumXOR nums ≥ (0 : Int) :=
   by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
 
 def maximumXOR'rn := fun (nums : List Int) ↦ Libraries.functools.pyReduce nums PastaLean.pyBitOr

@@ -87,6 +87,15 @@ theorem mySqrt_spec : ⦃⌜x ≥ (0 : Int)⌝⦄ mySqrt x ⦃⇓l => ⌜l *ₚ 
   simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
+theorem mySqrt_correct :
+    ∀ (x : Int),
+      x ≥ (0 : Int) →
+        let l := (mySqrt x).run;
+        l *ₚ l ≤ x ∧ (l +ₚ (1 : Int)) *ₚ (l +ₚ (1 : Int)) > x :=
+  by
+  intro x hpre
+  exact mySqrt_spec hpre
+
 def mySqrt'rn := fun (x : Int) ↦
   Id.run
     (do

@@ -68,69 +68,18 @@ def frequencySort := fun (s : String) ↦
 attribute [simp] frequencySort
 
 @[taste_ingr]
-theorem frequencySort_spec :
+theorem frequencySort_correct :
     ∀ (s : String),
       let cnt := Libraries.collections.pyCounter s
-      Libraries.collections.pyCounter
-            (PastaLean.pyStringJoin ""
-              ((PastaLean.pyIter
-                    (PastaLean.pySortBy (fun (x : String × Int) ↦ -Prod.snd x) false (PastaLean.pyItems cnt))).map
-                fun (_pair_1 : String × Int) =>
-                let c := Prod.fst _pair_1;
-                let v := Prod.snd _pair_1;
-                c *ₚ v)) =
-          Libraries.collections.pyCounter s ∧
+      Libraries.collections.pyCounter (frequencySort s) = Libraries.collections.pyCounter s ∧
         PastaLean.pyTruthy
             (PastaLean.pyAll
-              ((List.filter
-                    (fun i =>
-                      (PastaLean.pyStringJoin ""
-                            ((PastaLean.pyIter
-                                  (PastaLean.pySortBy (fun (x : String × Int) ↦ -Prod.snd x) false
-                                    (PastaLean.pyItems cnt))).map
-                              fun (_pair_10 : String × Int) =>
-                              let c := Prod.fst _pair_10;
-                              let v := Prod.snd _pair_10;
-                              c *ₚ v))⦋i⦌ ≠
-                        (PastaLean.pyStringJoin ""
-                            ((PastaLean.pyIter
-                                  (PastaLean.pySortBy (fun (x : String × Int) ↦ -Prod.snd x) false
-                                    (PastaLean.pyItems cnt))).map
-                              fun (_pair_11 : String × Int) =>
-                              let c := Prod.fst _pair_11;
-                              let v := Prod.snd _pair_11;
-                              c *ₚ v))⦋i +ₚ (1 : Int)⦌)
-                    (PastaLean.pyRange
-                      (PastaLean.pyLen
-                          (PastaLean.pyStringJoin ""
-                            ((PastaLean.pyIter
-                                  (PastaLean.pySortBy (fun (x : String × Int) ↦ -Prod.snd x) false
-                                    (PastaLean.pyItems cnt))).map
-                              fun (_pair_9 : String × Int) =>
-                              let c := Prod.fst _pair_9;
-                              let v := Prod.snd _pair_9;
-                              c *ₚ v)) -ₚ
-                        (1 : Int)))).map
+              ((List.filter (fun i => (frequencySort s)⦋i⦌ ≠ (frequencySort s)⦋i +ₚ (1 : Int)⦌)
+                    (PastaLean.pyRange (PastaLean.pyLen (frequencySort s) -ₚ (1 : Int)))).map
                 fun i =>
                 decide
-                  ((Libraries.collections.pyCounter
-                        s)⦋(PastaLean.pyStringJoin ""
-                          ((PastaLean.pyIter
-                                (PastaLean.pySortBy (fun (x : String × Int) ↦ -Prod.snd x) false
-                                  (PastaLean.pyItems cnt))).map
-                            fun (_pair_7 : String × Int) =>
-                            let c := Prod.fst _pair_7;
-                            let v := Prod.snd _pair_7;
-                            c *ₚ v))⦋i⦌⦌ ≥
-                    (Libraries.collections.pyCounter
-                        s)⦋(PastaLean.pyStringJoin ""
-                          ((PastaLean.pyIter
-                                (PastaLean.pySortBy (fun (x : String × Int) ↦ -Prod.snd x) false
-                                  (PastaLean.pyItems cnt))).map
-                            fun (_pair_8 : String × Int) =>
-                            let c := Prod.fst _pair_8;
-                            let v := Prod.snd _pair_8;
-                            c *ₚ v))⦋i +ₚ (1 : Int)⦌⦌))) =
+                  ((Libraries.collections.pyCounter s)⦋(frequencySort s)⦋i⦌⦌ ≥
+                    (Libraries.collections.pyCounter s)⦋(frequencySort s)⦋i +ₚ (1 : Int)⦌⦌))) =
           true :=
   by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
 

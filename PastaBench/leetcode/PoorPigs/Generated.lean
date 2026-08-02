@@ -66,9 +66,32 @@ theorem poorPigs_spec :
       poorPigs buckets minutesToDie minutesToTest ⦃⇓res =>
       ⌜(PastaLean.pyFloorDiv minutesToTest minutesToDie +ₚ (1 : Int)) ^ₚ res ≥ buckets⌝⦄ :=
   by
-  mvcgen [poorPigs, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  try
+    mvcgen [poorPigs, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · fun s =>
+      let p := s |>.snd;
+      let res := s |>.fst;
+      (⟨(buckets -ₚ p).toNat⟩ : ULift Nat)
+    · ⇓s =>
+      ⌜Sum.elim
+          (fun st =>
+            let p := st |>.snd;
+            let res := st |>.fst;
+            ((0 : Int) ≤ res ∧ p = base ^ₚ res) ∧ p < buckets)
+          (fun _ => True) s⌝
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
+
+theorem poorPigs_correct :
+    ∀ (buckets : Int),
+      ∀ (minutesToDie : Int),
+        ∀ (minutesToTest : Int),
+          (buckets ≥ (1 : Int) ∧ minutesToDie > (0 : Int)) ∧ minutesToTest ≥ minutesToDie →
+            let res := (poorPigs buckets minutesToDie minutesToTest).run;
+            (PastaLean.pyFloorDiv minutesToTest minutesToDie +ₚ (1 : Int)) ^ₚ res ≥ buckets :=
+  by
+  intro buckets minutesToDie minutesToTest hpre
+  exact poorPigs_spec hpre
 
 def poorPigs'rn := fun (buckets : Int) ↦ fun (minutesToDie : Int) ↦ fun (minutesToTest : Int) ↦
   Id.run

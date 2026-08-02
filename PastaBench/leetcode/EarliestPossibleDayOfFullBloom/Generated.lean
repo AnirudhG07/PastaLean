@@ -88,6 +88,18 @@ theorem earliestFullBloom_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
+theorem earliestFullBloom_correct :
+    ∀ (plantTime : List Int),
+      ∀ (growTime : List Int),
+        (PastaLean.pyLen plantTime = PastaLean.pyLen growTime ∧
+              PastaLean.pyAll ((PastaLean.pyIter plantTime).map fun t => decide (t ≥ (0 : Int)))) ∧
+            PastaLean.pyAll ((PastaLean.pyIter growTime).map fun t => decide (t ≥ (0 : Int))) →
+          let ans := (earliestFullBloom plantTime growTime).run;
+          ans ≥ (0 : Int) ∧ ans ≥ PastaLean.pySum plantTime :=
+  by
+  intro plantTime growTime hpre
+  exact earliestFullBloom_spec hpre
+
 def earliestFullBloom'rn := fun (plantTime : List Int) ↦ fun (growTime : List Int) ↦
   Id.run
     (do

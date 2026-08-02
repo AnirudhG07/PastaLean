@@ -74,15 +74,8 @@ def findMaximumLength := fun (nums : List Int) ↦
     let __py_ret_1 := f⦋n⦌
     return __py_ret_1 : Id _)
 
-theorem findMaximumLength_spec : ⦃⌜True⌝⦄ findMaximumLength nums ⦃⇓_ => ⌜True⌝⦄ :=
-  by
-  try
-    mvcgen [findMaximumLength, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓cur =>
-      ⌜let i := (cur.prefix.length : Int);
-        ((1 : Int) ≤ i ∧ i ≤ n) ∧ (0 : Int) ≤ pre⦋i⦌ ∧ pre⦋i⦌ ≤ i⌝
-  sorry
-  all_goals sorry
+theorem findMaximumLength_spec : ⦃⌜True⌝⦄ findMaximumLength nums ⦃⇓_ => ⌜True⌝⦄ := by
+  apply Std.Do.Triple.of_entails_wp; intro _; exact True.intro
 
 def findMaximumLength'rn := fun (nums : List Int) ↦
   Id.run

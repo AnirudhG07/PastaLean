@@ -75,6 +75,17 @@ theorem pivotInteger_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
+theorem pivotInteger_correct :
+    ∀ (n : Int),
+      n ≥ (1 : Int) →
+        let result := (pivotInteger n).run;
+        result = -(1 : Int) ∨
+          ((1 : Int) ≤ result ∧ result ≤ n) ∧
+            ((1 : Int) +ₚ result) *ₚ result = (result +ₚ n) *ₚ (n -ₚ result +ₚ (1 : Int)) :=
+  by
+  intro n hpre
+  exact pivotInteger_spec hpre
+
 def pivotInteger'rn := fun (n : Int) ↦
   Id.run
     (do

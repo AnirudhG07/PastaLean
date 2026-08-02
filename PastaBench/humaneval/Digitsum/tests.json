@@ -1,0 +1,202 @@
+[
+  {
+    "input": "s = ''",
+    "output": "0"
+  },
+  {
+    "input": "s = 'abAB'",
+    "output": "131"
+  },
+  {
+    "input": "s = 'abcCd'",
+    "output": "67"
+  },
+  {
+    "input": "s = 'helloE'",
+    "output": "69"
+  },
+  {
+    "input": "s = 'woArBld'",
+    "output": "131"
+  },
+  {
+    "input": "s = 'aAaaaXa'",
+    "output": "153"
+  },
+  {
+    "input": "s = ' How are yOu?'",
+    "output": "151"
+  },
+  {
+    "input": "s = 'You arE Very Smart'",
+    "output": "327"
+  },
+  {
+    "input": "s = '123'",
+    "output": "0"
+  },
+  {
+    "input": "s = 'ABCD'",
+    "output": "266"
+  },
+  {
+    "input": "s = 'abcd'",
+    "output": "0"
+  },
+  {
+    "input": "s = 'HELLOworld'",
+    "output": "372"
+  },
+  {
+    "input": "s = ':;<=>?@[\\\\]^_`{|}~'",
+    "output": "0"
+  },
+  {
+    "input": "s = 'ABC123def456GHI'",
+    "output": "414"
+  },
+  {
+    "input": "s = '  A  B C  D  '",
+    "output": "266"
+  },
+  {
+    "input": "s = 'UPPER'",
+    "output": "396"
+  },
+  {
+    "input": "s = 'lowercase'",
+    "output": "0"
+  },
+  {
+    "input": "s = 'Ab56'",
+    "output": "65"
+  },
+  {
+    "input": "s = 'lowrcase'",
+    "output": "0"
+  },
+  {
+    "input": "s = 'ABC123def45l6GHlowrcaseI'",
+    "output": "414"
+  },
+  {
+    "input": "s = '1123'",
+    "output": "0"
+  },
+  {
+    "input": "s = ':;<=>?@[\\\\]^_`{ABC123def456GHI'",
+    "output": "414"
+  },
+  {
+    "input": "s = 'HELLOworrld'",
+    "output": "372"
+  },
+  {
+    "input": "s = 'lowercalowercasese'",
+    "output": "0"
+  },
+  {
+    "input": "s = '  A  B C  D '",
+    "output": "266"
+  },
+  {
+    "input": "s = '  A   B  C  D '",
+    "output": "266"
+  },
+  {
+    "input": "s = '1Ab56cacbcd23'",
+    "output": "65"
+  },
+  {
+    "input": "s = 'HELrLOworrld'",
+    "output": "372"
+  },
+  {
+    "input": "s = '1123ABCD'",
+    "output": "266"
+  },
+  {
+    "input": "s = '12:;<=>?@[\\\\]^_`{|}~ABC123def456GHI3'",
+    "output": "414"
+  },
+  {
+    "input": "s = 'Ab556'",
+    "output": "65"
+  },
+  {
+    "input": "s = '112lowercalowercasese3'",
+    "output": "0"
+  },
+  {
+    "input": "s = ':;<=>?@[\\\\]^_`{_|}~'",
+    "output": "0"
+  },
+  {
+    "input": "s = 'lowercase123'",
+    "output": "0"
+  },
+  {
+    "input": "s = '  A   B  C  D 23'",
+    "output": "266"
+  },
+  {
+    "input": "s = '  A  C  D '",
+    "output": "200"
+  },
+  {
+    "input": "s = '1Ab56caacbcd23'",
+    "output": "65"
+  },
+  {
+    "input": "s = '   A  C  D '",
+    "output": "200"
+  },
+  {
+    "input": "s = 'HELLOworld  A  B C  D  '",
+    "output": "638"
+  },
+  {
+    "input": "s = 'HELLrOworrld'",
+    "output": "372"
+  },
+  {
+    "input": "s = '112lowercalowercasese31123'",
+    "output": "0"
+  },
+  {
+    "input": "s = 'abcd1123A12:;<=>?@[\\\\]^_`{|}~ABC123def456GHI3BCD'",
+    "output": "680"
+  },
+  {
+    "input": "s = '  A   B  C   D '",
+    "output": "266"
+  },
+  {
+    "input": "s = 'abc1Ab56cacbcd23d'",
+    "output": "65"
+  },
+  {
+    "input": "s = 'HELrLOworrlHELLOworld'",
+    "output": "744"
+  },
+  {
+    "input": "s = 'UPPRER'",
+    "output": "478"
+  },
+  {
+    "input": "s = 'abcd1123A1C123def456GHI3BCD'",
+    "output": "549"
+  },
+  {
+    "input": "s = '  A  B CC  D '",
+    "output": "333"
+  },
+  {
+    "input": "s = ':;<=>?@[]\\\\]^_`{|}~'",
+    "output": "0"
+  },
+  {
+    "input": "s = 'lowercasese31123'",
+    "output": "0"
+  }
+]

@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/139",
+  "problem": "special-factorial",
+  "module": "SpecialFactorial",
+  "method": "special_factorial",
+  "params": [
+    "n"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 49
+}

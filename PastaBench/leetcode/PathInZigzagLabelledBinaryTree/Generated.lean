@@ -121,9 +121,30 @@ theorem pathInZigZagTree_spec :
     ⦃⌜label ≥ (1 : Int)⌝⦄ pathInZigZagTree label ⦃⇓ans =>
       ⌜PastaLean.pyLen ans > (0 : Int) ∧ ans⦋(0 : Int)⦌ = (1 : Int)⌝⦄ :=
   by
-  mvcgen [pathInZigZagTree, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  try
+    mvcgen [pathInZigZagTree, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · fun s =>
+      let i := s |>.snd;
+      let x := s |>.fst;
+      (⟨(label -ₚ x).toNat⟩ : ULift Nat)
+    · ⇓s =>
+      ⌜Sum.elim
+          (fun st =>
+            let i := st |>.snd;
+            let x := st |>.fst;
+            i ≥ (1 : Int) ∧ x = PastaLean.pyShiftLeft (1 : Int) (i -ₚ (1 : Int)))
+          (fun _ => True) s⌝
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
+
+theorem pathInZigZagTree_correct :
+    ∀ (label : Int),
+      label ≥ (1 : Int) →
+        let ans := (pathInZigZagTree label).run;
+        PastaLean.pyLen ans > (0 : Int) ∧ ans⦋(0 : Int)⦌ = (1 : Int) :=
+  by
+  intro label hpre
+  exact pathInZigZagTree_spec hpre
 
 def pathInZigZagTree'rn := fun (label : Int) ↦
   Id.run

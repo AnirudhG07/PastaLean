@@ -73,46 +73,24 @@ def minimizedMaximum := fun (n : Int) ↦ fun (quantities : List Int) ↦
 attribute [simp] minimizedMaximum
 
 @[taste_ingr]
-theorem minimizedMaximum_spec :
+theorem minimizedMaximum_correct :
     ∀ (n : Int),
       ∀ (quantities : List Int),
         n > (0 : Int) →
           PastaLean.pyLen quantities > (0 : Int) →
             PastaLean.pyAll ((PastaLean.pyIter quantities).map fun q => decide (q > (0 : Int))) →
               n ≥ PastaLean.pyLen quantities →
-                ((1 : Int) +ₚ
-                        Libraries.bisect.pyBisectLeftRangeKey (1 : Int) ((10 : Int) ^ₚ (6 : Int)) (1 : Int) Bool.true
-                          (key := fun (x : Int) ↦ _minimizedMaximum'check x n quantities) ≥
-                      (1 : Int) ∧
+                (minimizedMaximum n quantities ≥ (1 : Int) ∧
                     PastaLean.pySum
                         ((PastaLean.pyIter quantities).map fun q =>
-                          PastaLean.pyFloorDiv
-                            (q +ₚ
-                                ((1 : Int) +ₚ
-                                  Libraries.bisect.pyBisectLeftRangeKey (1 : Int) ((10 : Int) ^ₚ (6 : Int)) (1 : Int)
-                                    Bool.true (key := fun (x : Int) ↦ _minimizedMaximum'check x n quantities)) -ₚ
-                              (1 : Int))
-                            ((1 : Int) +ₚ
-                              Libraries.bisect.pyBisectLeftRangeKey (1 : Int) ((10 : Int) ^ₚ (6 : Int)) (1 : Int)
-                                Bool.true (key := fun (x : Int) ↦ _minimizedMaximum'check x n quantities))) ≤
+                          PastaLean.pyFloorDiv (q +ₚ minimizedMaximum n quantities -ₚ (1 : Int))
+                            (minimizedMaximum n quantities)) ≤
                       n) ∧
-                  ((1 : Int) +ₚ
-                        Libraries.bisect.pyBisectLeftRangeKey (1 : Int) ((10 : Int) ^ₚ (6 : Int)) (1 : Int) Bool.true
-                          (key := fun (x : Int) ↦ _minimizedMaximum'check x n quantities) =
-                      (1 : Int) ∨
+                  (minimizedMaximum n quantities = (1 : Int) ∨
                     PastaLean.pySum
                         ((PastaLean.pyIter quantities).map fun q =>
-                          PastaLean.pyFloorDiv
-                            (q +ₚ
-                                ((1 : Int) +ₚ
-                                    Libraries.bisect.pyBisectLeftRangeKey (1 : Int) ((10 : Int) ^ₚ (6 : Int)) (1 : Int)
-                                      Bool.true (key := fun (x : Int) ↦ _minimizedMaximum'check x n quantities) -ₚ
-                                  (1 : Int)) -ₚ
-                              (1 : Int))
-                            ((1 : Int) +ₚ
-                                Libraries.bisect.pyBisectLeftRangeKey (1 : Int) ((10 : Int) ^ₚ (6 : Int)) (1 : Int)
-                                  Bool.true (key := fun (x : Int) ↦ _minimizedMaximum'check x n quantities) -ₚ
-                              (1 : Int))) >
+                          PastaLean.pyFloorDiv (q +ₚ (minimizedMaximum n quantities -ₚ (1 : Int)) -ₚ (1 : Int))
+                            (minimizedMaximum n quantities -ₚ (1 : Int))) >
                       n) :=
   by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
 

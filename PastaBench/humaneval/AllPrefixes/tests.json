@@ -1,0 +1,202 @@
+[
+  {
+    "input": "string = ''",
+    "output": "[]"
+  },
+  {
+    "input": "string = 'asdfgh'",
+    "output": "['a', 'as', 'asd', 'asdf', 'asdfg', 'asdfgh']"
+  },
+  {
+    "input": "string = 'WWW'",
+    "output": "['W', 'WW', 'WWW']"
+  },
+  {
+    "input": "string = 'Hello there!'",
+    "output": "['H', 'He', 'Hel', 'Hell', 'Hello', 'Hello ', 'Hello t', 'Hello th', 'Hello the', 'Hello ther', 'Hello there', 'Hello there!']"
+  },
+  {
+    "input": "string = 'abracadabra'",
+    "output": "['a', 'ab', 'abr', 'abra', 'abrac', 'abraca', 'abracad', 'abracada', 'abracadab', 'abracadabr', 'abracadabra']"
+  },
+  {
+    "input": "string = '12345'",
+    "output": "['1', '12', '123', '1234', '12345']"
+  },
+  {
+    "input": "string = '       '",
+    "output": "[' ', '  ', '   ', '    ', '     ', '      ', '       ']"
+  },
+  {
+    "input": "string = 'racecar'",
+    "output": "['r', 'ra', 'rac', 'race', 'racec', 'raceca', 'racecar']"
+  },
+  {
+    "input": "string = 'bananas'",
+    "output": "['b', 'ba', 'ban', 'bana', 'banan', 'banana', 'bananas']"
+  },
+  {
+    "input": "string = 'abcdefg'",
+    "output": "['a', 'ab', 'abc', 'abcd', 'abcde', 'abcdef', 'abcdefg']"
+  },
+  {
+    "input": "string = '1234567890'",
+    "output": "['1', '12', '123', '1234', '12345', '123456', '1234567', '12345678', '123456789', '1234567890']"
+  },
+  {
+    "input": "string = '1234'",
+    "output": "['1', '12', '123', '1234']"
+  },
+  {
+    "input": "string = 'python'",
+    "output": "['p', 'py', 'pyt', 'pyth', 'pytho', 'python']"
+  },
+  {
+    "input": "string = '1234567890       '",
+    "output": "['1', '12', '123', '1234', '12345', '123456', '1234567', '12345678', '123456789', '1234567890', '1234567890 ', '1234567890  ', '1234567890   ', '1234567890    ', '1234567890     ', '1234567890      ', '1234567890       ']"
+  },
+  {
+    "input": "string = 'Hello therre!'",
+    "output": "['H', 'He', 'Hel', 'Hell', 'Hello', 'Hello ', 'Hello t', 'Hello th', 'Hello the', 'Hello ther', 'Hello therr', 'Hello therre', 'Hello therre!']"
+  },
+  {
+    "input": "string = 'racecHello therre!ar'",
+    "output": "['r', 'ra', 'rac', 'race', 'racec', 'racecH', 'racecHe', 'racecHel', 'racecHell', 'racecHello', 'racecHello ', 'racecHello t', 'racecHello th', 'racecHello the', 'racecHello ther', 'racecHello therr', 'racecHello therre', 'racecHello therre!', 'racecHello therre!a', 'racecHello therre!ar']"
+  },
+  {
+    "input": "string = 'Hellho the1234567890       re!'",
+    "output": "['H', 'He', 'Hel', 'Hell', 'Hellh', 'Hellho', 'Hellho ', 'Hellho t', 'Hellho th', 'Hellho the', 'Hellho the1', 'Hellho the12', 'Hellho the123', 'Hellho the1234', 'Hellho the12345', 'Hellho the123456', 'Hellho the1234567', 'Hellho the12345678', 'Hellho the123456789', 'Hellho the1234567890', 'Hellho the1234567890 ', 'Hellho the1234567890  ', 'Hellho the1234567890   ', 'Hellho the1234567890    ', 'Hellho the1234567890     ', 'Hellho the1234567890      ', 'Hellho the1234567890       ', 'Hellho the1234567890       r', 'Hellho the1234567890       re', 'Hellho the1234567890       re!']"
+  },
+  {
+    "input": "string = 'Hello ther       re!'",
+    "output": "['H', 'He', 'Hel', 'Hell', 'Hello', 'Hello ', 'Hello t', 'Hello th', 'Hello the', 'Hello ther', 'Hello ther ', 'Hello ther  ', 'Hello ther   ', 'Hello ther    ', 'Hello ther     ', 'Hello ther      ', 'Hello ther       ', 'Hello ther       r', 'Hello ther       re', 'Hello ther       re!']"
+  },
+  {
+    "input": "string = '12345612347890'",
+    "output": "['1', '12', '123', '1234', '12345', '123456', '1234561', '12345612', '123456123', '1234561234', '12345612347', '123456123478', '1234561234789', '12345612347890']"
+  },
+  {
+    "input": "string = 'uKB'",
+    "output": "['u', 'uK', 'uKB']"
+  },
+  {
+    "input": "string = 'pythoHellho the1234567890       re!n'",
+    "output": "['p', 'py', 'pyt', 'pyth', 'pytho', 'pythoH', 'pythoHe', 'pythoHel', 'pythoHell', 'pythoHellh', 'pythoHellho', 'pythoHellho ', 'pythoHellho t', 'pythoHellho th', 'pythoHellho the', 'pythoHellho the1', 'pythoHellho the12', 'pythoHellho the123', 'pythoHellho the1234', 'pythoHellho the12345', 'pythoHellho the123456', 'pythoHellho the1234567', 'pythoHellho the12345678', 'pythoHellho the123456789', 'pythoHellho the1234567890', 'pythoHellho the1234567890 ', 'pythoHellho the1234567890  ', 'pythoHellho the1234567890   ', 'pythoHellho the1234567890    ', 'pythoHellho the1234567890     ', 'pythoHellho the1234567890      ', 'pythoHellho the1234567890       ', 'pythoHellho the1234567890       r', 'pythoHellho the1234567890       re', 'pythoHellho the1234567890       re!', 'pythoHellho the1234567890       re!n']"
+  },
+  {
+    "input": "string = '12uKB34'",
+    "output": "['1', '12', '12u', '12uK', '12uKB', '12uKB3', '12uKB34']"
+  },
+  {
+    "input": "string = 'pythoHellho ther3acecar1234567890       re!n'",
+    "output": "['p', 'py', 'pyt', 'pyth', 'pytho', 'pythoH', 'pythoHe', 'pythoHel', 'pythoHell', 'pythoHellh', 'pythoHellho', 'pythoHellho ', 'pythoHellho t', 'pythoHellho th', 'pythoHellho the', 'pythoHellho ther', 'pythoHellho ther3', 'pythoHellho ther3a', 'pythoHellho ther3ac', 'pythoHellho ther3ace', 'pythoHellho ther3acec', 'pythoHellho ther3aceca', 'pythoHellho ther3acecar', 'pythoHellho ther3acecar1', 'pythoHellho ther3acecar12', 'pythoHellho ther3acecar123', 'pythoHellho ther3acecar1234', 'pythoHellho ther3acecar12345', 'pythoHellho ther3acecar123456', 'pythoHellho ther3acecar1234567', 'pythoHellho ther3acecar12345678', 'pythoHellho ther3acecar123456789', 'pythoHellho ther3acecar1234567890', 'pythoHellho ther3acecar1234567890 ', 'pythoHellho ther3acecar1234567890  ', 'pythoHellho ther3acecar1234567890   ', 'pythoHellho ther3acecar1234567890    ', 'pythoHellho ther3acecar1234567890     ', 'pythoHellho ther3acecar1234567890      ', 'pythoHellho ther3acecar1234567890       ', 'pythoHellho ther3acecar1234567890       r', 'pythoHellho ther3acecar1234567890       re', 'pythoHellho ther3acecar1234567890       re!', 'pythoHellho ther3acecar1234567890       re!n']"
+  },
+  {
+    "input": "string = '2uKBuKB34'",
+    "output": "['2', '2u', '2uK', '2uKB', '2uKBu', '2uKBuK', '2uKBuKB', '2uKBuKB3', '2uKBuKB34']"
+  },
+  {
+    "input": "string = 'raceacar'",
+    "output": "['r', 'ra', 'rac', 'race', 'racea', 'raceac', 'raceaca', 'raceacar']"
+  },
+  {
+    "input": "string = '123455'",
+    "output": "['1', '12', '123', '1234', '12345', '123455']"
+  },
+  {
+    "input": "string = 'abcdabracadabraefg'",
+    "output": "['a', 'ab', 'abc', 'abcd', 'abcda', 'abcdab', 'abcdabr', 'abcdabra', 'abcdabrac', 'abcdabraca', 'abcdabracad', 'abcdabracada', 'abcdabracadab', 'abcdabracadabr', 'abcdabracadabra', 'abcdabracadabrae', 'abcdabracadabraef', 'abcdabracadabraefg']"
+  },
+  {
+    "input": "string = 'Hello ther       2uKBuKB34re!'",
+    "output": "['H', 'He', 'Hel', 'Hell', 'Hello', 'Hello ', 'Hello t', 'Hello th', 'Hello the', 'Hello ther', 'Hello ther ', 'Hello ther  ', 'Hello ther   ', 'Hello ther    ', 'Hello ther     ', 'Hello ther      ', 'Hello ther       ', 'Hello ther       2', 'Hello ther       2u', 'Hello ther       2uK', 'Hello ther       2uKB', 'Hello ther       2uKBu', 'Hello ther       2uKBuK', 'Hello ther       2uKBuKB', 'Hello ther       2uKBuKB3', 'Hello ther       2uKBuKB34', 'Hello ther       2uKBuKB34r', 'Hello ther       2uKBuKB34re', 'Hello ther       2uKBuKB34re!']"
+  },
+  {
+    "input": "string = 'bnas'",
+    "output": "['b', 'bn', 'bna', 'bnas']"
+  },
+  {
+    "input": "string = '12345678    '",
+    "output": "['1', '12', '123', '1234', '12345', '123456', '1234567', '12345678', '12345678 ', '12345678  ', '12345678   ', '12345678    ']"
+  },
+  {
+    "input": "string = 'Hellho th12345678    e1234567890       re!'",
+    "output": "['H', 'He', 'Hel', 'Hell', 'Hellh', 'Hellho', 'Hellho ', 'Hellho t', 'Hellho th', 'Hellho th1', 'Hellho th12', 'Hellho th123', 'Hellho th1234', 'Hellho th12345', 'Hellho th123456', 'Hellho th1234567', 'Hellho th12345678', 'Hellho th12345678 ', 'Hellho th12345678  ', 'Hellho th12345678   ', 'Hellho th12345678    ', 'Hellho th12345678    e', 'Hellho th12345678    e1', 'Hellho th12345678    e12', 'Hellho th12345678    e123', 'Hellho th12345678    e1234', 'Hellho th12345678    e12345', 'Hellho th12345678    e123456', 'Hellho th12345678    e1234567', 'Hellho th12345678    e12345678', 'Hellho th12345678    e123456789', 'Hellho th12345678    e1234567890', 'Hellho th12345678    e1234567890 ', 'Hellho th12345678    e1234567890  ', 'Hellho th12345678    e1234567890   ', 'Hellho th12345678    e1234567890    ', 'Hellho th12345678    e1234567890     ', 'Hellho th12345678    e1234567890      ', 'Hellho th12345678    e1234567890       ', 'Hellho th12345678    e1234567890       r', 'Hellho th12345678    e1234567890       re', 'Hellho th12345678    e1234567890       re!']"
+  },
+  {
+    "input": "string = 'uKBbnas'",
+    "output": "['u', 'uK', 'uKB', 'uKBb', 'uKBbn', 'uKBbna', 'uKBbnas']"
+  },
+  {
+    "input": "string = 'race12uKB34car'",
+    "output": "['r', 'ra', 'rac', 'race', 'race1', 'race12', 'race12u', 'race12uK', 'race12uKB', 'race12uKB3', 'race12uKB34', 'race12uKB34c', 'race12uKB34ca', 'race12uKB34car']"
+  },
+  {
+    "input": "string = 'Hellho the123456Hellho the1234567890       re!7890    3   re!'",
+    "output": "['H', 'He', 'Hel', 'Hell', 'Hellh', 'Hellho', 'Hellho ', 'Hellho t', 'Hellho th', 'Hellho the', 'Hellho the1', 'Hellho the12', 'Hellho the123', 'Hellho the1234', 'Hellho the12345', 'Hellho the123456', 'Hellho the123456H', 'Hellho the123456He', 'Hellho the123456Hel', 'Hellho the123456Hell', 'Hellho the123456Hellh', 'Hellho the123456Hellho', 'Hellho the123456Hellho ', 'Hellho the123456Hellho t', 'Hellho the123456Hellho th', 'Hellho the123456Hellho the', 'Hellho the123456Hellho the1', 'Hellho the123456Hellho the12', 'Hellho the123456Hellho the123', 'Hellho the123456Hellho the1234', 'Hellho the123456Hellho the12345', 'Hellho the123456Hellho the123456', 'Hellho the123456Hellho the1234567', 'Hellho the123456Hellho the12345678', 'Hellho the123456Hellho the123456789', 'Hellho the123456Hellho the1234567890', 'Hellho the123456Hellho the1234567890 ', 'Hellho the123456Hellho the1234567890  ', 'Hellho the123456Hellho the1234567890   ', 'Hellho the123456Hellho the1234567890    ', 'Hellho the123456Hellho the1234567890     ', 'Hellho the123456Hellho the1234567890      ', 'Hellho the123456Hellho the1234567890       ', 'Hellho the123456Hellho the1234567890       r', 'Hellho the123456Hellho the1234567890       re', 'Hellho the123456Hellho the1234567890       re!', 'Hellho the123456Hellho the1234567890       re!7', 'Hellho the123456Hellho the1234567890       re!78', 'Hellho the123456Hellho the1234567890       re!789', 'Hellho the123456Hellho the1234567890       re!7890', 'Hellho the123456Hellho the1234567890       re!7890 ', 'Hellho the123456Hellho the1234567890       re!7890  ', 'Hellho the123456Hellho the1234567890       re!7890   ', 'Hellho the123456Hellho the1234567890       re!7890    ', 'Hellho the123456Hellho the1234567890       re!7890    3', 'Hellho the123456Hellho the1234567890       re!7890    3 ', 'Hellho the123456Hellho the1234567890       re!7890    3  ', 'Hellho the123456Hellho the1234567890       re!7890    3   ', 'Hellho the123456Hellho the1234567890       re!7890    3   r', 'Hellho the123456Hellho the1234567890       re!7890    3   re', 'Hellho the123456Hellho the1234567890       re!7890    3   re!']"
+  },
+  {
+    "input": "string = '12uKB3'",
+    "output": "['1', '12', '12u', '12uK', '12uKB', '12uKB3']"
+  },
+  {
+    "input": "string = 'racecarabracadabra'",
+    "output": "['r', 'ra', 'rac', 'race', 'racec', 'raceca', 'racecar', 'racecara', 'racecarab', 'racecarabr', 'racecarabra', 'racecarabrac', 'racecarabraca', 'racecarabracad', 'racecarabracada', 'racecarabracadab', 'racecarabracadabr', 'racecarabracadabra']"
+  },
+  {
+    "input": "string = 'bnsas'",
+    "output": "['b', 'bn', 'bns', 'bnsa', 'bnsas']"
+  },
+  {
+    "input": "string = 'Hello threre!'",
+    "output": "['H', 'He', 'Hel', 'Hell', 'Hello', 'Hello ', 'Hello t', 'Hello th', 'Hello thr', 'Hello thre', 'Hello threr', 'Hello threre', 'Hello threre!']"
+  },
+  {
+    "input": "string = 'nbn'",
+    "output": "['n', 'nb', 'nbn']"
+  },
+  {
+    "input": "string = 'adbcdefg'",
+    "output": "['a', 'ad', 'adb', 'adbc', 'adbcd', 'adbcde', 'adbcdef', 'adbcdefg']"
+  },
+  {
+    "input": "string = '   '",
+    "output": "[' ', '  ', '   ']"
+  },
+  {
+    "input": "string = 'Hello thhere!'",
+    "output": "['H', 'He', 'Hel', 'Hell', 'Hello', 'Hello ', 'Hello t', 'Hello th', 'Hello thh', 'Hello thhe', 'Hello thher', 'Hello thhere', 'Hello thhere!']"
+  },
+  {
+    "input": "string = 'Hello thhHello ther       re!ere!'",
+    "output": "['H', 'He', 'Hel', 'Hell', 'Hello', 'Hello ', 'Hello t', 'Hello th', 'Hello thh', 'Hello thhH', 'Hello thhHe', 'Hello thhHel', 'Hello thhHell', 'Hello thhHello', 'Hello thhHello ', 'Hello thhHello t', 'Hello thhHello th', 'Hello thhHello the', 'Hello thhHello ther', 'Hello thhHello ther ', 'Hello thhHello ther  ', 'Hello thhHello ther   ', 'Hello thhHello ther    ', 'Hello thhHello ther     ', 'Hello thhHello ther      ', 'Hello thhHello ther       ', 'Hello thhHello ther       r', 'Hello thhHello ther       re', 'Hello thhHello ther       re!', 'Hello thhHello ther       re!e', 'Hello thhHello ther       re!er', 'Hello thhHello ther       re!ere', 'Hello thhHello ther       re!ere!']"
+  },
+  {
+    "input": "string = 'n'",
+    "output": "['n']"
+  },
+  {
+    "input": "string = 'adbcdefgg'",
+    "output": "['a', 'ad', 'adb', 'adbc', 'adbcd', 'adbcde', 'adbcdef', 'adbcdefg', 'adbcdefgg']"
+  },
+  {
+    "input": "string = 'b1234567890       ananHello there!s'",
+    "output": "['b', 'b1', 'b12', 'b123', 'b1234', 'b12345', 'b123456', 'b1234567', 'b12345678', 'b123456789', 'b1234567890', 'b1234567890 ', 'b1234567890  ', 'b1234567890   ', 'b1234567890    ', 'b1234567890     ', 'b1234567890      ', 'b1234567890       ', 'b1234567890       a', 'b1234567890       an', 'b1234567890       ana', 'b1234567890       anan', 'b1234567890       ananH', 'b1234567890       ananHe', 'b1234567890       ananHel', 'b1234567890       ananHell', 'b1234567890       ananHello', 'b1234567890       ananHello ', 'b1234567890       ananHello t', 'b1234567890       ananHello th', 'b1234567890       ananHello the', 'b1234567890       ananHello ther', 'b1234567890       ananHello there', 'b1234567890       ananHello there!', 'b1234567890       ananHello there!s']"
+  },
+  {
+    "input": "string = '1233455'",
+    "output": "['1', '12', '123', '1233', '12334', '123345', '1233455']"
+  },
+  {
+    "input": "string = 'Hellot!'",
+    "output": "['H', 'He', 'Hel', 'Hell', 'Hello', 'Hellot', 'Hellot!']"
+  },
+  {
+    "input": "string = '112'",
+    "output": "['1', '11', '112']"
+  },
+  {
+    "input": "string = '1234525'",
+    "output": "['1', '12', '123', '1234', '12345', '123452', '1234525']"
+  }
+]

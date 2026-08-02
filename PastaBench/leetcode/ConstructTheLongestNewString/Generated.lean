@@ -60,6 +60,18 @@ theorem longestString_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals
   all_goals sorry
 
+theorem longestString_correct :
+    ∀ (x : Int),
+      ∀ (y : Int),
+        ∀ (z : Int),
+          let result := (longestString x y z).run;
+          (x < y ∧ result = (x *ₚ (2 : Int) +ₚ z +ₚ (1 : Int)) *ₚ (2 : Int) ∨
+              x > y ∧ result = (y *ₚ (2 : Int) +ₚ z +ₚ (1 : Int)) *ₚ (2 : Int)) ∨
+            x = y ∧ result = (x +ₚ y +ₚ z) *ₚ (2 : Int) :=
+  by
+  intro x y z
+  exact longestString_spec True.intro
+
 def longestString'rn := fun (x : Int) ↦ fun (y : Int) ↦ fun (z : Int) ↦
   if x < y then (x *ₚ (2 : Int) +ₚ z +ₚ (1 : Int)) *ₚ (2 : Int)
   else if x > y then (y *ₚ (2 : Int) +ₚ z +ₚ (1 : Int)) *ₚ (2 : Int) else (x +ₚ y +ₚ z) *ₚ (2 : Int)

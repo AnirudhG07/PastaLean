@@ -83,14 +83,7 @@ def maximumEnergy := fun (energy : List Int) ↦ fun (k : Int) ↦
 theorem maximumEnergy_spec :
     ⦃⌜(PastaLean.pyLen energy > (0 : Int) ∧ k > (0 : Int)) ∧ k ≤ PastaLean.pyLen energy⌝⦄ maximumEnergy energy k ⦃⇓_ =>
       ⌜True⌝⦄ :=
-  by
-  try
-    mvcgen [maximumEnergy, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓⟨cur, ans⟩ =>
-      ⌜let i := (cur.prefix.length : Int);
-        (0 : Int) ≤ i ∧ i < n⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
-  all_goals sorry
+  by apply Std.Do.Triple.of_entails_wp; intro _; exact True.intro
 
 def maximumEnergy'rn := fun (energy : List Int) ↦ fun (k : Int) ↦
   Id.run

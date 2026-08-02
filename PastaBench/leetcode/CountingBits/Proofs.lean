@@ -1,4 +1,4 @@
 import PastaBench.leetcode.CountingBits.Generated
 namespace PastaBench.leetcode.CountingBits
--- TODO: state and prove.
+-- TODO.
 end PastaBench.leetcode.CountingBits

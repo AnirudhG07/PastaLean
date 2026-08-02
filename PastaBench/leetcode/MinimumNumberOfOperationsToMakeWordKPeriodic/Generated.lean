@@ -35,7 +35,14 @@ from operator import *
 from math import *
 
 def minimumOperationsToMakeKPeriodic(word: str, k: int) -> int:
-    Requires(k > 0 and k <= len(word))
+    Requires(k > 0)
+    Requires(len(word) > 0)
+    Requires(len(word) % k == 0)
+    # The number of operations is non-negative.
+    Ensures(Result() >= 0)
+    # The number of operations is at most (number of substrings) - 1.
+    # Result <= (len(word) / k) - 1  ==>  k * (Result + 1) <= len(word).
+    Ensures(k * (Result() + 1) <= len(word))
     n = len(word)
     return n // k - max(Counter((word[i:i + k] for i in range(0, n, k))).values())
 -/
@@ -43,34 +50,33 @@ def minimumOperationsToMakeKPeriodic(word: str, k: int) -> int:
 namespace PastaBench.leetcode.MinimumNumberOfOperationsToMakeWordKPeriodic
 
 def minimumOperationsToMakeKPeriodic := fun (word : String) ↦ fun (k : Int) ↦
-  (do
-    let mut n : Int := PastaLean.pyLen word
-    let __py_ret_1 :=
-      PastaLean.pyFloorDiv n k -ₚ
-        PastaLean.pyMax
-          (PastaLean.pyAnys
-            (Libraries.collections.pyCounter
-              ((PastaLean.pyRange n (0 : Int) k).map fun i => PastaLean.pySlice word (some i) (some (i +ₚ k)) none)))
-    return __py_ret_1 : Id _)
+  let n := (PastaLean.pyLen word : Int)
+  PastaLean.pyFloorDiv n k -ₚ
+    PastaLean.pyMax
+      (PastaLean.pyAnys
+        (Libraries.collections.pyCounter
+          ((PastaLean.pyRange n (0 : Int) k).map fun i => PastaLean.pySlice word (some i) (some (i +ₚ k)) none)))
 
-theorem minimumOperationsToMakeKPeriodic_spec :
-    ⦃⌜k > (0 : Int) ∧ k ≤ PastaLean.pyLen word⌝⦄ minimumOperationsToMakeKPeriodic word k ⦃⇓_ => ⌜True⌝⦄ :=
-  by
-  mvcgen [minimumOperationsToMakeKPeriodic, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  all_goals sorry
+attribute [simp] minimumOperationsToMakeKPeriodic
+
+@[taste_ingr]
+theorem minimumOperationsToMakeKPeriodic_correct :
+    ∀ (word : String),
+      ∀ (k : Int),
+        let n := PastaLean.pyLen word
+        k > (0 : Int) →
+          PastaLean.pyLen word > (0 : Int) →
+            PastaLean.pyLen word %ₚ k = (0 : Int) →
+              minimumOperationsToMakeKPeriodic word k ≥ (0 : Int) ∧
+                k *ₚ (minimumOperationsToMakeKPeriodic word k +ₚ (1 : Int)) ≤ PastaLean.pyLen word :=
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
 
 def minimumOperationsToMakeKPeriodic'rn := fun (word : String) ↦ fun (k : Int) ↦
-  Id.run
-    (do
-      let _ := Libraries.passta.pyPassRequires (decide (k > (0 : Int)) && decide (k ≤ PastaLean.pyLen word))
-      let mut n : Int := PastaLean.pyLen word
-      let __py_ret_1 :=
-        PastaLean.pyFloorDiv n k -ₚ
-          PastaLean.pyMax
-            (PastaLean.pyAnys
-              (Libraries.collections.pyCounter
-                ((PastaLean.pyRange n (0 : Int) k).map fun i =>
-                  PastaLean.pySlice word (some i) (some (i +ₚ k)) none)))
-      return __py_ret_1)
+  let n := (PastaLean.pyLen word : Int)
+  PastaLean.pyFloorDiv n k -ₚ
+    PastaLean.pyMax
+      (PastaLean.pyAnys
+        (Libraries.collections.pyCounter
+          ((PastaLean.pyRange n (0 : Int) k).map fun i => PastaLean.pySlice word (some i) (some (i +ₚ k)) none)))
 
 end PastaBench.leetcode.MinimumNumberOfOperationsToMakeWordKPeriodic

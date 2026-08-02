@@ -126,9 +126,28 @@ def kthLuckyNumber := fun (k : Int) ↦
 @[spec]
 theorem kthLuckyNumber_spec : ⦃⌜k ≥ (1 : Int)⌝⦄ kthLuckyNumber k ⦃⇓result => ⌜PastaLean.pyLen result ≥ (1 : Int)⌝⦄ :=
   by
-  mvcgen [kthLuckyNumber, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  try
+    mvcgen [kthLuckyNumber, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · fun s =>
+      let n := s;
+      (⟨(n).toNat⟩ : ULift Nat)
+    · ⇓s =>
+      ⌜Sum.elim
+          (fun st =>
+            let n := st;
+            (n ≥ (1 : Int) ∧ PastaLean.pyLen ans +ₚ n = n_len) ∧ (1 : Int) ≤ k ∧ k ≤ PastaLean.pyShiftLeft (1 : Int) n)
+          (fun _ => True) s⌝
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
+
+theorem kthLuckyNumber_correct :
+    ∀ (k : Int),
+      k ≥ (1 : Int) →
+        let result := (kthLuckyNumber k).run;
+        PastaLean.pyLen result ≥ (1 : Int) :=
+  by
+  intro k hpre
+  exact kthLuckyNumber_spec hpre
 
 def kthLuckyNumber'rn := fun (k : Int) ↦
   Id.run

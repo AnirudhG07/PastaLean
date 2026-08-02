@@ -90,6 +90,16 @@ theorem distributeCandies_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
+theorem distributeCandies_correct :
+    ∀ (candies : Int),
+      ∀ (num_people : Int),
+        candies ≥ (0 : Int) ∧ num_people > (0 : Int) →
+          let ans := (distributeCandies candies num_people).run;
+          PastaLean.pySum ans = candies :=
+  by
+  intro candies num_people hpre
+  exact distributeCandies_spec hpre
+
 def distributeCandies'rn := fun (candies : Int) ↦ fun (num_people : Int) ↦
   Id.run
     (do

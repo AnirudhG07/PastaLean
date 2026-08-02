@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/82",
+  "problem": "prime-length",
+  "module": "PrimeLength",
+  "method": "prime_length",
+  "params": [
+    "string"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

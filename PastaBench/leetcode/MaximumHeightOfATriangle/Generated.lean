@@ -136,6 +136,16 @@ theorem maxHeightOfTriangle_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
+theorem maxHeightOfTriangle_correct :
+    ∀ (red : Int),
+      ∀ (blue : Int),
+        red ≥ (0 : Int) ∧ blue ≥ (0 : Int) →
+          let ans := (maxHeightOfTriangle red blue).run;
+          ans *ₚ (ans +ₚ (1 : Int)) ≤ (2 : Int) *ₚ (red +ₚ blue) ∧ ans ≥ (0 : Int) :=
+  by
+  intro red blue hpre
+  exact maxHeightOfTriangle_spec hpre
+
 def maxHeightOfTriangle'rn := fun (red : Int) ↦ fun (blue : Int) ↦
   Id.run
     (do

@@ -47,11 +47,10 @@ def findGCD := fun (nums : List Int) ↦ Libraries.math.pyMathGcd (PastaLean.pyM
 attribute [simp] findGCD
 
 @[taste_ingr]
-theorem findGCD_spec :
+theorem findGCD_correct :
     ∀ (nums : List Int),
       PastaLean.pyLen nums > (0 : Int) →
-        Libraries.math.pyMathGcd (PastaLean.pyMax nums) (PastaLean.pyMin nums) =
-          Libraries.math.pyMathGcd (PastaLean.pyMax nums) (PastaLean.pyMin nums) :=
+        findGCD nums = Libraries.math.pyMathGcd (PastaLean.pyMax nums) (PastaLean.pyMin nums) :=
   by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]
 
 def findGCD'rn := fun (nums : List Int) ↦ Libraries.math.pyMathGcd (PastaLean.pyMax nums) (PastaLean.pyMin nums)

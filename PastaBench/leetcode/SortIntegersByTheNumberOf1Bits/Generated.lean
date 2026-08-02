@@ -53,30 +53,19 @@ def sortByBits := fun (arr : List Int) ↦ PastaLean.pySortBy (fun (x : Int) ↦
 attribute [simp] sortByBits
 
 @[taste_ingr]
-theorem sortByBits_spec :
+theorem sortByBits_correct :
     ∀ (arr : List Int),
-      (PastaLean.pyLen (PastaLean.pySortBy (fun (x : Int) ↦ (PastaLean.pyBitCount x, x)) false arr) =
-            PastaLean.pyLen arr ∧
+      (PastaLean.pyLen (sortByBits arr) = PastaLean.pyLen arr ∧
           PastaLean.pyTruthy
               (PastaLean.pyAll
-                ((PastaLean.pyIter arr).map fun x =>
-                  PastaLean.pyCount (PastaLean.pySortBy (fun (x : Int) ↦ (PastaLean.pyBitCount x, x)) false arr) x ==
-                    PastaLean.pyCount arr x)) =
+                ((PastaLean.pyIter arr).map fun x => PastaLean.pyCount (sortByBits arr) x == PastaLean.pyCount arr x)) =
             true) ∧
         PastaLean.pyTruthy
             (PastaLean.pyAll
-              ((PastaLean.pyRange
-                    (PastaLean.pyLen (PastaLean.pySortBy (fun (x : Int) ↦ (PastaLean.pyBitCount x, x)) false arr) -ₚ
-                      (1 : Int))).map
-                fun i =>
+              ((PastaLean.pyRange (PastaLean.pyLen (sortByBits arr) -ₚ (1 : Int))).map fun i =>
                 decide
-                  ((PastaLean.pyBitCount
-                        (PastaLean.pySortBy (fun (x : Int) ↦ (PastaLean.pyBitCount x, x)) false arr)⦋i⦌,
-                      (PastaLean.pySortBy (fun (x : Int) ↦ (PastaLean.pyBitCount x, x)) false arr)⦋i⦌) ≤
-                    (PastaLean.pyBitCount
-                        (PastaLean.pySortBy (fun (x : Int) ↦ (PastaLean.pyBitCount x, x)) false arr)⦋i +ₚ (1 : Int)⦌,
-                      (PastaLean.pySortBy (fun (x : Int) ↦ (PastaLean.pyBitCount x, x)) false
-                          arr)⦋i +ₚ (1 : Int)⦌)))) =
+                  ((PastaLean.pyBitCount (sortByBits arr)⦋i⦌, (sortByBits arr)⦋i⦌) ≤
+                    (PastaLean.pyBitCount (sortByBits arr)⦋i +ₚ (1 : Int)⦌, (sortByBits arr)⦋i +ₚ (1 : Int)⦌)))) =
           true :=
   by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
 

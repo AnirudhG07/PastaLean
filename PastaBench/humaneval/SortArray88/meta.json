@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/88",
+  "problem": "sort-array",
+  "module": "SortArray88",
+  "method": "sort_array",
+  "params": [
+    "array"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

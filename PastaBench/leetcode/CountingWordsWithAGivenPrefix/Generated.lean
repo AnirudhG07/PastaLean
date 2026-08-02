@@ -48,13 +48,10 @@ def prefixCount := fun (words : List String) ↦ fun (pref : String) ↦
 attribute [simp] prefixCount
 
 @[taste_ingr]
-theorem prefixCount_spec :
+theorem prefixCount_correct :
     ∀ (words : List String),
-      ∀ (pref : String),
-        (0 : Int) ≤ PastaLean.pySum ((PastaLean.pyIter words).map fun w => PastaLean.pyStringStartswith w pref) ∧
-          PastaLean.pySum ((PastaLean.pyIter words).map fun w => PastaLean.pyStringStartswith w pref) ≤
-            PastaLean.pyLen words :=
-  by intros; sorry
+      ∀ (pref : String), (0 : Int) ≤ prefixCount words pref ∧ prefixCount words pref ≤ PastaLean.pyLen words :=
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
 
 def prefixCount'rn := fun (words : List String) ↦ fun (pref : String) ↦
   PastaLean.pySum ((PastaLean.pyIter words).map fun w => PastaLean.pyStringStartswith w pref)

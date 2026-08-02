@@ -120,6 +120,25 @@ theorem peakIndexInMountainArray_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
+theorem peakIndexInMountainArray_correct :
+    ∀ (arr : List Int),
+      PastaLean.pyLen arr ≥ (3 : Int) ∧
+          PastaLean.pyStdAny
+            ((PastaLean.pyRange (PastaLean.pyLen arr)).map fun p =>
+              decide ((0 : Int) < p) && decide (p < PastaLean.pyLen arr -ₚ (1 : Int)) &&
+                  PastaLean.pyTruthy
+                    (PastaLean.pyAll ((PastaLean.pyRange p).map fun i => decide (arr⦋i⦌ < arr⦋i +ₚ (1 : Int)⦌))) &&
+                PastaLean.pyTruthy
+                  (PastaLean.pyAll
+                    ((PastaLean.pyRange (PastaLean.pyLen arr -ₚ (1 : Int)) p).map fun i =>
+                      decide (arr⦋i⦌ > arr⦋i +ₚ (1 : Int)⦌)))) →
+        let left := (peakIndexInMountainArray arr).run;
+        (((0 : Int) < left ∧ left < PastaLean.pyLen arr -ₚ (1 : Int)) ∧ arr⦋left⦌ > arr⦋left -ₚ (1 : Int)⦌) ∧
+          arr⦋left⦌ > arr⦋left +ₚ (1 : Int)⦌ :=
+  by
+  intro arr hpre
+  exact peakIndexInMountainArray_spec hpre
+
 def peakIndexInMountainArray'rn := fun (arr : List Int) ↦
   Id.run
     (do

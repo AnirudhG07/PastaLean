@@ -1,0 +1,202 @@
+[
+  {
+    "input": "txt = 'Hello world!'",
+    "output": "['Hello', 'world!']"
+  },
+  {
+    "input": "txt = 'Hello,world!'",
+    "output": "['Hello', 'world!']"
+  },
+  {
+    "input": "txt = 'Hello world,!'",
+    "output": "['Hello', 'world,!']"
+  },
+  {
+    "input": "txt = 'Hello,Hello,world !'",
+    "output": "['Hello,Hello,world', '!']"
+  },
+  {
+    "input": "txt = 'abcdef'",
+    "output": "3"
+  },
+  {
+    "input": "txt = 'aaabb'",
+    "output": "2"
+  },
+  {
+    "input": "txt = 'aaaBb'",
+    "output": "1"
+  },
+  {
+    "input": "txt = ''",
+    "output": "0"
+  },
+  {
+    "input": "txt = 'Hello?'",
+    "output": "2"
+  },
+  {
+    "input": "txt = 'abc deg'",
+    "output": "['abc', 'deg']"
+  },
+  {
+    "input": "txt = 'aaa,bbb'",
+    "output": "['aaa', 'bbb']"
+  },
+  {
+    "input": "txt = 'Hello World!'",
+    "output": "['Hello', 'World!']"
+  },
+  {
+    "input": "txt = '123,456'",
+    "output": "['123', '456']"
+  },
+  {
+    "input": "txt = 'abc123'",
+    "output": "1"
+  },
+  {
+    "input": "txt = 'Hello , world !'",
+    "output": "['Hello', ',', 'world', '!']"
+  },
+  {
+    "input": "txt = 'apple, banana, orange, grapefruit'",
+    "output": "['apple,', 'banana,', 'orange,', 'grapefruit']"
+  },
+  {
+    "input": "txt = '1234'",
+    "output": "0"
+  },
+  {
+    "input": "txt = 'HELLO WORLD'",
+    "output": "['HELLO', 'WORLD']"
+  },
+  {
+    "input": "txt = 'aabc123'",
+    "output": "1"
+  },
+  {
+    "input": "txt = 'Hellabc123o , world !'",
+    "output": "['Hellabc123o', ',', 'world', '!']"
+  },
+  {
+    "input": "txt = 'HELLOHELLO WORLD WOORLD'",
+    "output": "['HELLOHELLO', 'WORLD', 'WOORLD']"
+  },
+  {
+    "input": "txt = 'g'",
+    "output": "0"
+  },
+  {
+    "input": "txt = 'aaabc123'",
+    "output": "1"
+  },
+  {
+    "input": "txt = 'Hello ,Hello? world !'",
+    "output": "['Hello', ',Hello?', 'world', '!']"
+  },
+  {
+    "input": "txt = 'Hello dWorlld!'",
+    "output": "['Hello', 'dWorlld!']"
+  },
+  {
+    "input": "txt = 'Hello WdWorlld!'",
+    "output": "['Hello', 'WdWorlld!']"
+  },
+  {
+    "input": "txt = 'abc de'",
+    "output": "['abc', 'de']"
+  },
+  {
+    "input": "txt = 'aabc123Hello World!'",
+    "output": "['aabc123Hello', 'World!']"
+  },
+  {
+    "input": "txt = 'abcd de'",
+    "output": "['abcd', 'de']"
+  },
+  {
+    "input": "txt = '2aaabc123'",
+    "output": "1"
+  },
+  {
+    "input": "txt = 'abcHELLOHELLO WOORLD WOORLD de'",
+    "output": "['abcHELLOHELLO', 'WOORLD', 'WOORLD', 'de']"
+  },
+  {
+    "input": "txt = 'abcHello World! deg'",
+    "output": "['abcHello', 'World!', 'deg']"
+  },
+  {
+    "input": "txt = 'NDcwhK'",
+    "output": "1"
+  },
+  {
+    "input": "txt = 'abca123'",
+    "output": "1"
+  },
+  {
+    "input": "txt = 'abcHELLOHELLO WRLD de'",
+    "output": "['abcHELLOHELLO', 'WRLD', 'de']"
+  },
+  {
+    "input": "txt = 'Helalabc123o , world !'",
+    "output": "['Helalabc123o', ',', 'world', '!']"
+  },
+  {
+    "input": "txt = 'dabcd de'",
+    "output": "['dabcd', 'de']"
+  },
+  {
+    "input": "txt = 'ab cd deg'",
+    "output": "['ab', 'cd', 'deg']"
+  },
+  {
+    "input": "txt = 'abcHELLOHELLO WRabcHELLOHELLO WOORLD WOORLD deLD de'",
+    "output": "['abcHELLOHELLO', 'WRabcHELLOHELLO', 'WOORLD', 'WOORLD', 'deLD', 'de']"
+  },
+  {
+    "input": "txt = 'NDcwK'",
+    "output": "0"
+  },
+  {
+    "input": "txt = 'Hello ,Hello? rld !'",
+    "output": "['Hello', ',Hello?', 'rld', '!']"
+  },
+  {
+    "input": "txt = 'Hello , world Hello , world !!'",
+    "output": "['Hello', ',', 'world', 'Hello', ',', 'world', '!!']"
+  },
+  {
+    "input": "txt = 'Helalabc123o , bworld !'",
+    "output": "['Helalabc123o', ',', 'bworld', '!']"
+  },
+  {
+    "input": "txt = 'HELLOHello , world !HELLO WORLD WOOLRLD'",
+    "output": "['HELLOHello', ',', 'world', '!HELLO', 'WORLD', 'WOOLRLD']"
+  },
+  {
+    "input": "txt = 'abcabc a123'",
+    "output": "['abcabc', 'a123']"
+  },
+  {
+    "input": "txt = 'abcHello , deworabcd dded a123'",
+    "output": "['abcHello', ',', 'deworabcd', 'dded', 'a123']"
+  },
+  {
+    "input": "txt = 'Hello ,Helaabc123lo? rld  !'",
+    "output": "['Hello', ',Helaabc123lo?', 'rld', '!']"
+  },
+  {
+    "input": "txt = 'ababc123'",
+    "output": "2"
+  },
+  {
+    "input": "txt = '12344'",
+    "output": "0"
+  },
+  {
+    "input": "txt = 'H!ello WdWorlld!'",
+    "output": "['H!ello', 'WdWorlld!']"
+  }
+]

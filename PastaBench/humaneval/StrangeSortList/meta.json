@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/70",
+  "problem": "strange-sort-list",
+  "module": "StrangeSortList",
+  "method": "strange_sort_list",
+  "params": [
+    "lst"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

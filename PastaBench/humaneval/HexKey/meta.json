@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/78",
+  "problem": "hex-key",
+  "module": "HexKey",
+  "method": "hex_key",
+  "params": [
+    "num"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

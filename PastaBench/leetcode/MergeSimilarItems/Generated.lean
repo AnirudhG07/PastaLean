@@ -114,6 +114,51 @@ theorem mergeSimilarItems_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
+theorem mergeSimilarItems_correct :
+    ∀ (items1 : List (List Int)),
+      ∀ (items2 : List (List Int)),
+        ((PastaLean.pyAll
+                  ((PastaLean.pyIter items1).map fun item =>
+                    PastaLean.pyLen item == (2 : Int) && decide (item⦋(0 : Int)⦌ > (0 : Int)) &&
+                      decide (item⦋(1 : Int)⦌ > (0 : Int))) ∧
+                PastaLean.pyLen (PastaLean.pySetFromList ((PastaLean.pyIter items1).map fun item => item⦋(0 : Int)⦌)) =
+                  PastaLean.pyLen items1) ∧
+              PastaLean.pyAll
+                ((PastaLean.pyIter items2).map fun item =>
+                  PastaLean.pyLen item == (2 : Int) && decide (item⦋(0 : Int)⦌ > (0 : Int)) &&
+                    decide (item⦋(1 : Int)⦌ > (0 : Int)))) ∧
+            PastaLean.pyLen (PastaLean.pySetFromList ((PastaLean.pyIter items2).map fun item => item⦋(0 : Int)⦌)) =
+              PastaLean.pyLen items2 →
+          let result := (mergeSimilarItems items1 items2).run;
+          (PastaLean.pyAll
+                ((PastaLean.pyRange (PastaLean.pyLen result -ₚ (1 : Int))).map fun i =>
+                  decide (result⦋i⦌⦋(0 : Int)⦌ < result⦋i +ₚ (1 : Int)⦌⦋(0 : Int)⦌)) ∧
+              PastaLean.pySetEq (PastaLean.pySetFromList ((PastaLean.pyIter result).map fun item => item⦋(0 : Int)⦌))
+                  (PastaLean.pyBitOr
+                    (PastaLean.pySetFromList ((PastaLean.pyIter items1).map fun item => item⦋(0 : Int)⦌))
+                    (PastaLean.pySetFromList ((PastaLean.pyIter items2).map fun item => item⦋(0 : Int)⦌))) =
+                true) ∧
+            PastaLean.pyAll
+              ((PastaLean.pyIter result).map fun item =>
+                item⦋(1 : Int)⦌ ==
+                  PastaLean.pyGetD
+                      (Std.HashMap.ofList
+                        ((PastaLean.pyIter items1).map fun (_pair_3 : List Int) =>
+                          let v := PastaLean.pyListGetItem _pair_3 (0 : Int);
+                          let w := PastaLean.pyListGetItem _pair_3 (1 : Int);
+                          (v, w)))
+                      item⦋(0 : Int)⦌ (0 : Int) +ₚ
+                    PastaLean.pyGetD
+                      (Std.HashMap.ofList
+                        ((PastaLean.pyIter items2).map fun (_pair_4 : List Int) =>
+                          let v := PastaLean.pyListGetItem _pair_4 (0 : Int);
+                          let w := PastaLean.pyListGetItem _pair_4 (1 : Int);
+                          (v, w)))
+                      item⦋(0 : Int)⦌ (0 : Int)) :=
+  by
+  intro items1 items2 hpre
+  exact mergeSimilarItems_spec hpre
+
 def mergeSimilarItems'rn := fun (items1 : List (List Int)) ↦ fun (items2 : List (List Int)) ↦
   Id.run
     (do

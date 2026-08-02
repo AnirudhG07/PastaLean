@@ -1,0 +1,202 @@
+[
+  {
+    "input": "brackets = '()'",
+    "output": "True"
+  },
+  {
+    "input": "brackets = '(()())'",
+    "output": "True"
+  },
+  {
+    "input": "brackets = '()()(()())()'",
+    "output": "True"
+  },
+  {
+    "input": "brackets = '()()((()()())())(()()(()))'",
+    "output": "True"
+  },
+  {
+    "input": "brackets = '((()())))'",
+    "output": "False"
+  },
+  {
+    "input": "brackets = ')(()'",
+    "output": "False"
+  },
+  {
+    "input": "brackets = '('",
+    "output": "False"
+  },
+  {
+    "input": "brackets = '(((('",
+    "output": "False"
+  },
+  {
+    "input": "brackets = ')'",
+    "output": "False"
+  },
+  {
+    "input": "brackets = '(()'",
+    "output": "False"
+  },
+  {
+    "input": "brackets = '()()(()())())(()'",
+    "output": "False"
+  },
+  {
+    "input": "brackets = '()()(()())()))()'",
+    "output": "False"
+  },
+  {
+    "input": "brackets = '()()()()()'",
+    "output": "True"
+  },
+  {
+    "input": "brackets = '((((()))))'",
+    "output": "True"
+  },
+  {
+    "input": "brackets = '((())))('",
+    "output": "False"
+  },
+  {
+    "input": "brackets = ')()()))('",
+    "output": "False"
+  },
+  {
+    "input": "brackets = '((())'",
+    "output": "False"
+  },
+  {
+    "input": "brackets = '(()))()'",
+    "output": "False"
+  },
+  {
+    "input": "brackets = '((()))'",
+    "output": "True"
+  },
+  {
+    "input": "brackets = ')()()()'",
+    "output": "False"
+  },
+  {
+    "input": "brackets = ')('",
+    "output": "False"
+  },
+  {
+    "input": "brackets = ')))))))'",
+    "output": "False"
+  },
+  {
+    "input": "brackets = '((())((())'",
+    "output": "False"
+  },
+  {
+    "input": "brackets = ')()()))()()()()()'",
+    "output": "False"
+  },
+  {
+    "input": "brackets = '))('",
+    "output": "False"
+  },
+  {
+    "input": "brackets = '(())))()'",
+    "output": "False"
+  },
+  {
+    "input": "brackets = ')()()))()()()())(()'",
+    "output": "False"
+  },
+  {
+    "input": "brackets = '()(()))'",
+    "output": "False"
+  },
+  {
+    "input": "brackets = '((()))()()))()()()())(()'",
+    "output": "False"
+  },
+  {
+    "input": "brackets = '((())))()'",
+    "output": "False"
+  },
+  {
+    "input": "brackets = '(('",
+    "output": "False"
+  },
+  {
+    "input": "brackets = '((()))()(())))'",
+    "output": "False"
+  },
+  {
+    "input": "brackets = '()(((())))()))((())))'",
+    "output": "False"
+  },
+  {
+    "input": "brackets = ')()()))()()()())(()((((())((())))())))'",
+    "output": "False"
+  },
+  {
+    "input": "brackets = ')()()()()))()()()())(())()'",
+    "output": "False"
+  },
+  {
+    "input": "brackets = ')(('",
+    "output": "False"
+  },
+  {
+    "input": "brackets = '(())'",
+    "output": "True"
+  },
+  {
+    "input": "brackets = ')(((())'",
+    "output": "False"
+  },
+  {
+    "input": "brackets = '((()(())))'",
+    "output": "True"
+  },
+  {
+    "input": "brackets = '((()))())(())))'",
+    "output": "False"
+  },
+  {
+    "input": "brackets = ')()()))()()()())(()((((())((()))))())))'",
+    "output": "False"
+  },
+  {
+    "input": "brackets = '((()(()((())))())))'",
+    "output": "False"
+  },
+  {
+    "input": "brackets = ')))('",
+    "output": "False"
+  },
+  {
+    "input": "brackets = ')()())()()))()()()()()()'",
+    "output": "False"
+  },
+  {
+    "input": "brackets = '((()))))('",
+    "output": "False"
+  },
+  {
+    "input": "brackets = '))))((((())))()))'",
+    "output": "False"
+  },
+  {
+    "input": "brackets = '((()))))(())))'",
+    "output": "False"
+  },
+  {
+    "input": "brackets = ')()()))()()()())(()((((())((())))()()))'",
+    "output": "False"
+  },
+  {
+    "input": "brackets = '()(((()))))'",
+    "output": "False"
+  },
+  {
+    "input": "brackets = ')()()))()()(()())()'",
+    "output": "False"
+  }
+]

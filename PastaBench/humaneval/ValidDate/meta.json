@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/124",
+  "problem": "valid-date",
+  "module": "ValidDate",
+  "method": "valid_date",
+  "params": [
+    "date"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

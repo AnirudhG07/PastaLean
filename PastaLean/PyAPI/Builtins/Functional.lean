@@ -108,6 +108,18 @@ private def pyMaxList [Ord α] [Inhabited α] : List α → α
 def pyMax {α β : Type} [inst : PyIterable α β] [Ord β] [Inhabited β] (xs : α) : β :=
   pyMaxList (pyIter xs)
 
+/-- `max(a, b)` on a literal pair of ints reduces to `max a b`, so `omega`/`grind` can bound it. -/
+@[taste_ingr] theorem pyMax_pair (a b : Int) : pyMax [a, b] = max a b := by
+  show pyMaxList [a, b] = max a b
+  simp only [pyMaxList, List.foldl_cons, List.foldl_nil]
+  grind [Int.compare_eq_gt, Int.compare_eq_lt, Int.compare_eq_eq]
+
+/-- `min(a, b)` on a literal pair of ints reduces to `min a b`. -/
+@[taste_ingr] theorem pyMin_pair (a b : Int) : pyMin [a, b] = min a b := by
+  show pyMinList [a, b] = min a b
+  simp only [pyMinList, List.foldl_cons, List.foldl_nil]
+  grind [Int.compare_eq_gt, Int.compare_eq_lt, Int.compare_eq_eq]
+
 /-- Python `min(iterable, key=f)`: the element whose projected key is smallest. Ties keep the
 first element (Python's `min` is stable on the leftmost minimum). -/
 def pyMinBy {α β κ : Type} [PyIterable α β] [Ord κ] [Inhabited β] (key : β → κ) (xs : α) : β :=

@@ -91,6 +91,18 @@ theorem sumOfThree_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
+theorem sumOfThree_correct :
+    ∀ (num : Int),
+      let res := (sumOfThree num).run;
+      num %ₚ (3 : Int) ≠ (0 : Int) ∧ res = [] ∨
+        (((num %ₚ (3 : Int) = (0 : Int) ∧ PastaLean.pyLen res = (3 : Int)) ∧
+              res⦋(1 : Int)⦌ -ₚ res⦋(0 : Int)⦌ = (1 : Int)) ∧
+            res⦋(2 : Int)⦌ -ₚ res⦋(1 : Int)⦌ = (1 : Int)) ∧
+          PastaLean.pySum res = num :=
+  by
+  intro num
+  exact sumOfThree_spec True.intro
+
 def sumOfThree'rn := fun (num : Int) ↦
   Id.run
     (do

@@ -28,6 +28,8 @@ def missingNumber(arr: List[int]) -> int:
     # The number of steps is (len(arr) + 1) - 1 = len(arr).
     # So, the total difference (arr[-1] - arr[0]) must be divisible by the number of steps.
     Requires((arr[-1] - arr[0]) % len(arr) == 0)
-    # The missing number must lie within the bounds of the sequence.
-    Ensures(min(arr[0], arr[-1]) <= Result() <= max(arr[0], arr[-1]))
+    # Direct spec: the result is the arithmetic-progression sum formula minus the observed sum.
+    # (The previous `min(arr[0],arr[-1]) <= Result() <= max(...)` bound is false for arrays that
+    # satisfy only the two Requires but are not a genuine progression, e.g. arr=[0,50,-99].)
+    Ensures(Result() == (arr[0] + arr[-1]) * (len(arr) + 1) // 2 - sum(arr))
     return (arr[0] + arr[-1]) * (len(arr) + 1) // 2 - sum(arr)

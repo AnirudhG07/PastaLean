@@ -79,14 +79,7 @@ def maximumNumberOfOnes := fun (width : Int) ↦ fun (height : Int) ↦ fun (sid
 theorem maximumNumberOfOnes_spec :
     ⦃⌜((width ≥ (0 : Int) ∧ height ≥ (0 : Int)) ∧ sideLength > (0 : Int)) ∧ maxOnes ≥ (0 : Int)⌝⦄
       maximumNumberOfOnes width height sideLength maxOnes ⦃⇓_ => ⌜True⌝⦄ :=
-  by
-  try
-    mvcgen [maximumNumberOfOnes, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓cur =>
-      ⌜let i := (cur.prefix.length : Int);
-        (0 : Int) ≤ i ∧ i < width⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
-  all_goals sorry
+  by apply Std.Do.Triple.of_entails_wp; intro _; exact True.intro
 
 def maximumNumberOfOnes'rn := fun (width : Int) ↦ fun (height : Int) ↦ fun (sideLength : Int) ↦ fun (maxOnes : Int) ↦
   Id.run

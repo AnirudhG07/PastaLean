@@ -1,0 +1,202 @@
+[
+  {
+    "input": "a = 1",
+    "output": "True"
+  },
+  {
+    "input": "a = 2",
+    "output": "False"
+  },
+  {
+    "input": "a = -1",
+    "output": "True"
+  },
+  {
+    "input": "a = 64",
+    "output": "True"
+  },
+  {
+    "input": "a = 180",
+    "output": "False"
+  },
+  {
+    "input": "a = 1000",
+    "output": "True"
+  },
+  {
+    "input": "a = 0",
+    "output": "True"
+  },
+  {
+    "input": "a = 1729",
+    "output": "False"
+  },
+  {
+    "input": "a = 1728",
+    "output": "True"
+  },
+  {
+    "input": "a = -8",
+    "output": "True"
+  },
+  {
+    "input": "a = 27",
+    "output": "True"
+  },
+  {
+    "input": "a = 125",
+    "output": "True"
+  },
+  {
+    "input": "a = 729",
+    "output": "True"
+  },
+  {
+    "input": "a = 512",
+    "output": "True"
+  },
+  {
+    "input": "a = -27",
+    "output": "True"
+  },
+  {
+    "input": "a = -64",
+    "output": "True"
+  },
+  {
+    "input": "a = 1000000",
+    "output": "True"
+  },
+  {
+    "input": "a = -1000000",
+    "output": "True"
+  },
+  {
+    "input": "a = 120",
+    "output": "False"
+  },
+  {
+    "input": "a = 57",
+    "output": "False"
+  },
+  {
+    "input": "a = -63",
+    "output": "False"
+  },
+  {
+    "input": "a = 510",
+    "output": "False"
+  },
+  {
+    "input": "a = 728",
+    "output": "False"
+  },
+  {
+    "input": "a = 999999",
+    "output": "False"
+  },
+  {
+    "input": "a = -999999",
+    "output": "False"
+  },
+  {
+    "input": "a = 55",
+    "output": "False"
+  },
+  {
+    "input": "a = 123",
+    "output": "False"
+  },
+  {
+    "input": "a = 56",
+    "output": "False"
+  },
+  {
+    "input": "a = 26",
+    "output": "False"
+  },
+  {
+    "input": "a = -1000001",
+    "output": "False"
+  },
+  {
+    "input": "a = 730",
+    "output": "False"
+  },
+  {
+    "input": "a = -7",
+    "output": "False"
+  },
+  {
+    "input": "a = 119",
+    "output": "False"
+  },
+  {
+    "input": "a = -28",
+    "output": "False"
+  },
+  {
+    "input": "a = 126",
+    "output": "False"
+  },
+  {
+    "input": "a = -6",
+    "output": "False"
+  },
+  {
+    "input": "a = -62",
+    "output": "False"
+  },
+  {
+    "input": "a = 58",
+    "output": "False"
+  },
+  {
+    "input": "a = -5",
+    "output": "False"
+  },
+  {
+    "input": "a = 727",
+    "output": "False"
+  },
+  {
+    "input": "a = -26",
+    "output": "False"
+  },
+  {
+    "input": "a = -39",
+    "output": "False"
+  },
+  {
+    "input": "a = -1000002",
+    "output": "False"
+  },
+  {
+    "input": "a = -46",
+    "output": "False"
+  },
+  {
+    "input": "a = 999998",
+    "output": "False"
+  },
+  {
+    "input": "a = 726",
+    "output": "False"
+  },
+  {
+    "input": "a = 731",
+    "output": "False"
+  },
+  {
+    "input": "a = 54",
+    "output": "False"
+  },
+  {
+    "input": "a = 725",
+    "output": "False"
+  },
+  {
+    "input": "a = -29",
+    "output": "False"
+  }
+]

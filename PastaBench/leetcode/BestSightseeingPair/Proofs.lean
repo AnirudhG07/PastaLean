@@ -92,8 +92,20 @@ theorem maxScoreSightseeingPair_spec :
               (PastaLean.pyRange j).map fun i => values⦋i⦌ +ₚ values⦋j⦌ +ₚ i -ₚ j)⌝⦄ :=
   by
   mvcgen [maxScoreSightseeingPair, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  simp_all (config := { zetaDelta := true }) [taste_ingr];
   all_goals sorry
+
+theorem maxScoreSightseeingPair_correct :
+    ∀ (values : List Int),
+      PastaLean.pyLen values ≥ (2 : Int) →
+        let ans := (maxScoreSightseeingPair values).run;
+        ans =
+          PastaLean.pyMax
+            ((PastaLean.pyRange (PastaLean.pyLen values)).flatMap fun j =>
+              (PastaLean.pyRange j).map fun i => values⦋i⦌ +ₚ values⦋j⦌ +ₚ i -ₚ j) :=
+  by
+  intro values hpre
+  exact maxScoreSightseeingPair_spec hpre
 
 def maxScoreSightseeingPair'rn := fun (values : List Int) ↦
   Id.run

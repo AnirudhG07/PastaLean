@@ -120,9 +120,33 @@ def gcd := fun (a : Int) ↦ fun (b : Int) ↦
 @[spec]
 theorem gcd_spec : ⦃⌜a ≥ (0 : Int) ∧ b ≥ (0 : Int)⌝⦄ gcd a b ⦃⇓x => ⌜x ≥ (0 : Int)⌝⦄ :=
   by
-  mvcgen [gcd, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  sorry
+  try
+    mvcgen [gcd, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · fun s =>
+      let t := s |>.snd |>.snd;
+      let y := s |>.snd |>.fst;
+      let x := s |>.fst;
+      (⟨(y).toNat⟩ : ULift Nat)
+    · ⇓s =>
+      ⌜Sum.elim
+          (fun st =>
+            let t := st |>.snd |>.snd;
+            let y := st |>.snd |>.fst;
+            let x := st |>.fst;
+            x ≥ (0 : Int) ∧ y ≥ (0 : Int))
+          (fun _ => True) s⌝
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
+
+theorem gcd_correct :
+    ∀ (a : Int),
+      ∀ (b : Int),
+        a ≥ (0 : Int) ∧ b ≥ (0 : Int) →
+          let x := (gcd a b).run;
+          x ≥ (0 : Int) :=
+  by
+  intro a b hpre
+  exact gcd_spec hpre
 
 def gcd'rn := fun (a : Int) ↦ fun (b : Int) ↦
   Id.run
@@ -158,9 +182,33 @@ def bisect_left := fun (a : List Int) ↦ fun (x : Int) ↦
 @[spec]
 theorem bisect_left_spec : ⦃⌜PastaLean.pyLen a ≥ (0 : Int)⌝⦄ bisect_left a x ⦃⇓lo => ⌜lo ≥ (0 : Int)⌝⦄ :=
   by
-  mvcgen [bisect_left, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  try
+    mvcgen [bisect_left, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · fun s =>
+      let mid := s |>.snd |>.snd;
+      let hi := s |>.snd |>.fst;
+      let lo := s |>.fst;
+      (⟨(hi -ₚ lo).toNat⟩ : ULift Nat)
+    · ⇓s =>
+      ⌜Sum.elim
+          (fun st =>
+            let mid := st |>.snd |>.snd;
+            let hi := st |>.snd |>.fst;
+            let lo := st |>.fst;
+            lo ≥ (0 : Int) ∧ lo ≤ hi)
+          (fun _ => True) s⌝
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals; sorry; sorry
   all_goals sorry
+
+theorem bisect_left_correct :
+    ∀ (a : List Int),
+      ∀ (x : Int),
+        PastaLean.pyLen a ≥ (0 : Int) →
+          let lo := (bisect_left a x).run;
+          lo ≥ (0 : Int) :=
+  by
+  intro a x hpre
+  exact bisect_left_spec hpre
 
 def bisect_left'rn := fun (a : List Int) ↦ fun (x : Int) ↦
   Id.run
@@ -195,9 +243,33 @@ def bisect_right := fun (a : List Int) ↦ fun (x : Int) ↦
 @[spec]
 theorem bisect_right_spec : ⦃⌜PastaLean.pyLen a ≥ (0 : Int)⌝⦄ bisect_right a x ⦃⇓lo => ⌜lo ≥ (0 : Int)⌝⦄ :=
   by
-  mvcgen [bisect_right, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  try
+    mvcgen [bisect_right, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · fun s =>
+      let mid := s |>.snd |>.snd;
+      let hi := s |>.snd |>.fst;
+      let lo := s |>.fst;
+      (⟨(hi -ₚ lo).toNat⟩ : ULift Nat)
+    · ⇓s =>
+      ⌜Sum.elim
+          (fun st =>
+            let mid := st |>.snd |>.snd;
+            let hi := st |>.snd |>.fst;
+            let lo := st |>.fst;
+            lo ≥ (0 : Int) ∧ lo ≤ hi)
+          (fun _ => True) s⌝
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals; sorry; sorry
   all_goals sorry
+
+theorem bisect_right_correct :
+    ∀ (a : List Int),
+      ∀ (x : Int),
+        PastaLean.pyLen a ≥ (0 : Int) →
+          let lo := (bisect_right a x).run;
+          lo ≥ (0 : Int) :=
+  by
+  intro a x hpre
+  exact bisect_right_spec hpre
 
 def bisect_right'rn := fun (a : List Int) ↦ fun (x : Int) ↦
   Id.run
@@ -220,28 +292,27 @@ def mean := fun (data : List Int) ↦ (PastaLean.pySum data /ₚ PastaLean.pyLen
 attribute [simp] mean
 
 @[taste_ingr]
-theorem mean_spec :
-    ∀ (data : List Int),
-      PastaLean.pyLen data > (0 : Int) →
-        PastaLean.pySum data /ₚ PastaLean.pyLen data *ₚ PastaLean.pyLen data = PastaLean.pySum data :=
-  by intros; sorry
+theorem mean_correct :
+    ∀ (data : List Int), PastaLean.pyLen data > (0 : Int) → mean data *ₚ PastaLean.pyLen data = PastaLean.pySum data :=
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
 
 def mean'rn := fun (data : List Int) ↦ (PastaLean.pyFloat (PastaLean.pySum data) /ₚ PastaLean.pyLen data : Float)
 
 def median := fun (data : List Int) ↦
-  (do
-    let mut s : List Int := PastaLean.pySort data
-    let mut n : Int := PastaLean.pyLen s
-    let __py_ret_1 :=
-      (if n %ₚ (2 : Int) = (1 : Int) then s⦋PastaLean.pyFloorDiv n (2 : Int)⦌
-        else (s⦋PastaLean.pyFloorDiv n (2 : Int) -ₚ (1 : Int)⦌ +ₚ s⦋PastaLean.pyFloorDiv n (2 : Int)⦌) /ₚ (2 : Int) :
-        Rat)
-    return __py_ret_1 : Id _)
+  (Id.run
+      (do
+        let _ := Libraries.passta.pyPassRequires (decide (PastaLean.pyLen data > (0 : Int)))
+        let mut s : List Int := PastaLean.pySort data
+        let mut n : Int := PastaLean.pyLen s
+        let __py_ret_1 :=
+          (if n %ₚ (2 : Int) = (1 : Int) then s⦋PastaLean.pyFloorDiv n (2 : Int)⦌
+            else
+              (s⦋PastaLean.pyFloorDiv n (2 : Int) -ₚ (1 : Int)⦌ +ₚ s⦋PastaLean.pyFloorDiv n (2 : Int)⦌) /ₚ (2 : Int) :
+            Rat)
+        return __py_ret_1) :
+    Rat)
 
-theorem median_spec : ⦃⌜PastaLean.pyLen data > (0 : Int)⌝⦄ median data ⦃⇓_ => ⌜True⌝⦄ :=
-  by
-  mvcgen [median, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  all_goals sorry
+attribute [simp, taste_ingr] median
 
 def median'rn := fun (data : List Int) ↦
   (Id.run

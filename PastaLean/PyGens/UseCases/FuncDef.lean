@@ -936,14 +936,23 @@ def funcDefSyntax : (kind : SyntaxNodeKind) → Json →
         -- stays a `def` with anonymous `have`s (see `Head_Assert`).
         let bodyArr := (json.getObjValAs? (Array Json) "body").toOption.getD #[]
         let substantive := bodyArr.filter fun (s : Json) => !isDocstringLike s
+        -- Postconditions (`Ensures`/`Assert`) must bookend the function, not sit mid-computation.
+        if hasMidFunctionPostcondition substantive then
+          throwError "Ensures/Assert must appear at the start or end of the function body, not \
+            interleaved with the computation — a mid-function Assert is a program-point checkpoint, \
+            not a postcondition. Move it to the end (or use Invariant inside the loop)."
         let paramNames := (← functionArgInfos json).map (fun (id, _) => id.getId.toString)
         if let some (letJsons, hypJsons, conclJson) := theoremShape? paramNames bodyArr substantive then
           if (← getNumericMode) == .approx then return ⟨mkNullNode #[]⟩
           let thmCmd ← buildSpecTheorem nameIdent (← functionArgInfos json) letJsons hypJsons conclJson
           return ⟨mkNullNode #[thmCmd.raw]⟩
         -- Track P: a pure, straight-line contracted function (`Requires`/`Ensures` + `let`s +
-        -- `return`) emits its ordinary runnable `def` (contracts stripped) plus a `<fn>_spec` theorem.
-        if let some (cleanBody, letJsons, hypJsons, conclJson) := contractShape? paramNames bodyArr substantive then
+        -- `return`) emits its ordinary runnable `def` (contracts stripped) plus a `<fn>_correct` theorem.
+        -- No Hoare triple here (it's pure), so the single readable theorem is named `_correct`, not `_spec`.
+        -- Reference the function by name in its `_spec`/`_correct` UNLESS the name is a Python builtin
+        -- (`sum`, `max`, …), where a `Call` would dispatch to the builtin, not the user def — inline there.
+        let refFn := (← builtinMappedName? name).isNone
+        if let some (cleanBody, letJsons, hypJsons, conclJson) := contractShape? name refFn paramNames bodyArr substantive then
           let argInfos ← functionArgInfos json
           -- A `float`-annotated contracted body whose `return` mixes `int` and true-division
           -- (`median`) needs its result ascribed to `ℚ`/`Float` so the `int` branch coerces — same
@@ -957,7 +966,10 @@ def funcDefSyntax : (kind : SyntaxNodeKind) → Json →
           let finalDef ← applyPrivacy name (← `(command| def $nameIdent := $valueStx))
           if (← getNumericMode) == .approx then
             return ⟨mkNullNode #[finalDef.raw]⟩
-          let thmName := mkIdent (name ++ "_spec").toName
+          -- The one top-level readable correctness theorem is `_correct`; a helper (`_`-prefixed,
+          -- e.g. a closure-converted nested def) is a supporting `_spec`.
+          let suffix := if pythonNameIsPrivate name then "_spec" else "_correct"
+          let thmName := mkIdent (name ++ suffix).toName
           let thmCmd ← buildSpecTheorem thmName argInfos letJsons hypJsons conclJson
           let attrCmd ← `(command| attribute [simp] $nameIdent)
           return ⟨mkNullNode #[finalDef.raw, attrCmd.raw, thmCmd.raw]⟩
@@ -1012,9 +1024,11 @@ def funcDefSyntax : (kind : SyntaxNodeKind) → Json →
             let defCmd ← if nc then `(command| noncomputable def $nameIdent := $valueStx)
               else `(command| def $nameIdent := $valueStx)
             let finalDef ← applyPrivacy name defCmd
-            let thmCmd ← buildMonadicSpec (mkIdent (name ++ "_spec").toName) nameIdent
-              (argInfos.map (·.1)) info
-            return ⟨mkNullNode #[finalDef.raw, thmCmd.raw]⟩
+            let thmCmd ← buildMonadicSpec (mkIdent (name ++ "_spec").toName)
+              (mkIdent (name ++ "_correct").toName) nameIdent (!pythonNameIsPrivate name) argInfos info
+            -- `thmCmd` is a null node of one-or-two commands (spec + optional readable corollary);
+            -- splice its children flat so each elaborates as a command.
+            return ⟨mkNullNode (#[finalDef.raw] ++ thmCmd.raw.getArgs)⟩
         -- `_real_fn` (set by the Python per-variable pass) means the function produces or handles an
         -- `ℝ` value → it must be `noncomputable` in exact mode. This is now DECOUPLED from which
         -- floats are `ℝ`: real params carry a per-`arg` `_real` stamp (read in `functionArgInfos`)

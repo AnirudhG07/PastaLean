@@ -13,23 +13,25 @@ from bisect import *
 from string import *
 from operator import *
 from math import *
-
 from contracts import *
-
 
 def countLetters(s: str) -> int:
     n = len(s)
+    Ensures(Result() >= 0)
+    Ensures(2 * Result() <= n * (n + 1))
+
     i = ans = 0
-    Decreases(n - i)
     while i < n:
-        Invariant(0 <= i)
-        Invariant(i <= n)
+        Invariant(0 <= i <= n)
         Invariant(ans >= 0)
+        Invariant(2 * ans <= i * (i + 1))
+        Decreases(n - i)
+
         j = i
-        Decreases(n - j)
         while j < n and s[j] == s[i]:
-            Invariant(i <= j)
-            Invariant(j <= n)
+            Invariant(i <= j <= n)
+            Decreases(n - j)
+
             j += 1
         ans += (1 + j - i) * (j - i) // 2
         i = j

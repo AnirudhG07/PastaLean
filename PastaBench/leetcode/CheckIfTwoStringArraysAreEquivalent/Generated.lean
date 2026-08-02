@@ -47,11 +47,10 @@ def arrayStringsAreEqual := fun (word1 : List String) ↦ fun (word2 : List Stri
 attribute [simp] arrayStringsAreEqual
 
 @[taste_ingr]
-theorem arrayStringsAreEqual_spec :
+theorem arrayStringsAreEqual_correct :
     ∀ (word1 : List String),
       ∀ (word2 : List String),
-        (PastaLean.pyStringJoin "" word1 = PastaLean.pyStringJoin "" word2) =
-          (PastaLean.pyStringJoin "" word1 = PastaLean.pyStringJoin "" word2) :=
+        arrayStringsAreEqual word1 word2 = (PastaLean.pyStringJoin "" word1 = PastaLean.pyStringJoin "" word2) :=
   by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]
 
 def arrayStringsAreEqual'rn := fun (word1 : List String) ↦ fun (word2 : List String) ↦

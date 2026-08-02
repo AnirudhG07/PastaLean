@@ -126,6 +126,16 @@ theorem longestSubarray_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
+theorem longestSubarray_correct :
+    ∀ (nums : List Int),
+      ∀ (limit : Int),
+        limit ≥ (0 : Int) →
+          let ans := (longestSubarray nums limit).run;
+          ((0 : Int) ≤ ans ∧ ans ≤ PastaLean.pyLen nums) ∧ (PastaLean.pyLen nums = (0 : Int) ∨ ans ≥ (1 : Int)) :=
+  by
+  intro nums limit hpre
+  exact longestSubarray_spec hpre
+
 def longestSubarray'rn := fun (nums : List Int) ↦ fun (limit : Int) ↦
   Id.run
     (do

@@ -93,11 +93,20 @@ theorem longestAlternatingSubarray_spec :
   by
   try
     mvcgen [longestAlternatingSubarray, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓cur =>
+    · ⇓⟨cur, ans⟩ =>
       ⌜let l := (cur.prefix.length : Int);
         ((0 : Int) ≤ l ∧ l ≤ n) ∧ (0 : Int) ≤ ans ∧ ans ≤ n⌝
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
+
+theorem longestAlternatingSubarray_correct :
+    ∀ (nums : List Int),
+      ∀ (threshold : Int),
+        let ans := (longestAlternatingSubarray nums threshold).run;
+        ans ≥ (0 : Int) ∧ ans ≤ PastaLean.pyLen nums :=
+  by
+  intro nums threshold
+  exact longestAlternatingSubarray_spec True.intro
 
 def longestAlternatingSubarray'rn := fun (nums : List Int) ↦ fun (threshold : Int) ↦
   Id.run

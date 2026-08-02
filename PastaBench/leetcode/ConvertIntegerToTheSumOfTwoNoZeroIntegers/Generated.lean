@@ -87,6 +87,18 @@ theorem getNoZeroIntegers_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
+theorem getNoZeroIntegers_correct :
+    ∀ (n : Int),
+      n ≥ (2 : Int) →
+        let result := (getNoZeroIntegers n).run;
+        ((((PastaLean.pyLen result = (2 : Int) ∧ result⦋(0 : Int)⦌ > (0 : Int)) ∧ result⦋(1 : Int)⦌ > (0 : Int)) ∧
+              result⦋(0 : Int)⦌ +ₚ result⦋(1 : Int)⦌ = n) ∧
+            !(PastaLean.pyStrContainsSubstr (PastaLean.pyStr result⦋(0 : Int)⦌) "0")) ∧
+          !(PastaLean.pyStrContainsSubstr (PastaLean.pyStr result⦋(1 : Int)⦌) "0") :=
+  by
+  intro n hpre
+  exact getNoZeroIntegers_spec hpre
+
 def getNoZeroIntegers'rn := fun (n : Int) ↦
   Id.run
     (do

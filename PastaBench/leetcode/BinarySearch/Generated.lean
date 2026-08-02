@@ -98,6 +98,16 @@ theorem search_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
+theorem search_correct :
+    ∀ (nums : List Int),
+      ∀ (target : Int),
+        PastaLean.pyLen nums > (0 : Int) →
+          let result := (search nums target).run;
+          result = -(1 : Int) ∨ ((0 : Int) ≤ result ∧ result < PastaLean.pyLen nums) ∧ nums⦋result⦌ = target :=
+  by
+  intro nums target hpre
+  exact search_spec hpre
+
 def search'rn := fun (nums : List Int) ↦ fun (target : Int) ↦
   Id.run
     (do

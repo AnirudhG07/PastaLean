@@ -308,6 +308,48 @@ Recursive self-calls in the body are lowered to `(← fib'memo'rn …)`, so the 
 
 any many more... like many many many more small annoying features...
 
+## Verifying with contracts (and how postcondition proving can fail)
+
+You annotate a Python function with `Requires`/`Ensures` (plus `Invariant`/`Decreases`/`Assert`), and
+PastaLean turns it into a Hoare-triple spec on the provable twin:
+
+- **precondition** = the conjunction of every `Requires`/`Assume`,
+- **postcondition** = the conjunction of every `Ensures` (and every `Result()`-bearing `Assert`),
+- a bare `Assert(...)` about *intermediate* state stays an in-body checkpoint (a no-op), and
+  `Invariant`/`Decreases` drive the loop's `mvcgen` proof,
+- the postcondition is `True` **only** when the function declares no `Ensures`/`Result`-`Assert` at all
+  — and a `True` postcondition asserts *nothing*, so it proves trivially and verifies nothing.
+- `Ensures`/`Result`-`Assert` must sit at the start/end of the body, never sandwiched *between loops*
+  (that would be a program-point checkpoint, not a postcondition) — PastaLean rejects that.
+
+The transpiler emits the spec and tries to discharge it automatically (`taste?`/`mvcgen`). **But a
+compiling spec is not a proved spec** — and worse, **a postcondition can be flat-out false**, in which
+case no proof exists. This is the single biggest way verification "fails miserably":
+
+```python
+def missingNumber(arr: list[int]) -> int:
+    Requires(len(arr) >= 1)
+    Requires((arr[-1] - arr[0]) % len(arr) == 0)
+    # ⚠️ FALSE as a postcondition. It only holds when `arr` is a genuine arithmetic
+    #    progression missing exactly one term — a property the two Requires do NOT capture.
+    Ensures(min(arr[0], arr[-1]) <= Result() <= max(arr[0], arr[-1]))
+    return (arr[0] + arr[-1]) * (len(arr) + 1) // 2 - sum(arr)
+```
+
+For `arr = [0, 50, -99]` both `Requires` hold (`len == 3`, `(-99 - 0) % 3 == 0`), but the function
+returns **-149**, while `min(0, -99) == -99` — so `-99 <= -149` is false. The postcondition is
+unprovable because it is *not true*. PastaLean will happily generate the `_spec` theorem and it will
+sit there with a `sorry` forever: **the contract, not the prover, is the bug.**
+
+Two lessons:
+
+1. **Strengthen the precondition** to the domain where the property holds ("`arr` is an arithmetic
+   progression"), or **weaken the postcondition** to something true (e.g. the direct
+   `Ensures(Result() == (arr[0] + arr[-1]) * (len(arr) + 1) // 2 - sum(arr))`).
+2. Even a *true* postcondition can be out of automated reach — a functional characterization like
+   `Ensures(Result() == number_of_pairs(i, j) with i < j and words[i] == reverse(words[j]))` is true
+   but needs a bespoke inductive proof; `taste?`/`mvcgen` will leave a `sorry`, and that is expected.
+
 ## Libraries
 
 Python libraries can be supported in PastaLean by writing Lean definitions that correspond to the Python library's API. These definitions can be made by implementing the necessary translation logic in the Lean backend, then added to PastaLean by creating a mapping using `Mapping.lean` which is simply a map from python name for a function to Your Lean definition.

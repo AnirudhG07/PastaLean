@@ -1,0 +1,14 @@
+{
+  "task_id": "HumanEval/74",
+  "problem": "total-match",
+  "module": "TotalMatch",
+  "method": "total_match",
+  "params": [
+    "lst1",
+    "lst2"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

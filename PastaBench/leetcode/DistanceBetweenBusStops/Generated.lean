@@ -92,6 +92,19 @@ theorem distanceBetweenBusStops_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
+theorem distanceBetweenBusStops_correct :
+    ∀ (distance : List Int),
+      ∀ (start : Int),
+        ∀ (destination : Int),
+          ((PastaLean.pyLen distance > (0 : Int) ∧ (0 : Int) ≤ start ∧ start < PastaLean.pyLen distance) ∧
+                (0 : Int) ≤ destination ∧ destination < PastaLean.pyLen distance) ∧
+              PastaLean.pyAll ((PastaLean.pyIter distance).map fun d => decide (d ≥ (0 : Int))) →
+            let result := (distanceBetweenBusStops distance start destination).run;
+            result ≥ (0 : Int) ∧ (2 : Int) *ₚ result ≤ PastaLean.pySum distance :=
+  by
+  intro distance start destination hpre
+  exact distanceBetweenBusStops_spec hpre
+
 def distanceBetweenBusStops'rn := fun (distance : List Int) ↦ fun (start : Int) ↦ fun (destination : Int) ↦
   Id.run
     (do

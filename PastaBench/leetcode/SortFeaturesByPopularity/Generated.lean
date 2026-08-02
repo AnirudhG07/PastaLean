@@ -65,6 +65,15 @@ theorem sortFeatures_spec :
   sorry
   all_goals sorry
 
+theorem sortFeatures_correct :
+    ∀ (features : List String),
+      ∀ (responses : List String),
+        let result := (sortFeatures features responses).run;
+        result = PastaLean.pySortBy (fun (w : String) ↦ -Libraries.collections.pyCounterEmpty⦋w⦌) false features :=
+  by
+  intro features responses
+  exact sortFeatures_spec True.intro
+
 def sortFeatures'rn := fun (features : List String) ↦ fun (responses : List String) ↦
   Id.run
     (do

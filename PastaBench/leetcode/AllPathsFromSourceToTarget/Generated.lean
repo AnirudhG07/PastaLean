@@ -149,6 +149,29 @@ theorem allPathsSourceTarget_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
+theorem allPathsSourceTarget_correct :
+    ∀ (graph : List (List Int)),
+      n > (0 : Int) ∧
+          PastaLean.pyAll
+            ((PastaLean.pyIter graph).flatMap fun neighbors =>
+              (PastaLean.pyIter neighbors).map fun v => decide ((0 : Int) ≤ v) && decide (v < n)) →
+        let ans := (allPathsSourceTarget graph).run;
+        PastaLean.pyAll
+          ((PastaLean.pyIter ans).map fun p =>
+            decide (PastaLean.pyLen p > (0 : Int)) && p⦋(0 : Int)⦌ == (0 : Int) &&
+                  p⦋(-1 : Int)⦌ == PastaLean.pyLen graph -ₚ (1 : Int) &&
+                PastaLean.pyTruthy
+                  (PastaLean.pyAll
+                    ((PastaLean.pyIter p).map fun node =>
+                      decide ((0 : Int) ≤ node) && decide (node < PastaLean.pyLen graph))) &&
+              PastaLean.pyTruthy
+                (PastaLean.pyAll
+                  ((PastaLean.pyRange (PastaLean.pyLen p -ₚ (1 : Int))).map fun i =>
+                    PastaLean.pyContains graph⦋p⦋i⦌⦌ p⦋i +ₚ (1 : Int)⦌))) :=
+  by
+  intro graph hpre
+  exact allPathsSourceTarget_spec hpre
+
 def allPathsSourceTarget'rn := fun (graph : List (List Int)) ↦
   Id.run
     (do

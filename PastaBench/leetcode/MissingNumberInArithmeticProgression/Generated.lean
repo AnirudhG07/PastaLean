@@ -47,8 +47,10 @@ def missingNumber(arr: List[int]) -> int:
     # The number of steps is (len(arr) + 1) - 1 = len(arr).
     # So, the total difference (arr[-1] - arr[0]) must be divisible by the number of steps.
     Requires((arr[-1] - arr[0]) % len(arr) == 0)
-    # The missing number must lie within the bounds of the sequence.
-    Ensures(min(arr[0], arr[-1]) <= Result() <= max(arr[0], arr[-1]))
+    # Direct spec: the result is the arithmetic-progression sum formula minus the observed sum.
+    # (The previous `min(arr[0],arr[-1]) <= Result() <= max(...)` bound is false for arrays that
+    # satisfy only the two Requires but are not a genuine progression, e.g. arr=[0,50,-99].)
+    Ensures(Result() == (arr[0] + arr[-1]) * (len(arr) + 1) // 2 - sum(arr))
     return (arr[0] + arr[-1]) * (len(arr) + 1) // 2 - sum(arr)
 -/
 
@@ -61,19 +63,15 @@ def missingNumber := fun (arr : List Int) ↦
 attribute [simp] missingNumber
 
 @[taste_ingr]
-theorem missingNumber_spec :
+theorem missingNumber_correct :
     ∀ (arr : List Int),
       PastaLean.pyLen arr ≥ (1 : Int) →
         (arr⦋(-1 : Int)⦌ -ₚ arr⦋(0 : Int)⦌) %ₚ PastaLean.pyLen arr = (0 : Int) →
-          PastaLean.pyMin [arr⦋(0 : Int)⦌, arr⦋(-1 : Int)⦌] ≤
-              PastaLean.pyFloorDiv ((arr⦋(0 : Int)⦌ +ₚ arr⦋(-1 : Int)⦌) *ₚ (PastaLean.pyLen arr +ₚ (1 : Int)))
-                  (2 : Int) -ₚ
-                PastaLean.pySum arr ∧
+          missingNumber arr =
             PastaLean.pyFloorDiv ((arr⦋(0 : Int)⦌ +ₚ arr⦋(-1 : Int)⦌) *ₚ (PastaLean.pyLen arr +ₚ (1 : Int)))
-                  (2 : Int) -ₚ
-                PastaLean.pySum arr ≤
-              PastaLean.pyMax [arr⦋(0 : Int)⦌, arr⦋(-1 : Int)⦌] :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+                (2 : Int) -ₚ
+              PastaLean.pySum arr :=
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]
 
 def missingNumber'rn := fun (arr : List Int) ↦
   PastaLean.pyFloorDiv ((arr⦋(0 : Int)⦌ +ₚ arr⦋(-1 : Int)⦌) *ₚ (PastaLean.pyLen arr +ₚ (1 : Int))) (2 : Int) -ₚ

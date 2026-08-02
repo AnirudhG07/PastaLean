@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/48",
+  "problem": "is-palindrome",
+  "module": "IsPalindrome",
+  "method": "is_palindrome",
+  "params": [
+    "text"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

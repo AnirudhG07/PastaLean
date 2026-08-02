@@ -67,6 +67,19 @@ theorem maximumNumberOfStringPairs_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
+theorem maximumNumberOfStringPairs_correct :
+    ∀ (words : List String),
+      let ans := (maximumNumberOfStringPairs words).run;
+      ans =
+        PastaLean.pySum
+          ((PastaLean.pyRange (PastaLean.pyLen words)).flatMap fun i =>
+            (List.filter (fun j => words⦋i⦌ = PastaLean.pySlice words⦋j⦌ none none (some (-(1 : Int))))
+                  (PastaLean.pyRange (PastaLean.pyLen words) (i +ₚ (1 : Int)))).map
+              fun j => (1 : Int)) :=
+  by
+  intro words
+  exact maximumNumberOfStringPairs_spec True.intro
+
 def maximumNumberOfStringPairs'rn := fun (words : List String) ↦
   Id.run
     (do

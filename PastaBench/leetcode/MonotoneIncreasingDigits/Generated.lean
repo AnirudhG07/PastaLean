@@ -147,9 +147,32 @@ theorem monotoneIncreasingDigits_spec :
             ((PastaLean.pyRange (PastaLean.pyLen (PastaLean.pyStr result) -ₚ (1 : Int))).map fun k =>
               decide ((PastaLean.pyStr result)⦋k⦌ ≤ (PastaLean.pyStr result)⦋k +ₚ (1 : Int)⦌))⌝⦄ :=
   by
-  mvcgen [monotoneIncreasingDigits, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  sorry
+  try
+    mvcgen [monotoneIncreasingDigits, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · fun s =>
+      let i := s;
+      (⟨(PastaLean.pyLen s -ₚ i).toNat⟩ : ULift Nat)
+    · ⇓s =>
+      ⌜Sum.elim
+          (fun st =>
+            let i := st;
+            ((1 : Int) ≤ i ∧ i ≤ PastaLean.pyLen s) ∧
+              PastaLean.pyAll ((PastaLean.pyRange (i -ₚ (1 : Int))).map fun k => decide (s⦋k⦌ ≤ s⦋k +ₚ (1 : Int)⦌)))
+          (fun _ => True) s⌝
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
+
+theorem monotoneIncreasingDigits_correct :
+    ∀ (n : Int),
+      n ≥ (0 : Int) →
+        let result := (monotoneIncreasingDigits n).run;
+        result ≤ n ∧
+          PastaLean.pyAll
+            ((PastaLean.pyRange (PastaLean.pyLen (PastaLean.pyStr result) -ₚ (1 : Int))).map fun k =>
+              decide ((PastaLean.pyStr result)⦋k⦌ ≤ (PastaLean.pyStr result)⦋k +ₚ (1 : Int)⦌)) :=
+  by
+  intro n hpre
+  exact monotoneIncreasingDigits_spec hpre
 
 def monotoneIncreasingDigits'rn := fun (n : Int) ↦
   Id.run

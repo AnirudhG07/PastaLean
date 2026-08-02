@@ -1,0 +1,14 @@
+{
+  "task_id": "HumanEval/112",
+  "problem": "reverse-delete",
+  "module": "ReverseDelete",
+  "method": "reverse_delete",
+  "params": [
+    "s",
+    "c"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

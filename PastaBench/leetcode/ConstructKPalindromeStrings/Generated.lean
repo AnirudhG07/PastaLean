@@ -32,16 +32,22 @@ from bisect import *
 from string import *
 from operator import *
 from math import *
-
 from contracts import *
 
 def canConstruct(s: str, k: int) -> bool:
-    Requires(k >= 0)
+    Requires(k >= 1)
+    # A string can be partitioned into k non-empty palindromic substrings iff:
+    # 1. There are at least as many characters as partitions (len(s) >= k).
+    # 2. The number of characters with odd frequencies is at most k, since each
+    #    such character must be the center of a distinct palindrome.
+    Ensures(Result() == (len(s) >= k and sum((v & 1 for v in Counter(s).values())) <= k))
+
     if len(s) < k:
         return False
+
+    Assert(len(s) >= k)
     cnt = Counter(s)
-    odd = sum(v & 1 for v in cnt.values())
-    return odd <= k
+    return sum((v & 1 for v in cnt.values())) <= k
 -/
 
 namespace PastaBench.leetcode.ConstructKPalindromeStrings
@@ -52,29 +58,59 @@ def canConstruct := fun (s : String) ↦ fun (k : Int) ↦
       return Bool.false
     else
       let _ := ()
+    let _ := Libraries.passta.pyPassAssert (decide (PastaLean.pyLen s ≥ k))
     let mut cnt : Libraries.collections.PyDefaultDict String Int := Libraries.collections.pyCounter s
-    let mut odd : Int :=
-      PastaLean.pySum ((PastaLean.pyIter (PastaLean.pyAnys cnt)).map fun v => PastaLean.pyBitAnd v (1 : Int))
-    let __py_ret_1 := decide (odd ≤ k)
+    let __py_ret_1 :=
+      decide
+        (PastaLean.pySum ((PastaLean.pyIter (PastaLean.pyAnys cnt)).map fun v => PastaLean.pyBitAnd v (1 : Int)) ≤ k)
     return __py_ret_1 : Id _)
 
-theorem canConstruct_spec : ⦃⌜k ≥ (0 : Int)⌝⦄ canConstruct s k ⦃⇓_ => ⌜True⌝⦄ :=
+@[spec]
+theorem canConstruct_spec :
+    ⦃⌜k ≥ (1 : Int)⌝⦄ canConstruct s k ⦃⇓result =>
+      ⌜result =
+          (PastaLean.pyLen s ≥ k ∧
+            PastaLean.pySum
+                ((PastaLean.pyIter (PastaLean.pyAnys (Libraries.collections.pyCounter s))).map fun v =>
+                  PastaLean.pyBitAnd v (1 : Int)) ≤
+              k)⌝⦄ :=
   by
   mvcgen [canConstruct, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]
   all_goals sorry
+
+theorem canConstruct_correct :
+    ∀ (s : String),
+      ∀ (k : Int),
+        k ≥ (1 : Int) →
+          let result := (canConstruct s k).run;
+          result =
+            (PastaLean.pyLen s ≥ k ∧
+              PastaLean.pySum
+                  ((PastaLean.pyIter (PastaLean.pyAnys (Libraries.collections.pyCounter s))).map fun v =>
+                    PastaLean.pyBitAnd v (1 : Int)) ≤
+                k) :=
+  by
+  intro s k hpre
+  exact canConstruct_spec hpre
 
 def canConstruct'rn := fun (s : String) ↦ fun (k : Int) ↦
   Id.run
     (do
-      let _ := Libraries.passta.pyPassRequires (decide (k ≥ (0 : Int)))
+      let _ := Libraries.passta.pyPassRequires (decide (k ≥ (1 : Int)))
+      -- A string can be partitioned into k non-empty palindromic substrings iff:
+      -- 1. There are at least as many characters as partitions (len(s) >= k).
+      -- 2. The number of characters with odd frequencies is at most k, since each
+      -- such character must be the center of a distinct palindrome.
       if h_1 : PastaLean.pyLen s < k then 
         return Bool.false
       else
         let _ := ()
+      let _ := Libraries.passta.pyPassAssert (decide (PastaLean.pyLen s ≥ k))
       let mut cnt : Libraries.collections.PyDefaultDict String Int := Libraries.collections.pyCounter s
-      let mut odd : Int :=
-        PastaLean.pySum ((PastaLean.pyIter (PastaLean.pyAnys cnt)).map fun v => PastaLean.pyBitAnd v (1 : Int))
-      let __py_ret_1 := decide (odd ≤ k)
+      let __py_ret_1 :=
+        decide
+          (PastaLean.pySum ((PastaLean.pyIter (PastaLean.pyAnys cnt)).map fun v => PastaLean.pyBitAnd v (1 : Int)) ≤ k)
       return __py_ret_1)
 
 end PastaBench.leetcode.ConstructKPalindromeStrings

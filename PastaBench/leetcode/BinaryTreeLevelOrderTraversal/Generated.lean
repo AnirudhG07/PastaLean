@@ -132,6 +132,14 @@ theorem levelOrder_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry; sorry; sorry; pyany_cases <;> grind +locals; sorry; sorry; sorry; sorry; sorry; sorry; sorry; sorry; sorry
   all_goals sorry
 
+theorem levelOrder_correct :
+    ∀ (root : Option TreeNode),
+      let ans := (levelOrder root).run;
+      PastaLean.pyIsNone root ∧ ans = [] ∨ !PastaLean.pyIsNone root ∧ PastaLean.pyLen ans > (0 : Int) :=
+  by
+  intro root
+  exact levelOrder_spec True.intro
+
 def levelOrder'rn := fun (root : Option TreeNode'rn) ↦
   Id.run
     (do

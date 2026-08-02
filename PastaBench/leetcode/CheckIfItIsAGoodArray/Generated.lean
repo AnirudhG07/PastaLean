@@ -36,26 +36,35 @@ from math import *
 
 def isGoodArray(nums: List[int]) -> bool:
     Requires(len(nums) > 0)
+    Requires(all(n > 0 for n in nums))
+    # The intent is that the numbers are coprime as a set, which is equivalent
+    # to their greatest common divisor (GCD) being 1. This postcondition
+    # states the definition of coprimality: there is no integer d > 1 that
+    # divides every number in the list. The search for such a common divisor `d`
+    # can be bounded by the minimum element in the list.
+    Ensures(Result() == (not any(all(num % d == 0 for num in nums) for d in range(2, min(nums) + 1))))
     return reduce(gcd, nums) == 1
 -/
 
 namespace PastaBench.leetcode.CheckIfItIsAGoodArray
 
-def isGoodArray := fun (nums : List Int) ↦
-  (do
-    let __py_ret_1 := Libraries.functools.pyReduce nums Libraries.math.pyMathGcd == (1 : Int)
-    return __py_ret_1 : Id _)
+def isGoodArray := fun (nums : List Int) ↦ Libraries.functools.pyReduce nums Libraries.math.pyMathGcd == (1 : Int)
 
-theorem isGoodArray_spec : ⦃⌜PastaLean.pyLen nums > (0 : Int)⌝⦄ isGoodArray nums ⦃⇓_ => ⌜True⌝⦄ :=
-  by
-  mvcgen [isGoodArray, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  all_goals sorry
+attribute [simp] isGoodArray
 
-def isGoodArray'rn := fun (nums : List Int) ↦
-  Id.run
-    (do
-      let _ := Libraries.passta.pyPassRequires (decide (PastaLean.pyLen nums > (0 : Int)))
-      let __py_ret_1 := Libraries.functools.pyReduce nums Libraries.math.pyMathGcd == (1 : Int)
-      return __py_ret_1)
+@[taste_ingr]
+theorem isGoodArray_correct :
+    ∀ (nums : List Int),
+      PastaLean.pyLen nums > (0 : Int) →
+        PastaLean.pyAll ((PastaLean.pyIter nums).map fun n => decide (n > (0 : Int))) →
+          isGoodArray nums =
+            ¬PastaLean.pyTruthy
+                  (PastaLean.pyStdAny
+                    ((PastaLean.pyRange (PastaLean.pyMin nums +ₚ (1 : Int)) (2 : Int)).map fun d =>
+                      PastaLean.pyAll ((PastaLean.pyIter nums).map fun num => num %ₚ d == (0 : Int)))) =
+                true :=
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+
+def isGoodArray'rn := fun (nums : List Int) ↦ Libraries.functools.pyReduce nums Libraries.math.pyMathGcd == (1 : Int)
 
 end PastaBench.leetcode.CheckIfItIsAGoodArray

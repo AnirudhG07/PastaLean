@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/17",
+  "problem": "parse-music",
+  "module": "ParseMusic",
+  "method": "parse_music",
+  "params": [
+    "music_string"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

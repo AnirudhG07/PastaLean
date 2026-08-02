@@ -53,9 +53,30 @@ def sumOfTheDigitsOfHarshadNumber := fun (x : Int) ↦
 theorem sumOfTheDigitsOfHarshadNumber_spec :
     ⦃⌜x > (0 : Int)⌝⦄ sumOfTheDigitsOfHarshadNumber x ⦃⇓result => ⌜result = -(1 : Int) ∨ x %ₚ result = (0 : Int)⌝⦄ :=
   by
-  mvcgen [sumOfTheDigitsOfHarshadNumber, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry; sorry; sorry; sorry; sorry; pyany_cases <;> grind +locals
+  try
+    mvcgen [sumOfTheDigitsOfHarshadNumber, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · fun s =>
+      let y := s |>.snd;
+      let s := s |>.fst;
+      (⟨(y).toNat⟩ : ULift Nat)
+    · ⇓s =>
+      ⌜Sum.elim
+          (fun st =>
+            let y := st |>.snd;
+            let s := st |>.fst;
+            y ≥ (0 : Int) ∧ s ≥ (0 : Int))
+          (fun _ => True) s⌝
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals; pyany_cases <;> grind +locals; pyany_cases <;> grind +locals
   all_goals sorry
+
+theorem sumOfTheDigitsOfHarshadNumber_correct :
+    ∀ (x : Int),
+      x > (0 : Int) →
+        let result := (sumOfTheDigitsOfHarshadNumber x).run;
+        result = -(1 : Int) ∨ x %ₚ result = (0 : Int) :=
+  by
+  intro x hpre
+  exact sumOfTheDigitsOfHarshadNumber_spec hpre
 
 def sumOfTheDigitsOfHarshadNumber'rn := fun (x : Int) ↦
   Id.run

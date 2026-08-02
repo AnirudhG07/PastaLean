@@ -72,6 +72,14 @@ theorem finalString_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
+theorem finalString_correct :
+    ∀ (s : String),
+      let result := (finalString s).run;
+      PastaLean.pyAll ((PastaLean.pyIter result).map fun c => c != "i") :=
+  by
+  intro s
+  exact finalString_spec True.intro
+
 def finalString'rn := fun (s : String) ↦
   Id.run
     (do

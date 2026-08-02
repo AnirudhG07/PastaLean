@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/109",
+  "problem": "move-one-ball",
+  "module": "MoveOneBall",
+  "method": "move_one_ball",
+  "params": [
+    "arr"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

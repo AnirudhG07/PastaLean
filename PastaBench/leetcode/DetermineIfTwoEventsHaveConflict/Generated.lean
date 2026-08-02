@@ -17,7 +17,6 @@ set_option maxHeartbeats 800000
 
 /- Python source converted to produce the Lean below (the exact input to PastaLean):
 
-from contracts import *
 import random
 import functools
 import collections
@@ -33,35 +32,47 @@ from bisect import *
 from string import *
 from operator import *
 from math import *
+from contracts import *
 
 def haveConflict(event1: List[str], event2: List[str]) -> bool:
-    Requires(len(event1) == 2)
-    Requires(len(event2) == 2)
+    Requires(len(event1) >= 2)
+    Requires(len(event2) >= 2)
+    Requires(event1[0] <= event1[1])
+    Requires(event2[0] <= event2[1])
+    Ensures(Result() == (event1[0] <= event2[1] and event1[1] >= event2[0]))
+
+    # The condition for two intervals [s1, e1] and [s2, e2] to NOT overlap is
+    # e1 < s2 (the first ends before the second begins) OR
+    # s1 > e2 (the first begins after the second ends).
+    # This function returns the negation, which is true if they DO overlap.
+    # The postcondition expresses this overlap condition directly using
+    # De Morgan's laws: not (A or B) == (not A) and (not B).
+    # not (e1 < s2) -> e1 >= s2
+    # not (s1 > e2) -> s1 <= e2
+    # So, overlap is (e1 >= s2 and s1 <= e2).
     return not (event1[0] > event2[1] or event1[1] < event2[0])
 -/
 
 namespace PastaBench.leetcode.DetermineIfTwoEventsHaveConflict
 
 def haveConflict := fun (event1 : List String) ↦ fun (event2 : List String) ↦
-  (do
-    let __py_ret_1 :=
-      !(decide (event1⦋(0 : Int)⦌ > event2⦋(1 : Int)⦌) || decide (event1⦋(1 : Int)⦌ < event2⦋(0 : Int)⦌))
-    return __py_ret_1 : Id _)
+  !(decide (event1⦋(0 : Int)⦌ > event2⦋(1 : Int)⦌) || decide (event1⦋(1 : Int)⦌ < event2⦋(0 : Int)⦌))
 
-theorem haveConflict_spec :
-    ⦃⌜PastaLean.pyLen event1 = (2 : Int) ∧ PastaLean.pyLen event2 = (2 : Int)⌝⦄ haveConflict event1 event2 ⦃⇓_ =>
-      ⌜True⌝⦄ :=
-  by
-  mvcgen [haveConflict, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  all_goals sorry
+attribute [simp] haveConflict
+
+@[taste_ingr]
+theorem haveConflict_correct :
+    ∀ (event1 : List String),
+      ∀ (event2 : List String),
+        PastaLean.pyLen event1 ≥ (2 : Int) →
+          PastaLean.pyLen event2 ≥ (2 : Int) →
+            event1⦋(0 : Int)⦌ ≤ event1⦋(1 : Int)⦌ →
+              event2⦋(0 : Int)⦌ ≤ event2⦋(1 : Int)⦌ →
+                haveConflict event1 event2 =
+                  (event1⦋(0 : Int)⦌ ≤ event2⦋(1 : Int)⦌ ∧ event1⦋(1 : Int)⦌ ≥ event2⦋(0 : Int)⦌) :=
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; grind +locals +suggestions
 
 def haveConflict'rn := fun (event1 : List String) ↦ fun (event2 : List String) ↦
-  Id.run
-    (do
-      let _ := Libraries.passta.pyPassRequires (PastaLean.pyLen event1 == (2 : Int))
-      let _ := Libraries.passta.pyPassRequires (PastaLean.pyLen event2 == (2 : Int))
-      let __py_ret_1 :=
-        !(decide (event1⦋(0 : Int)⦌ > event2⦋(1 : Int)⦌) || decide (event1⦋(1 : Int)⦌ < event2⦋(0 : Int)⦌))
-      return __py_ret_1)
+  !(decide (event1⦋(0 : Int)⦌ > event2⦋(1 : Int)⦌) || decide (event1⦋(1 : Int)⦌ < event2⦋(0 : Int)⦌))
 
 end PastaBench.leetcode.DetermineIfTwoEventsHaveConflict

@@ -50,11 +50,11 @@ def countOdds := fun (low : Int) ↦ fun (high : Int) ↦
 attribute [simp] countOdds
 
 @[taste_ingr]
-theorem countOdds_spec :
+theorem countOdds_correct :
     ∀ (low : Int),
       ∀ (high : Int),
         low ≤ high →
-          PastaLean.pyShiftRight (high +ₚ (1 : Int)) (1 : Int) -ₚ PastaLean.pyShiftRight low (1 : Int) =
+          countOdds low high =
             PastaLean.pySum
               ((List.filter (fun i => i %ₚ (2 : Int) ≠ (0 : Int)) (PastaLean.pyRange (high +ₚ (1 : Int)) low)).map
                 fun i => (1 : Int)) :=

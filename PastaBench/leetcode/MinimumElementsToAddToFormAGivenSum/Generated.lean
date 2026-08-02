@@ -51,17 +51,15 @@ def minElements := fun (nums : List Int) ↦ fun (limit : Int) ↦ fun (goal : I
 attribute [simp] minElements
 
 @[taste_ingr]
-theorem minElements_spec :
+theorem minElements_correct :
     ∀ (nums : List Int),
       ∀ (limit : Int),
         ∀ (goal : Int),
           let d := PastaLean.pyAbs (PastaLean.pySum nums -ₚ goal)
           limit > (0 : Int) →
-            PastaLean.pyFloorDiv (d +ₚ limit -ₚ (1 : Int)) limit *ₚ limit ≥
-                PastaLean.pyAbs (PastaLean.pySum nums -ₚ goal) ∧
-              (PastaLean.pyFloorDiv (d +ₚ limit -ₚ (1 : Int)) limit -ₚ (1 : Int)) *ₚ limit <
-                PastaLean.pyAbs (PastaLean.pySum nums -ₚ goal) :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+            minElements nums limit goal *ₚ limit ≥ PastaLean.pyAbs (PastaLean.pySum nums -ₚ goal) ∧
+              (minElements nums limit goal -ₚ (1 : Int)) *ₚ limit < PastaLean.pyAbs (PastaLean.pySum nums -ₚ goal) :=
+  by sorry
 
 def minElements'rn := fun (nums : List Int) ↦ fun (limit : Int) ↦ fun (goal : Int) ↦
   let d := (PastaLean.pyAbs (PastaLean.pySum nums -ₚ goal) : Int)

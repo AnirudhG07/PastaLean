@@ -121,7 +121,7 @@ theorem minimumSum_spec :
   by
   try
     mvcgen [minimumSum, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓cur =>
+    · ⇓⟨cur, s, i⟩ =>
       ⌜let _ := (cur.prefix.length : Int);
         (((0 : Int) ≤ PastaLean.pyLen vis ∧ PastaLean.pyLen vis < n) ∧ i ≥ (1 : Int)) ∧
           (PastaLean.pyLen vis ≤ PastaLean.pyFloorDiv k (2 : Int) ∧
@@ -133,6 +133,21 @@ theorem minimumSum_spec :
                     ((2 : Int) *ₚ k +ₚ PastaLean.pyLen vis -ₚ PastaLean.pyFloorDiv k (2 : Int) -ₚ (1 : Int)))⌝
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
+
+theorem minimumSum_correct :
+    ∀ (n : Int),
+      ∀ (k : Int),
+        n ≥ (0 : Int) ∧ k ≥ (1 : Int) →
+          let s := (minimumSum n k).run;
+          n ≤ PastaLean.pyFloorDiv k (2 : Int) ∧ (2 : Int) *ₚ s = n *ₚ (n +ₚ (1 : Int)) ∨
+            n > PastaLean.pyFloorDiv k (2 : Int) ∧
+              (2 : Int) *ₚ s =
+                PastaLean.pyFloorDiv k (2 : Int) *ₚ (PastaLean.pyFloorDiv k (2 : Int) +ₚ (1 : Int)) +ₚ
+                  (n -ₚ PastaLean.pyFloorDiv k (2 : Int)) *ₚ
+                    ((2 : Int) *ₚ k +ₚ n -ₚ PastaLean.pyFloorDiv k (2 : Int) -ₚ (1 : Int)) :=
+  by
+  intro n k hpre
+  exact minimumSum_spec hpre
 
 def minimumSum'rn := fun (n : Int) ↦ fun (k : Int) ↦
   Id.run

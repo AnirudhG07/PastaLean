@@ -119,6 +119,16 @@ theorem predictPartyVictory_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry; sorry; sorry; sorry; sorry; sorry; sorry; sorry; sorry; sorry; pyany_cases <;> grind +locals
   all_goals sorry
 
+theorem predictPartyVictory_correct :
+    ∀ (senate : String),
+      PastaLean.pyLen senate > (0 : Int) ∧
+          PastaLean.pyAll ((PastaLean.pyIter senate).map fun c => PastaLean.pyContains ("R", "D") c) →
+        let result := (predictPartyVictory senate).run;
+        result = "Radiant" ∨ result = "Dire" :=
+  by
+  intro senate hpre
+  exact predictPartyVictory_spec hpre
+
 def predictPartyVictory'rn := fun (senate : String) ↦
   Id.run
     (do

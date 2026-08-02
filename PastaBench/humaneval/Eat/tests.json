@@ -1,0 +1,202 @@
+[
+  {
+    "input": "number = 5, need = 6, remaining = 10",
+    "output": "[11, 4]"
+  },
+  {
+    "input": "number = 4, need = 8, remaining = 9",
+    "output": "[12, 1]"
+  },
+  {
+    "input": "number = 1, need = 10, remaining = 10",
+    "output": "[11, 0]"
+  },
+  {
+    "input": "number = 2, need = 11, remaining = 5",
+    "output": "[7, 0]"
+  },
+  {
+    "input": "number = 4, need = 5, remaining = 7",
+    "output": "[9, 2]"
+  },
+  {
+    "input": "number = 4, need = 5, remaining = 1",
+    "output": "[5, 0]"
+  },
+  {
+    "input": "number = 0, need = 0, remaining = 0",
+    "output": "[0, 0]"
+  },
+  {
+    "input": "number = 10, need = 0, remaining = 10",
+    "output": "[10, 10]"
+  },
+  {
+    "input": "number = 0, need = 10, remaining = 5",
+    "output": "[5, 0]"
+  },
+  {
+    "input": "number = 5, need = 0, remaining = 5",
+    "output": "[5, 5]"
+  },
+  {
+    "input": "number = 2, need = 2, remaining = 2",
+    "output": "[4, 0]"
+  },
+  {
+    "input": "number = 999, need = 1, remaining = 0",
+    "output": "[999, 0]"
+  },
+  {
+    "input": "number = 0, need = 999, remaining = 1",
+    "output": "[1, 0]"
+  },
+  {
+    "input": "number = 500, need = 500, remaining = 1000",
+    "output": "[1000, 500]"
+  },
+  {
+    "input": "number = 1, need = 10, remaining = 5",
+    "output": "[6, 0]"
+  },
+  {
+    "input": "number = 0, need = 0, remaining = 5",
+    "output": "[0, 5]"
+  },
+  {
+    "input": "number = 0, need = 0, remaining = 1",
+    "output": "[0, 1]"
+  },
+  {
+    "input": "number = 999, need = 5, remaining = 5",
+    "output": "[1004, 0]"
+  },
+  {
+    "input": "number = 999, need = 5, remaining = 500",
+    "output": "[1004, 495]"
+  },
+  {
+    "input": "number = 999, need = 10, remaining = 5",
+    "output": "[1004, 0]"
+  },
+  {
+    "input": "number = 5, need = 6, remaining = 6",
+    "output": "[11, 0]"
+  },
+  {
+    "input": "number = 999, need = 2, remaining = 1",
+    "output": "[1000, 0]"
+  },
+  {
+    "input": "number = 5, need = 5, remaining = 5",
+    "output": "[10, 0]"
+  },
+  {
+    "input": "number = 0, need = 10, remaining = 500",
+    "output": "[10, 490]"
+  },
+  {
+    "input": "number = 5, need = 10, remaining = 5",
+    "output": "[10, 0]"
+  },
+  {
+    "input": "number = 1, need = 0, remaining = 1",
+    "output": "[1, 1]"
+  },
+  {
+    "input": "number = 6, need = 0, remaining = 6",
+    "output": "[6, 6]"
+  },
+  {
+    "input": "number = 0, need = 4, remaining = 0",
+    "output": "[0, 0]"
+  },
+  {
+    "input": "number = 10, need = 999, remaining = 4",
+    "output": "[14, 0]"
+  },
+  {
+    "input": "number = 9, need = 0, remaining = 10",
+    "output": "[9, 10]"
+  },
+  {
+    "input": "number = 999, need = 2, remaining = 500",
+    "output": "[1001, 498]"
+  },
+  {
+    "input": "number = 999, need = 0, remaining = 0",
+    "output": "[999, 0]"
+  },
+  {
+    "input": "number = 7, need = 7, remaining = 6",
+    "output": "[13, 0]"
+  },
+  {
+    "input": "number = 9, need = 1000, remaining = 10",
+    "output": "[19, 0]"
+  },
+  {
+    "input": "number = 4, need = 10, remaining = 4",
+    "output": "[8, 0]"
+  },
+  {
+    "input": "number = 999, need = 1, remaining = 999",
+    "output": "[1000, 998]"
+  },
+  {
+    "input": "number = 0, need = 5, remaining = 1",
+    "output": "[1, 0]"
+  },
+  {
+    "input": "number = 3, need = 9, remaining = 4",
+    "output": "[7, 0]"
+  },
+  {
+    "input": "number = 7, need = 6, remaining = 6",
+    "output": "[13, 0]"
+  },
+  {
+    "input": "number = 10, need = 5, remaining = 10",
+    "output": "[15, 5]"
+  },
+  {
+    "input": "number = 5, need = 10, remaining = 10",
+    "output": "[15, 0]"
+  },
+  {
+    "input": "number = 999, need = 2, remaining = 10",
+    "output": "[1001, 8]"
+  },
+  {
+    "input": "number = 999, need = 0, remaining = 999",
+    "output": "[999, 999]"
+  },
+  {
+    "input": "number = 999, need = 1, remaining = 1",
+    "output": "[1000, 0]"
+  },
+  {
+    "input": "number = 1000, need = 1, remaining = 999",
+    "output": "[1001, 998]"
+  },
+  {
+    "input": "number = 6, need = 10, remaining = 5",
+    "output": "[11, 0]"
+  },
+  {
+    "input": "number = 999, need = 6, remaining = 7",
+    "output": "[1005, 1]"
+  },
+  {
+    "input": "number = 6, need = 0, remaining = 10",
+    "output": "[6, 10]"
+  },
+  {
+    "input": "number = 10, need = 5, remaining = 5",
+    "output": "[15, 0]"
+  },
+  {
+    "input": "number = 4, need = 5, remaining = 5",
+    "output": "[9, 0]"
+  }
+]

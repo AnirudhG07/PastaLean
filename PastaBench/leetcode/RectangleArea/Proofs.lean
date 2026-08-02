@@ -65,7 +65,7 @@ def computeArea := fun (ax1 : Int) ↦ fun (ay1 : Int) ↦ fun (ax2 : Int) ↦ f
 attribute [simp] computeArea
 
 @[taste_ingr]
-theorem computeArea_spec :
+theorem computeArea_correct :
     ∀ (ax1 : Int),
       ∀ (ay1 : Int),
         ∀ (ax2 : Int),
@@ -82,13 +82,35 @@ theorem computeArea_spec :
                       ay2 ≥ ay1 →
                         bx2 ≥ bx1 →
                           by2 ≥ by1 →
-                            (a +ₚ b -ₚ PastaLean.pyMax [height, (0 : Int)] *ₚ PastaLean.pyMax [width, (0 : Int)] ≥
-                                  (ax2 -ₚ ax1) *ₚ (ay2 -ₚ ay1) ∧
-                                a +ₚ b -ₚ PastaLean.pyMax [height, (0 : Int)] *ₚ PastaLean.pyMax [width, (0 : Int)] ≥
-                                  (bx2 -ₚ bx1) *ₚ (by2 -ₚ by1)) ∧
-                              a +ₚ b -ₚ PastaLean.pyMax [height, (0 : Int)] *ₚ PastaLean.pyMax [width, (0 : Int)] ≤
+                            (computeArea ax1 ay1 ax2 ay2 bx1 by1 bx2 by2 ≥ (ax2 -ₚ ax1) *ₚ (ay2 -ₚ ay1) ∧
+                                computeArea ax1 ay1 ax2 ay2 bx1 by1 bx2 by2 ≥ (bx2 -ₚ bx1) *ₚ (by2 -ₚ by1)) ∧
+                              computeArea ax1 ay1 ax2 ay2 bx1 by1 bx2 by2 ≤
                                 (ax2 -ₚ ax1) *ₚ (ay2 -ₚ ay1) +ₚ (bx2 -ₚ bx1) *ₚ (by2 -ₚ by1) :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  by
+  intro ax1 ay1 ax2 ay2 bx1 by1 bx2 by2 a b width height h1 h2 h3 h4
+  simp only [computeArea, pyMax_pair, pyMin_pair, PyHSub.hSub, PyHAdd.hAdd, PyHMul.hMul, ge_iff_le]
+  have hw0 : (0:Int) ≤ max (min ax2 bx2 - max ax1 bx1) 0 := le_max_right _ _
+  have hh0 : (0:Int) ≤ max (min ay2 by2 - max ay1 by1) 0 := le_max_right _ _
+  have hwa : max (min ax2 bx2 - max ax1 bx1) 0 ≤ ax2 - ax1 := by
+    apply max_le
+    · have := min_le_left ax2 bx2; have := le_max_left ax1 bx1; omega
+    · omega
+  have hwb : max (min ax2 bx2 - max ax1 bx1) 0 ≤ bx2 - bx1 := by
+    apply max_le
+    · have := min_le_right ax2 bx2; have := le_max_right ax1 bx1; omega
+    · omega
+  have hha : max (min ay2 by2 - max ay1 by1) 0 ≤ ay2 - ay1 := by
+    apply max_le
+    · have := min_le_left ay2 by2; have := le_max_left ay1 by1; omega
+    · omega
+  have hhb : max (min ay2 by2 - max ay1 by1) 0 ≤ by2 - by1 := by
+    apply max_le
+    · have := min_le_right ay2 by2; have := le_max_right ay1 by1; omega
+    · omega
+  refine ⟨⟨?_, ?_⟩, ?_⟩
+  · nlinarith [mul_le_mul hhb hwb hw0 (by omega : (0:Int) ≤ by2 - by1)]
+  · nlinarith [mul_le_mul hha hwa hw0 (by omega : (0:Int) ≤ ay2 - ay1)]
+  · nlinarith [mul_nonneg hh0 hw0]
 
 def computeArea'rn := fun (ax1 : Int) ↦ fun (ay1 : Int) ↦ fun (ax2 : Int) ↦ fun (ay2 : Int) ↦ fun (bx1 : Int) ↦
   fun (by1 : Int) ↦ fun (bx2 : Int) ↦ fun (by2 : Int) ↦

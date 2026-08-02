@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/51",
+  "problem": "remove-vowels",
+  "module": "RemoveVowels",
+  "method": "remove_vowels",
+  "params": [
+    "text"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

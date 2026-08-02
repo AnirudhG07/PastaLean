@@ -48,12 +48,12 @@ def addedInteger := fun (nums1 : List Int) ↦ fun (nums2 : List Int) ↦ PastaL
 attribute [simp] addedInteger
 
 @[taste_ingr]
-theorem addedInteger_spec :
+theorem addedInteger_correct :
     ∀ (nums1 : List Int),
       ∀ (nums2 : List Int),
         PastaLean.pyLen nums1 > (0 : Int) →
           PastaLean.pyLen nums2 > (0 : Int) →
-            PastaLean.pyMin nums2 -ₚ PastaLean.pyMin nums1 = PastaLean.pyMin nums2 -ₚ PastaLean.pyMin nums1 :=
+            addedInteger nums1 nums2 = PastaLean.pyMin nums2 -ₚ PastaLean.pyMin nums1 :=
   by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]
 
 def addedInteger'rn := fun (nums1 : List Int) ↦ fun (nums2 : List Int) ↦

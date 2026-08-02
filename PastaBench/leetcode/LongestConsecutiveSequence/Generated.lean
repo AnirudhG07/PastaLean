@@ -74,6 +74,14 @@ theorem longestConsecutive_spec : ⦃⌜True⌝⦄ longestConsecutive nums ⦃�
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
+theorem longestConsecutive_correct :
+    ∀ (nums : List Int),
+      let ans := (longestConsecutive nums).run;
+      ans ≥ (0 : Int) :=
+  by
+  intro nums
+  exact longestConsecutive_spec True.intro
+
 def longestConsecutive'rn := fun (nums : List Int) ↦
   Id.run
     (do

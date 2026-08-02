@@ -105,6 +105,18 @@ theorem maxLength_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
+theorem maxLength_correct :
+    ∀ (ribbons : List Int),
+      ∀ (k : Int),
+        (PastaLean.pyLen ribbons > (0 : Int) ∧ PastaLean.pyMin ribbons ≥ (0 : Int)) ∧ k > (0 : Int) →
+          let left := (maxLength ribbons k).run;
+          PastaLean.pySum ((PastaLean.pyIter ribbons).map fun x => PastaLean.pyFloorDiv x (left +ₚ (1 : Int))) < k ∧
+            (left = (0 : Int) ∨
+              PastaLean.pySum ((PastaLean.pyIter ribbons).map fun x => PastaLean.pyFloorDiv x left) ≥ k) :=
+  by
+  intro ribbons k hpre
+  exact maxLength_spec hpre
+
 def maxLength'rn := fun (ribbons : List Int) ↦ fun (k : Int) ↦
   Id.run
     (do

@@ -77,11 +77,19 @@ theorem returnToBoundaryCount_spec :
   by
   try
     mvcgen [returnToBoundaryCount, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓⟨cur, current_sum, count⟩ =>
+    · ⇓⟨cur, count, current_sum⟩ =>
       ⌜let i := (cur.prefix.length : Int);
         (((0 : Int) ≤ i ∧ i ≤ PastaLean.pyLen nums) ∧ (0 : Int) ≤ count) ∧ count ≤ i⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; grind +locals +suggestions; sorry; sorry; sorry
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals; pyany_cases <;> grind +locals; simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals
   all_goals sorry
+
+theorem returnToBoundaryCount_correct :
+    ∀ (nums : List Int),
+      let count := (returnToBoundaryCount nums).run;
+      count ≥ (0 : Int) ∧ count ≤ PastaLean.pyLen nums :=
+  by
+  intro nums
+  exact returnToBoundaryCount_spec True.intro
 
 def returnToBoundaryCount'rn := fun (nums : List Int) ↦
   Id.run

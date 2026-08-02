@@ -55,12 +55,8 @@ def maxArrayValue := fun (nums : List Int) ↦
     let __py_ret_1 := PastaLean.pyMax nums
     return __py_ret_1 : Id _)
 
-theorem maxArrayValue_spec : ⦃⌜PastaLean.pyLen nums > (0 : Int)⌝⦄ maxArrayValue nums ⦃⇓_ => ⌜True⌝⦄ :=
-  by
-  try
-    mvcgen [maxArrayValue, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓cur => ⌜True⌝
-  all_goals sorry
+theorem maxArrayValue_spec : ⦃⌜PastaLean.pyLen nums > (0 : Int)⌝⦄ maxArrayValue nums ⦃⇓_ => ⌜True⌝⦄ := by
+  apply Std.Do.Triple.of_entails_wp; intro _; exact True.intro
 
 def maxArrayValue'rn := fun (nums : List Int) ↦
   Id.run

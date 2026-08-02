@@ -57,11 +57,8 @@ def countOperations := fun (num1 : Int) ↦ fun (num2 : Int) ↦
       ans := ans +ₚ (1 : Int)
     return ans : Id _)
 
-theorem countOperations_spec : ⦃⌜num1 ≥ (0 : Int) ∧ num2 ≥ (0 : Int)⌝⦄ countOperations num1 num2 ⦃⇓_ => ⌜True⌝⦄ :=
-  by
-  mvcgen [countOperations, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
-  all_goals sorry
+theorem countOperations_spec : ⦃⌜num1 ≥ (0 : Int) ∧ num2 ≥ (0 : Int)⌝⦄ countOperations num1 num2 ⦃⇓_ => ⌜True⌝⦄ := by
+  apply Std.Do.Triple.of_entails_wp; intro _; exact True.intro
 
 def countOperations'rn := fun (num1 : Int) ↦ fun (num2 : Int) ↦
   Id.run

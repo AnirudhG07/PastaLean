@@ -69,9 +69,33 @@ theorem maximumScore_spec :
     ⦃⌜(a ≥ (0 : Int) ∧ b ≥ (0 : Int)) ∧ c ≥ (0 : Int)⌝⦄ maximumScore a b c ⦃⇓ans =>
       ⌜ans ≥ (0 : Int) ∧ (2 : Int) *ₚ ans ≤ a +ₚ b +ₚ c⌝⦄ :=
   by
-  mvcgen [maximumScore, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  try
+    mvcgen [maximumScore, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · fun s =>
+      let ans := s;
+      (⟨(s⦋(0 : Int)⦌ +ₚ s⦋(1 : Int)⦌ +ₚ s⦋(2 : Int)⦌).toNat⟩ : ULift Nat)
+    · ⇓s =>
+      ⌜Sum.elim
+          (fun st =>
+            let ans := st;
+            ((((PastaLean.pyLen s = (3 : Int) ∧ s⦋(0 : Int)⦌ ≥ (0 : Int)) ∧ s⦋(1 : Int)⦌ ≥ (0 : Int)) ∧
+                  s⦋(2 : Int)⦌ ≥ (0 : Int)) ∧
+                ans ≥ (0 : Int)) ∧
+              s⦋(0 : Int)⦌ +ₚ s⦋(1 : Int)⦌ +ₚ s⦋(2 : Int)⦌ +ₚ (2 : Int) *ₚ ans = S0)
+          (fun _ => True) s⌝
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
+
+theorem maximumScore_correct :
+    ∀ (a : Int),
+      ∀ (b : Int),
+        ∀ (c : Int),
+          (a ≥ (0 : Int) ∧ b ≥ (0 : Int)) ∧ c ≥ (0 : Int) →
+            let ans := (maximumScore a b c).run;
+            ans ≥ (0 : Int) ∧ (2 : Int) *ₚ ans ≤ a +ₚ b +ₚ c :=
+  by
+  intro a b c hpre
+  exact maximumScore_spec hpre
 
 def maximumScore'rn := fun (a : Int) ↦ fun (b : Int) ↦ fun (c : Int) ↦
   Id.run

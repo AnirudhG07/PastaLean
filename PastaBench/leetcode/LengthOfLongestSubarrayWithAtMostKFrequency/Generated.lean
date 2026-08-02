@@ -82,6 +82,16 @@ theorem maxSubarrayLength_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
+theorem maxSubarrayLength_correct :
+    ∀ (nums : List Int),
+      ∀ (k : Int),
+        k ≥ (0 : Int) →
+          let ans := (maxSubarrayLength nums k).run;
+          (0 : Int) ≤ ans ∧ ans ≤ PastaLean.pyLen nums :=
+  by
+  intro nums k hpre
+  exact maxSubarrayLength_spec hpre
+
 def maxSubarrayLength'rn := fun (nums : List Int) ↦ fun (k : Int) ↦
   Id.run
     (do

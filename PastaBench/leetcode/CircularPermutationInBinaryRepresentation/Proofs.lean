@@ -1,4 +1,4 @@
 import PastaBench.leetcode.CircularPermutationInBinaryRepresentation.Generated
 namespace PastaBench.leetcode.CircularPermutationInBinaryRepresentation
--- TODO: state and prove.
+-- TODO.
 end PastaBench.leetcode.CircularPermutationInBinaryRepresentation

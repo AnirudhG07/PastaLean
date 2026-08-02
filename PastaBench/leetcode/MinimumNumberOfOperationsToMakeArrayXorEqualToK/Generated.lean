@@ -51,15 +51,15 @@ def minOperations := fun (nums : List Int) ↦ fun (k : Int) ↦
 attribute [simp] minOperations
 
 @[taste_ingr]
-theorem minOperations_spec :
+theorem minOperations_correct :
     ∀ (nums : List Int),
       ∀ (k : Int),
         k ≥ (0 : Int) →
           PastaLean.pyAll ((PastaLean.pyIter nums).map fun x => decide (x ≥ (0 : Int))) →
-            PastaLean.pyBitCount (Libraries.functools.pyReduce nums PastaLean.pyBitXor (some k)) =
+            minOperations nums k =
               PastaLean.pyBitCount
                 (PastaLean.pyBitXor (Libraries.functools.pyReduce nums PastaLean.pyBitXor (some (0 : Int))) k) :=
-  by intros; sorry
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
 
 def minOperations'rn := fun (nums : List Int) ↦ fun (k : Int) ↦
   PastaLean.pyBitCount (Libraries.functools.pyReduce nums PastaLean.pyBitXor (some k))

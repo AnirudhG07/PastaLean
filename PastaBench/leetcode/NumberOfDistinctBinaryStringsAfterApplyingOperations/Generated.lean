@@ -18,34 +18,52 @@ set_option maxHeartbeats 800000
 /- Python source converted to produce the Lean below (the exact input to PastaLean):
 
 from contracts import *
+import random
+import functools
+import collections
+import string
+import math
+import datetime
+from typing import *
+from functools import *
+from collections import *
+from itertools import *
+from heapq import *
+from bisect import *
+from string import *
+from operator import *
+from math import *
 
 def countDistinctStrings(s: str, k: int) -> int:
-    Requires(k >= 0)
-    Requires(k <= len(s) + 1)
+    # This formula likely arises from a combinatorial problem on a binary string of length n=len(s),
+    # where an operation is to flip a substring of length k. There are n-k+1 such substrings,
+    # and if the operations are independent, there are 2^(n-k+1) possible outcomes.
+    # For this to be well-defined:
+    # 1. The number of operations must be non-negative: len(s) - k + 1 >= 0, so k <= len(s) + 1.
+    #    This ensures the exponent to pow() is non-negative, yielding an integer result.
+    # 2. The length k is typically positive in such problems, so k >= 1.
+    Requires(k >= 1 and k <= len(s) + 1)
+    Ensures(Result() == pow(2, len(s) - k + 1) % (10 ** 9 + 7))
     return pow(2, len(s) - k + 1) % (10 ** 9 + 7)
 -/
 
 namespace PastaBench.leetcode.NumberOfDistinctBinaryStringsAfterApplyingOperations
 
 def countDistinctStrings := fun (s : String) ↦ fun (k : Int) ↦
-  (do
-    let __py_ret_1 :=
-      PastaLean.pyPow (2 : Int) (PastaLean.pyLen s -ₚ k +ₚ (1 : Int)) %ₚ ((10 : Int) ^ₚ (9 : Int) +ₚ (7 : Int))
-    return __py_ret_1 : Id _)
+  PastaLean.pyPow (2 : Int) (PastaLean.pyLen s -ₚ k +ₚ (1 : Int)) %ₚ ((10 : Int) ^ₚ (9 : Int) +ₚ (7 : Int))
 
-theorem countDistinctStrings_spec :
-    ⦃⌜k ≥ (0 : Int) ∧ k ≤ PastaLean.pyLen s +ₚ (1 : Int)⌝⦄ countDistinctStrings s k ⦃⇓_ => ⌜True⌝⦄ :=
-  by
-  mvcgen [countDistinctStrings, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  all_goals sorry
+attribute [simp] countDistinctStrings
+
+@[taste_ingr]
+theorem countDistinctStrings_correct :
+    ∀ (s : String),
+      ∀ (k : Int),
+        k ≥ (1 : Int) ∧ k ≤ PastaLean.pyLen s +ₚ (1 : Int) →
+          countDistinctStrings s k =
+            PastaLean.pyPow (2 : Int) (PastaLean.pyLen s -ₚ k +ₚ (1 : Int)) %ₚ ((10 : Int) ^ₚ (9 : Int) +ₚ (7 : Int)) :=
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]
 
 def countDistinctStrings'rn := fun (s : String) ↦ fun (k : Int) ↦
-  Id.run
-    (do
-      let _ := Libraries.passta.pyPassRequires (decide (k ≥ (0 : Int)))
-      let _ := Libraries.passta.pyPassRequires (decide (k ≤ PastaLean.pyLen s +ₚ (1 : Int)))
-      let __py_ret_1 :=
-        PastaLean.pyPow (2 : Int) (PastaLean.pyLen s -ₚ k +ₚ (1 : Int)) %ₚ ((10 : Int) ^ₚ (9 : Int) +ₚ (7 : Int))
-      return __py_ret_1)
+  PastaLean.pyPow (2 : Int) (PastaLean.pyLen s -ₚ k +ₚ (1 : Int)) %ₚ ((10 : Int) ^ₚ (9 : Int) +ₚ (7 : Int))
 
 end PastaBench.leetcode.NumberOfDistinctBinaryStringsAfterApplyingOperations

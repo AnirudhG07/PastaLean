@@ -134,6 +134,14 @@ theorem deleteDuplicates_spec : ⦃⌜True⌝⦄ deleteDuplicates head ⦃⇓hea
   all_goals sorry
   all_goals sorry
 
+theorem deleteDuplicates_correct :
+    ∀ (head : Option ListNode),
+      let head := (deleteDuplicates head).run;
+      head == head :=
+  by
+  intro head
+  exact deleteDuplicates_spec True.intro
+
 def deleteDuplicates'rn : Option ListNode'rn → Option ListNode'rn := fun (head : Option ListNode'rn) ↦
   Id.run
     (do

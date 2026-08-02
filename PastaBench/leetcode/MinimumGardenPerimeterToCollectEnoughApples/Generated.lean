@@ -17,21 +17,42 @@ set_option maxHeartbeats 800000
 
 /- Python source converted to produce the Lean below (the exact input to PastaLean):
 
+import random
+import functools
+import collections
+import string
+import math
+import datetime
+from typing import *
+from functools import *
+from collections import *
+from itertools import *
+from heapq import *
+from bisect import *
+from string import *
+from operator import *
+from math import *
 from contracts import *
-
 
 def minimumPerimeter(neededApples: int) -> int:
     Requires(neededApples >= 1)
+    # The function finds the smallest side length `x` such that the total number of apples,
+    # given by `2 * x * (x + 1) * (2 * x + 1)`, is at least `neededApples`.
+    # The postconditions assert that the returned perimeter corresponds to a side length `x`
+    # that is both sufficient (yields enough apples) and minimal (any smaller side length is insufficient).
+    Ensures(2 * (Result() // 8) * (Result() // 8 + 1) * (2 * (Result() // 8) + 1) >= neededApples)
+    Ensures((Result() // 8) == 1 or (2 * ((Result() // 8) - 1) * (Result() // 8) * (2 * (Result() // 8) - 1) < neededApples))
+
     x = 1
-    # Loop finds the smallest x >= 1 with 2*x*(x+1)*(2*x+1) >= neededApples
     while 2 * x * (x + 1) * (2 * x + 1) < neededApples:
         Invariant(x >= 1)
-        Invariant(2 * x * (x + 1) * (2 * x + 1) < neededApples)
+        # This invariant establishes that for all side lengths smaller than the current x,
+        # the number of apples is insufficient. This is the key to proving minimality.
+        Invariant(x == 1 or 2 * (x - 1) * x * (2 * x - 1) < neededApples)
+        # The term x grows, so (neededApples - x) is a strictly decreasing non-negative integer.
+        # Since 4*x^3 < neededApples in the loop, x is always smaller than neededApples for neededApples >= 1.
+        Decreases(neededApples - x)
         x += 1
-    # On exit, the condition is false → we've reached the threshold
-    Assert(2 * x * (x + 1) * (2 * x + 1) >= neededApples)
-    # And x is minimal: stepping back fails the threshold (unless x==1)
-    Assert(x == 1 or 2 * (x - 1) * x * (2 * (x - 1) + 1) < neededApples)
     return x * 8
 -/
 
@@ -42,47 +63,83 @@ def minimumPerimeter := fun (neededApples : Int) ↦
     let mut x : Int := (1 : Int)
     while ((2 : Int) *ₚ x *ₚ (x +ₚ (1 : Int)) *ₚ ((2 : Int) *ₚ x +ₚ (1 : Int)) < neededApples) do
       let _ := Libraries.passta.pyPassInvariant (decide (x ≥ (1 : Int)))
+      -- This invariant establishes that for all side lengths smaller than the current x,
+      -- the number of apples is insufficient. This is the key to proving minimality.
       let _ :=
         Libraries.passta.pyPassInvariant
-          (decide ((2 : Int) *ₚ x *ₚ (x +ₚ (1 : Int)) *ₚ ((2 : Int) *ₚ x +ₚ (1 : Int)) < neededApples))
+          (x == (1 : Int) ||
+            decide ((2 : Int) *ₚ (x -ₚ (1 : Int)) *ₚ x *ₚ ((2 : Int) *ₚ x -ₚ (1 : Int)) < neededApples))
+      -- The term x grows, so (neededApples - x) is a strictly decreasing non-negative integer.
+      -- Since 4*x^3 < neededApples in the loop, x is always smaller than neededApples for neededApples >= 1.
+      let _ := Libraries.passta.pyPassDecreases (neededApples -ₚ x)
       x := x +ₚ (1 : Int)
-    let _ :=
-      Libraries.passta.pyPassAssert
-        (decide ((2 : Int) *ₚ x *ₚ (x +ₚ (1 : Int)) *ₚ ((2 : Int) *ₚ x +ₚ (1 : Int)) ≥ neededApples))
-    let _ :=
-      Libraries.passta.pyPassAssert
-        (x == (1 : Int) ||
-          decide ((2 : Int) *ₚ (x -ₚ (1 : Int)) *ₚ x *ₚ ((2 : Int) *ₚ (x -ₚ (1 : Int)) +ₚ (1 : Int)) < neededApples))
     let __py_ret_1 := x *ₚ (8 : Int)
     return __py_ret_1 : Id _)
 
-theorem minimumPerimeter_spec : ⦃⌜neededApples ≥ (1 : Int)⌝⦄ minimumPerimeter neededApples ⦃⇓_ => ⌜True⌝⦄ :=
+@[spec]
+theorem minimumPerimeter_spec :
+    ⦃⌜neededApples ≥ (1 : Int)⌝⦄ minimumPerimeter neededApples ⦃⇓result =>
+      ⌜(2 : Int) *ₚ PastaLean.pyFloorDiv result (8 : Int) *ₚ (PastaLean.pyFloorDiv result (8 : Int) +ₚ (1 : Int)) *ₚ
+              ((2 : Int) *ₚ PastaLean.pyFloorDiv result (8 : Int) +ₚ (1 : Int)) ≥
+            neededApples ∧
+          (PastaLean.pyFloorDiv result (8 : Int) = (1 : Int) ∨
+            (2 : Int) *ₚ (PastaLean.pyFloorDiv result (8 : Int) -ₚ (1 : Int)) *ₚ
+                  PastaLean.pyFloorDiv result (8 : Int) *ₚ
+                ((2 : Int) *ₚ PastaLean.pyFloorDiv result (8 : Int) -ₚ (1 : Int)) <
+              neededApples)⌝⦄ :=
   by
-  mvcgen [minimumPerimeter, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  try
+    mvcgen [minimumPerimeter, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · fun s =>
+      let x := s;
+      (⟨(neededApples -ₚ x).toNat⟩ : ULift Nat)
+    · ⇓s =>
+      ⌜Sum.elim
+          (fun st =>
+            let x := st;
+            x ≥ (1 : Int) ∧
+              (x = (1 : Int) ∨ (2 : Int) *ₚ (x -ₚ (1 : Int)) *ₚ x *ₚ ((2 : Int) *ₚ x -ₚ (1 : Int)) < neededApples))
+          (fun _ => True) s⌝
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry; pyany_cases <;> grind +locals; sorry
   all_goals sorry
+
+theorem minimumPerimeter_correct :
+    ∀ (neededApples : Int),
+      neededApples ≥ (1 : Int) →
+        let result := (minimumPerimeter neededApples).run;
+        (2 : Int) *ₚ PastaLean.pyFloorDiv result (8 : Int) *ₚ (PastaLean.pyFloorDiv result (8 : Int) +ₚ (1 : Int)) *ₚ
+              ((2 : Int) *ₚ PastaLean.pyFloorDiv result (8 : Int) +ₚ (1 : Int)) ≥
+            neededApples ∧
+          (PastaLean.pyFloorDiv result (8 : Int) = (1 : Int) ∨
+            (2 : Int) *ₚ (PastaLean.pyFloorDiv result (8 : Int) -ₚ (1 : Int)) *ₚ
+                  PastaLean.pyFloorDiv result (8 : Int) *ₚ
+                ((2 : Int) *ₚ PastaLean.pyFloorDiv result (8 : Int) -ₚ (1 : Int)) <
+              neededApples) :=
+  by
+  intro neededApples hpre
+  exact minimumPerimeter_spec hpre
 
 def minimumPerimeter'rn := fun (neededApples : Int) ↦
   Id.run
     (do
       let _ := Libraries.passta.pyPassRequires (decide (neededApples ≥ (1 : Int)))
+      -- The function finds the smallest side length `x` such that the total number of apples,
+      -- given by `2 * x * (x + 1) * (2 * x + 1)`, is at least `neededApples`.
+      -- The postconditions assert that the returned perimeter corresponds to a side length `x`
+      -- that is both sufficient (yields enough apples) and minimal (any smaller side length is insufficient).
       let mut x : Int := (1 : Int)
-      -- Loop finds the smallest x >= 1 with 2*x*(x+1)*(2*x+1) >= neededApples
       while ((2 : Int) *ₚ x *ₚ (x +ₚ (1 : Int)) *ₚ ((2 : Int) *ₚ x +ₚ (1 : Int)) < neededApples) do
         let _ := Libraries.passta.pyPassInvariant (decide (x ≥ (1 : Int)))
+        -- This invariant establishes that for all side lengths smaller than the current x,
+        -- the number of apples is insufficient. This is the key to proving minimality.
         let _ :=
           Libraries.passta.pyPassInvariant
-            (decide ((2 : Int) *ₚ x *ₚ (x +ₚ (1 : Int)) *ₚ ((2 : Int) *ₚ x +ₚ (1 : Int)) < neededApples))
+            (x == (1 : Int) ||
+              decide ((2 : Int) *ₚ (x -ₚ (1 : Int)) *ₚ x *ₚ ((2 : Int) *ₚ x -ₚ (1 : Int)) < neededApples))
+        -- The term x grows, so (neededApples - x) is a strictly decreasing non-negative integer.
+        -- Since 4*x^3 < neededApples in the loop, x is always smaller than neededApples for neededApples >= 1.
+        let _ := Libraries.passta.pyPassDecreases (neededApples -ₚ x)
         x := x +ₚ (1 : Int)
-      -- On exit, the condition is false → we've reached the threshold
-      let _ :=
-        Libraries.passta.pyPassAssert
-          (decide ((2 : Int) *ₚ x *ₚ (x +ₚ (1 : Int)) *ₚ ((2 : Int) *ₚ x +ₚ (1 : Int)) ≥ neededApples))
-      -- And x is minimal: stepping back fails the threshold (unless x==1)
-      let _ :=
-        Libraries.passta.pyPassAssert
-          (x == (1 : Int) ||
-            decide ((2 : Int) *ₚ (x -ₚ (1 : Int)) *ₚ x *ₚ ((2 : Int) *ₚ (x -ₚ (1 : Int)) +ₚ (1 : Int)) < neededApples))
       let __py_ret_1 := x *ₚ (8 : Int)
       return __py_ret_1)
 

@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/10",
+  "problem": "make-palindrome",
+  "module": "MakePalindrome",
+  "method": "make_palindrome",
+  "params": [
+    "string"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

@@ -80,6 +80,16 @@ theorem taskSchedulerII_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
+theorem taskSchedulerII_correct :
+    ∀ (tasks : List Int),
+      ∀ (space : Int),
+        space ≥ (0 : Int) →
+          let ans := (taskSchedulerII tasks space).run;
+          ans ≥ PastaLean.pyLen tasks :=
+  by
+  intro tasks space hpre
+  exact taskSchedulerII_spec hpre
+
 def taskSchedulerII'rn := fun (tasks : List Int) ↦ fun (space : Int) ↦
   Id.run
     (do

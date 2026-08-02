@@ -1,0 +1,14 @@
+{
+  "task_id": "HumanEval/13",
+  "problem": "greatest-common-divisor",
+  "module": "GreatestCommonDivisor",
+  "method": "greatest_common_divisor",
+  "params": [
+    "a",
+    "b"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

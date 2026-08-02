@@ -108,6 +108,21 @@ theorem addToArrayForm_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
+theorem addToArrayForm_correct :
+    ∀ (num : List Int),
+      ∀ (k : Int),
+        ((PastaLean.pyLen num ≥ (1 : Int) ∧
+                PastaLean.pyAll
+                  ((PastaLean.pyIter num).map fun d => decide ((0 : Int) ≤ d) && decide (d ≤ (9 : Int)))) ∧
+              (PastaLean.pyLen num = (1 : Int) ∨ num⦋(0 : Int)⦌ ≠ (0 : Int))) ∧
+            k ≥ (0 : Int) →
+          let result := (addToArrayForm num k).run;
+          PastaLean.pyAll ((PastaLean.pyIter result).map fun d => decide ((0 : Int) ≤ d) && decide (d ≤ (9 : Int))) ∧
+            (PastaLean.pyLen result = (1 : Int) ∨ result⦋(0 : Int)⦌ ≠ (0 : Int)) :=
+  by
+  intro num k hpre
+  exact addToArrayForm_spec hpre
+
 def addToArrayForm'rn := fun (num : List Int) ↦ fun (k : Int) ↦
   Id.run
     (do

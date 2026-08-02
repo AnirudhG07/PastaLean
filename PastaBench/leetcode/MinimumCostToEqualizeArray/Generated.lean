@@ -105,8 +105,19 @@ theorem minCostToEqualizeArray_spec :
       minCostToEqualizeArray nums cost1 cost2 ⦃⇓result => ⌜result ≥ (0 : Int) ∧ result < (1000000007 : Int)⌝⦄ :=
   by
   mvcgen [minCostToEqualizeArray, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals; sorry
   all_goals sorry
+
+theorem minCostToEqualizeArray_correct :
+    ∀ (nums : List Int),
+      ∀ (cost1 : Int),
+        ∀ (cost2 : Int),
+          (PastaLean.pyLen nums > (0 : Int) ∧ cost1 ≥ (0 : Int)) ∧ cost2 ≥ (0 : Int) →
+            let result := (minCostToEqualizeArray nums cost1 cost2).run;
+            result ≥ (0 : Int) ∧ result < (1000000007 : Int) :=
+  by
+  intro nums cost1 cost2 hpre
+  exact minCostToEqualizeArray_spec hpre
 
 private def _minCostToEqualizeArray'getMinCost'rn := fun (target : Int) ↦ fun (cost1 : Int) ↦ fun (cost2 : Int) ↦
   fun (n : Int) ↦ fun (minNum : Int) ↦ fun (summ : Int) ↦

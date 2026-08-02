@@ -1,0 +1,15 @@
+{
+  "task_id": "HumanEval/92",
+  "problem": "any-int",
+  "module": "AnyInt",
+  "method": "any_int",
+  "params": [
+    "x",
+    "y",
+    "z"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

@@ -135,6 +135,16 @@ theorem shortestSubarray_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
+theorem shortestSubarray_correct :
+    ∀ (nums : List Int),
+      ∀ (k : Int),
+        k > (0 : Int) →
+          let result := (shortestSubarray nums k).run;
+          result = -(1 : Int) ∨ (1 : Int) ≤ result ∧ result ≤ PastaLean.pyLen nums :=
+  by
+  intro nums k hpre
+  exact shortestSubarray_spec hpre
+
 def shortestSubarray'rn := fun (nums : List Int) ↦ fun (k : Int) ↦
   Id.run
     (do

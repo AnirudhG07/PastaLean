@@ -51,21 +51,13 @@ def addDigits := fun (num : Int) ↦ if num = (0 : Int) then (0 : Int) else (num
 attribute [simp] addDigits
 
 @[taste_ingr]
-theorem addDigits_spec :
+theorem addDigits_correct :
     ∀ (num : Int),
       num ≥ (0 : Int) →
-        num = (0 : Int) ∧
-            (if num = (0 : Int) then (0 : Int) else (num -ₚ (1 : Int)) %ₚ (9 : Int) +ₚ (1 : Int)) = (0 : Int) ∨
-          (num > (0 : Int) ∧
-              ((1 : Int) ≤ if num = (0 : Int) then (0 : Int) else (num -ₚ (1 : Int)) %ₚ (9 : Int) +ₚ (1 : Int)) ∧
-                (if num = (0 : Int) then (0 : Int) else (num -ₚ (1 : Int)) %ₚ (9 : Int) +ₚ (1 : Int)) ≤ (9 : Int)) ∧
-            (num -ₚ if num = (0 : Int) then (0 : Int) else (num -ₚ (1 : Int)) %ₚ (9 : Int) +ₚ (1 : Int)) %ₚ (9 : Int) =
-              (0 : Int) :=
-  by
-    intro num h
-    simp only [taste_ingr, PyModulo.hMod, PyHAdd.hAdd, PyHSub.hSub, pyMod, BEq.beq]
-    norm_num
-    split_ifs <;> omega
+        num = (0 : Int) ∧ addDigits num = (0 : Int) ∨
+          (num > (0 : Int) ∧ (1 : Int) ≤ addDigits num ∧ addDigits num ≤ (9 : Int)) ∧
+            (num -ₚ addDigits num) %ₚ (9 : Int) = (0 : Int) :=
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals
 
 def addDigits'rn := fun (num : Int) ↦
   if num == (0 : Int) then (0 : Int) else (num -ₚ (1 : Int)) %ₚ (9 : Int) +ₚ (1 : Int)

@@ -82,6 +82,22 @@ theorem fullBloomFlowers_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
+theorem fullBloomFlowers_correct :
+    ∀ (flowers : List (List Int)),
+      ∀ (people : List Int),
+        PastaLean.pyAll ((PastaLean.pyIter flowers).map fun f => PastaLean.pyLen f == (2 : Int)) ∧
+            PastaLean.pyAll ((PastaLean.pyIter flowers).map fun f => decide (f⦋(0 : Int)⦌ ≤ f⦋(1 : Int)⦌)) →
+          let result := (fullBloomFlowers flowers people).run;
+          PastaLean.pyLen result = PastaLean.pyLen people ∧
+            result =
+              (PastaLean.pyIter people).map fun p =>
+                PastaLean.pySum
+                  ((List.filter (fun f => f⦋(0 : Int)⦌ ≤ p ∧ p ≤ f⦋(1 : Int)⦌) (PastaLean.pyIter flowers)).map fun f =>
+                    (1 : Int)) :=
+  by
+  intro flowers people hpre
+  exact fullBloomFlowers_spec hpre
+
 def fullBloomFlowers'rn := fun (flowers : List (List Int)) ↦ fun (people : List Int) ↦
   Id.run
     (do

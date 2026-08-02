@@ -94,9 +94,27 @@ theorem countSubarrays_spec :
   by
   try
     mvcgen [countSubarrays, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓⟨cur, pre, ans⟩ => ⌜ans = (cur.prefix.map (fun x => cur⦋k⦌)).sum⌝
+    · ⇓⟨cur, ans, pre⟩ => ⌜ans = (cur.prefix.map (fun x => cur⦋k⦌)).sum⌝
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
+
+theorem countSubarrays_correct :
+    ∀ (nums : List Int),
+      ∀ (k : Int),
+        let ans := (countSubarrays nums k).run;
+        ans =
+          PastaLean.pySum
+            ((PastaLean.pyRange (PastaLean.pyLen nums)).flatMap fun i =>
+              (List.filter
+                    (fun j =>
+                      (Libraries.functools.pyReduce (PastaLean.pySlice nums (some i) (some (j +ₚ (1 : Int))) none)
+                          fun (a : _) ↦ fun (b : _) ↦ PastaLean.pyBitAnd a b) =
+                        k)
+                    (PastaLean.pyRange (PastaLean.pyLen nums) i)).map
+                fun j => (1 : Int)) :=
+  by
+  intro nums k
+  exact countSubarrays_spec True.intro
 
 def countSubarrays'rn := fun (nums : List Int) ↦ fun (k : Int) ↦
   Id.run

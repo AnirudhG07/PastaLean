@@ -55,16 +55,12 @@ def interpret := fun (command : String) ↦
 attribute [simp] interpret
 
 @[taste_ingr]
-theorem interpret_spec :
+theorem interpret_correct :
     ∀ (command : String),
-      ((PastaLean.pyLen (PastaLean.pyStringReplace (PastaLean.pyStringReplace command "()" "o") "(al)" "al") ≤
-              PastaLean.pyLen command ∧
-            PastaLean.pyCount (PastaLean.pyStringReplace (PastaLean.pyStringReplace command "()" "o") "(al)" "al") "G" =
-              PastaLean.pyCount command "G") ∧
-          !(PastaLean.pyStrContainsSubstr
-              (PastaLean.pyStringReplace (PastaLean.pyStringReplace command "()" "o") "(al)" "al") "()")) ∧
-        !(PastaLean.pyStrContainsSubstr
-            (PastaLean.pyStringReplace (PastaLean.pyStringReplace command "()" "o") "(al)" "al") "(al)") :=
+      ((PastaLean.pyLen (interpret command) ≤ PastaLean.pyLen command ∧
+            PastaLean.pyCount (interpret command) "G" = PastaLean.pyCount command "G") ∧
+          !(PastaLean.pyStrContainsSubstr (interpret command) "()")) ∧
+        !(PastaLean.pyStrContainsSubstr (interpret command) "(al)") :=
   by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
 
 def interpret'rn := fun (command : String) ↦

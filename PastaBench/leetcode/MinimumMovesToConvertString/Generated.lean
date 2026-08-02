@@ -58,9 +58,29 @@ def minimumMoves := fun (s : String) ↦
 @[spec]
 theorem minimumMoves_spec : ⦃⌜True⌝⦄ minimumMoves s ⦃⇓ans => ⌜ans ≥ (0 : Int)⌝⦄ :=
   by
-  mvcgen [minimumMoves, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
+  try
+    mvcgen [minimumMoves, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · fun s =>
+      let i := s |>.snd;
+      let ans := s |>.fst;
+      (⟨(PastaLean.pyLen s -ₚ i).toNat⟩ : ULift Nat)
+    · ⇓s =>
+      ⌜Sum.elim
+          (fun st =>
+            let i := st |>.snd;
+            let ans := st |>.fst;
+            ((0 : Int) ≤ i ∧ i ≤ PastaLean.pyLen s) ∧ ans ≥ (0 : Int))
+          (fun _ => True) s⌝
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
-  all_goals sorry
+
+theorem minimumMoves_correct :
+    ∀ (s : String),
+      let ans := (minimumMoves s).run;
+      ans ≥ (0 : Int) :=
+  by
+  intro s
+  exact minimumMoves_spec True.intro
 
 def minimumMoves'rn := fun (s : String) ↦
   Id.run

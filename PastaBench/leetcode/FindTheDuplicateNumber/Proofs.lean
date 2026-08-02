@@ -1,4 +1,4 @@
 import PastaBench.leetcode.FindTheDuplicateNumber.Generated
 namespace PastaBench.leetcode.FindTheDuplicateNumber
--- TODO: state and prove.
+-- TODO.
 end PastaBench.leetcode.FindTheDuplicateNumber

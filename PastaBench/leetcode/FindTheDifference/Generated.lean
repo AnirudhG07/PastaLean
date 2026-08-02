@@ -79,6 +79,17 @@ theorem findTheDifference_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
+theorem findTheDifference_correct :
+    ∀ (s : String),
+      ∀ (t : String),
+        PastaLean.pyLen t = PastaLean.pyLen s +ₚ (1 : Int) →
+          let result := (findTheDifference s t).run;
+          PastaLean.pySum ((PastaLean.pyIter t).map fun c => PastaLean.pyOrd c) =
+            PastaLean.pySum ((PastaLean.pyIter s).map fun c => PastaLean.pyOrd c) +ₚ PastaLean.pyOrd result :=
+  by
+  intro s t hpre
+  exact findTheDifference_spec hpre
+
 def findTheDifference'rn := fun (s : String) ↦ fun (t : String) ↦
   Id.run
     (do

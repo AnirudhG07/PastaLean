@@ -97,6 +97,16 @@ theorem commonChars_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
+theorem commonChars_correct :
+    ∀ (words : List String),
+      PastaLean.pyLen words > (0 : Int) →
+        let result := (commonChars words).run;
+        PastaLean.pySetSubset (PastaLean.pySet result) (PastaLean.pySet words⦋(0 : Int)⦌) ∧
+          PastaLean.pyLen result ≤ PastaLean.pyLen words⦋(0 : Int)⦌ :=
+  by
+  intro words hpre
+  exact commonChars_spec hpre
+
 def commonChars'rn := fun (words : List String) ↦
   Id.run
     (do

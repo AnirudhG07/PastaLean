@@ -90,9 +90,34 @@ theorem getSmallestString_spec :
               ((PastaLean.pyIter result).map fun c => PastaLean.pyOrd c -ₚ PastaLean.pyOrd "a" +ₚ (1 : Int)) =
             k⌝⦄ :=
   by
-  mvcgen [getSmallestString, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  try
+    mvcgen [getSmallestString, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · fun s =>
+      let d := s |>.snd;
+      let i := s |>.fst;
+      (⟨(d).toNat⟩ : ULift Nat)
+    · ⇓s =>
+      ⌜Sum.elim
+          (fun st =>
+            let d := st |>.snd;
+            let i := st |>.fst;
+            (((0 : Int) ≤ i ∧ i < n) ∧ d ≥ (0 : Int)) ∧ d ≤ (25 : Int) *ₚ (i +ₚ (1 : Int)))
+          (fun _ => True) s⌝
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
+
+theorem getSmallestString_correct :
+    ∀ (n : Int),
+      ∀ (k : Int),
+        (n ≥ (1 : Int) ∧ k ≥ n) ∧ k ≤ (26 : Int) *ₚ n →
+          let result := (getSmallestString n k).run;
+          PastaLean.pyLen result = n ∧
+            PastaLean.pySum
+                ((PastaLean.pyIter result).map fun c => PastaLean.pyOrd c -ₚ PastaLean.pyOrd "a" +ₚ (1 : Int)) =
+              k :=
+  by
+  intro n k hpre
+  exact getSmallestString_spec hpre
 
 def getSmallestString'rn := fun (n : Int) ↦ fun (k : Int) ↦
   Id.run

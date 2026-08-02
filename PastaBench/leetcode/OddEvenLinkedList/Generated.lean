@@ -129,6 +129,14 @@ theorem oddEvenList_spec : ⦃⌜True⌝⦄ oddEvenList head ⦃⇓head => ⌜Pa
   simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
+theorem oddEvenList_correct :
+    ∀ (head : Option ListNode),
+      let head := (oddEvenList head).run;
+      PastaLean.pyIsNone head ∨ head == head :=
+  by
+  intro head
+  exact oddEvenList_spec True.intro
+
 def oddEvenList'rn : Option ListNode'rn → Option ListNode'rn := fun (head : Option ListNode'rn) ↦
   Id.run
     (do

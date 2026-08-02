@@ -89,6 +89,15 @@ theorem singleNonDuplicate_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
+theorem singleNonDuplicate_correct :
+    ∀ (nums : List Int),
+      PastaLean.pyLen nums > (0 : Int) →
+        let result := (singleNonDuplicate nums).run;
+        PastaLean.pyContains nums result :=
+  by
+  intro nums hpre
+  exact singleNonDuplicate_spec hpre
+
 def singleNonDuplicate'rn := fun (nums : List Int) ↦
   Id.run
     (do

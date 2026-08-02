@@ -1,0 +1,14 @@
+{
+  "task_id": "HumanEval/127",
+  "problem": "intersection",
+  "module": "Intersection",
+  "method": "intersection",
+  "params": [
+    "interval1",
+    "interval2"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

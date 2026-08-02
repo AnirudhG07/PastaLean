@@ -164,6 +164,23 @@ theorem nextGreaterElement_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
+theorem nextGreaterElement_correct :
+    ∀ (nums1 : List Int),
+      ∀ (nums2 : List Int),
+        (PastaLean.pyLen (PastaLean.pySet nums1) = PastaLean.pyLen nums1 ∧
+              PastaLean.pyLen (PastaLean.pySet nums2) = PastaLean.pyLen nums2) ∧
+            PastaLean.pySetSubset (PastaLean.pySet nums1) (PastaLean.pySet nums2) →
+          let result := (nextGreaterElement nums1 nums2).run;
+          PastaLean.pyLen result = PastaLean.pyLen nums1 ∧
+            PastaLean.pyAll
+              ((PastaLean.pyIter (PastaLean.pyZip nums1 result)).map fun _pair_6 =>
+                let x := Prod.fst _pair_6;
+                let y := Prod.snd _pair_6;
+                y == -(1 : Int) || decide (y > x) && PastaLean.pyContains nums2 y) :=
+  by
+  intro nums1 nums2 hpre
+  exact nextGreaterElement_spec hpre
+
 def nextGreaterElement'rn := fun (nums1 : List Int) ↦ fun (nums2 : List Int) ↦
   Id.run
     (do

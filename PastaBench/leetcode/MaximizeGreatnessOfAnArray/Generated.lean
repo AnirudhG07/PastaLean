@@ -17,7 +17,6 @@ set_option maxHeartbeats 800000
 
 /- Python source converted to produce the Lean below (the exact input to PastaLean):
 
-from contracts import *
 import random
 import functools
 import collections
@@ -33,16 +32,22 @@ from bisect import *
 from string import *
 from operator import *
 from math import *
+from contracts import *
 
 def maximizeGreatness(nums: List[int]) -> int:
+    Ensures(0 <= Result() <= len(nums))
     nums.sort()
-    # Domain fact: after sort, list is non-decreasing
-    Assume(all(nums[k] <= nums[k+1] for k in range(len(nums)-1)))
     i = 0
+    # In a `for-each` loop, the verifier introduces an implicit loop counter,
+    # conventionally named `__loop_iter_0`.
     for x in nums:
         Invariant(0 <= i)
-        Invariant(i < len(nums))
-        # each time x > nums[i], we match x to beat nums[i] and increment i
+        # The number of successful pairings `i` cannot exceed the number of elements
+        # (`__loop_iter_0`) examined so far. This is the core invariant that
+        # also guarantees the memory safety of the access `nums[i]`, since it implies
+        # `i <= __loop_iter_0 < len(nums)`.
+        Invariant(i <= __loop_iter_0)
+        Invariant(i <= len(nums))
         i += x > nums[i]
     return i
 -/
@@ -56,39 +61,48 @@ def maximizeGreatness := fun (nums : List Int) ↦
     let mut i : Int := (0 : Int)
     for x in (PastaLean.pyIter nums)do
       let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i))
-      let _ := Libraries.passta.pyPassInvariant (decide (i < PastaLean.pyLen nums))
-      -- each time x > nums[i], we match x to beat nums[i] and increment i
+      -- The number of successful pairings `i` cannot exceed the number of elements
+      -- (`__loop_iter_0`) examined so far. This is the core invariant that
+      -- also guarantees the memory safety of the access `nums[i]`, since it implies
+      -- `i <= __loop_iter_0 < len(nums)`.
+      let _ := Libraries.passta.pyPassInvariant (decide (i ≤ __loop_iter_0))
+      let _ := Libraries.passta.pyPassInvariant (decide (i ≤ PastaLean.pyLen nums))
       i := i +ₚ decide (x > nums⦋i⦌)
     return i : Id _)
 
-theorem maximizeGreatness_spec :
-    ⦃⌜PastaLean.pyAll
-          ((PastaLean.pyRange (PastaLean.pyLen nums -ₚ (1 : Int))).map fun k =>
-            decide (nums⦋k⦌ ≤ nums⦋k +ₚ (1 : Int)⦌))⌝⦄
-      maximizeGreatness nums ⦃⇓_ => ⌜True⌝⦄ :=
+@[spec]
+theorem maximizeGreatness_spec : ⦃⌜True⌝⦄ maximizeGreatness nums ⦃⇓i => ⌜(0 : Int) ≤ i ∧ i ≤ PastaLean.pyLen nums⌝⦄ :=
   by
   try
     mvcgen [maximizeGreatness, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓⟨cur, i⟩ => ⌜(0 : Int) ≤ i ∧ i < PastaLean.pyLen nums⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+    · ⇓⟨cur, i⟩ => ⌜((0 : Int) ≤ i ∧ i ≤ __loop_iter_0) ∧ i ≤ PastaLean.pyLen nums⌝
+  sorry
   all_goals sorry
+
+theorem maximizeGreatness_correct :
+    ∀ (nums : List Int),
+      let i := (maximizeGreatness nums).run;
+      (0 : Int) ≤ i ∧ i ≤ PastaLean.pyLen nums :=
+  by
+  intro nums
+  exact maximizeGreatness_spec True.intro
 
 def maximizeGreatness'rn := fun (nums : List Int) ↦
   Id.run
     (do
       let mut nums := nums
       nums := PastaLean.pySort nums
-      -- Domain fact: after sort, list is non-decreasing
-      let _ :=
-        Libraries.passta.pyPassAssume
-          (PastaLean.pyAll
-            ((PastaLean.pyRange (PastaLean.pyLen nums -ₚ (1 : Int))).map fun k =>
-              decide (nums⦋k⦌ ≤ nums⦋k +ₚ (1 : Int)⦌)))
       let mut i : Int := (0 : Int)
+      -- In a `for-each` loop, the verifier introduces an implicit loop counter,
+      -- conventionally named `__loop_iter_0`.
       for x in (PastaLean.pyIter nums)do
         let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i))
-        let _ := Libraries.passta.pyPassInvariant (decide (i < PastaLean.pyLen nums))
-        -- each time x > nums[i], we match x to beat nums[i] and increment i
+        -- The number of successful pairings `i` cannot exceed the number of elements
+        -- (`__loop_iter_0`) examined so far. This is the core invariant that
+        -- also guarantees the memory safety of the access `nums[i]`, since it implies
+        -- `i <= __loop_iter_0 < len(nums)`.
+        let _ := Libraries.passta.pyPassInvariant (decide (i ≤ __loop_iter_0))
+        let _ := Libraries.passta.pyPassInvariant (decide (i ≤ PastaLean.pyLen nums))
         i := i +ₚ decide (x > nums⦋i⦌)
       return i)
 

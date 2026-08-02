@@ -47,16 +47,50 @@ def minChanges := fun (s : String) ↦
 
 attribute [simp] minChanges
 
+theorem pyRange_length_two (stop start : Int) :
+    (PastaLean.pyRange stop start 2).length = ((stop - start + 2 - 1) / 2).toNat := by
+  unfold PastaLean.pyRange
+  norm_num [List.length_map, List.length_range']
+
+theorem pySum_bool_bounds (L : List Bool) :
+    0 ≤ PastaLean.pySum L ∧ PastaLean.pySum L ≤ (L.length : Int) := by
+  have gen : ∀ (a : Int),
+      a ≤ L.foldl (fun acc x => acc +ₚ PastaLean.PySummand.toSummand x) a ∧
+      L.foldl (fun acc x => acc +ₚ PastaLean.PySummand.toSummand x) a ≤ a + (L.length : Int) := by
+    induction L with
+    | nil => intro a; simp
+    | cons x xs ih =>
+      intro a
+      obtain ⟨h1, h2⟩ := ih (a +ₚ PastaLean.PySummand.toSummand x)
+      have hx : (0:Int) ≤ (PastaLean.PySummand.toSummand x : Int) ∧
+          (PastaLean.PySummand.toSummand x : Int) ≤ 1 := by
+        show (0:Int) ≤ PastaLean.pyBoolToInt x ∧ PastaLean.pyBoolToInt x ≤ 1
+        unfold PastaLean.pyBoolToInt; split <;> omega
+      simp only [List.foldl_cons, List.length_cons] at *
+      simp only [PyHAdd.hAdd] at h1 h2 ⊢
+      push_cast at h2 ⊢
+      omega
+  unfold PastaLean.pySum
+  have hid : PastaLean.pyIter L = L := rfl
+  rw [hid]
+  obtain ⟨g1, g2⟩ := gen 0
+  exact ⟨by simpa using g1, by simpa using g2⟩
+
 @[taste_ingr]
-theorem minChanges_spec :
-    ∀ (s : String),
-      (0 : Int) ≤
-          PastaLean.pySum
-            ((PastaLean.pyRange (PastaLean.pyLen s) (1 : Int) (2 : Int)).map fun i => s⦋i⦌ != s⦋i -ₚ (1 : Int)⦌) ∧
-        PastaLean.pySum
-            ((PastaLean.pyRange (PastaLean.pyLen s) (1 : Int) (2 : Int)).map fun i => s⦋i⦌ != s⦋i -ₚ (1 : Int)⦌) ≤
-          PastaLean.pyFloorDiv (PastaLean.pyLen s) (2 : Int) :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+theorem minChanges_correct :
+    ∀ (s : String), (0 : Int) ≤ minChanges s ∧ minChanges s ≤ PastaLean.pyFloorDiv (PastaLean.pyLen s) (2 : Int) := by
+  intro s
+  simp only [minChanges, pyFloorDiv, PyFloorDiv.floorDiv]
+  rw [if_neg (by decide)]
+  set M := (PastaLean.pyRange (PastaLean.pyLen s) (1 : Int) (2 : Int)).map
+    (fun i => s⦋i⦌ != s⦋i -ₚ (1 : Int)⦌) with hM
+  obtain ⟨hlo, hhi⟩ := pySum_bool_bounds M
+  refine ⟨hlo, le_trans hhi ?_⟩
+  rw [hM, List.length_map, pyRange_length_two,
+      Int.fdiv_eq_ediv_of_nonneg _ (by norm_num : (0:Int) ≤ 2),
+      show PastaLean.pyLen s - 1 + 2 - 1 = PastaLean.pyLen s by ring]
+  have hs : 0 ≤ PastaLean.pyLen s := pyLen_string_nonneg s
+  omega
 
 def minChanges'rn := fun (s : String) ↦
   PastaLean.pySum ((PastaLean.pyRange (PastaLean.pyLen s) (1 : Int) (2 : Int)).map fun i => s⦋i⦌ != s⦋i -ₚ (1 : Int)⦌)

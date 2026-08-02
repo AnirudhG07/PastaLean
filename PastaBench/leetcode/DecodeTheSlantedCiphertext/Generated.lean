@@ -101,6 +101,16 @@ theorem decodeCiphertext_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
+theorem decodeCiphertext_correct :
+    ∀ (encodedText : String),
+      ∀ (rows : Int),
+        rows > (0 : Int) ∧ PastaLean.pyLen encodedText %ₚ rows = (0 : Int) →
+          let result := (decodeCiphertext encodedText rows).run;
+          PastaLean.pyLen result ≤ PastaLean.pyLen encodedText :=
+  by
+  intro encodedText rows hpre
+  exact decodeCiphertext_spec hpre
+
 def decodeCiphertext'rn := fun (encodedText : String) ↦ fun (rows : Int) ↦
   Id.run
     (do

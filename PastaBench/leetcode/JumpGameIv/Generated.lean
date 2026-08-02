@@ -115,9 +115,30 @@ def minJumps := fun (arr : List Int) ↦
 theorem minJumps_spec :
     ⦃⌜PastaLean.pyLen arr > (0 : Int)⌝⦄ minJumps arr ⦃⇓result => ⌜result ≥ (0 : Int) ∧ result < PastaLean.pyLen arr⌝⦄ :=
   by
-  mvcgen [minJumps, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  try
+    mvcgen [minJumps, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · fun s =>
+      let ans := s;
+      (⟨(PastaLean.pyLen arr -ₚ PastaLean.pyLen vis).toNat⟩ : ULift Nat)
+    · ⇓s =>
+      ⌜Sum.elim
+          (fun st =>
+            let ans := st;
+            (((ans ≥ (0 : Int) ∧ PastaLean.pyContains vis (0 : Int)) ∧ (1 : Int) ≤ PastaLean.pyLen vis) ∧
+                PastaLean.pyLen vis ≤ PastaLean.pyLen arr) ∧
+              PastaLean.pyLen q > (0 : Int))
+          (fun _ => True) s⌝
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
+
+theorem minJumps_correct :
+    ∀ (arr : List Int),
+      PastaLean.pyLen arr > (0 : Int) →
+        let result := (minJumps arr).run;
+        result ≥ (0 : Int) ∧ result < PastaLean.pyLen arr :=
+  by
+  intro arr hpre
+  exact minJumps_spec hpre
 
 def minJumps'rn := fun (arr : List Int) ↦
   Id.run

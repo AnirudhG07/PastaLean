@@ -99,6 +99,27 @@ theorem maxArea_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
+theorem maxArea_correct :
+    ∀ (height : List Int),
+      PastaLean.pyLen height ≥ (2 : Int) →
+        let ans := (maxArea height).run;
+        ans =
+          if
+              PastaLean.pyLen
+                  ((PastaLean.pyRange (PastaLean.pyLen height)).flatMap fun i =>
+                    (PastaLean.pyRange (PastaLean.pyLen height) (i +ₚ (1 : Int))).map fun j =>
+                      PastaLean.pyMin [height⦋i⦌, height⦋j⦌] *ₚ (j -ₚ i)) ==
+                (0 : Int) then
+            (0 : Int)
+          else
+            PastaLean.pyMax
+              ((PastaLean.pyRange (PastaLean.pyLen height)).flatMap fun i =>
+                (PastaLean.pyRange (PastaLean.pyLen height) (i +ₚ (1 : Int))).map fun j =>
+                  PastaLean.pyMin [height⦋i⦌, height⦋j⦌] *ₚ (j -ₚ i)) :=
+  by
+  intro height hpre
+  exact maxArea_spec hpre
+
 def maxArea'rn := fun (height : List Int) ↦
   Id.run
     (do

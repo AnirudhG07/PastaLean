@@ -17,6 +17,7 @@ set_option maxHeartbeats 800000
 
 /- Python source converted to produce the Lean below (the exact input to PastaLean):
 
+from contracts import *
 import random
 import functools
 import collections
@@ -33,31 +34,22 @@ from string import *
 from operator import *
 from math import *
 
-from contracts import *
-
-
 def encode(num: int) -> str:
     Requires(num >= 0)
+    Ensures(num + 1 == int('1' + Result(), 2))
     return bin(num + 1)[3:]
 -/
 
 namespace PastaBench.leetcode.EncodeNumber
 
-def encode := fun (num : Int) ↦
-  (do
-    let __py_ret_1 := PastaLean.pySlice (PastaLean.pyBin (num +ₚ (1 : Int))) (some (3 : Int)) none none
-    return __py_ret_1 : Id _)
+def encode := fun (num : Int) ↦ PastaLean.pySlice (PastaLean.pyBin (num +ₚ (1 : Int))) (some (3 : Int)) none none
 
-theorem encode_spec : ⦃⌜num ≥ (0 : Int)⌝⦄ encode num ⦃⇓_ => ⌜True⌝⦄ :=
-  by
-  mvcgen [encode, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  all_goals sorry
+attribute [simp] encode
 
-def encode'rn := fun (num : Int) ↦
-  Id.run
-    (do
-      let _ := Libraries.passta.pyPassRequires (decide (num ≥ (0 : Int)))
-      let __py_ret_1 := PastaLean.pySlice (PastaLean.pyBin (num +ₚ (1 : Int))) (some (3 : Int)) none none
-      return __py_ret_1)
+@[taste_ingr]
+theorem encode_correct :
+    ∀ (num : Int), num ≥ (0 : Int) → num +ₚ (1 : Int) = PastaLean.pyIntBase ("1" +ₚ encode num) (2 : Int) := by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+
+def encode'rn := fun (num : Int) ↦ PastaLean.pySlice (PastaLean.pyBin (num +ₚ (1 : Int))) (some (3 : Int)) none none
 
 end PastaBench.leetcode.EncodeNumber

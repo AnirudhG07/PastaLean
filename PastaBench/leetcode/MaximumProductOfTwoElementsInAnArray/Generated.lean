@@ -105,6 +105,18 @@ theorem maxProduct_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
+theorem maxProduct_correct :
+    ∀ (nums : List Int),
+      let ans := (maxProduct nums).run;
+      ans ≥ (0 : Int) ∧
+        PastaLean.pyAll
+          ((PastaLean.pyRange (PastaLean.pyLen nums)).flatMap fun i =>
+            (PastaLean.pyRange (PastaLean.pyLen nums) (i +ₚ (1 : Int))).map fun j =>
+              decide (ans ≥ (nums⦋i⦌ -ₚ (1 : Int)) *ₚ (nums⦋j⦌ -ₚ (1 : Int)))) :=
+  by
+  intro nums
+  exact maxProduct_spec True.intro
+
 def maxProduct'rn := fun (nums : List Int) ↦
   Id.run
     (do

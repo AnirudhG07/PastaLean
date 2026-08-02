@@ -105,9 +105,18 @@ theorem continuousSubarrays_spec :
   by
   try
     mvcgen [continuousSubarrays, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓⟨cur, i, ans⟩ => ⌜ans = (cur.prefix.map (fun x => PastaLean.pyLen sl)).sum⌝
+    · ⇓⟨cur, ans, i⟩ => ⌜ans = (cur.prefix.map (fun x => PastaLean.pyLen sl)).sum⌝
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
+
+theorem continuousSubarrays_correct :
+    ∀ (nums : List Int),
+      let ans := (continuousSubarrays nums).run;
+      ans ≥ (0 : Int) ∧
+        ans ≤ PastaLean.pyFloorDiv (PastaLean.pyLen nums *ₚ (PastaLean.pyLen nums +ₚ (1 : Int))) (2 : Int) :=
+  by
+  intro nums
+  exact continuousSubarrays_spec True.intro
 
 def continuousSubarrays'rn := fun (nums : List Int) ↦
   Id.run

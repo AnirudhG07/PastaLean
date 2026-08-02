@@ -101,6 +101,19 @@ theorem maximumBinaryString_spec :
   sorry
   all_goals sorry
 
+theorem maximumBinaryString_correct :
+    ∀ (binary : String),
+      PastaLean.pyAll ((PastaLean.pyIter binary).map fun c => c == "0" || c == "1") →
+        let result := (maximumBinaryString binary).run;
+        PastaLean.pyLen result = PastaLean.pyLen binary ∧
+          (PastaLean.pyStringFind binary "0" = -(1 : Int) ∧ result = binary ∨
+            (PastaLean.pyStringFind binary "0" ≠ -(1 : Int) ∧ PastaLean.pyCount result "0" = (1 : Int)) ∧
+              PastaLean.pyStringFind result "0" =
+                PastaLean.pyStringFind binary "0" +ₚ PastaLean.pyCount binary "0" -ₚ (1 : Int)) :=
+  by
+  intro binary hpre
+  exact maximumBinaryString_spec hpre
+
 def maximumBinaryString'rn := fun (binary : String) ↦
   Id.run
     (do

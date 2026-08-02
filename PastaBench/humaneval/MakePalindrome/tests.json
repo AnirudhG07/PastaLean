@@ -1,0 +1,202 @@
+[
+  {
+    "input": "string = ''",
+    "output": "''"
+  },
+  {
+    "input": "string = 'x'",
+    "output": "'x'"
+  },
+  {
+    "input": "string = 'xyz'",
+    "output": "'xyzyx'"
+  },
+  {
+    "input": "string = 'xyx'",
+    "output": "'xyx'"
+  },
+  {
+    "input": "string = 'jerry'",
+    "output": "'jerryrrej'"
+  },
+  {
+    "input": "string = 'race'",
+    "output": "'racecar'"
+  },
+  {
+    "input": "string = 'level'",
+    "output": "'level'"
+  },
+  {
+    "input": "string = 'tenet'",
+    "output": "'tenet'"
+  },
+  {
+    "input": "string = 'noon'",
+    "output": "'noon'"
+  },
+  {
+    "input": "string = 'redder'",
+    "output": "'redder'"
+  },
+  {
+    "input": "string = 'refer'",
+    "output": "'refer'"
+  },
+  {
+    "input": "string = 'dewed'",
+    "output": "'dewed'"
+  },
+  {
+    "input": "string = 'madam'",
+    "output": "'madam'"
+  },
+  {
+    "input": "string = 'malayalam'",
+    "output": "'malayalam'"
+  },
+  {
+    "input": "string = 'radar'",
+    "output": "'radar'"
+  },
+  {
+    "input": "string = 'r'",
+    "output": "'r'"
+  },
+  {
+    "input": "string = 'rrefrerace'",
+    "output": "'rrefreracecarerferr'"
+  },
+  {
+    "input": "string = 'erace'",
+    "output": "'eracecare'"
+  },
+  {
+    "input": "string = 'raracece'",
+    "output": "'raracececarar'"
+  },
+  {
+    "input": "string = 'rrrefrear'",
+    "output": "'rrrefrearaerferrr'"
+  },
+  {
+    "input": "string = 'raceredder'",
+    "output": "'raceredderecar'"
+  },
+  {
+    "input": "string = 'araracecae'",
+    "output": "'araracecaeacecarara'"
+  },
+  {
+    "input": "string = 'rradar'",
+    "output": "'rradarr'"
+  },
+  {
+    "input": "string = 'racrrefreraceereddrce'",
+    "output": "'racrrefreraceereddrcecrddereecarerferrcar'"
+  },
+  {
+    "input": "string = 'levevl'",
+    "output": "'levevlvevel'"
+  },
+  {
+    "input": "string = 'lracrrefreraceereddrceevel'",
+    "output": "'lracrrefreraceereddrceeveleveecrddereecarerferrcarl'"
+  },
+  {
+    "input": "string = 'rrefreracrefere'",
+    "output": "'rrefreracreferefercarerferr'"
+  },
+  {
+    "input": "string = 'rardar'",
+    "output": "'rardaradrar'"
+  },
+  {
+    "input": "string = 'levevltenet'",
+    "output": "'levevltenetlvevel'"
+  },
+  {
+    "input": "string = 'racrrefreraceeredrdrce'",
+    "output": "'racrrefreraceeredrdrcecrdrdereecarerferrcar'"
+  },
+  {
+    "input": "string = 'racrrefracrrefreraceereddrceaceereddrce'",
+    "output": "'racrrefracrrefreraceereddrceaceereddrcecrddereecaecrddereecarerferrcarferrcar'"
+  },
+  {
+    "input": "string = 'ararracrrefreraceeredrdrceacecae'",
+    "output": "'ararracrrefreraceeredrdrceacecaecrdrdereecarerferrcarrara'"
+  },
+  {
+    "input": "string = 'noradarolevevln'",
+    "output": "'noradarolevevlnlveveloradaron'"
+  },
+  {
+    "input": "string = 'rrefreralevevlce'",
+    "output": "'rrefreralevevlceclvevelarerferr'"
+  },
+  {
+    "input": "string = 'racrrefreraceereddrcerrefrerace'",
+    "output": "'racrrefreraceereddrcerrefreracecarerferrecrddereecarerferrcar'"
+  },
+  {
+    "input": "string = 'onoon'",
+    "output": "'onoono'"
+  },
+  {
+    "input": "string = 'rrefreraracecee'",
+    "output": "'rrefreraraceceececararerferr'"
+  },
+  {
+    "input": "string = 'tene'",
+    "output": "'tenet'"
+  },
+  {
+    "input": "string = 'racrrefddrce'",
+    "output": "'racrrefddrcecrddferrcar'"
+  },
+  {
+    "input": "string = 'dedwed'",
+    "output": "'dedwedewded'"
+  },
+  {
+    "input": "string = 'erradarrace'",
+    "output": "'erradarracecarradarre'"
+  },
+  {
+    "input": "string = 'acece'",
+    "output": "'acececa'"
+  },
+  {
+    "input": "string = 'leevel'",
+    "output": "'leeveleveel'"
+  },
+  {
+    "input": "string = 'racrrefrracrrefracrrefreraceereddrceaceereddrceacrrefreraceereddrceaceereddrce'",
+    "output": "'racrrefrracrrefracrrefreraceereddrceaceereddrceacrrefreraceereddrceaceereddrcecrddereecaecrddereecarerferrcaecrddereecaecrddereecarerferrcarferrcarrferrcar'"
+  },
+  {
+    "input": "string = 'rr'",
+    "output": "'rr'"
+  },
+  {
+    "input": "string = 'rrefreracrdewede'",
+    "output": "'rrefreracrdewedewedrcarerferr'"
+  },
+  {
+    "input": "string = 'rrrarteneacecee'",
+    "output": "'rrrarteneaceceececaenetrarrr'"
+  },
+  {
+    "input": "string = 'malaylalam'",
+    "output": "'malaylalamalalyalam'"
+  },
+  {
+    "input": "string = 'rarcrrefreraceereddrcerrefrerace'",
+    "output": "'rarcrrefreraceereddrcerrefreracecarerferrecrddereecarerferrcrar'"
+  },
+  {
+    "input": "string = 'rrraertracrrefracrrefreraceereddrceaceereddrceeneacededwedcee'",
+    "output": "'rrraertracrrefracrrefreraceereddrceaceereddrceeneacededwedceecdewdedecaeneecrddereecaecrddereecarerferrcarferrcartrearrr'"
+  }
+]

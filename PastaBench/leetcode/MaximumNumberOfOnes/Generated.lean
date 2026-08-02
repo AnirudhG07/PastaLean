@@ -17,7 +17,6 @@ set_option maxHeartbeats 800000
 
 /- Python source converted to produce the Lean below (the exact input to PastaLean):
 
-from contracts import *
 import random
 import functools
 import collections
@@ -33,26 +32,45 @@ from bisect import *
 from string import *
 from operator import *
 from math import *
+from contracts import *
 
 def maximumNumberOfOnes(width: int, height: int, sideLength: int, maxOnes: int) -> int:
-    Requires(width >= 0)
-    Requires(height >= 0)
+    Requires(width > 0)
+    Requires(height > 0)
     Requires(sideLength > 0)
-    Requires(maxOnes >= 0)
+    Requires(0 <= maxOnes)
+    Requires(maxOnes <= sideLength * sideLength)
+
+    Ensures(Result() >= 0)
+    Ensures(Result() <= width * height)
 
     x = sideLength
     cnt = [0] * (x * x)
     Assert(len(cnt) == x * x)
+    Assert(all(c == 0 for c in cnt))
+
     for i in range(width):
-        Invariant(0 <= i)
-        Invariant(i < width)
+        Invariant(0 <= i <= width)
+        Invariant(len(cnt) == x * x)
+        Invariant(all(c >= 0 for c in cnt))
+        Invariant(sum(cnt) == i * height)
         for j in range(height):
-            Invariant(0 <= j)
-            Invariant(j < height)
+            Invariant(0 <= j <= height)
+            Invariant(len(cnt) == x * x)
+            Invariant(all(c >= 0 for c in cnt))
+            Invariant(sum(cnt) == i * height + j)
             k = i % x * x + j % x
-            Assert(0 <= k < len(cnt))
+            Assert(0 <= k < x * x)
             cnt[k] += 1
+
+    Assert(sum(cnt) == width * height)
+    Assert(all(c >= 0 for c in cnt))
+
     cnt.sort(reverse=True)
+
+    Assert(sum(cnt) == width * height)
+    Assert(all(c >= 0 for c in cnt))
+
     return sum(cnt[:maxOnes])
 -/
 
@@ -63,51 +81,99 @@ def maximumNumberOfOnes := fun (width : Int) ↦ fun (height : Int) ↦ fun (sid
     let mut x : Int := sideLength
     let mut cnt : List Int := PastaLean.pyListRepeat [(0 : Int)] (x *ₚ x)
     let _ := Libraries.passta.pyPassAssert (PastaLean.pyLen cnt == x *ₚ x)
+    let _ := Libraries.passta.pyPassAssert (PastaLean.pyAll ((PastaLean.pyIter cnt).map fun c => c == (0 : Int)))
     for i in (PastaLean.pyRange width)do
-      let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i))
-      let _ := Libraries.passta.pyPassInvariant (decide (i < width))
+      let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i) && decide (i ≤ width))
+      let _ := Libraries.passta.pyPassInvariant (PastaLean.pyLen cnt == x *ₚ x)
+      let _ :=
+        Libraries.passta.pyPassInvariant (PastaLean.pyAll ((PastaLean.pyIter cnt).map fun c => decide (c ≥ (0 : Int))))
+      let _ := Libraries.passta.pyPassInvariant (PastaLean.pySum cnt == i *ₚ height)
       for j in (PastaLean.pyRange height)do
-        let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ j))
-        let _ := Libraries.passta.pyPassInvariant (decide (j < height))
+        let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ j) && decide (j ≤ height))
+        let _ := Libraries.passta.pyPassInvariant (PastaLean.pyLen cnt == x *ₚ x)
+        let _ :=
+          Libraries.passta.pyPassInvariant
+            (PastaLean.pyAll ((PastaLean.pyIter cnt).map fun c => decide (c ≥ (0 : Int))))
+        let _ := Libraries.passta.pyPassInvariant (PastaLean.pySum cnt == i *ₚ height +ₚ j)
         let mut k : Int := i %ₚ x *ₚ x +ₚ j %ₚ x
-        let _ := Libraries.passta.pyPassAssert (decide ((0 : Int) ≤ k) && decide (k < PastaLean.pyLen cnt))
+        let _ := Libraries.passta.pyPassAssert (decide ((0 : Int) ≤ k) && decide (k < x *ₚ x))
         cnt := PastaLean.pySetItem cnt k (cnt⦋k⦌ +ₚ (1 : Int))
+    let _ := Libraries.passta.pyPassAssert (PastaLean.pySum cnt == width *ₚ height)
+    let _ :=
+      Libraries.passta.pyPassAssert (PastaLean.pyAll ((PastaLean.pyIter cnt).map fun c => decide (c ≥ (0 : Int))))
     cnt := PastaLean.pySortBy (fun x => x) Bool.true cnt
+    let _ := Libraries.passta.pyPassAssert (PastaLean.pySum cnt == width *ₚ height)
+    let _ :=
+      Libraries.passta.pyPassAssert (PastaLean.pyAll ((PastaLean.pyIter cnt).map fun c => decide (c ≥ (0 : Int))))
     let __py_ret_1 := PastaLean.pySum (PastaLean.pySlice cnt none (some maxOnes) none)
     return __py_ret_1 : Id _)
 
+@[spec]
 theorem maximumNumberOfOnes_spec :
-    ⦃⌜((width ≥ (0 : Int) ∧ height ≥ (0 : Int)) ∧ sideLength > (0 : Int)) ∧ maxOnes ≥ (0 : Int)⌝⦄
-      maximumNumberOfOnes width height sideLength maxOnes ⦃⇓_ => ⌜True⌝⦄ :=
+    ⦃⌜(((width > (0 : Int) ∧ height > (0 : Int)) ∧ sideLength > (0 : Int)) ∧ (0 : Int) ≤ maxOnes) ∧
+          maxOnes ≤ sideLength *ₚ sideLength⌝⦄
+      maximumNumberOfOnes width height sideLength maxOnes ⦃⇓result =>
+      ⌜result ≥ (0 : Int) ∧ result ≤ width *ₚ height⌝⦄ :=
   by
   try
     mvcgen [maximumNumberOfOnes, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓cur =>
       ⌜let i := (cur.prefix.length : Int);
-        (0 : Int) ≤ i ∧ i < width⌝
+        ((((0 : Int) ≤ i ∧ i ≤ width) ∧ PastaLean.pyLen cnt = x *ₚ x) ∧
+            PastaLean.pyAll ((PastaLean.pyIter cnt).map fun c => decide (c ≥ (0 : Int)))) ∧
+          PastaLean.pySum cnt = i *ₚ height⌝
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
+
+theorem maximumNumberOfOnes_correct :
+    ∀ (width : Int),
+      ∀ (height : Int),
+        ∀ (sideLength : Int),
+          ∀ (maxOnes : Int),
+            (((width > (0 : Int) ∧ height > (0 : Int)) ∧ sideLength > (0 : Int)) ∧ (0 : Int) ≤ maxOnes) ∧
+                maxOnes ≤ sideLength *ₚ sideLength →
+              let result := (maximumNumberOfOnes width height sideLength maxOnes).run;
+              result ≥ (0 : Int) ∧ result ≤ width *ₚ height :=
+  by
+  intro width height sideLength maxOnes hpre
+  exact maximumNumberOfOnes_spec hpre
 
 def maximumNumberOfOnes'rn := fun (width : Int) ↦ fun (height : Int) ↦ fun (sideLength : Int) ↦ fun (maxOnes : Int) ↦
   Id.run
     (do
-      let _ := Libraries.passta.pyPassRequires (decide (width ≥ (0 : Int)))
-      let _ := Libraries.passta.pyPassRequires (decide (height ≥ (0 : Int)))
+      let _ := Libraries.passta.pyPassRequires (decide (width > (0 : Int)))
+      let _ := Libraries.passta.pyPassRequires (decide (height > (0 : Int)))
       let _ := Libraries.passta.pyPassRequires (decide (sideLength > (0 : Int)))
-      let _ := Libraries.passta.pyPassRequires (decide (maxOnes ≥ (0 : Int)))
+      let _ := Libraries.passta.pyPassRequires (decide ((0 : Int) ≤ maxOnes))
+      let _ := Libraries.passta.pyPassRequires (decide (maxOnes ≤ sideLength *ₚ sideLength))
       let mut x : Int := sideLength
       let mut cnt : List Int := PastaLean.pyListRepeat [(0 : Int)] (x *ₚ x)
       let _ := Libraries.passta.pyPassAssert (PastaLean.pyLen cnt == x *ₚ x)
+      let _ := Libraries.passta.pyPassAssert (PastaLean.pyAll ((PastaLean.pyIter cnt).map fun c => c == (0 : Int)))
       for i in (PastaLean.pyRange width)do
-        let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i))
-        let _ := Libraries.passta.pyPassInvariant (decide (i < width))
+        let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i) && decide (i ≤ width))
+        let _ := Libraries.passta.pyPassInvariant (PastaLean.pyLen cnt == x *ₚ x)
+        let _ :=
+          Libraries.passta.pyPassInvariant
+            (PastaLean.pyAll ((PastaLean.pyIter cnt).map fun c => decide (c ≥ (0 : Int))))
+        let _ := Libraries.passta.pyPassInvariant (PastaLean.pySum cnt == i *ₚ height)
         for j in (PastaLean.pyRange height)do
-          let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ j))
-          let _ := Libraries.passta.pyPassInvariant (decide (j < height))
+          let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ j) && decide (j ≤ height))
+          let _ := Libraries.passta.pyPassInvariant (PastaLean.pyLen cnt == x *ₚ x)
+          let _ :=
+            Libraries.passta.pyPassInvariant
+              (PastaLean.pyAll ((PastaLean.pyIter cnt).map fun c => decide (c ≥ (0 : Int))))
+          let _ := Libraries.passta.pyPassInvariant (PastaLean.pySum cnt == i *ₚ height +ₚ j)
           let mut k : Int := i %ₚ x *ₚ x +ₚ j %ₚ x
-          let _ := Libraries.passta.pyPassAssert (decide ((0 : Int) ≤ k) && decide (k < PastaLean.pyLen cnt))
+          let _ := Libraries.passta.pyPassAssert (decide ((0 : Int) ≤ k) && decide (k < x *ₚ x))
           cnt := PastaLean.pySetItem cnt k (cnt⦋k⦌ +ₚ (1 : Int))
+      let _ := Libraries.passta.pyPassAssert (PastaLean.pySum cnt == width *ₚ height)
+      let _ :=
+        Libraries.passta.pyPassAssert (PastaLean.pyAll ((PastaLean.pyIter cnt).map fun c => decide (c ≥ (0 : Int))))
       cnt := PastaLean.pySortBy (fun x => x) Bool.true cnt
+      let _ := Libraries.passta.pyPassAssert (PastaLean.pySum cnt == width *ₚ height)
+      let _ :=
+        Libraries.passta.pyPassAssert (PastaLean.pyAll ((PastaLean.pyIter cnt).map fun c => decide (c ≥ (0 : Int))))
       let __py_ret_1 := PastaLean.pySum (PastaLean.pySlice cnt none (some maxOnes) none)
       return __py_ret_1)
 

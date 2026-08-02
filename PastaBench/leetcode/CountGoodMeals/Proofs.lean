@@ -65,13 +65,8 @@ def countPairs := fun (deliciousness : List Int) ↦
       cnt := PastaLean.pySetItem cnt d (cnt⦋d⦌ +ₚ (1 : Int))
     return ans : Id _)
 
-theorem countPairs_spec : ⦃⌜PastaLean.pyLen deliciousness > (0 : Int)⌝⦄ countPairs deliciousness ⦃⇓_ => ⌜True⌝⦄ :=
-  by
-  try
-    mvcgen [countPairs, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓⟨cur, ans⟩ => ⌜True⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
-  all_goals sorry
+theorem countPairs_spec : ⦃⌜PastaLean.pyLen deliciousness > (0 : Int)⌝⦄ countPairs deliciousness ⦃⇓_ => ⌜True⌝⦄ := by
+  apply Std.Do.Triple.of_entails_wp; intro _; exact True.intro
 
 def countPairs'rn := fun (deliciousness : List Int) ↦
   Id.run

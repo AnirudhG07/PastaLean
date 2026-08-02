@@ -59,7 +59,7 @@ def cellsInRange := fun (s : String) ↦
 attribute [simp] cellsInRange
 
 @[taste_ingr]
-theorem cellsInRange_spec :
+theorem cellsInRange_correct :
     ∀ (s : String),
       PastaLean.pyLen s = (5 : Int) →
         s⦋(2 : Int)⦌ = ":" →
@@ -70,13 +70,7 @@ theorem cellsInRange_spec :
                     PastaLean.pyOrd s⦋(-1 : Int)⦌ ≤ PastaLean.pyOrd "9" →
                   PastaLean.pyOrd s⦋(0 : Int)⦌ ≤ PastaLean.pyOrd s⦋(-2 : Int)⦌ →
                     PastaLean.pyInt s⦋(1 : Int)⦌ ≤ PastaLean.pyInt s⦋(-1 : Int)⦌ →
-                      PastaLean.pyLen
-                          ((PastaLean.pyRange (PastaLean.pyOrd s⦋(-2 : Int)⦌ +ₚ (1 : Int))
-                                (PastaLean.pyOrd s⦋(0 : Int)⦌)).flatMap
-                            fun i =>
-                            (PastaLean.pyRange (PastaLean.pyInt s⦋(-1 : Int)⦌ +ₚ (1 : Int))
-                                  (PastaLean.pyInt s⦋(1 : Int)⦌)).map
-                              fun j => PastaLean.pyChr i +ₚ PastaLean.pyStr j) =
+                      PastaLean.pyLen (cellsInRange s) =
                         (PastaLean.pyOrd s⦋(-2 : Int)⦌ -ₚ PastaLean.pyOrd s⦋(0 : Int)⦌ +ₚ (1 : Int)) *ₚ
                           (PastaLean.pyInt s⦋(-1 : Int)⦌ -ₚ PastaLean.pyInt s⦋(1 : Int)⦌ +ₚ (1 : Int)) :=
   by sorry

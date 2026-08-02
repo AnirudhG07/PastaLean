@@ -52,25 +52,13 @@ def findArray := fun (pref : List Int) ↦
 attribute [simp] findArray
 
 @[taste_ingr]
-theorem findArray_spec :
+theorem findArray_correct :
     ∀ (pref : List Int),
-      PastaLean.pyLen
-            ((PastaLean.pyIter (Libraries.itertools.pyPairwise ([(0 : Int)] +ₚ pref))).map fun (_pair_1 : Int × Int) =>
-              let a := Prod.fst _pair_1;
-              let b := Prod.snd _pair_1;
-              PastaLean.pyBitXor a b) =
-          PastaLean.pyLen pref ∧
+      PastaLean.pyLen (findArray pref) = PastaLean.pyLen pref ∧
         PastaLean.pyTruthy
             (PastaLean.pyAll
               ((PastaLean.pyRange (PastaLean.pyLen pref)).map fun i =>
-                Libraries.functools.pyReduce
-                    (PastaLean.pySlice
-                      ((PastaLean.pyIter (Libraries.itertools.pyPairwise ([(0 : Int)] +ₚ pref))).map
-                        fun (_pair_3 : Int × Int) =>
-                        let a := Prod.fst _pair_3;
-                        let b := Prod.snd _pair_3;
-                        PastaLean.pyBitXor a b)
-                      none (some (i +ₚ (1 : Int))) none)
+                Libraries.functools.pyReduce (PastaLean.pySlice (findArray pref) none (some (i +ₚ (1 : Int))) none)
                     PastaLean.pyBitXor (some (0 : Int)) ==
                   pref⦋i⦌)) =
           true :=

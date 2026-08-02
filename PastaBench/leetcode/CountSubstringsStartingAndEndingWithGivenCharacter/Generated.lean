@@ -37,14 +37,13 @@ def countSubstrings := fun (s : String) ↦ fun (c : String) ↦
 attribute [simp] countSubstrings
 
 @[taste_ingr]
-theorem countSubstrings_spec :
+theorem countSubstrings_correct :
     ∀ (s : String),
       ∀ (c : String),
         let cnt := PastaLean.pyCount s c
         PastaLean.pyLen c > (0 : Int) →
-          (2 : Int) *ₚ (cnt +ₚ PastaLean.pyFloorDiv (cnt *ₚ (cnt -ₚ (1 : Int))) (2 : Int)) =
-            PastaLean.pyCount s c *ₚ (PastaLean.pyCount s c +ₚ (1 : Int)) :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+          (2 : Int) *ₚ countSubstrings s c = PastaLean.pyCount s c *ₚ (PastaLean.pyCount s c +ₚ (1 : Int)) :=
+  by sorry
 
 def countSubstrings'rn := fun (s : String) ↦ fun (c : String) ↦
   let cnt := (PastaLean.pyCount s c : Int)

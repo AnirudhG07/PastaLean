@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/9",
+  "problem": "rolling-max",
+  "module": "RollingMax",
+  "method": "rolling_max",
+  "params": [
+    "numbers"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

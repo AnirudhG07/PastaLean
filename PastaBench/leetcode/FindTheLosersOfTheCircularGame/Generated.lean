@@ -94,9 +94,38 @@ theorem circularGameLosers_spec :
     ⦃⌜n ≥ (1 : Int) ∧ k ≥ (1 : Int)⌝⦄ circularGameLosers n k ⦃⇓result =>
       ⌜PastaLean.pyAll ((PastaLean.pyIter result).map fun x => decide ((1 : Int) ≤ x) && decide (x ≤ n))⌝⦄ :=
   by
-  mvcgen [circularGameLosers, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  try
+    mvcgen [circularGameLosers, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · fun s =>
+      let p := s |>.snd;
+      let i := s |>.fst;
+      (⟨(n -ₚ
+              PastaLean.pySum
+                ((List.filter (fun v => PastaLean.pyTruthy v) (PastaLean.pyIter vis)).map fun v =>
+                  (1 : Int))).toNat⟩ :
+        ULift Nat)
+    · ⇓s =>
+      ⌜Sum.elim
+          (fun st =>
+            let p := st |>.snd;
+            let i := st |>.fst;
+            ((((0 : Int) ≤ i ∧ i < n) ∧ p ≥ (1 : Int)) ∧ PastaLean.pyLen vis = n) ∧
+              PastaLean.pySum
+                  ((List.filter (fun v => PastaLean.pyTruthy v) (PastaLean.pyIter vis)).map fun v => (1 : Int)) =
+                p -ₚ (1 : Int))
+          (fun _ => True) s⌝
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
+
+theorem circularGameLosers_correct :
+    ∀ (n : Int),
+      ∀ (k : Int),
+        n ≥ (1 : Int) ∧ k ≥ (1 : Int) →
+          let result := (circularGameLosers n k).run;
+          PastaLean.pyAll ((PastaLean.pyIter result).map fun x => decide ((1 : Int) ≤ x) && decide (x ≤ n)) :=
+  by
+  intro n k hpre
+  exact circularGameLosers_spec hpre
 
 def circularGameLosers'rn := fun (n : Int) ↦ fun (k : Int) ↦
   Id.run

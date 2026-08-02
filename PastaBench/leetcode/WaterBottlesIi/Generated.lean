@@ -64,7 +64,6 @@ def maxBottlesDrunk := fun (numBottles : Int) ↦ fun (numExchange : Int) ↦
     let mut numExchange := numExchange
     let mut initialBottles : Int := numBottles
     let mut initialExchange : Int := numExchange
-    let _ := Libraries.passta.pyPassEnsures (decide (numBottles < numExchange))
     let mut ans : Int := numBottles
     while (numBottles ≥ numExchange) do
       let _ := Libraries.passta.pyPassInvariant (decide (numBottles ≥ (0 : Int)))
@@ -82,11 +81,21 @@ def maxBottlesDrunk := fun (numBottles : Int) ↦ fun (numExchange : Int) ↦
 @[spec]
 theorem maxBottlesDrunk_spec :
     ⦃⌜numBottles ≥ (0 : Int) ∧ numExchange > (1 : Int)⌝⦄ maxBottlesDrunk numBottles numExchange ⦃⇓ans =>
-      ⌜ans -ₚ numBottles = numExchange -ₚ numExchange⌝⦄ :=
+      ⌜ans -ₚ numBottles = numExchange -ₚ numExchange ∧ numBottles < numExchange⌝⦄ :=
   by
   mvcgen [maxBottlesDrunk, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
   simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
+
+theorem maxBottlesDrunk_correct :
+    ∀ (numBottles : Int),
+      ∀ (numExchange : Int),
+        numBottles ≥ (0 : Int) ∧ numExchange > (1 : Int) →
+          let ans := (maxBottlesDrunk numBottles numExchange).run;
+          ans -ₚ numBottles = numExchange -ₚ numExchange ∧ numBottles < numExchange :=
+  by
+  intro numBottles numExchange hpre
+  exact maxBottlesDrunk_spec hpre
 
 def maxBottlesDrunk'rn := fun (numBottles : Int) ↦ fun (numExchange : Int) ↦
   Id.run
@@ -97,7 +106,6 @@ def maxBottlesDrunk'rn := fun (numBottles : Int) ↦ fun (numExchange : Int) ↦
       let _ := Libraries.passta.pyPassRequires (decide (numExchange > (1 : Int)))
       let mut initialBottles : Int := numBottles
       let mut initialExchange : Int := numExchange
-      let _ := Libraries.passta.pyPassEnsures (decide (numBottles < numExchange))
       let mut ans : Int := numBottles
       while (numBottles ≥ numExchange) do
         let _ := Libraries.passta.pyPassInvariant (decide (numBottles ≥ (0 : Int)))

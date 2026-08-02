@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/50",
+  "problem": "decode-shift",
+  "module": "DecodeShift",
+  "method": "decode_shift",
+  "params": [
+    "s"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

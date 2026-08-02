@@ -1,0 +1,202 @@
+[
+  {
+    "input": "lst = ['aa', 'a', 'aaa']",
+    "output": "['aa']"
+  },
+  {
+    "input": "lst = ['school', 'AI', 'asdf', 'b']",
+    "output": "['AI', 'asdf', 'school']"
+  },
+  {
+    "input": "lst = ['d', 'b', 'c', 'a']",
+    "output": "[]"
+  },
+  {
+    "input": "lst = ['d', 'dcba', 'abcd', 'a']",
+    "output": "['abcd', 'dcba']"
+  },
+  {
+    "input": "lst = ['AI', 'ai', 'au']",
+    "output": "['AI', 'ai', 'au']"
+  },
+  {
+    "input": "lst = ['a', 'b', 'b', 'c', 'c', 'a']",
+    "output": "[]"
+  },
+  {
+    "input": "lst = ['aaaa', 'bbbb', 'dd', 'cc']",
+    "output": "['cc', 'dd', 'aaaa', 'bbbb']"
+  },
+  {
+    "input": "lst = ['programming', 'python', 'java', 'ruby']",
+    "output": "['java', 'ruby', 'python']"
+  },
+  {
+    "input": "lst = ['apple', 'orange', 'banana', 'grapefruit']",
+    "output": "['banana', 'orange', 'grapefruit']"
+  },
+  {
+    "input": "lst = ['abcd', 'efgh', 'ijkl', 'mnop']",
+    "output": "['abcd', 'efgh', 'ijkl', 'mnop']"
+  },
+  {
+    "input": "lst = ['hello', 'world', 'this', 'is', 'a', 'test']",
+    "output": "['is', 'test', 'this']"
+  },
+  {
+    "input": "lst = ['dog', 'cat', 'bird', 'fish', 'lizard']",
+    "output": "['bird', 'fish', 'lizard']"
+  },
+  {
+    "input": "lst = ['aaaa', 'bb', 'cccc', 'ddd']",
+    "output": "['bb', 'aaaa', 'cccc']"
+  },
+  {
+    "input": "lst = ['the', 'quick', 'fox', 'jumps', 'over', 'the', 'lazy', 'dog']",
+    "output": "['lazy', 'over']"
+  },
+  {
+    "input": "lst = ['python', 'is', 'a', 'popular', 'language']",
+    "output": "['is', 'python', 'language']"
+  },
+  {
+    "input": "lst = ['this', 'list', 'has', 'words', 'of', 'different', 'lengths']",
+    "output": "['of', 'list', 'this']"
+  },
+  {
+    "input": "lst = ['racecar', 'deified', 'civic', 'level', 'rotor']",
+    "output": "[]"
+  },
+  {
+    "input": "lst = ['bb', 'cccc', 'ddd']",
+    "output": "['bb', 'cccc']"
+  },
+  {
+    "input": "lst = ['efgh', 'ijkl', 'mnop']",
+    "output": "['efgh', 'ijkl', 'mnop']"
+  },
+  {
+    "input": "lst = ['popuolar', 'python', 'is', '', 'popular', 'language']",
+    "output": "['', 'is', 'python', 'language', 'popuolar']"
+  },
+  {
+    "input": "lst = ['hello', 'world', 'this', 'jumpshello', 'telizardst', 'istest', 'a', 'test']",
+    "output": "['test', 'this', 'istest', 'jumpshello', 'telizardst']"
+  },
+  {
+    "input": "lst = ['abcdifferentd', 'efgh', 'ijkl', 'mnop']",
+    "output": "['efgh', 'ijkl', 'mnop']"
+  },
+  {
+    "input": "lst = ['aajavaa', 'fox', 'cccc', 'ddd']",
+    "output": "['cccc']"
+  },
+  {
+    "input": "lst = ['programming', 'python', '', 'java', 'ruby']",
+    "output": "['', 'java', 'ruby', 'python']"
+  },
+  {
+    "input": "lst = ['aaaa', 'bb', 'cccc', 'ccccc', 'ddd']",
+    "output": "['bb', 'aaaa', 'cccc']"
+  },
+  {
+    "input": "lst = ['popuolar', 'lizardpython', 'is', '', 'popular', 'jumps']",
+    "output": "['', 'is', 'popuolar', 'lizardpython']"
+  },
+  {
+    "input": "lst = ['popuolar', 'is', '', 'popular', 'language']",
+    "output": "['', 'is', 'language', 'popuolar']"
+  },
+  {
+    "input": "lst = ['poupular', 'popuolar', 'lizardpython', 'is', '', 'popular', 'jumps']",
+    "output": "['', 'is', 'popuolar', 'poupular', 'lizardpython']"
+  },
+  {
+    "input": "lst = ['python', 'is', 'popular', 'language', 'language']",
+    "output": "['is', 'python', 'language', 'language']"
+  },
+  {
+    "input": "lst = ['aajavaa', 'fox', 'ddd', 'fox']",
+    "output": "[]"
+  },
+  {
+    "input": "lst = ['programming', 'python', 'ruby']",
+    "output": "['ruby', 'python']"
+  },
+  {
+    "input": "lst = ['bb', 'cccc', 'ddd', 'ddd']",
+    "output": "['bb', 'cccc']"
+  },
+  {
+    "input": "lst = ['poupular', 'lizardpython', 'is', '', 'popular']",
+    "output": "['', 'is', 'poupular', 'lizardpython']"
+  },
+  {
+    "input": "lst = ['poupular', 'lizardpython', 'is', 'popular']",
+    "output": "['is', 'poupular', 'lizardpython']"
+  },
+  {
+    "input": "lst = ['this', 'list', 'halevels', 'words', 'of', 'different', 'lengths']",
+    "output": "['of', 'list', 'this', 'halevels']"
+  },
+  {
+    "input": "lst = ['the', 'quick', 'hello', 'fox', 'jumps', 'over', 'the', 'lazy', 'dog']",
+    "output": "['lazy', 'over']"
+  },
+  {
+    "input": "lst = ['aajavaa', 'appleffoxox', 'ddd', 'fox', 'aajavaa']",
+    "output": "[]"
+  },
+  {
+    "input": "lst = ['apple', 'ojumpsnge', 'banana', 'bananna', 'grapefruit']",
+    "output": "['banana', 'grapefruit']"
+  },
+  {
+    "input": "lst = ['dog', 'cat', 'bird', 'fish', 'lizard', 'fish']",
+    "output": "['bird', 'fish', 'fish', 'lizard']"
+  },
+  {
+    "input": "lst = ['popuolar', 'python', 'is', 'hello']",
+    "output": "['is', 'python', 'popuolar']"
+  },
+  {
+    "input": "lst = ['hello', 'st', 'world', 'this', 'is', 'a', 'test', 'this']",
+    "output": "['is', 'st', 'test', 'this', 'this']"
+  },
+  {
+    "input": "lst = ['aapple', 'orange', 'banana', 'aapple', 'banana']",
+    "output": "['aapple', 'aapple', 'banana', 'banana', 'orange']"
+  },
+  {
+    "input": "lst = ['hello', 'world', 'this', 'jumpshello', 'telizardst', 'hetestllo', 'istest', 'a', 'test', 'a']",
+    "output": "['test', 'this', 'istest', 'jumpshello', 'telizardst']"
+  },
+  {
+    "input": "lst = ['aaaa', 'bb', 'cccc', 'ccccc', 'cccc', 'ddd']",
+    "output": "['bb', 'aaaa', 'cccc', 'cccc']"
+  },
+  {
+    "input": "lst = ['aajaisaa', 'ddd', 'fox']",
+    "output": "['aajaisaa']"
+  },
+  {
+    "input": "lst = ['hlizardello', 'hello', 'world', 'this', 'has', 'a', 'test']",
+    "output": "['test', 'this']"
+  },
+  {
+    "input": "lst = ['hello', 'world', 'this', 'thiis', 'jumpshello', 'telizardst', 'istest', 'a', 'test', 'istest']",
+    "output": "['test', 'this', 'istest', 'istest', 'jumpshello', 'telizardst']"
+  },
+  {
+    "input": "lst = ['hello', 'world', 'this', 'thiis', 'jumpshello', 'telizardst', 'istest', 'a', 'test']",
+    "output": "['test', 'this', 'istest', 'jumpshello', 'telizardst']"
+  },
+  {
+    "input": "lst = ['python', 'java', 'ruby']",
+    "output": "['java', 'ruby', 'python']"
+  },
+  {
+    "input": "lst = ['banan', 'orange', 'banana', 'aapple', 'banana']",
+    "output": "['aapple', 'banana', 'banana', 'orange']"
+  }
+]

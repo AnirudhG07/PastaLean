@@ -48,13 +48,10 @@ def countPrefixes := fun (words : List String) ↦ fun (s : String) ↦
 attribute [simp] countPrefixes
 
 @[taste_ingr]
-theorem countPrefixes_spec :
+theorem countPrefixes_correct :
     ∀ (words : List String),
-      ∀ (s : String),
-        (0 : Int) ≤ PastaLean.pySum ((PastaLean.pyIter words).map fun w => PastaLean.pyStringStartswith s w) ∧
-          PastaLean.pySum ((PastaLean.pyIter words).map fun w => PastaLean.pyStringStartswith s w) ≤
-            PastaLean.pyLen words :=
-  by intros; sorry
+      ∀ (s : String), (0 : Int) ≤ countPrefixes words s ∧ countPrefixes words s ≤ PastaLean.pyLen words :=
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
 
 def countPrefixes'rn := fun (words : List String) ↦ fun (s : String) ↦
   PastaLean.pySum ((PastaLean.pyIter words).map fun w => PastaLean.pyStringStartswith s w)

@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/57",
+  "problem": "monotonic",
+  "module": "Monotonic",
+  "method": "monotonic",
+  "params": [
+    "l"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

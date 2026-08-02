@@ -64,6 +64,18 @@ theorem numberOfWeeks_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals
   all_goals sorry
 
+theorem numberOfWeeks_correct :
+    ∀ (milestones : List Int),
+      PastaLean.pyLen milestones > (0 : Int) →
+        let result := (numberOfWeeks milestones).run;
+        result =
+          if PastaLean.pyMax milestones ≤ PastaLean.pySum milestones -ₚ PastaLean.pyMax milestones +ₚ (1 : Int) then
+            PastaLean.pySum milestones
+          else (2 : Int) *ₚ (PastaLean.pySum milestones -ₚ PastaLean.pyMax milestones) +ₚ (1 : Int) :=
+  by
+  intro milestones hpre
+  exact numberOfWeeks_spec hpre
+
 def numberOfWeeks'rn := fun (milestones : List Int) ↦
   Id.run
     (do

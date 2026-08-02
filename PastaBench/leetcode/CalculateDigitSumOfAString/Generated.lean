@@ -73,6 +73,16 @@ theorem digitSum_spec : ⦃⌜k > (0 : Int) ∧ PastaLean.pyIsDecimal s⌝⦄ di
   simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
+theorem digitSum_correct :
+    ∀ (s : String),
+      ∀ (k : Int),
+        k > (0 : Int) ∧ PastaLean.pyIsDecimal s →
+          let s := (digitSum s k).run;
+          PastaLean.pyLen s ≤ k :=
+  by
+  intro s k hpre
+  exact digitSum_spec hpre
+
 def digitSum'rn := fun (s : String) ↦ fun (k : Int) ↦
   Id.run
     (do

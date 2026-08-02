@@ -96,6 +96,15 @@ theorem strangePrinter_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
+theorem strangePrinter_correct :
+    ∀ (s : String),
+      PastaLean.pyLen s > (0 : Int) →
+        let result := (strangePrinter s).run;
+        (1 : Int) ≤ result ∧ result ≤ PastaLean.pyLen s :=
+  by
+  intro s hpre
+  exact strangePrinter_spec hpre
+
 def strangePrinter'rn := fun (s : String) ↦
   Id.run
     (do

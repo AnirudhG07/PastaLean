@@ -82,6 +82,16 @@ theorem getEncryptedString_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
+theorem getEncryptedString_correct :
+    ∀ (s : String),
+      ∀ (k : Int),
+        let result := (getEncryptedString s k).run;
+        PastaLean.pyAll
+          ((PastaLean.pyRange (PastaLean.pyLen s)).map fun i => result⦋i⦌ == s⦋(i +ₚ k) %ₚ PastaLean.pyLen s⦌) :=
+  by
+  intro s k
+  exact getEncryptedString_spec True.intro
+
 def getEncryptedString'rn := fun (s : String) ↦ fun (k : Int) ↦
   Id.run
     (do

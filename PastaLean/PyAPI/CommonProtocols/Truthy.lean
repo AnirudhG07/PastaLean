@@ -15,6 +15,7 @@ class PyTruthy (α : Type) where
   truthy : α → Bool
 
 /-- Dispatch Python truthiness through the `PyTruthy` typeclass. -/
+@[simp, grind]
 def pyTruthy {α : Type} [PyTruthy α] (x : α) : Bool := PyTruthy.truthy x
 
 instance : PyTruthy Bool where truthy b := b

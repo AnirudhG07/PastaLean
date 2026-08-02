@@ -33,11 +33,9 @@ def isSameAfterReversals := fun (num : Int) ↦
 attribute [simp] isSameAfterReversals
 
 @[taste_ingr]
-theorem isSameAfterReversals_spec :
-    ∀ (num : Int),
-      num ≥ (0 : Int) →
-        (num = (0 : Int) ∨ num %ₚ (10 : Int) ≠ (0 : Int)) = (num = (0 : Int) ∨ num %ₚ (10 : Int) ≠ (0 : Int)) :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]
+theorem isSameAfterReversals_correct :
+    ∀ (num : Int), num ≥ (0 : Int) → isSameAfterReversals num = (num = (0 : Int) ∨ num %ₚ (10 : Int) ≠ (0 : Int)) := by
+  intros; simp_all (config := { zetaDelta := true }) [taste_ingr]
 
 def isSameAfterReversals'rn := fun (num : Int) ↦
   if PastaLean.pyTruthy (num == (0 : Int)) then num == (0 : Int) else num %ₚ (10 : Int) != (0 : Int)

@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/90",
+  "problem": "next-smallest",
+  "module": "NextSmallest",
+  "method": "next_smallest",
+  "params": [
+    "lst"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

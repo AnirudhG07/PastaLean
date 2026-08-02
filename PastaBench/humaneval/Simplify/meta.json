@@ -1,0 +1,14 @@
+{
+  "task_id": "HumanEval/144",
+  "problem": "simplify",
+  "module": "Simplify",
+  "method": "simplify",
+  "params": [
+    "x",
+    "n"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

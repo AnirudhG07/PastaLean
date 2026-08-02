@@ -17,6 +17,7 @@ set_option maxHeartbeats 800000
 
 /- Python source converted to produce the Lean below (the exact input to PastaLean):
 
+from contracts import *
 import random
 import functools
 import collections
@@ -33,14 +34,22 @@ from string import *
 from operator import *
 from math import *
 
-from contracts import *
-
-
 def hasAlternatingBits(n: int) -> bool:
     Requires(n >= 0)
+    # A positive integer has alternating bits if and only if `x = n + (n >> 1)` consists of
+    # all set bits (i.e., is of the form 2^k - 1). This is equivalent to `x + 1` being
+    # a power of two. A number `y > 0` is a power of two if `y & (y - 1) == 0`.
+    # Let `y = x + 1`. The condition becomes `(x + 1) & x == 0`.
+    # For n >= 0, the positivity condition holds.
+    # We assume 'n' in the postcondition refers to its initial value.
+    Ensures(Result() == (((n + (n >> 1) + 1) & (n + (n >> 1))) == 0))
+
     prev = -1
     while n:
+        Invariant(n >= 0)
+        Invariant(prev == -1 or prev == 0 or prev == 1)
         Decreases(n)
+
         curr = n & 1
         if prev == curr:
             return False
@@ -56,6 +65,8 @@ def hasAlternatingBits := fun (n : Int) ↦
     let mut n := n
     let mut prev : Int := -(1 : Int)
     while (PastaLean.pyTruthy n) do
+      let _ := Libraries.passta.pyPassInvariant (decide (n ≥ (0 : Int)))
+      let _ := Libraries.passta.pyPassInvariant (prev == -(1 : Int) || prev == (0 : Int) || prev == (1 : Int))
       let _ := Libraries.passta.pyPassDecreases n
       let mut curr : Int := PastaLean.pyBitAnd n (1 : Int)
       if h_1 : prev = curr then 
@@ -66,19 +77,45 @@ def hasAlternatingBits := fun (n : Int) ↦
       n := PastaLean.pyShiftRight n (1 : Int)
     return Bool.true : Id _)
 
-theorem hasAlternatingBits_spec : ⦃⌜n ≥ (0 : Int)⌝⦄ hasAlternatingBits n ⦃⇓_ => ⌜True⌝⦄ :=
+@[spec]
+theorem hasAlternatingBits_spec :
+    ⦃⌜n ≥ (0 : Int)⌝⦄ hasAlternatingBits n ⦃⇓result =>
+      ⌜result =
+          (PastaLean.pyBitAnd (n +ₚ PastaLean.pyShiftRight n (1 : Int) +ₚ (1 : Int))
+              (n +ₚ PastaLean.pyShiftRight n (1 : Int)) =
+            (0 : Int))⌝⦄ :=
   by
   mvcgen [hasAlternatingBits, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
   simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
+
+theorem hasAlternatingBits_correct :
+    ∀ (n : Int),
+      n ≥ (0 : Int) →
+        let result := (hasAlternatingBits n).run;
+        result =
+          (PastaLean.pyBitAnd (n +ₚ PastaLean.pyShiftRight n (1 : Int) +ₚ (1 : Int))
+              (n +ₚ PastaLean.pyShiftRight n (1 : Int)) =
+            (0 : Int)) :=
+  by
+  intro n hpre
+  exact hasAlternatingBits_spec hpre
 
 def hasAlternatingBits'rn := fun (n : Int) ↦
   Id.run
     (do
       let mut n := n
       let _ := Libraries.passta.pyPassRequires (decide (n ≥ (0 : Int)))
+      -- A positive integer has alternating bits if and only if `x = n + (n >> 1)` consists of
+      -- all set bits (i.e., is of the form 2^k - 1). This is equivalent to `x + 1` being
+      -- a power of two. A number `y > 0` is a power of two if `y & (y - 1) == 0`.
+      -- Let `y = x + 1`. The condition becomes `(x + 1) & x == 0`.
+      -- For n >= 0, the positivity condition holds.
+      -- We assume 'n' in the postcondition refers to its initial value.
       let mut prev : Int := -(1 : Int)
       while (PastaLean.pyTruthy n) do
+        let _ := Libraries.passta.pyPassInvariant (decide (n ≥ (0 : Int)))
+        let _ := Libraries.passta.pyPassInvariant (prev == -(1 : Int) || prev == (0 : Int) || prev == (1 : Int))
         let _ := Libraries.passta.pyPassDecreases n
         let mut curr : Int := PastaLean.pyBitAnd n (1 : Int)
         if h_1 : prev == curr then 

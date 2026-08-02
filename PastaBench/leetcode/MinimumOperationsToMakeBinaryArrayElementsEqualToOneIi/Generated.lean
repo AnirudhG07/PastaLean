@@ -82,9 +82,17 @@ theorem minOperations_spec : ⦃⌜True⌝⦄ minOperations nums ⦃⇓ans => �
   by
   try
     mvcgen [minOperations, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓⟨cur, v, ans⟩ => ⌜(ans ≥ (0 : Int) ∧ (v = (0 : Int) ∨ v = (1 : Int))) ∧ v = ans %ₚ (2 : Int)⌝
+    · ⇓⟨cur, ans, v⟩ => ⌜(ans ≥ (0 : Int) ∧ (v = (0 : Int) ∨ v = (1 : Int))) ∧ v = ans %ₚ (2 : Int)⌝
   sorry
   all_goals sorry
+
+theorem minOperations_correct :
+    ∀ (nums : List Int),
+      let ans := (minOperations nums).run;
+      (0 : Int) ≤ ans ∧ ans ≤ PastaLean.pyLen nums :=
+  by
+  intro nums
+  exact minOperations_spec True.intro
 
 def minOperations'rn := fun (nums : List Int) ↦
   Id.run

@@ -61,7 +61,7 @@ def maximumSetSize := fun (nums1 : List Int) ↦ fun (nums2 : List Int) ↦
 attribute [simp] maximumSetSize
 
 @[taste_ingr]
-theorem maximumSetSize_spec :
+theorem maximumSetSize_correct :
     ∀ (nums1 : List Int),
       ∀ (nums2 : List Int),
         let s1 := PastaLean.pySet nums1
@@ -69,9 +69,18 @@ theorem maximumSetSize_spec :
         let n := PastaLean.pyLen nums1
         let a := PastaLean.pyMin [PastaLean.pyLen (s1 -ₚ s2), PastaLean.pyFloorDiv n (2 : Int)]
         let b := PastaLean.pyMin [PastaLean.pyLen (s2 -ₚ s1), PastaLean.pyFloorDiv n (2 : Int)]
-        (0 : Int) ≤ PastaLean.pyMin [a +ₚ b +ₚ PastaLean.pyLen (PastaLean.pyBitAnd s1 s2), n] ∧
-          PastaLean.pyMin [a +ₚ b +ₚ PastaLean.pyLen (PastaLean.pyBitAnd s1 s2), n] ≤ PastaLean.pyLen nums1 :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+        (0 : Int) ≤ maximumSetSize nums1 nums2 ∧ maximumSetSize nums1 nums2 ≤ PastaLean.pyLen nums1 :=
+  by
+  intro nums1 nums2 s1 s2 n a b
+  simp only [maximumSetSize, pyMin_pair, PyHAdd.hAdd, pyFloorDiv, PyFloorDiv.floorDiv]
+  rw [if_neg (by decide)]
+  have hF : (0:Int) ≤ (pyLen nums1).fdiv 2 := by
+    rw [Int.fdiv_eq_ediv_of_nonneg _ (by norm_num : (0:Int) ≤ 2)]
+    exact Int.ediv_nonneg (pyLen_list_nonneg _) (by norm_num)
+  refine ⟨le_min (add_nonneg (add_nonneg ?_ ?_) ?_) (pyLen_list_nonneg _), min_le_right _ _⟩
+  · exact le_min (pyLen_list_nonneg _) hF
+  · exact le_min (pyLen_list_nonneg _) hF
+  · exact pyLen_list_nonneg _
 
 def maximumSetSize'rn := fun (nums1 : List Int) ↦ fun (nums2 : List Int) ↦
   let s1 := (PastaLean.pySet nums1 : List Int)

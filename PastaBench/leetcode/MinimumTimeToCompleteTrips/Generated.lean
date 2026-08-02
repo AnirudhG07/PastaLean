@@ -69,7 +69,7 @@ def minimumTime := fun (time : List Int) ↦ fun (totalTrips : Int) ↦
 attribute [simp] minimumTime
 
 @[taste_ingr]
-theorem minimumTime_spec :
+theorem minimumTime_correct :
     ∀ (time : List Int),
       ∀ (totalTrips : Int),
         let mx := PastaLean.pyMin time *ₚ totalTrips
@@ -77,21 +77,11 @@ theorem minimumTime_spec :
           PastaLean.pyAll ((PastaLean.pyIter time).map fun t => decide (t > (0 : Int))) →
             totalTrips > (0 : Int) →
               (PastaLean.pySum
-                      ((PastaLean.pyIter time).map fun v =>
-                        PastaLean.pyFloorDiv
-                          (Libraries.bisect.pyBisectLeftRangeKey (0 : Int) mx (1 : Int) totalTrips (key :=
-                            fun (x : Int) ↦
-                            PastaLean.pySum ((PastaLean.pyIter time).map fun v => PastaLean.pyFloorDiv x v)))
-                          v) ≥
+                      ((PastaLean.pyIter time).map fun v => PastaLean.pyFloorDiv (minimumTime time totalTrips) v) ≥
                     totalTrips ∧
                   PastaLean.pySum
                       ((PastaLean.pyIter time).map fun v =>
-                        PastaLean.pyFloorDiv
-                          (Libraries.bisect.pyBisectLeftRangeKey (0 : Int) mx (1 : Int) totalTrips (key :=
-                              fun (x : Int) ↦
-                              PastaLean.pySum ((PastaLean.pyIter time).map fun v => PastaLean.pyFloorDiv x v)) -ₚ
-                            (1 : Int))
-                          v) <
+                        PastaLean.pyFloorDiv (minimumTime time totalTrips -ₚ (1 : Int)) v) <
                     totalTrips) ∧
                 PastaLean.pySum ((PastaLean.pyIter time).map fun v => PastaLean.pyFloorDiv mx v) ≥ totalTrips :=
   by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry

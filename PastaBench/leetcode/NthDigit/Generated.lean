@@ -99,6 +99,15 @@ theorem findNthDigit_spec : ⦃⌜n ≥ (1 : Int)⌝⦄ findNthDigit n ⦃⇓res
   simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
+theorem findNthDigit_correct :
+    ∀ (n : Int),
+      n ≥ (1 : Int) →
+        let result := (findNthDigit n).run;
+        (0 : Int) ≤ result ∧ result < (10 : Int) :=
+  by
+  intro n hpre
+  exact findNthDigit_spec hpre
+
 def findNthDigit'rn := fun (n : Int) ↦
   Id.run
     (do

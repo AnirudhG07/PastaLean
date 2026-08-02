@@ -17,7 +17,6 @@ set_option maxHeartbeats 800000
 
 /- Python source converted to produce the Lean below (the exact input to PastaLean):
 
-from contracts import *
 import random
 import functools
 import collections
@@ -33,12 +32,24 @@ from bisect import *
 from string import *
 from operator import *
 from math import *
+from contracts import *
 
 def maxArrayValue(nums: List[int]) -> int:
     Requires(len(nums) > 0)
+    # The maximum value of the array is non-decreasing across the transformation.
+    # Therefore, the result must be at least the maximum of the original array.
+    # We assume `max(nums)` in the postcondition refers to the state of `nums` at function entry.
+    Ensures(Result() >= max(nums))
+
     for i in range(len(nums) - 2, -1, -1):
+        # Invariants to ensure memory safety for the accesses nums[i] and nums[i+1].
+        # The loop iterates i from len(nums) - 2 down to 0.
+        Invariant(0 <= i < len(nums))
+        Invariant(0 <= i + 1 < len(nums))
+
         if nums[i] <= nums[i + 1]:
             nums[i] += nums[i + 1]
+            
     return max(nums)
 -/
 
@@ -48,6 +59,12 @@ def maxArrayValue := fun (nums : List Int) ↦
   (do
     let mut nums := nums
     for i in (PastaLean.pyRange (-(1 : Int)) (PastaLean.pyLen nums -ₚ (2 : Int)) (-(1 : Int)))do
+      -- Invariants to ensure memory safety for the accesses nums[i] and nums[i+1].
+      -- The loop iterates i from len(nums) - 2 down to 0.
+      let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i) && decide (i < PastaLean.pyLen nums))
+      let _ :=
+        Libraries.passta.pyPassInvariant
+          (decide ((0 : Int) ≤ i +ₚ (1 : Int)) && decide (i +ₚ (1 : Int) < PastaLean.pyLen nums))
       if h_1 : nums⦋i⦌ ≤ nums⦋i +ₚ (1 : Int)⦌ then 
         nums := PastaLean.pySetItem nums i (nums⦋i⦌ +ₚ nums⦋i +ₚ (1 : Int)⦌)
       else
@@ -55,19 +72,42 @@ def maxArrayValue := fun (nums : List Int) ↦
     let __py_ret_1 := PastaLean.pyMax nums
     return __py_ret_1 : Id _)
 
-theorem maxArrayValue_spec : ⦃⌜PastaLean.pyLen nums > (0 : Int)⌝⦄ maxArrayValue nums ⦃⇓_ => ⌜True⌝⦄ :=
+@[spec]
+theorem maxArrayValue_spec :
+    ⦃⌜PastaLean.pyLen nums > (0 : Int)⌝⦄ maxArrayValue nums ⦃⇓result => ⌜result ≥ PastaLean.pyMax nums⌝⦄ :=
   by
   try
     mvcgen [maxArrayValue, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓cur => ⌜True⌝
+    · ⇓cur =>
+      ⌜let i := (cur.prefix.length : Int);
+        ((0 : Int) ≤ i ∧ i < PastaLean.pyLen nums) ∧ (0 : Int) ≤ i +ₚ (1 : Int) ∧ i +ₚ (1 : Int) < PastaLean.pyLen nums⌝
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
+
+theorem maxArrayValue_correct :
+    ∀ (nums : List Int),
+      PastaLean.pyLen nums > (0 : Int) →
+        let result := (maxArrayValue nums).run;
+        result ≥ PastaLean.pyMax nums :=
+  by
+  intro nums hpre
+  exact maxArrayValue_spec hpre
 
 def maxArrayValue'rn := fun (nums : List Int) ↦
   Id.run
     (do
       let mut nums := nums
       let _ := Libraries.passta.pyPassRequires (decide (PastaLean.pyLen nums > (0 : Int)))
+      -- The maximum value of the array is non-decreasing across the transformation.
+      -- Therefore, the result must be at least the maximum of the original array.
+      -- We assume `max(nums)` in the postcondition refers to the state of `nums` at function entry.
       for i in (PastaLean.pyRange (-(1 : Int)) (PastaLean.pyLen nums -ₚ (2 : Int)) (-(1 : Int)))do
+        -- Invariants to ensure memory safety for the accesses nums[i] and nums[i+1].
+        -- The loop iterates i from len(nums) - 2 down to 0.
+        let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i) && decide (i < PastaLean.pyLen nums))
+        let _ :=
+          Libraries.passta.pyPassInvariant
+            (decide ((0 : Int) ≤ i +ₚ (1 : Int)) && decide (i +ₚ (1 : Int) < PastaLean.pyLen nums))
         if h_1 : nums⦋i⦌ ≤ nums⦋i +ₚ (1 : Int)⦌ then 
           nums := PastaLean.pySetItem nums i (nums⦋i⦌ +ₚ nums⦋i +ₚ (1 : Int)⦌)
         else

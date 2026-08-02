@@ -93,6 +93,20 @@ theorem waysToBuyPensPencils_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry; sorry; pyany_cases <;> grind +locals
   all_goals sorry
 
+theorem waysToBuyPensPencils_correct :
+    ∀ (total : Int),
+      ∀ (cost1 : Int),
+        ∀ (cost2 : Int),
+          cost1 > (0 : Int) ∧ cost2 > (0 : Int) →
+            let ans := (waysToBuyPensPencils total cost1 cost2).run;
+            ans =
+              PastaLean.pySum
+                ((PastaLean.pyRange (PastaLean.pyFloorDiv total cost1 +ₚ (1 : Int))).map fun x =>
+                  PastaLean.pyFloorDiv (total -ₚ x *ₚ cost1) cost2 +ₚ (1 : Int)) :=
+  by
+  intro total cost1 cost2 hpre
+  exact waysToBuyPensPencils_spec hpre
+
 def waysToBuyPensPencils'rn := fun (total : Int) ↦ fun (cost1 : Int) ↦ fun (cost2 : Int) ↦
   Id.run
     (do

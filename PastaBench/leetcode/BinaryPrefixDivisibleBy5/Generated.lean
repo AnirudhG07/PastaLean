@@ -73,6 +73,15 @@ theorem prefixesDivBy5_spec :
   sorry
   all_goals sorry
 
+theorem prefixesDivBy5_correct :
+    ∀ (nums : List Int),
+      PastaLean.pyAll ((PastaLean.pyIter nums).map fun v => v == (0 : Int) || v == (1 : Int)) →
+        let ans := (prefixesDivBy5 nums).run;
+        PastaLean.pyLen ans = PastaLean.pyLen nums :=
+  by
+  intro nums hpre
+  exact prefixesDivBy5_spec hpre
+
 def prefixesDivBy5'rn := fun (nums : List Int) ↦
   Id.run
     (do

@@ -124,6 +124,15 @@ theorem goodNodes_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
+theorem goodNodes_correct :
+    ∀ (root : Option TreeNode),
+      PastaLean.pyIsNone root ∨ ((root).getD default).val ≥ -(1000000 : Int) →
+        let ans := (goodNodes root).run;
+        PastaLean.pyIsNone root ∧ ans = (0 : Int) ∨ !PastaLean.pyIsNone root ∧ ans ≥ (1 : Int) :=
+  by
+  intro root hpre
+  exact goodNodes_spec hpre
+
 private partial def _goodNodes'dfs'rn := fun (root : Option TreeNode'rn) ↦ fun (mx : Int) ↦ fun (ans : Int) ↦
   Id.run
     (do

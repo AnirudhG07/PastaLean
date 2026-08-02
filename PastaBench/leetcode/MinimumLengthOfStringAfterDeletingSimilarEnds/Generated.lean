@@ -98,9 +98,29 @@ def minimumLength := fun (s : String) ↦
 @[spec]
 theorem minimumLength_spec : ⦃⌜True⌝⦄ minimumLength s ⦃⇓result => ⌜(0 : Int) ≤ result ∧ result ≤ PastaLean.pyLen s⌝⦄ :=
   by
-  mvcgen [minimumLength, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
+  try
+    mvcgen [minimumLength, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · fun s =>
+      let j := s |>.snd;
+      let i := s |>.fst;
+      (⟨(j -ₚ i).toNat⟩ : ULift Nat)
+    · ⇓s =>
+      ⌜Sum.elim
+          (fun st =>
+            let j := st |>.snd;
+            let i := st |>.fst;
+            ((0 : Int) ≤ i ∧ j < PastaLean.pyLen s) ∧ i ≤ j +ₚ (1 : Int))
+          (fun _ => True) s⌝
+  sorry
   all_goals sorry
-  all_goals sorry
+
+theorem minimumLength_correct :
+    ∀ (s : String),
+      let result := (minimumLength s).run;
+      (0 : Int) ≤ result ∧ result ≤ PastaLean.pyLen s :=
+  by
+  intro s
+  exact minimumLength_spec True.intro
 
 def minimumLength'rn := fun (s : String) ↦
   Id.run

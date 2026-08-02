@@ -49,7 +49,7 @@ def numberOfMatches := fun (n : Int) ↦ n -ₚ (1 : Int)
 attribute [simp] numberOfMatches
 
 @[taste_ingr]
-theorem numberOfMatches_spec : ∀ (n : Int), n ≥ (1 : Int) → n -ₚ (1 : Int) = n -ₚ (1 : Int) := by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]
+theorem numberOfMatches_correct : ∀ (n : Int), n ≥ (1 : Int) → numberOfMatches n = n -ₚ (1 : Int) := by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]
 
 def numberOfMatches'rn := fun (n : Int) ↦ n -ₚ (1 : Int)
 

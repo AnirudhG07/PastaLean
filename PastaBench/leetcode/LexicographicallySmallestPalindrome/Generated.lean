@@ -101,6 +101,16 @@ theorem makeSmallestPalindrome_spec :
   all_goals sorry
   all_goals sorry
 
+theorem makeSmallestPalindrome_correct :
+    ∀ (s : String),
+      let result := (makeSmallestPalindrome s).run;
+      (PastaLean.pyLen result = PastaLean.pyLen s ∧
+          result = PastaLean.pySlice result none none (some (-(1 : Int)))) ∧
+        result ≤ s :=
+  by
+  intro s
+  exact makeSmallestPalindrome_spec True.intro
+
 def makeSmallestPalindrome'rn := fun (s : String) ↦
   Id.run
     (do

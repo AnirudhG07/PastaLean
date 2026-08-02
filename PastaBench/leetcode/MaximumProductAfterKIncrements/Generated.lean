@@ -35,11 +35,32 @@ from operator import *
 from math import *
 
 def maximumProduct(nums: List[int], k: int) -> int:
-    Requires(k >= 0)
     Requires(len(nums) > 0)
+    Requires(k >= 0)
+    Requires(all(x >= 0 for x in nums))
+
+    # The core mechanical property of the loop is that it adds a total of k to the sum
+    # of the elements in `nums`, one by one. This is the main provable fact.
+    initial_sum = sum(nums)
+    Ensures(sum(nums) == initial_sum + k)
+    Ensures(Result() >= 0)
+
     heapify(nums)
-    for _ in range(k):
+
+    # We introduce a loop counter `i` (changing `_` to `i`) to express the invariant.
+    # This does not change the runtime behavior as `i` is not used in the loop body.
+    for i in range(k):
+        Invariant(0 <= i <= k)
+        # The sum of elements increases by 1 in each iteration.
+        Invariant(sum(nums) == initial_sum + i)
+        # All numbers remain non-negative.
+        Invariant(all(x >= 0 for x in nums))
+        Decreases(k - i)
+
         heapreplace(nums, nums[0] + 1)
+
+    Assert(sum(nums) == initial_sum + k)
+
     mod = 10 ** 9 + 7
     return reduce(lambda x, y: x * y % mod, nums)
 -/
@@ -49,30 +70,74 @@ namespace PastaBench.leetcode.MaximumProductAfterKIncrements
 def maximumProduct := fun (nums : List Int) ↦ fun (k : Int) ↦
   (do
     let mut nums := nums
+    let mut initial_sum : Int := PastaLean.pySum nums
     nums := Libraries.heapq.pyHeapify nums
-    for _ in (PastaLean.pyRange k)do
+    for i in (PastaLean.pyRange k)do
+      let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i) && decide (i ≤ k))
+      -- The sum of elements increases by 1 in each iteration.
+      let _ := Libraries.passta.pyPassInvariant (PastaLean.pySum nums == initial_sum +ₚ i)
+      -- All numbers remain non-negative.
+      let _ :=
+        Libraries.passta.pyPassInvariant
+          (PastaLean.pyAll ((PastaLean.pyIter nums).map fun x => decide (x ≥ (0 : Int))))
+      let _ := Libraries.passta.pyPassDecreases (k -ₚ i)
       nums := Libraries.heapq.pyHeapreplaceRest nums (nums⦋(0 : Int)⦌ +ₚ (1 : Int))
+    let _ := Libraries.passta.pyPassAssert (PastaLean.pySum nums == initial_sum +ₚ k)
     let mut mod : Int := (10 : Int) ^ₚ (9 : Int) +ₚ (7 : Int)
     let __py_ret_1 := Libraries.functools.pyReduce nums fun (x : _) ↦ fun (y : _) ↦ x *ₚ y %ₚ mod
     return __py_ret_1 : Id _)
 
+@[spec]
 theorem maximumProduct_spec :
-    ⦃⌜k ≥ (0 : Int) ∧ PastaLean.pyLen nums > (0 : Int)⌝⦄ maximumProduct nums k ⦃⇓_ => ⌜True⌝⦄ :=
+    ⦃⌜(PastaLean.pyLen nums > (0 : Int) ∧ k ≥ (0 : Int)) ∧
+          PastaLean.pyAll ((PastaLean.pyIter nums).map fun x => decide (x ≥ (0 : Int)))⌝⦄
+      maximumProduct nums k ⦃⇓result => ⌜PastaLean.pySum nums = PastaLean.pySum nums +ₚ k ∧ result ≥ (0 : Int)⌝⦄ :=
   by
   try
     mvcgen [maximumProduct, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓cur => ⌜True⌝
+    · ⇓cur =>
+      ⌜let i := (cur.prefix.length : Int);
+        (((0 : Int) ≤ i ∧ i ≤ k) ∧ PastaLean.pySum nums = initial_sum +ₚ i) ∧
+          PastaLean.pyAll ((PastaLean.pyIter nums).map fun x => decide (x ≥ (0 : Int)))⌝
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
+
+theorem maximumProduct_correct :
+    ∀ (nums : List Int),
+      ∀ (k : Int),
+        (PastaLean.pyLen nums > (0 : Int) ∧ k ≥ (0 : Int)) ∧
+            PastaLean.pyAll ((PastaLean.pyIter nums).map fun x => decide (x ≥ (0 : Int))) →
+          let result := (maximumProduct nums k).run;
+          PastaLean.pySum nums = PastaLean.pySum nums +ₚ k ∧ result ≥ (0 : Int) :=
+  by
+  intro nums k hpre
+  exact maximumProduct_spec hpre
 
 def maximumProduct'rn := fun (nums : List Int) ↦ fun (k : Int) ↦
   Id.run
     (do
       let mut nums := nums
-      let _ := Libraries.passta.pyPassRequires (decide (k ≥ (0 : Int)))
       let _ := Libraries.passta.pyPassRequires (decide (PastaLean.pyLen nums > (0 : Int)))
+      let _ := Libraries.passta.pyPassRequires (decide (k ≥ (0 : Int)))
+      let _ :=
+        Libraries.passta.pyPassRequires (PastaLean.pyAll ((PastaLean.pyIter nums).map fun x => decide (x ≥ (0 : Int))))
+      -- The core mechanical property of the loop is that it adds a total of k to the sum
+      -- of the elements in `nums`, one by one. This is the main provable fact.
+      let mut initial_sum : Int := PastaLean.pySum nums
       nums := Libraries.heapq.pyHeapify nums
-      for _ in (PastaLean.pyRange k)do
+      -- We introduce a loop counter `i` (changing `_` to `i`) to express the invariant.
+      -- This does not change the runtime behavior as `i` is not used in the loop body.
+      for i in (PastaLean.pyRange k)do
+        let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i) && decide (i ≤ k))
+        -- The sum of elements increases by 1 in each iteration.
+        let _ := Libraries.passta.pyPassInvariant (PastaLean.pySum nums == initial_sum +ₚ i)
+        -- All numbers remain non-negative.
+        let _ :=
+          Libraries.passta.pyPassInvariant
+            (PastaLean.pyAll ((PastaLean.pyIter nums).map fun x => decide (x ≥ (0 : Int))))
+        let _ := Libraries.passta.pyPassDecreases (k -ₚ i)
         nums := Libraries.heapq.pyHeapreplaceRest nums (nums⦋(0 : Int)⦌ +ₚ (1 : Int))
+      let _ := Libraries.passta.pyPassAssert (PastaLean.pySum nums == initial_sum +ₚ k)
       let mut mod : Int := (10 : Int) ^ₚ (9 : Int) +ₚ (7 : Int)
       let __py_ret_1 := Libraries.functools.pyReduce nums fun (x : _) ↦ fun (y : _) ↦ x *ₚ y %ₚ mod
       return __py_ret_1)

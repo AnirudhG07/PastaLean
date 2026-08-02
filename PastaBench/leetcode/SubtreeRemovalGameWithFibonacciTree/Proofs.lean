@@ -49,8 +49,8 @@ def findGameWinner := fun (n : Int) ↦ n %ₚ (6 : Int) != (1 : Int)
 attribute [simp] findGameWinner
 
 @[taste_ingr]
-theorem findGameWinner_spec :
-    ∀ (n : Int), n ≥ (0 : Int) → (n %ₚ (6 : Int) ≠ (1 : Int)) = (n %ₚ (6 : Int) ≠ (1 : Int)) := by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]
+theorem findGameWinner_correct : ∀ (n : Int), n ≥ (0 : Int) → findGameWinner n = (n %ₚ (6 : Int) ≠ (1 : Int)) := by
+  intros; simp_all (config := { zetaDelta := true }) [taste_ingr]
 
 def findGameWinner'rn := fun (n : Int) ↦ n %ₚ (6 : Int) != (1 : Int)
 

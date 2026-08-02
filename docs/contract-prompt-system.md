@@ -78,7 +78,7 @@ Hard rules:
   contract breaks the whole proof — when unsure, write a weaker fact you are certain of rather than a
   strong one you are guessing at, and keep each assert as WEAK as suffices.
 - Prefer linear arithmetic over nonlinear; prefer division-free forms (write `2 * s == n * (n - 1)`,
-  never `s == n * (n - 1) // 2`).
+  never `s == n * (n - 1) // 2`). If multiple denominators exist like `((n+1)/2) + (m/3) = s/6`, then also try to take the factor above to make it `3(n+1) + 2m = s`.
 - Do not invent domain lemmas, do not restructure the code, do not change behaviour.
 - Output ONLY the annotated Python program, in a single ```python code block. No prose, no
   explanation outside the code.

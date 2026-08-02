@@ -1,0 +1,14 @@
+{
+  "task_id": "HumanEval/152",
+  "problem": "compare",
+  "module": "Compare",
+  "method": "compare",
+  "params": [
+    "game",
+    "guess"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

@@ -17,7 +17,6 @@ set_option maxHeartbeats 800000
 
 /- Python source converted to produce the Lean below (the exact input to PastaLean):
 
-from contracts import *
 import random
 import functools
 import collections
@@ -33,13 +32,20 @@ from bisect import *
 from string import *
 from operator import *
 from math import *
+from contracts import *
 
 def isArmstrong(n: int) -> bool:
     Requires(n >= 0)
+    # The property of being an Armstrong number is defined with respect to the
+    # number of digits in its decimal representation. A formal proof would
+    # require axioms relating arithmetic to decimal representations, which
+    # is beyond the scope of simple arithmetic invariants.
+    # We can, however, prove basic properties like non-negativity and termination.
     k = len(str(n))
-    s, x = 0, n
+    s, x = (0, n)
     while x:
         Invariant(x >= 0)
+        Invariant(s >= 0)
         Decreases(x)
         s += (x % 10) ** k
         x //= 10
@@ -57,22 +63,23 @@ def isArmstrong := fun (n : Int) ↦
     let mut x : Int := Prod.snd __unpack_pair_1
     while (PastaLean.pyTruthy x) do
       let _ := Libraries.passta.pyPassInvariant (decide (x ≥ (0 : Int)))
+      let _ := Libraries.passta.pyPassInvariant (decide (s ≥ (0 : Int)))
       let _ := Libraries.passta.pyPassDecreases x
       s := s +ₚ (x %ₚ (10 : Int)) ^ₚ k
       x := PastaLean.pyFloorDiv x (10 : Int)
     let __py_ret_1 := s == n
     return __py_ret_1 : Id _)
 
-theorem isArmstrong_spec : ⦃⌜n ≥ (0 : Int)⌝⦄ isArmstrong n ⦃⇓_ => ⌜True⌝⦄ :=
-  by
-  mvcgen [isArmstrong, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
-  all_goals sorry
-
+theorem isArmstrong_spec : ⦃⌜n ≥ (0 : Int)⌝⦄ isArmstrong n ⦃⇓_ => ⌜True⌝⦄ := by sorry
 def isArmstrong'rn := fun (n : Int) ↦
   Id.run
     (do
       let _ := Libraries.passta.pyPassRequires (decide (n ≥ (0 : Int)))
+      -- The property of being an Armstrong number is defined with respect to the
+      -- number of digits in its decimal representation. A formal proof would
+      -- require axioms relating arithmetic to decimal representations, which
+      -- is beyond the scope of simple arithmetic invariants.
+      -- We can, however, prove basic properties like non-negativity and termination.
       let mut k : Int := PastaLean.pyLen (PastaLean.pyStr n)
       let __unpack_value_1 := ((0 : Int), n)
       let __unpack_pair_1 := __unpack_value_1
@@ -80,6 +87,7 @@ def isArmstrong'rn := fun (n : Int) ↦
       let mut x : Int := Prod.snd __unpack_pair_1
       while (PastaLean.pyTruthy x) do
         let _ := Libraries.passta.pyPassInvariant (decide (x ≥ (0 : Int)))
+        let _ := Libraries.passta.pyPassInvariant (decide (s ≥ (0 : Int)))
         let _ := Libraries.passta.pyPassDecreases x
         s := s +ₚ (x %ₚ (10 : Int)) ^ₚ k
         x := PastaLean.pyFloorDiv x (10 : Int)

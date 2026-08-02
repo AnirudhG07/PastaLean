@@ -99,6 +99,15 @@ theorem lengthOfLIS_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
+theorem lengthOfLIS_correct :
+    ∀ (nums : List Int),
+      PastaLean.pyLen nums > (0 : Int) →
+        let result := (lengthOfLIS nums).run;
+        (1 : Int) ≤ result ∧ result ≤ PastaLean.pyLen nums :=
+  by
+  intro nums hpre
+  exact lengthOfLIS_spec hpre
+
 def lengthOfLIS'rn := fun (nums : List Int) ↦
   Id.run
     (do

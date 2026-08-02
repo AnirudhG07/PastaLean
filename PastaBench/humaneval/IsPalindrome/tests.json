@@ -1,0 +1,202 @@
+[
+  {
+    "input": "text = ''",
+    "output": "True"
+  },
+  {
+    "input": "text = 'aba'",
+    "output": "True"
+  },
+  {
+    "input": "text = 'aaaaa'",
+    "output": "True"
+  },
+  {
+    "input": "text = 'zbcd'",
+    "output": "False"
+  },
+  {
+    "input": "text = 'xywyx'",
+    "output": "True"
+  },
+  {
+    "input": "text = 'xywyz'",
+    "output": "False"
+  },
+  {
+    "input": "text = 'xywzx'",
+    "output": "False"
+  },
+  {
+    "input": "text = 'a'",
+    "output": "True"
+  },
+  {
+    "input": "text = 'ab'",
+    "output": "False"
+  },
+  {
+    "input": "text = 'abc'",
+    "output": "False"
+  },
+  {
+    "input": "text = 'abca'",
+    "output": "False"
+  },
+  {
+    "input": "text = 'racecar'",
+    "output": "True"
+  },
+  {
+    "input": "text = 'never odd or even'",
+    "output": "False"
+  },
+  {
+    "input": "text = 'step on no pets'",
+    "output": "True"
+  },
+  {
+    "input": "text = 'Was it a car or a cat I saw?'",
+    "output": "False"
+  },
+  {
+    "input": "text = 'radar'",
+    "output": "True"
+  },
+  {
+    "input": "text = 'refer'",
+    "output": "True"
+  },
+  {
+    "input": "text = 'bab'",
+    "output": "True"
+  },
+  {
+    "input": "text = 'aabc'",
+    "output": "False"
+  },
+  {
+    "input": "text = 'Was it a car or a cat I saw?refer'",
+    "output": "False"
+  },
+  {
+    "input": "text = 'Was it a car or a sacat I saw?'",
+    "output": "False"
+  },
+  {
+    "input": "text = 'aabca'",
+    "output": "False"
+  },
+  {
+    "input": "text = 'Was it a car ostep on no petsr a ca t I saw?'",
+    "output": "False"
+  },
+  {
+    "input": "text = 'Was ait a car or a sacat I saw?'",
+    "output": "False"
+  },
+  {
+    "input": "text = 'Was it a car orWas it a car or a cat I saw?refer a sacat I saw?'",
+    "output": "False"
+  },
+  {
+    "input": "text = 'reacecar'",
+    "output": "False"
+  },
+  {
+    "input": "text = 'aWas ait a car or a sacat I saw?b'",
+    "output": "False"
+  },
+  {
+    "input": "text = 'reWas it a car or a cat I saw?fer'",
+    "output": "False"
+  },
+  {
+    "input": "text = 'frefer'",
+    "output": "False"
+  },
+  {
+    "input": "text = 'aaWas it a car or a cat I saw?bWas it a car ostep on no petsr a ca t I saw?ca'",
+    "output": "False"
+  },
+  {
+    "input": "text = 'abbcc'",
+    "output": "False"
+  },
+  {
+    "input": "text = 'aaWas it a car or a cat I rbWas it a car ostep on no petsr a ca t I saw?ca'",
+    "output": "False"
+  },
+  {
+    "input": "text = 'abbc'",
+    "output": "False"
+  },
+  {
+    "input": "text = 'aaWas it a car or a cat I rbWas it a car ostep on no petsr a cafrefer t I saw?ca'",
+    "output": "False"
+  },
+  {
+    "input": "text = 'abcaabca'",
+    "output": "False"
+  },
+  {
+    "input": "text = 'areferaWas it a car or a cat I rbWas it a car ostep on no petsr a ca t I saw?ca'",
+    "output": "False"
+  },
+  {
+    "input": "text = 'rar'",
+    "output": "True"
+  },
+  {
+    "input": "text = 'Was it a car or I rbWas it a car ostep on no petsr a ca t I saw?cat I saw?refer'",
+    "output": "False"
+  },
+  {
+    "input": "text = 'babb'",
+    "output": "False"
+  },
+  {
+    "input": "text = 'never odd or  even'",
+    "output": "False"
+  },
+  {
+    "input": "text = 'abbbc'",
+    "output": "False"
+  },
+  {
+    "input": "text = 'never odd or e ven'",
+    "output": "False"
+  },
+  {
+    "input": "text = 'aa'",
+    "output": "True"
+  },
+  {
+    "input": "text = 'nXHRf'",
+    "output": "False"
+  },
+  {
+    "input": "text = 'Was it a car or a cat I saw?rr'",
+    "output": "False"
+  },
+  {
+    "input": "text = 'ranever oddWas it a car or a sacat I saw? venr'",
+    "output": "False"
+  },
+  {
+    "input": "text = 'babbabcca'",
+    "output": "False"
+  },
+  {
+    "input": "text = 'baabbcbbabcca'",
+    "output": "False"
+  },
+  {
+    "input": "text = 'aaWas it a car or a cat I saw?bWas it a car osteaabcp on no petsrr a ca t I saw?ca'",
+    "output": "False"
+  },
+  {
+    "input": "text = 'rereWas it a car or a cat I saw?feracecar'",
+    "output": "False"
+  }
+]

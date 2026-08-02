@@ -17,15 +17,53 @@ set_option maxHeartbeats 800000
 
 /- Python source converted to produce the Lean below (the exact input to PastaLean):
 
+import random
+import functools
+import collections
+import string
+import math
+import datetime
+from typing import *
+from functools import *
+from collections import *
+from itertools import *
+from heapq import *
+from bisect import *
+from string import *
+from operator import *
+from math import *
 from contracts import *
-
 
 def maxA(n: int) -> int:
     Requires(n >= 0)
+    # The result is the maximum number of A's, which is always at least n
+    # (achieved by just typing the 'A' key n times).
+    Ensures(Result() >= n)
+
     dp = list(range(n + 1))
+    Assert(len(dp) == n + 1)
+
     for i in range(3, n + 1):
+        # Loop counter stays within the bounds of the dp array.
+        Invariant(3 <= i <= n + 1)
+        Invariant(len(dp) == n + 1)
+        # Key invariant: Every entry in the dp table is at least its index.
+        # This is true after initialization. The inner loop only increases dp[i]
+        # from its initial value of i, using non-negative terms, so the
+        # property is maintained for all elements.
+        Invariant(all(dp[k] >= k for k in range(n + 1)))
+
         for j in range(2, i - 1):
+            # Index bounds are critical for proving memory safety of the array accesses.
+            Invariant(0 <= i < len(dp))
+            Invariant(0 <= j - 1 < len(dp))
+
             dp[i] = max(dp[i], dp[j - 1] * (i - j))
+
+    # The loop invariant `all(dp[k] >= k ...)` holds upon termination.
+    # A specific instance of this is that dp[n] >= n, which is what the
+    # postcondition requires, since Result() will be dp[-1] == dp[n].
+    Assert(dp[n] >= n)
     return dp[-1]
 -/
 
@@ -34,28 +72,80 @@ namespace PastaBench.leetcode.N4KeysKeyboard
 def maxA := fun (n : Int) ↦
   (do
     let mut dp : List Int := PastaLean.pyList (PastaLean.pyRange (n +ₚ (1 : Int)))
+    let _ := Libraries.passta.pyPassAssert (PastaLean.pyLen dp == n +ₚ (1 : Int))
     for i in (PastaLean.pyRange (n +ₚ (1 : Int)) (3 : Int))do
+      -- Loop counter stays within the bounds of the dp array.
+      let _ := Libraries.passta.pyPassInvariant (decide ((3 : Int) ≤ i) && decide (i ≤ n +ₚ (1 : Int)))
+      let _ := Libraries.passta.pyPassInvariant (PastaLean.pyLen dp == n +ₚ (1 : Int))
+      -- Key invariant: Every entry in the dp table is at least its index.
+      -- This is true after initialization. The inner loop only increases dp[i]
+      -- from its initial value of i, using non-negative terms, so the
+      -- property is maintained for all elements.
+      let _ :=
+        Libraries.passta.pyPassInvariant
+          (PastaLean.pyAll ((PastaLean.pyRange (n +ₚ (1 : Int))).map fun k => decide (dp⦋k⦌ ≥ k)))
       for j in (PastaLean.pyRange (i -ₚ (1 : Int)) (2 : Int))do
+        -- Index bounds are critical for proving memory safety of the array accesses.
+        let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i) && decide (i < PastaLean.pyLen dp))
+        let _ :=
+          Libraries.passta.pyPassInvariant
+            (decide ((0 : Int) ≤ j -ₚ (1 : Int)) && decide (j -ₚ (1 : Int) < PastaLean.pyLen dp))
         dp := PastaLean.pySetItem dp i (PastaLean.pyMax [dp⦋i⦌, dp⦋j -ₚ (1 : Int)⦌ *ₚ (i -ₚ j)])
+    let _ := Libraries.passta.pyPassAssert (decide (dp⦋n⦌ ≥ n))
     let __py_ret_1 := dp⦋(-1 : Int)⦌
     return __py_ret_1 : Id _)
 
-theorem maxA_spec : ⦃⌜n ≥ (0 : Int)⌝⦄ maxA n ⦃⇓_ => ⌜True⌝⦄ :=
+@[spec]
+theorem maxA_spec : ⦃⌜n ≥ (0 : Int)⌝⦄ maxA n ⦃⇓result => ⌜result ≥ n⌝⦄ :=
   by
   try
     mvcgen [maxA, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓cur => ⌜True⌝
+    · ⇓cur =>
+      ⌜let i := (cur.prefix.length : Int);
+        (((3 : Int) ≤ i ∧ i ≤ n +ₚ (1 : Int)) ∧ PastaLean.pyLen dp = n +ₚ (1 : Int)) ∧
+          PastaLean.pyAll ((PastaLean.pyRange (n +ₚ (1 : Int))).map fun k => decide (dp⦋k⦌ ≥ k))⌝
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
+
+theorem maxA_correct :
+    ∀ (n : Int),
+      n ≥ (0 : Int) →
+        let result := (maxA n).run;
+        result ≥ n :=
+  by
+  intro n hpre
+  exact maxA_spec hpre
 
 def maxA'rn := fun (n : Int) ↦
   Id.run
     (do
       let _ := Libraries.passta.pyPassRequires (decide (n ≥ (0 : Int)))
+      -- The result is the maximum number of A's, which is always at least n
+      -- (achieved by just typing the 'A' key n times).
       let mut dp : List Int := PastaLean.pyList (PastaLean.pyRange (n +ₚ (1 : Int)))
+      let _ := Libraries.passta.pyPassAssert (PastaLean.pyLen dp == n +ₚ (1 : Int))
       for i in (PastaLean.pyRange (n +ₚ (1 : Int)) (3 : Int))do
+        -- Loop counter stays within the bounds of the dp array.
+        let _ := Libraries.passta.pyPassInvariant (decide ((3 : Int) ≤ i) && decide (i ≤ n +ₚ (1 : Int)))
+        let _ := Libraries.passta.pyPassInvariant (PastaLean.pyLen dp == n +ₚ (1 : Int))
+        -- Key invariant: Every entry in the dp table is at least its index.
+        -- This is true after initialization. The inner loop only increases dp[i]
+        -- from its initial value of i, using non-negative terms, so the
+        -- property is maintained for all elements.
+        let _ :=
+          Libraries.passta.pyPassInvariant
+            (PastaLean.pyAll ((PastaLean.pyRange (n +ₚ (1 : Int))).map fun k => decide (dp⦋k⦌ ≥ k)))
         for j in (PastaLean.pyRange (i -ₚ (1 : Int)) (2 : Int))do
+          -- Index bounds are critical for proving memory safety of the array accesses.
+          let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i) && decide (i < PastaLean.pyLen dp))
+          let _ :=
+            Libraries.passta.pyPassInvariant
+              (decide ((0 : Int) ≤ j -ₚ (1 : Int)) && decide (j -ₚ (1 : Int) < PastaLean.pyLen dp))
           dp := PastaLean.pySetItem dp i (PastaLean.pyMax [dp⦋i⦌, dp⦋j -ₚ (1 : Int)⦌ *ₚ (i -ₚ j)])
+      -- The loop invariant `all(dp[k] >= k ...)` holds upon termination.
+      -- A specific instance of this is that dp[n] >= n, which is what the
+      -- postcondition requires, since Result() will be dp[-1] == dp[n].
+      let _ := Libraries.passta.pyPassAssert (decide (dp⦋n⦌ ≥ n))
       let __py_ret_1 := dp⦋(-1 : Int)⦌
       return __py_ret_1)
 

@@ -66,6 +66,15 @@ theorem minSteps_spec : ⦃⌜True⌝⦄ minSteps s t ⦃⇓ans => ⌜ans ≥ (0
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
+theorem minSteps_correct :
+    ∀ (s : String),
+      ∀ (t : String),
+        let ans := (minSteps s t).run;
+        ans ≥ (0 : Int) :=
+  by
+  intro s t
+  exact minSteps_spec True.intro
+
 def minSteps'rn := fun (s : String) ↦ fun (t : String) ↦
   Id.run
     (do

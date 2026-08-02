@@ -1,0 +1,15 @@
+{
+  "task_id": "HumanEval/157",
+  "problem": "right-angle-triangle",
+  "module": "RightAngleTriangle",
+  "method": "right_angle_triangle",
+  "params": [
+    "a",
+    "b",
+    "c"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

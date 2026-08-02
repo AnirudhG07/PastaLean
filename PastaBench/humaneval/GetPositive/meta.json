@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/30",
+  "problem": "get-positive",
+  "module": "GetPositive",
+  "method": "get_positive",
+  "params": [
+    "l"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

@@ -159,9 +159,34 @@ theorem lastSubstring_spec :
           ((PastaLean.pyRange (PastaLean.pyLen s)).map fun p =>
             decide (result ≥ PastaLean.pySlice s (some p) none none))⌝⦄ :=
   by
-  mvcgen [lastSubstring, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
+  try
+    mvcgen [lastSubstring, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · fun s =>
+      let k := s |>.snd |>.snd;
+      let j := s |>.snd |>.fst;
+      let i := s |>.fst;
+      (⟨((3 : Int) *ₚ PastaLean.pyLen s -ₚ (i +ₚ j +ₚ k)).toNat⟩ : ULift Nat)
+    · ⇓s =>
+      ⌜Sum.elim
+          (fun st =>
+            let k := st |>.snd |>.snd;
+            let j := st |>.snd |>.fst;
+            let i := st |>.fst;
+            (((((0 : Int) ≤ i ∧ i < j) ∧ j ≤ PastaLean.pyLen s) ∧ (0 : Int) ≤ k) ∧ j +ₚ k < PastaLean.pyLen s) ∧
+              i +ₚ k < PastaLean.pyLen s)
+          (fun _ => True) s⌝
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
-  all_goals sorry
+
+theorem lastSubstring_correct :
+    ∀ (s : String),
+      let result := (lastSubstring s).run;
+      PastaLean.pyAll
+        ((PastaLean.pyRange (PastaLean.pyLen s)).map fun p =>
+          decide (result ≥ PastaLean.pySlice s (some p) none none)) :=
+  by
+  intro s
+  exact lastSubstring_spec True.intro
 
 def lastSubstring'rn := fun (s : String) ↦
   Id.run

@@ -116,6 +116,16 @@ theorem replaceNonCoprimes_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
+theorem replaceNonCoprimes_correct :
+    ∀ (nums : List Int),
+      let stk := (replaceNonCoprimes nums).run;
+      PastaLean.pyAll
+        ((PastaLean.pyRange (PastaLean.pyLen stk -ₚ (1 : Int))).map fun i =>
+          Libraries.math.pyMathGcd stk⦋i⦌ stk⦋i +ₚ (1 : Int)⦌ == (1 : Int)) :=
+  by
+  intro nums
+  exact replaceNonCoprimes_spec True.intro
+
 def replaceNonCoprimes'rn := fun (nums : List Int) ↦
   Id.run
     (do

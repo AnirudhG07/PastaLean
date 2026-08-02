@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/15",
+  "problem": "string-sequence",
+  "module": "StringSequence",
+  "method": "string_sequence",
+  "params": [
+    "n"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

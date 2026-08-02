@@ -195,6 +195,20 @@ theorem maxHeight_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
+theorem maxHeight_correct :
+    ∀ (cuboids : List (List Int)),
+      (PastaLean.pyLen cuboids > (0 : Int) ∧
+            PastaLean.pyAll ((PastaLean.pyIter cuboids).map fun c => PastaLean.pyLen c == (3 : Int))) ∧
+          PastaLean.pyAll
+            ((PastaLean.pyIter cuboids).map fun c =>
+              PastaLean.pyAll ((PastaLean.pyIter c).map fun d => decide (d ≥ (0 : Int)))) →
+        let result := (maxHeight cuboids).run;
+        PastaLean.pyAll ((PastaLean.pyIter cuboids).map fun c => decide (result ≥ c⦋(2 : Int)⦌)) ∧
+          result ≥ (0 : Int) :=
+  by
+  intro cuboids hpre
+  exact maxHeight_spec hpre
+
 def maxHeight'rn := fun (cuboids : List (List Int)) ↦
   Id.run
     (do

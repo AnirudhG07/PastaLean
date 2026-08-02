@@ -31,11 +31,9 @@ def minBitFlips := fun (start : Int) ↦ fun (goal : Int) ↦ PastaLean.pyBitCou
 attribute [simp] minBitFlips
 
 @[taste_ingr]
-theorem minBitFlips_spec :
-    ∀ (start : Int),
-      ∀ (goal : Int),
-        PastaLean.pyBitCount (PastaLean.pyBitXor start goal) = PastaLean.pyBitCount (PastaLean.pyBitXor start goal) :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]
+theorem minBitFlips_correct :
+    ∀ (start : Int), ∀ (goal : Int), minBitFlips start goal = PastaLean.pyBitCount (PastaLean.pyBitXor start goal) := by
+  intros; simp_all (config := { zetaDelta := true }) [taste_ingr]
 
 def minBitFlips'rn := fun (start : Int) ↦ fun (goal : Int) ↦ PastaLean.pyBitCount (PastaLean.pyBitXor start goal)
 

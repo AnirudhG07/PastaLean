@@ -1,0 +1,202 @@
+[
+  {
+    "input": "s0 = 'eabcdzzzz', s1 = 'dddzzzzzzzddeddabc'",
+    "output": "True"
+  },
+  {
+    "input": "s0 = 'abcd', s1 = 'dddddddabc'",
+    "output": "True"
+  },
+  {
+    "input": "s0 = 'dddddddabc', s1 = 'abcd'",
+    "output": "True"
+  },
+  {
+    "input": "s0 = 'eabcd', s1 = 'dddddddabc'",
+    "output": "False"
+  },
+  {
+    "input": "s0 = 'abcd', s1 = 'dddddddabcf'",
+    "output": "False"
+  },
+  {
+    "input": "s0 = 'eabcdzzzz', s1 = 'dddzzzzzzzddddabc'",
+    "output": "False"
+  },
+  {
+    "input": "s0 = 'aabb', s1 = 'aaccc'",
+    "output": "False"
+  },
+  {
+    "input": "s0 = 'ab', s1 = 'cd'",
+    "output": "False"
+  },
+  {
+    "input": "s0 = 'abcd', s1 = 'cbad'",
+    "output": "True"
+  },
+  {
+    "input": "s0 = 'aaa', s1 = 'aaa'",
+    "output": "True"
+  },
+  {
+    "input": "s0 = 'abc', s1 = 'def'",
+    "output": "False"
+  },
+  {
+    "input": "s0 = 'aaabbbccc', s1 = 'abbabcbc'",
+    "output": "True"
+  },
+  {
+    "input": "s0 = 'abcdefg', s1 = 'gfedcba'",
+    "output": "True"
+  },
+  {
+    "input": "s0 = 'abbcccddddeeeee', s1 = 'abcde'",
+    "output": "True"
+  },
+  {
+    "input": "s0 = '12345', s1 = '54321'",
+    "output": "True"
+  },
+  {
+    "input": "s0 = 'hello', s1 = 'world'",
+    "output": "False"
+  },
+  {
+    "input": "s0 = '', s1 = ''",
+    "output": "True"
+  },
+  {
+    "input": "s0 = '524321', s1 = '5432'",
+    "output": "False"
+  },
+  {
+    "input": "s0 = 'cdcd', s1 = ''",
+    "output": "False"
+  },
+  {
+    "input": "s0 = 'aaabbbccc', s1 = 'abbbabcbc'",
+    "output": "True"
+  },
+  {
+    "input": "s0 = 'abbabcbc', s1 = 'abc'",
+    "output": "True"
+  },
+  {
+    "input": "s0 = '123445', s1 = '54321'",
+    "output": "True"
+  },
+  {
+    "input": "s0 = 'hoelldefo', s1 = 'helldefo'",
+    "output": "True"
+  },
+  {
+    "input": "s0 = 'aaabbbccc', s1 = 'world'",
+    "output": "False"
+  },
+  {
+    "input": "s0 = 'adbbcccddddeeeeehelldefo', s1 = 'abcde'",
+    "output": "False"
+  },
+  {
+    "input": "s0 = 'abcde', s1 = 'abcde'",
+    "output": "True"
+  },
+  {
+    "input": "s0 = 'abecde', s1 = 'abecde'",
+    "output": "True"
+  },
+  {
+    "input": "s0 = '5432cababecdead', s1 = 'cababecdead'",
+    "output": "False"
+  },
+  {
+    "input": "s0 = '5432cababecdead', s1 = '5432cababecdead'",
+    "output": "True"
+  },
+  {
+    "input": "s0 = '5432caaaababecdead', s1 = '5432cababecdead'",
+    "output": "True"
+  },
+  {
+    "input": "s0 = 'ab54321fg', s1 = 'gfedcba'",
+    "output": "False"
+  },
+  {
+    "input": "s0 = 'aaa1234a5bbbccc', s1 = 'aaa1234a5bbbccc'",
+    "output": "True"
+  },
+  {
+    "input": "s0 = '123445', s1 = '514321'",
+    "output": "True"
+  },
+  {
+    "input": "s0 = '5432caaaabacababecdeadbecdead', s1 = '5432cababecdead'",
+    "output": "True"
+  },
+  {
+    "input": "s0 = 'ab', s1 = 'cbad'",
+    "output": "False"
+  },
+  {
+    "input": "s0 = 'abcdegfedcba', s1 = 'abcdegfedcba'",
+    "output": "True"
+  },
+  {
+    "input": "s0 = '5432', s1 = 'cdcd5432'",
+    "output": "False"
+  },
+  {
+    "input": "s0 = '543543221', s1 = 'abcdeadbbcccddddeeeeehelldefogfedcba'",
+    "output": "False"
+  },
+  {
+    "input": "s0 = '5432caaaabacaabcd', s1 = 'abcd'",
+    "output": "False"
+  },
+  {
+    "input": "s0 = 'abbcccddddeeeee', s1 = ''",
+    "output": "False"
+  },
+  {
+    "input": "s0 = '123445', s1 = '5143241'",
+    "output": "True"
+  },
+  {
+    "input": "s0 = '5432caaaabacaababbcccddddeeeeecd', s1 = 'abcd'",
+    "output": "False"
+  },
+  {
+    "input": "s0 = 'llo', s1 = 'helleo'",
+    "output": "False"
+  },
+  {
+    "input": "s0 = '123445', s1 = ''",
+    "output": "False"
+  },
+  {
+    "input": "s0 = 'abcdcb5143241a514321de', s1 = 'abcdcbadcbade'",
+    "output": "False"
+  },
+  {
+    "input": "s0 = 'abcd', s1 = 'aabcdbcd'",
+    "output": "True"
+  },
+  {
+    "input": "s0 = 'abcdegfedcba', s1 = 'aabcdegfedcba'",
+    "output": "True"
+  },
+  {
+    "input": "s0 = 'abcdeadbbcccddddeeeeehelldefogfedcba', s1 = '54321'",
+    "output": "False"
+  },
+  {
+    "input": "s0 = 'abcdeadbbcccddddeeeeehelabdcba', s1 = '54321'",
+    "output": "False"
+  },
+  {
+    "input": "s0 = 'cdcd', s1 = 'ccd5143241cd'",
+    "output": "False"
+  }
+]

@@ -17,7 +17,6 @@ set_option maxHeartbeats 800000
 
 /- Python source converted to produce the Lean below (the exact input to PastaLean):
 
-from contracts import *
 import random
 import functools
 import collections
@@ -33,11 +32,21 @@ from bisect import *
 from string import *
 from operator import *
 from math import *
+from contracts import *
 
 def maxScore(prices: List[int]) -> int:
     Requires(len(prices) > 0)
+    # This property holds if all prices are non-negative.
+    # With negative prices, a group sum could be less than the maximum element in that group.
+    Requires(all(p >= 0 for p in prices))
+    # The maximum group sum is at least as large as the maximum single price.
+    Ensures(Result() >= max(prices))
+
     cnt = Counter()
     for i, x in enumerate(prices):
+        Invariant(0 <= i <= len(prices))
+        # Since all input prices are non-negative, all accumulated sums in the counter must also be non-negative.
+        Invariant(all(v >= 0 for v in cnt.values()))
         cnt[x - i] += x
     return max(cnt.values())
 -/
@@ -50,24 +59,54 @@ def maxScore := fun (prices : List Int) ↦
     for _pair_1 in (PastaLean.pyIter (PastaLean.pyEnumerate prices))do
       let i := Prod.fst _pair_1
       let x := Prod.snd _pair_1
+      let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i) && decide (i ≤ PastaLean.pyLen prices))
+      -- Since all input prices are non-negative, all accumulated sums in the counter must also be non-negative.
+      let _ :=
+        Libraries.passta.pyPassInvariant
+          (PastaLean.pyAll ((PastaLean.pyIter (PastaLean.pyAnys cnt)).map fun v => decide (v ≥ (0 : Int))))
       cnt := PastaLean.pySetItem cnt (x -ₚ i) (cnt⦋x -ₚ i⦌ +ₚ x)
     let __py_ret_1 := PastaLean.pyMax (PastaLean.pyAnys cnt)
     return __py_ret_1 : Id _)
 
-theorem maxScore_spec : ⦃⌜PastaLean.pyLen prices > (0 : Int)⌝⦄ maxScore prices ⦃⇓_ => ⌜True⌝⦄ :=
+@[spec]
+theorem maxScore_spec :
+    ⦃⌜PastaLean.pyLen prices > (0 : Int) ∧
+          PastaLean.pyAll ((PastaLean.pyIter prices).map fun p => decide (p ≥ (0 : Int)))⌝⦄
+      maxScore prices ⦃⇓result => ⌜result ≥ PastaLean.pyMax prices⌝⦄ :=
   by
   mvcgen [maxScore, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
   simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
+theorem maxScore_correct :
+    ∀ (prices : List Int),
+      PastaLean.pyLen prices > (0 : Int) ∧
+          PastaLean.pyAll ((PastaLean.pyIter prices).map fun p => decide (p ≥ (0 : Int))) →
+        let result := (maxScore prices).run;
+        result ≥ PastaLean.pyMax prices :=
+  by
+  intro prices hpre
+  exact maxScore_spec hpre
+
 def maxScore'rn := fun (prices : List Int) ↦
   Id.run
     (do
       let _ := Libraries.passta.pyPassRequires (decide (PastaLean.pyLen prices > (0 : Int)))
+      -- This property holds if all prices are non-negative.
+      -- With negative prices, a group sum could be less than the maximum element in that group.
+      let _ :=
+        Libraries.passta.pyPassRequires
+          (PastaLean.pyAll ((PastaLean.pyIter prices).map fun p => decide (p ≥ (0 : Int))))
+      -- The maximum group sum is at least as large as the maximum single price.
       let mut cnt : Libraries.collections.PyDefaultDict Int Int := Libraries.collections.pyCounterEmpty
       for _pair_1 in (PastaLean.pyIter (PastaLean.pyEnumerate prices))do
         let i := Prod.fst _pair_1
         let x := Prod.snd _pair_1
+        let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i) && decide (i ≤ PastaLean.pyLen prices))
+        -- Since all input prices are non-negative, all accumulated sums in the counter must also be non-negative.
+        let _ :=
+          Libraries.passta.pyPassInvariant
+            (PastaLean.pyAll ((PastaLean.pyIter (PastaLean.pyAnys cnt)).map fun v => decide (v ≥ (0 : Int))))
         cnt := PastaLean.pySetItem cnt (x -ₚ i) (cnt⦋x -ₚ i⦌ +ₚ x)
       let __py_ret_1 := PastaLean.pyMax (PastaLean.pyAnys cnt)
       return __py_ret_1)

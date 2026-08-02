@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/42",
+  "problem": "incr-list",
+  "module": "IncrList",
+  "method": "incr_list",
+  "params": [
+    "l"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

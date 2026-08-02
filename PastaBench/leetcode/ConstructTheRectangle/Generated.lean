@@ -50,6 +50,15 @@ theorem constructRectangle_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
+theorem constructRectangle_correct :
+    ∀ (area : Int),
+      area ≥ (1 : Int) →
+        let result := (constructRectangle area).run;
+        result⦋(0 : Int)⦌ *ₚ result⦋(1 : Int)⦌ = area :=
+  by
+  intro area hpre
+  exact constructRectangle_spec hpre
+
 def constructRectangle'rn := fun (area : Int) ↦
   Id.run
     (do

@@ -65,7 +65,7 @@ def computeArea := fun (ax1 : Int) ↦ fun (ay1 : Int) ↦ fun (ax2 : Int) ↦ f
 attribute [simp] computeArea
 
 @[taste_ingr]
-theorem computeArea_spec :
+theorem computeArea_correct :
     ∀ (ax1 : Int),
       ∀ (ay1 : Int),
         ∀ (ax2 : Int),
@@ -82,11 +82,9 @@ theorem computeArea_spec :
                       ay2 ≥ ay1 →
                         bx2 ≥ bx1 →
                           by2 ≥ by1 →
-                            (a +ₚ b -ₚ PastaLean.pyMax [height, (0 : Int)] *ₚ PastaLean.pyMax [width, (0 : Int)] ≥
-                                  (ax2 -ₚ ax1) *ₚ (ay2 -ₚ ay1) ∧
-                                a +ₚ b -ₚ PastaLean.pyMax [height, (0 : Int)] *ₚ PastaLean.pyMax [width, (0 : Int)] ≥
-                                  (bx2 -ₚ bx1) *ₚ (by2 -ₚ by1)) ∧
-                              a +ₚ b -ₚ PastaLean.pyMax [height, (0 : Int)] *ₚ PastaLean.pyMax [width, (0 : Int)] ≤
+                            (computeArea ax1 ay1 ax2 ay2 bx1 by1 bx2 by2 ≥ (ax2 -ₚ ax1) *ₚ (ay2 -ₚ ay1) ∧
+                                computeArea ax1 ay1 ax2 ay2 bx1 by1 bx2 by2 ≥ (bx2 -ₚ bx1) *ₚ (by2 -ₚ by1)) ∧
+                              computeArea ax1 ay1 ax2 ay2 bx1 by1 bx2 by2 ≤
                                 (ax2 -ₚ ax1) *ₚ (ay2 -ₚ ay1) +ₚ (bx2 -ₚ bx1) *ₚ (by2 -ₚ by1) :=
   by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
 

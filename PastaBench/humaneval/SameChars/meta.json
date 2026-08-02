@@ -1,0 +1,14 @@
+{
+  "task_id": "HumanEval/54",
+  "problem": "same-chars",
+  "module": "SameChars",
+  "method": "same_chars",
+  "params": [
+    "s0",
+    "s1"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

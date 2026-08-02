@@ -89,6 +89,15 @@ theorem numRabbits_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
+theorem numRabbits_correct :
+    ∀ (answers : List Int),
+      PastaLean.pyAll ((PastaLean.pyIter answers).map fun a => decide (a ≥ (0 : Int))) →
+        let ans := (numRabbits answers).run;
+        ans ≥ (0 : Int) ∧ ans ≥ PastaLean.pyLen answers :=
+  by
+  intro answers hpre
+  exact numRabbits_spec hpre
+
 def numRabbits'rn := fun (answers : List Int) ↦
   Id.run
     (do

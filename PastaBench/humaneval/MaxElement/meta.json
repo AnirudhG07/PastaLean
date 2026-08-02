@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/35",
+  "problem": "max-element",
+  "module": "MaxElement",
+  "method": "max_element",
+  "params": [
+    "l"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

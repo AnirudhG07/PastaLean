@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/142",
+  "problem": "sum-squares",
+  "module": "SumSquares142",
+  "method": "sum_squares",
+  "params": [
+    "lst"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

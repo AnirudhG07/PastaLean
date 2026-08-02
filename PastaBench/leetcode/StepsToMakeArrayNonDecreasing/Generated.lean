@@ -95,6 +95,15 @@ theorem totalSteps_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
+theorem totalSteps_correct :
+    ∀ (nums : List Int),
+      PastaLean.pyLen nums > (0 : Int) →
+        let result := (totalSteps nums).run;
+        result ≥ (0 : Int) ∧ result < PastaLean.pyLen nums :=
+  by
+  intro nums hpre
+  exact totalSteps_spec hpre
+
 def totalSteps'rn := fun (nums : List Int) ↦
   Id.run
     (do

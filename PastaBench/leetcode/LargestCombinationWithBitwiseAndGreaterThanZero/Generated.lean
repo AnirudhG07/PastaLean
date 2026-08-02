@@ -36,9 +36,24 @@ from math import *
 
 def largestCombination(candidates: List[int]) -> int:
     Requires(len(candidates) > 0)
+    Requires(all(c >= 0 for c in candidates))
+    Ensures(0 <= Result())
+    Ensures(Result() <= len(candidates))
+
     ans = 0
-    for i in range(max(candidates).bit_length()):
+    limit = max(candidates).bit_length()
+    for i in range(limit):
+        Invariant(0 <= i <= limit)
+        Invariant(0 <= ans)
+        Invariant(ans <= len(candidates))
+        Decreases(limit - i)
+
+        # The inner expression counts how many numbers in `candidates`
+        # have the i-th bit set. This count must be between 0 and len(candidates).
+        # `ans` is the running maximum of these counts.
         ans = max(ans, sum((x >> i & 1 for x in candidates)))
+    
+    Assert(0 <= ans <= len(candidates))
     return ans
 -/
 
@@ -47,33 +62,70 @@ namespace PastaBench.leetcode.LargestCombinationWithBitwiseAndGreaterThanZero
 def largestCombination := fun (candidates : List Int) ↦
   (do
     let mut ans : Int := (0 : Int)
-    for i in (PastaLean.pyRange (PastaLean.pyBitLength (PastaLean.pyMax candidates)))do
+    let mut limit := PastaLean.pyBitLength (PastaLean.pyMax candidates)
+    for i in (PastaLean.pyRange limit)do
+      let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i) && decide (i ≤ limit))
+      let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ ans))
+      let _ := Libraries.passta.pyPassInvariant (decide (ans ≤ PastaLean.pyLen candidates))
+      let _ := Libraries.passta.pyPassDecreases (limit -ₚ i)
+      -- The inner expression counts how many numbers in `candidates`
+      -- have the i-th bit set. This count must be between 0 and len(candidates).
+      -- `ans` is the running maximum of these counts.
       ans :=
         PastaLean.pyMax
           [ans,
             PastaLean.pySum
               ((PastaLean.pyIter candidates).map fun x => PastaLean.pyBitAnd (PastaLean.pyShiftRight x i) (1 : Int))]
+    let _ := Libraries.passta.pyPassAssert (decide ((0 : Int) ≤ ans) && decide (ans ≤ PastaLean.pyLen candidates))
     return ans : Id _)
 
+@[spec]
 theorem largestCombination_spec :
-    ⦃⌜PastaLean.pyLen candidates > (0 : Int)⌝⦄ largestCombination candidates ⦃⇓_ => ⌜True⌝⦄ :=
+    ⦃⌜PastaLean.pyLen candidates > (0 : Int) ∧
+          PastaLean.pyAll ((PastaLean.pyIter candidates).map fun c => decide (c ≥ (0 : Int)))⌝⦄
+      largestCombination candidates ⦃⇓ans => ⌜(0 : Int) ≤ ans ∧ ans ≤ PastaLean.pyLen candidates⌝⦄ :=
   by
   try
     mvcgen [largestCombination, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓⟨cur, ans⟩ => ⌜True⌝
+    · ⇓⟨cur, ans⟩ =>
+      ⌜let i := (cur.prefix.length : Int);
+        (((0 : Int) ≤ i ∧ i ≤ limit) ∧ (0 : Int) ≤ ans) ∧ ans ≤ PastaLean.pyLen candidates⌝
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
+
+theorem largestCombination_correct :
+    ∀ (candidates : List Int),
+      PastaLean.pyLen candidates > (0 : Int) ∧
+          PastaLean.pyAll ((PastaLean.pyIter candidates).map fun c => decide (c ≥ (0 : Int))) →
+        let ans := (largestCombination candidates).run;
+        (0 : Int) ≤ ans ∧ ans ≤ PastaLean.pyLen candidates :=
+  by
+  intro candidates hpre
+  exact largestCombination_spec hpre
 
 def largestCombination'rn := fun (candidates : List Int) ↦
   Id.run
     (do
       let _ := Libraries.passta.pyPassRequires (decide (PastaLean.pyLen candidates > (0 : Int)))
+      let _ :=
+        Libraries.passta.pyPassRequires
+          (PastaLean.pyAll ((PastaLean.pyIter candidates).map fun c => decide (c ≥ (0 : Int))))
       let mut ans : Int := (0 : Int)
-      for i in (PastaLean.pyRange (PastaLean.pyBitLength (PastaLean.pyMax candidates)))do
+      let mut limit := PastaLean.pyBitLength (PastaLean.pyMax candidates)
+      for i in (PastaLean.pyRange limit)do
+        let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i) && decide (i ≤ limit))
+        let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ ans))
+        let _ := Libraries.passta.pyPassInvariant (decide (ans ≤ PastaLean.pyLen candidates))
+        let _ := Libraries.passta.pyPassDecreases (limit -ₚ i)
+        -- The inner expression counts how many numbers in `candidates`
+        -- have the i-th bit set. This count must be between 0 and len(candidates).
+        -- `ans` is the running maximum of these counts.
         ans :=
           PastaLean.pyMax
             [ans,
               PastaLean.pySum
                 ((PastaLean.pyIter candidates).map fun x => PastaLean.pyBitAnd (PastaLean.pyShiftRight x i) (1 : Int))]
+      let _ := Libraries.passta.pyPassAssert (decide ((0 : Int) ≤ ans) && decide (ans ≤ PastaLean.pyLen candidates))
       return ans)
 
 end PastaBench.leetcode.LargestCombinationWithBitwiseAndGreaterThanZero

@@ -230,6 +230,17 @@ theorem countRangeSum_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
+theorem countRangeSum_correct :
+    ∀ (nums : List Int),
+      ∀ (lower : Int),
+        ∀ (upper : Int),
+          lower ≤ upper →
+            let ans := (countRangeSum nums lower upper).run;
+            ans ≥ (0 : Int) ∧ ans *ₚ (2 : Int) ≤ PastaLean.pyLen nums *ₚ (PastaLean.pyLen nums +ₚ (1 : Int)) :=
+  by
+  intro nums lower upper hpre
+  exact countRangeSum_spec hpre
+
 def countRangeSum'rn := fun (nums : List Int) ↦ fun (lower : Int) ↦ fun (upper : Int) ↦
   Id.run
     (do

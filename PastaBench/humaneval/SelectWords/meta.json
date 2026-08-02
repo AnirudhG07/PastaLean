@@ -1,0 +1,14 @@
+{
+  "task_id": "HumanEval/117",
+  "problem": "select-words",
+  "module": "SelectWords",
+  "method": "select_words",
+  "params": [
+    "s",
+    "n"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

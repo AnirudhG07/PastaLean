@@ -75,6 +75,15 @@ theorem repeatedCharacter_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
+theorem repeatedCharacter_correct :
+    ∀ (s : String),
+      PastaLean.pyLen (PastaLean.pySet s) < PastaLean.pyLen s →
+        let result := (repeatedCharacter s).run;
+        PastaLean.pyCount s result ≥ (2 : Int) :=
+  by
+  intro s hpre
+  exact repeatedCharacter_spec hpre
+
 def repeatedCharacter'rn := fun (s : String) ↦
   Id.run
     (do

@@ -142,6 +142,14 @@ theorem rightSideView_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry; sorry; sorry; pyany_cases <;> grind +locals; sorry; sorry; sorry; sorry; sorry; sorry; sorry; sorry; sorry
   all_goals sorry
 
+theorem rightSideView_correct :
+    ∀ (root : Option TreeNode),
+      let ans := (rightSideView root).run;
+      PastaLean.pyIsNone root ∨ PastaLean.pyLen ans ≥ (1 : Int) ∧ ans⦋(0 : Int)⦌ = ((root).getD default).val :=
+  by
+  intro root
+  exact rightSideView_spec True.intro
+
 def rightSideView'rn := fun (root : Option TreeNode'rn) ↦
   Id.run
     (do

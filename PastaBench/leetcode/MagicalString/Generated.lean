@@ -17,6 +17,7 @@ set_option maxHeartbeats 800000
 
 /- Python source converted to produce the Lean below (the exact input to PastaLean):
 
+from contracts import *
 import random
 import functools
 import collections
@@ -32,19 +33,36 @@ from bisect import *
 from string import *
 from operator import *
 from math import *
-from contracts import *
 
 def magicalString(n: int) -> int:
     Requires(n >= 0)
+    Ensures(0 <= Result() <= n)
+
+    if n == 0:
+        return 0
+    if n <= 3:
+        return 1
+
     s = [1, 2, 2]
     i = 2
     while len(s) < n:
-        Invariant(0 <= i)
+        Invariant(i >= 2)
+        Invariant(len(s) >= 3)
+        # This is the key invariant that proves the access s[i] is always safe.
+        # The gap len(s) - i starts at 1 and is non-decreasing.
         Invariant(i < len(s))
+        Decreases(n - len(s))
+
         pre = s[-1]
+        Assert(pre == 1 or pre == 2)
         cur = 3 - pre
+        Assert(cur == 1 or cur == 2)
+        
+        # All elements of s are guaranteed to be 1 or 2.
+        Assert(s[i] == 1 or s[i] == 2)
         s += [cur] * s[i]
         i += 1
+    
     Assert(len(s) >= n)
     return s[:n].count(1)
 -/
@@ -53,36 +71,78 @@ namespace PastaBench.leetcode.MagicalString
 
 def magicalString := fun (n : Int) ↦
   (do
+    if h_1 : n = (0 : Int) then 
+      return (0 : Int)
+    else
+      let _ := ()
+    if h_2 : n ≤ (3 : Int) then 
+      return (1 : Int)
+    else
+      let _ := ()
     let mut s : List Int := [(1 : Int), (2 : Int), (2 : Int)]
     let mut i : Int := (2 : Int)
     while (PastaLean.pyLen s < n) do
-      let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i))
+      let _ := Libraries.passta.pyPassInvariant (decide (i ≥ (2 : Int)))
+      let _ := Libraries.passta.pyPassInvariant (decide (PastaLean.pyLen s ≥ (3 : Int)))
+      -- This is the key invariant that proves the access s[i] is always safe.
+      -- The gap len(s) - i starts at 1 and is non-decreasing.
       let _ := Libraries.passta.pyPassInvariant (decide (i < PastaLean.pyLen s))
+      let _ := Libraries.passta.pyPassDecreases (n -ₚ PastaLean.pyLen s)
       let mut pre : Int := s⦋(-1 : Int)⦌
+      let _ := Libraries.passta.pyPassAssert (pre == (1 : Int) || pre == (2 : Int))
       let mut cur : Int := (3 : Int) -ₚ pre
+      let _ := Libraries.passta.pyPassAssert (cur == (1 : Int) || cur == (2 : Int))
+      -- All elements of s are guaranteed to be 1 or 2.
+      let _ := Libraries.passta.pyPassAssert (s⦋i⦌ == (1 : Int) || s⦋i⦌ == (2 : Int))
       s := s +ₚ PastaLean.pyListRepeat [cur] s⦋i⦌
       i := i +ₚ (1 : Int)
     let _ := Libraries.passta.pyPassAssert (decide (PastaLean.pyLen s ≥ n))
     let __py_ret_1 := PastaLean.pyCount (PastaLean.pySlice s none (some n) none) (1 : Int)
     return __py_ret_1 : Id _)
 
-theorem magicalString_spec : ⦃⌜n ≥ (0 : Int)⌝⦄ magicalString n ⦃⇓_ => ⌜True⌝⦄ :=
+@[spec]
+theorem magicalString_spec : ⦃⌜n ≥ (0 : Int)⌝⦄ magicalString n ⦃⇓result => ⌜(0 : Int) ≤ result ∧ result ≤ n⌝⦄ :=
   by
   mvcgen [magicalString, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry; sorry; pyany_cases <;> grind +locals; sorry; sorry; sorry; sorry
   all_goals sorry
+
+theorem magicalString_correct :
+    ∀ (n : Int),
+      n ≥ (0 : Int) →
+        let result := (magicalString n).run;
+        (0 : Int) ≤ result ∧ result ≤ n :=
+  by
+  intro n hpre
+  exact magicalString_spec hpre
 
 def magicalString'rn := fun (n : Int) ↦
   Id.run
     (do
       let _ := Libraries.passta.pyPassRequires (decide (n ≥ (0 : Int)))
+      if h_1 : n == (0 : Int) then 
+        return (0 : Int)
+      else
+        let _ := ()
+      if h_2 : n ≤ (3 : Int) then 
+        return (1 : Int)
+      else
+        let _ := ()
       let mut s : List Int := [(1 : Int), (2 : Int), (2 : Int)]
       let mut i : Int := (2 : Int)
       while (PastaLean.pyLen s < n) do
-        let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i))
+        let _ := Libraries.passta.pyPassInvariant (decide (i ≥ (2 : Int)))
+        let _ := Libraries.passta.pyPassInvariant (decide (PastaLean.pyLen s ≥ (3 : Int)))
+        -- This is the key invariant that proves the access s[i] is always safe.
+        -- The gap len(s) - i starts at 1 and is non-decreasing.
         let _ := Libraries.passta.pyPassInvariant (decide (i < PastaLean.pyLen s))
+        let _ := Libraries.passta.pyPassDecreases (n -ₚ PastaLean.pyLen s)
         let mut pre : Int := s⦋(-1 : Int)⦌
+        let _ := Libraries.passta.pyPassAssert (pre == (1 : Int) || pre == (2 : Int))
         let mut cur : Int := (3 : Int) -ₚ pre
+        let _ := Libraries.passta.pyPassAssert (cur == (1 : Int) || cur == (2 : Int))
+        -- All elements of s are guaranteed to be 1 or 2.
+        let _ := Libraries.passta.pyPassAssert (s⦋i⦌ == (1 : Int) || s⦋i⦌ == (2 : Int))
         s := s +ₚ PastaLean.pyListRepeat [cur] s⦋i⦌
         i := i +ₚ (1 : Int)
       let _ := Libraries.passta.pyPassAssert (decide (PastaLean.pyLen s ≥ n))

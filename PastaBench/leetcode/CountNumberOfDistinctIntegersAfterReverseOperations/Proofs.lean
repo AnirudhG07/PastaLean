@@ -77,19 +77,42 @@ def countDistinctIntegers := fun (nums : List Int) ↦
     let __py_ret_1 := PastaLean.pyLen s
     return __py_ret_1 : Id _)
 
+theorem length_pySetAdd_le' {α : Type} [BEq α] (s : List α) (x : α) :
+    (PastaLean.pySetAdd s x).length ≤ s.length + 1 := by
+  simp only [PastaLean.pySetAdd]
+  split <;> simp [List.length_append]
+
+theorem length_le_pySetAdd' {α : Type} [BEq α] (s : List α) (x : α) :
+    s.length ≤ (PastaLean.pySetAdd s x).length := by
+  simp only [PastaLean.pySetAdd]
+  split <;> simp [List.length_append]
+
 @[spec]
 theorem countDistinctIntegers_spec :
     ⦃⌜True⌝⦄ countDistinctIntegers nums ⦃⇓result =>
       ⌜result ≥ PastaLean.pyLen (PastaLean.pySet nums) ∧
           result ≤ PastaLean.pyLen (PastaLean.pySet nums) +ₚ PastaLean.pyLen nums⌝⦄ :=
   by
-  try
-    mvcgen [countDistinctIntegers, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓cur =>
+  mvcgen [countDistinctIntegers, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · ⇓⟨cur, s⟩ =>
       ⌜PastaLean.pyLen s ≥ PastaLean.pyLen (PastaLean.pySet nums) ∧
-          PastaLean.pyLen s ≤ PastaLean.pyLen (PastaLean.pySet nums) +ₚ PastaLean.pyLen nums⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
-  all_goals sorry
+          PastaLean.pyLen s ≤ PastaLean.pyLen (PastaLean.pySet nums) + (cur.prefix.length : Int)⌝
+  all_goals
+    (simp_all (config := { zetaDelta := true }) [taste_ingr, PyHAdd.hAdd, pyLen, PyLen.pyLen] <;>
+      (first
+        | omega
+        | grind [length_pySetAdd_le', length_le_pySetAdd']
+        | (split_ifs <;> omega)
+        | grind +locals))
+
+theorem countDistinctIntegers_correct :
+    ∀ (nums : List Int),
+      let result := (countDistinctIntegers nums).run;
+      result ≥ PastaLean.pyLen (PastaLean.pySet nums) ∧
+        result ≤ PastaLean.pyLen (PastaLean.pySet nums) +ₚ PastaLean.pyLen nums :=
+  by
+  intro nums
+  exact countDistinctIntegers_spec True.intro
 
 def countDistinctIntegers'rn := fun (nums : List Int) ↦
   Id.run

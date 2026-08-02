@@ -121,6 +121,21 @@ theorem countExcellentPairs_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
+theorem countExcellentPairs_correct :
+    ∀ (nums : List Int),
+      ∀ (k : Int),
+        PastaLean.pyAll ((PastaLean.pyIter nums).map fun x => decide (x ≥ (0 : Int))) ∧ k ≥ (0 : Int) →
+          let ans := (countExcellentPairs nums k).run;
+          ans =
+            PastaLean.pySum
+              ((PastaLean.pyIter (PastaLean.pySet nums)).flatMap fun v1 =>
+                (List.filter (fun v2 => PastaLean.pyBitCount v1 +ₚ PastaLean.pyBitCount v2 ≥ k)
+                      (PastaLean.pyIter (PastaLean.pySet nums))).map
+                  fun v2 => (1 : Int)) :=
+  by
+  intro nums k hpre
+  exact countExcellentPairs_spec hpre
+
 def countExcellentPairs'rn := fun (nums : List Int) ↦ fun (k : Int) ↦
   Id.run
     (do

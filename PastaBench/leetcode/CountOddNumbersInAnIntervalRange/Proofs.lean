@@ -1,4 +1,4 @@
 import PastaBench.leetcode.CountOddNumbersInAnIntervalRange.Generated
 namespace PastaBench.leetcode.CountOddNumbersInAnIntervalRange
--- TODO: state and prove.
+-- TODO.
 end PastaBench.leetcode.CountOddNumbersInAnIntervalRange

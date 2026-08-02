@@ -152,11 +152,37 @@ theorem findLengthOfShortestSubarray_spec :
   by
   try
     mvcgen [findLengthOfShortestSubarray, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · fun s =>
+      let i := s;
+      (⟨(n -ₚ (1 : Int) -ₚ i).toNat⟩ : ULift Nat)
+    · ⇓s =>
+      ⌜Sum.elim
+          (fun st =>
+            let i := st;
+            (0 : Int) ≤ i ∧ i < n -ₚ (1 : Int))
+          (fun _ => True) s⌝
+    · fun s =>
+      let j := s;
+      (⟨(j).toNat⟩ : ULift Nat)
+    · ⇓s =>
+      ⌜Sum.elim
+          (fun st =>
+            let j := st;
+            j ≥ (0 : Int) ∧ j < n)
+          (fun _ => True) s⌝
     · ⇓⟨cur, ans⟩ =>
       ⌜let l := (cur.prefix.length : Int);
         (((0 : Int) ≤ l ∧ l ≤ i) ∧ (0 : Int) ≤ ans ∧ ans ≤ n) ∧ i < j⌝
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
+
+theorem findLengthOfShortestSubarray_correct :
+    ∀ (arr : List Int),
+      let ans := (findLengthOfShortestSubarray arr).run;
+      ans ≥ (0 : Int) ∧ ans ≤ PastaLean.pyLen arr :=
+  by
+  intro arr
+  exact findLengthOfShortestSubarray_spec True.intro
 
 def findLengthOfShortestSubarray'rn := fun (arr : List Int) ↦
   Id.run

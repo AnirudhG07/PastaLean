@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/68",
+  "problem": "pluck",
+  "module": "Pluck",
+  "method": "pluck",
+  "params": [
+    "arr"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

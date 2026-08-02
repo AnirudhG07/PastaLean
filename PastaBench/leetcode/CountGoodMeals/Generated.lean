@@ -18,31 +18,29 @@ set_option maxHeartbeats 800000
 /- Python source converted to produce the Lean below (the exact input to PastaLean):
 
 from contracts import *
-import random
-import functools
 import collections
-import string
-import math
-import datetime
 from typing import *
-from functools import *
-from collections import *
-from itertools import *
-from heapq import *
-from bisect import *
-from string import *
-from operator import *
-from math import *
 
 def countPairs(deliciousness: List[int]) -> int:
     Requires(len(deliciousness) > 0)
+    Requires(all(d >= 0 for d in deliciousness))
+    Ensures(Result() >= 0)
+    Ensures(Result() < 10**9 + 7)
+
     mod = 10 ** 9 + 7
     mx = max(deliciousness) << 1
-    cnt = Counter()
+    cnt = collections.Counter()
     ans = 0
     for d in deliciousness:
+        Invariant(0 <= ans < mod)
+        Invariant(all(v >= 0 for v in cnt.values()))
+
         s = 1
         while s <= mx:
+            Invariant(s > 0 and (s & (s - 1)) == 0)
+            Invariant(0 <= ans < mod)
+            Decreases(mx + 1 - s)
+
             ans = (ans + cnt[s - d]) % mod
             s <<= 1
         cnt[d] += 1
@@ -58,32 +56,69 @@ def countPairs := fun (deliciousness : List Int) ↦
     let mut cnt : Libraries.collections.PyDefaultDict Int Int := Libraries.collections.pyCounterEmpty
     let mut ans : Int := (0 : Int)
     for d in (PastaLean.pyIter deliciousness)do
+      let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ ans) && decide (ans < mod))
+      let _ :=
+        Libraries.passta.pyPassInvariant
+          (PastaLean.pyAll ((PastaLean.pyIter (PastaLean.pyAnys cnt)).map fun v => decide (v ≥ (0 : Int))))
       let mut s : Int := (1 : Int)
       while (s ≤ mx) do
+        let _ :=
+          Libraries.passta.pyPassInvariant
+            (decide (s > (0 : Int)) && PastaLean.pyBitAnd s (s -ₚ (1 : Int)) == (0 : Int))
+        let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ ans) && decide (ans < mod))
+        let _ := Libraries.passta.pyPassDecreases (mx +ₚ (1 : Int) -ₚ s)
         ans := (ans +ₚ cnt⦋s -ₚ d⦌) %ₚ mod
         s := PastaLean.pyShiftLeft s (1 : Int)
       cnt := PastaLean.pySetItem cnt d (cnt⦋d⦌ +ₚ (1 : Int))
     return ans : Id _)
 
-theorem countPairs_spec : ⦃⌜PastaLean.pyLen deliciousness > (0 : Int)⌝⦄ countPairs deliciousness ⦃⇓_ => ⌜True⌝⦄ :=
+@[spec]
+theorem countPairs_spec :
+    ⦃⌜PastaLean.pyLen deliciousness > (0 : Int) ∧
+          PastaLean.pyAll ((PastaLean.pyIter deliciousness).map fun d => decide (d ≥ (0 : Int)))⌝⦄
+      countPairs deliciousness ⦃⇓ans => ⌜ans ≥ (0 : Int) ∧ ans < (10 : Int) ^ₚ (9 : Int) +ₚ (7 : Int)⌝⦄ :=
   by
   try
     mvcgen [countPairs, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓⟨cur, ans⟩ => ⌜True⌝
+    · ⇓⟨cur, ans⟩ =>
+      ⌜((0 : Int) ≤ ans ∧ ans < mod) ∧
+          PastaLean.pyAll ((PastaLean.pyIter (PastaLean.pyAnys cnt)).map fun v => decide (v ≥ (0 : Int)))⌝
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
+
+theorem countPairs_correct :
+    ∀ (deliciousness : List Int),
+      PastaLean.pyLen deliciousness > (0 : Int) ∧
+          PastaLean.pyAll ((PastaLean.pyIter deliciousness).map fun d => decide (d ≥ (0 : Int))) →
+        let ans := (countPairs deliciousness).run;
+        ans ≥ (0 : Int) ∧ ans < (10 : Int) ^ₚ (9 : Int) +ₚ (7 : Int) :=
+  by
+  intro deliciousness hpre
+  exact countPairs_spec hpre
 
 def countPairs'rn := fun (deliciousness : List Int) ↦
   Id.run
     (do
       let _ := Libraries.passta.pyPassRequires (decide (PastaLean.pyLen deliciousness > (0 : Int)))
+      let _ :=
+        Libraries.passta.pyPassRequires
+          (PastaLean.pyAll ((PastaLean.pyIter deliciousness).map fun d => decide (d ≥ (0 : Int))))
       let mut mod : Int := (10 : Int) ^ₚ (9 : Int) +ₚ (7 : Int)
       let mut mx : Int := PastaLean.pyShiftLeft (PastaLean.pyMax deliciousness) (1 : Int)
       let mut cnt : Libraries.collections.PyDefaultDict Int Int := Libraries.collections.pyCounterEmpty
       let mut ans : Int := (0 : Int)
       for d in (PastaLean.pyIter deliciousness)do
+        let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ ans) && decide (ans < mod))
+        let _ :=
+          Libraries.passta.pyPassInvariant
+            (PastaLean.pyAll ((PastaLean.pyIter (PastaLean.pyAnys cnt)).map fun v => decide (v ≥ (0 : Int))))
         let mut s : Int := (1 : Int)
         while (s ≤ mx) do
+          let _ :=
+            Libraries.passta.pyPassInvariant
+              (decide (s > (0 : Int)) && PastaLean.pyBitAnd s (s -ₚ (1 : Int)) == (0 : Int))
+          let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ ans) && decide (ans < mod))
+          let _ := Libraries.passta.pyPassDecreases (mx +ₚ (1 : Int) -ₚ s)
           ans := (ans +ₚ cnt⦋s -ₚ d⦌) %ₚ mod
           s := PastaLean.pyShiftLeft s (1 : Int)
         cnt := PastaLean.pySetItem cnt d (cnt⦋d⦌ +ₚ (1 : Int))

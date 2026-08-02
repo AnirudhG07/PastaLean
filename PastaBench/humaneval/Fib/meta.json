@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/55",
+  "problem": "fib",
+  "module": "Fib",
+  "method": "fib",
+  "params": [
+    "n"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 45
+}

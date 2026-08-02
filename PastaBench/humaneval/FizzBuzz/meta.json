@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/36",
+  "problem": "fizz-buzz",
+  "module": "FizzBuzz",
+  "method": "fizz_buzz",
+  "params": [
+    "n"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

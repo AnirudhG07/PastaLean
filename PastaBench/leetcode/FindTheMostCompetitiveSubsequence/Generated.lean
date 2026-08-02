@@ -17,7 +17,6 @@ set_option maxHeartbeats 800000
 
 /- Python source converted to produce the Lean below (the exact input to PastaLean):
 
-from contracts import *
 import random
 import functools
 import collections
@@ -33,17 +32,34 @@ from bisect import *
 from string import *
 from operator import *
 from math import *
+from contracts import *
 
 def mostCompetitive(nums: List[int], k: int) -> List[int]:
-    Requires(k >= 0)
+    Requires(0 <= k)
     Requires(k <= len(nums))
+    Ensures(len(Result()) == k)
+
     stk = []
     n = len(nums)
     for i, v in enumerate(nums):
+        Invariant(0 <= i)
+        Invariant(i <= n)
+        Invariant(len(stk) <= k)
+        # Key invariant: there are always enough elements available (in the stack
+        # plus the remainder of the input) to be able to form a final result of size k.
+        Invariant(len(stk) + (n - i) >= k)
+
         while stk and stk[-1] > v and (len(stk) + n - i > k):
             stk.pop()
+
         if len(stk) < k:
             stk.append(v)
+
+    # After the loop, i is conceptually n.
+    # The invariants `len(stk) <= k` and `len(stk) + (n - i) >= k`
+    # imply `len(stk) <= k` and `len(stk) + (n - n) >= k` => `len(stk) >= k`.
+    # Thus, len(stk) must be exactly k.
+    Assert(len(stk) == k)
     return stk
 -/
 
@@ -56,30 +72,55 @@ def mostCompetitive := fun (nums : List Int) ↦ fun (k : Int) ↦
     for _pair_1 in (PastaLean.pyIter (PastaLean.pyEnumerate nums))do
       let i := Prod.fst _pair_1
       let v := Prod.snd _pair_1
+      let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i))
+      let _ := Libraries.passta.pyPassInvariant (decide (i ≤ n))
+      let _ := Libraries.passta.pyPassInvariant (decide (PastaLean.pyLen stk ≤ k))
+      -- Key invariant: there are always enough elements available (in the stack
+      -- plus the remainder of the input) to be able to form a final result of size k.
+      let _ := Libraries.passta.pyPassInvariant (decide (PastaLean.pyLen stk +ₚ (n -ₚ i) ≥ k))
       while ((PastaLean.pyTruthy stk = true ∧ stk⦋(-1 : Int)⦌ > v) ∧ PastaLean.pyLen stk +ₚ n -ₚ i > k) do
         stk := PastaLean.pyPopRest stk
       if h_1 : PastaLean.pyLen stk < k then 
         stk := PastaLean.pyAppend stk v
       else
         let _ := ()
+    let _ := Libraries.passta.pyPassAssert (PastaLean.pyLen stk == k)
     return stk : Id _)
 
-theorem mostCompetitive_spec : ⦃⌜k ≥ (0 : Int) ∧ k ≤ PastaLean.pyLen nums⌝⦄ mostCompetitive nums k ⦃⇓_ => ⌜True⌝⦄ :=
+@[spec]
+theorem mostCompetitive_spec :
+    ⦃⌜(0 : Int) ≤ k ∧ k ≤ PastaLean.pyLen nums⌝⦄ mostCompetitive nums k ⦃⇓stk => ⌜PastaLean.pyLen stk = k⌝⦄ :=
   by
   mvcgen [mostCompetitive, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
   simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
+theorem mostCompetitive_correct :
+    ∀ (nums : List Int),
+      ∀ (k : Int),
+        (0 : Int) ≤ k ∧ k ≤ PastaLean.pyLen nums →
+          let stk := (mostCompetitive nums k).run;
+          PastaLean.pyLen stk = k :=
+  by
+  intro nums k hpre
+  exact mostCompetitive_spec hpre
+
 def mostCompetitive'rn := fun (nums : List Int) ↦ fun (k : Int) ↦
   Id.run
     (do
-      let _ := Libraries.passta.pyPassRequires (decide (k ≥ (0 : Int)))
+      let _ := Libraries.passta.pyPassRequires (decide ((0 : Int) ≤ k))
       let _ := Libraries.passta.pyPassRequires (decide (k ≤ PastaLean.pyLen nums))
       let mut stk : List Int := []
       let mut n : Int := PastaLean.pyLen nums
       for _pair_1 in (PastaLean.pyIter (PastaLean.pyEnumerate nums))do
         let i := Prod.fst _pair_1
         let v := Prod.snd _pair_1
+        let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i))
+        let _ := Libraries.passta.pyPassInvariant (decide (i ≤ n))
+        let _ := Libraries.passta.pyPassInvariant (decide (PastaLean.pyLen stk ≤ k))
+        -- Key invariant: there are always enough elements available (in the stack
+        -- plus the remainder of the input) to be able to form a final result of size k.
+        let _ := Libraries.passta.pyPassInvariant (decide (PastaLean.pyLen stk +ₚ (n -ₚ i) ≥ k))
         while
           (PastaLean.pyTruthy stk && decide (stk⦋(-1 : Int)⦌ > v) && decide (PastaLean.pyLen stk +ₚ n -ₚ i > k)) do
           stk := PastaLean.pyPopRest stk
@@ -87,6 +128,11 @@ def mostCompetitive'rn := fun (nums : List Int) ↦ fun (k : Int) ↦
           stk := PastaLean.pyAppend stk v
         else
           let _ := ()
+      -- After the loop, i is conceptually n.
+      -- The invariants `len(stk) <= k` and `len(stk) + (n - i) >= k`
+      -- imply `len(stk) <= k` and `len(stk) + (n - n) >= k` => `len(stk) >= k`.
+      -- Thus, len(stk) must be exactly k.
+      let _ := Libraries.passta.pyPassAssert (PastaLean.pyLen stk == k)
       return stk)
 
 end PastaBench.leetcode.FindTheMostCompetitiveSubsequence

@@ -62,15 +62,12 @@ def removePalindromeSub := fun (s : String) ↦
 attribute [simp] removePalindromeSub
 
 @[taste_ingr]
-theorem removePalindromeSub_spec :
+theorem removePalindromeSub_correct :
     ∀ (s : String),
       PastaLean.pyLen s > (0 : Int) →
         PastaLean.pyLen (PastaLean.pySet s) ≤ (2 : Int) →
-          (((0 : Int) < if PastaLean.pySlice s none none (some (-(1 : Int))) = s then (1 : Int) else (2 : Int)) ∧
-              (if PastaLean.pySlice s none none (some (-(1 : Int))) = s then (1 : Int) else (2 : Int)) ≤ (2 : Int)) ∧
-            (s = PastaLean.pySlice s none none (some (-(1 : Int)))) =
-              ((if PastaLean.pySlice s none none (some (-(1 : Int))) = s then (1 : Int) else (2 : Int)) =
-                (1 : Int)) :=
+          ((0 : Int) < removePalindromeSub s ∧ removePalindromeSub s ≤ (2 : Int)) ∧
+            (s = PastaLean.pySlice s none none (some (-(1 : Int)))) = (removePalindromeSub s = (1 : Int)) :=
   by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals
 
 def removePalindromeSub'rn := fun (s : String) ↦

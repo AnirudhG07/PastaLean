@@ -82,9 +82,32 @@ def removeAlmostEqualCharacters := fun (word : String) ↦
 theorem removeAlmostEqualCharacters_spec :
     ⦃⌜True⌝⦄ removeAlmostEqualCharacters word ⦃⇓ans => ⌜ans ≥ (0 : Int) ∧ (2 : Int) *ₚ ans ≤ PastaLean.pyLen word⌝⦄ :=
   by
-  mvcgen [removeAlmostEqualCharacters, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  all_goals sorry
-  all_goals sorry
+  try
+    mvcgen [removeAlmostEqualCharacters, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · fun s =>
+      let i := s |>.snd;
+      (⟨(PastaLean.pyLen word -ₚ i).toNat⟩ : ULift Nat)
+    · ⇓s =>
+      ⌜Sum.elim
+          (fun st =>
+            let i := st |>.snd;
+            let ans := st |>.fst;
+            ((0 : Int) ≤ i ∧ i ≤ PastaLean.pyLen word + 1) ∧ (2 : Int) * ans ≤ i - 1 ∧ (0 : Int) ≤ ans)
+          (fun st =>
+            let i := st |>.snd;
+            let ans := st |>.fst;
+            ((0 : Int) ≤ i ∧ i ≤ PastaLean.pyLen word + 1) ∧ (2 : Int) * ans ≤ i - 1 ∧ (0 : Int) ≤ ans) s⌝
+  all_goals first
+    | (simp (config:={zetaDelta:=true}) only [taste_ingr] at * <;> omega)
+    | (simp_all (config:={zetaDelta:=true}) [taste_ingr, pyTruthy, PyTruthy.truthy, PyHSub.hSub, PyHAdd.hAdd, PyHMul.hMul] <;> (first | omega | grind | (split_ifs <;> omega) | grind +locals))
+
+theorem removeAlmostEqualCharacters_correct :
+    ∀ (word : String),
+      let ans := (removeAlmostEqualCharacters word).run;
+      ans ≥ (0 : Int) ∧ (2 : Int) *ₚ ans ≤ PastaLean.pyLen word :=
+  by
+  intro word
+  exact removeAlmostEqualCharacters_spec True.intro
 
 def removeAlmostEqualCharacters'rn := fun (word : String) ↦
   Id.run

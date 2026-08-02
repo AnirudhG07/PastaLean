@@ -48,10 +48,8 @@ def checkRecord := fun (s : String) ↦
 attribute [simp] checkRecord
 
 @[taste_ingr]
-theorem checkRecord_spec :
-    ∀ (s : String),
-      (PastaLean.pyCount s "A" < (2 : Int) ∧ !(PastaLean.pyStrContainsSubstr s "LLL")) =
-        (PastaLean.pyCount s "A" < (2 : Int) ∧ !(PastaLean.pyStrContainsSubstr s "LLL")) :=
+theorem checkRecord_correct :
+    ∀ (s : String), checkRecord s = (PastaLean.pyCount s "A" < (2 : Int) ∧ !(PastaLean.pyStrContainsSubstr s "LLL")) :=
   by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]
 
 def checkRecord'rn := fun (s : String) ↦

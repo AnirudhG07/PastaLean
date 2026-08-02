@@ -95,6 +95,14 @@ theorem minOperations_spec :
   sorry
   all_goals sorry
 
+theorem minOperations_correct :
+    ∀ (nums : List Int),
+      let result := (minOperations nums).run;
+      (0 : Int) ≤ result ∧ result ≤ PastaLean.pyLen nums :=
+  by
+  intro nums
+  exact minOperations_spec True.intro
+
 def minOperations'rn := fun (nums : List Int) ↦
   Id.run
     (do

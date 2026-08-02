@@ -54,8 +54,17 @@ theorem longestPrefix_spec :
   try
     mvcgen [longestPrefix, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · Invariant.withEarlyReturn (onReturn := fun _ _ => ⌜True⌝) (onContinue := fun _ _ => ⌜True⌝)
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
+
+theorem longestPrefix_correct :
+    ∀ (s : String),
+      let result := (longestPrefix s).run;
+      PastaLean.pyTruthy (PastaLean.pyStringStartswith s result) = true ∧
+        PastaLean.pyTruthy (PastaLean.pyStringEndswith s result) = true :=
+  by
+  intro s
+  exact longestPrefix_spec True.intro
 
 def longestPrefix'rn := fun (s : String) ↦
   Id.run

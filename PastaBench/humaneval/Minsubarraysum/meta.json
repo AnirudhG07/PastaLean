@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/114",
+  "problem": "minSubArraySum",
+  "module": "Minsubarraysum",
+  "method": "minSubArraySum",
+  "params": [
+    "nums"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

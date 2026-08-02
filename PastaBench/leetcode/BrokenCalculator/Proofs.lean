@@ -17,8 +17,6 @@ set_option maxHeartbeats 800000
 
 /- Python source converted to produce the Lean below (the exact input to PastaLean):
 
-from contracts import *
-
 import random
 import functools
 import collections
@@ -34,17 +32,25 @@ from bisect import *
 from string import *
 from operator import *
 from math import *
+from contracts import *
 
 def brokenCalc(startValue: int, target: int) -> int:
     Requires(startValue > 0)
     Requires(target > 0)
+    Ensures(Result() >= 0)
     ans = 0
     while startValue < target:
+        Invariant(ans >= 0)
+        Invariant(target > 0)
+        # Termination is guaranteed because `target` is at least halved over any two
+        # consecutive iterations, ensuring it eventually falls below `startValue`.
+        # However, `target` is not monotonic, so a simple `Decreases` clause is elusive.
         if target & 1:
             target += 1
         else:
             target >>= 1
         ans += 1
+    Assert(target <= startValue)
     ans += startValue - target
     return ans
 -/
@@ -56,20 +62,37 @@ def brokenCalc := fun (startValue : Int) ↦ fun (target : Int) ↦
     let mut target := target
     let mut ans : Int := (0 : Int)
     while (startValue < target) do
-      if h_1 : PastaLean.pyTruthy (PastaLean.pyBitAnd target (1 : Int)) then 
+      let _ := Libraries.passta.pyPassInvariant (decide (ans ≥ (0 : Int)))
+      let _ := Libraries.passta.pyPassInvariant (decide (target > (0 : Int)))
+      -- Termination is guaranteed because `target` is at least halved over any two
+      -- consecutive iterations, ensuring it eventually falls below `startValue`.
+      -- However, `target` is not monotonic, so a simple `Decreases` clause is elusive.
+      if h_1 : PastaLean.pyTruthy (PastaLean.pyBitAnd target (1 : Int)) then
         target := target +ₚ (1 : Int)
       else
         target := PastaLean.pyShiftRight target (1 : Int)
       ans := ans +ₚ (1 : Int)
+    let _ := Libraries.passta.pyPassAssert (decide (target ≤ startValue))
     ans := ans +ₚ (startValue -ₚ target)
     return ans : Id _)
 
+@[spec]
 theorem brokenCalc_spec :
-    ⦃⌜startValue > (0 : Int) ∧ target > (0 : Int)⌝⦄ brokenCalc startValue target ⦃⇓_ => ⌜True⌝⦄ :=
+    ⦃⌜startValue > (0 : Int) ∧ target > (0 : Int)⌝⦄ brokenCalc startValue target ⦃⇓ans => ⌜ans ≥ (0 : Int)⌝⦄ :=
   by
   mvcgen [brokenCalc, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  simp_all (config := { zetaDelta := true }) [taste_ingr];
   all_goals sorry
+
+theorem brokenCalc_correct :
+    ∀ (startValue : Int),
+      ∀ (target : Int),
+        startValue > (0 : Int) ∧ target > (0 : Int) →
+          let ans := (brokenCalc startValue target).run;
+          ans ≥ (0 : Int) :=
+  by
+  intro startValue target hpre
+  exact brokenCalc_spec hpre
 
 def brokenCalc'rn := fun (startValue : Int) ↦ fun (target : Int) ↦
   Id.run
@@ -79,11 +102,17 @@ def brokenCalc'rn := fun (startValue : Int) ↦ fun (target : Int) ↦
       let _ := Libraries.passta.pyPassRequires (decide (target > (0 : Int)))
       let mut ans : Int := (0 : Int)
       while (startValue < target) do
-        if h_1 : PastaLean.pyTruthy (PastaLean.pyBitAnd target (1 : Int)) then 
+        let _ := Libraries.passta.pyPassInvariant (decide (ans ≥ (0 : Int)))
+        let _ := Libraries.passta.pyPassInvariant (decide (target > (0 : Int)))
+        -- Termination is guaranteed because `target` is at least halved over any two
+        -- consecutive iterations, ensuring it eventually falls below `startValue`.
+        -- However, `target` is not monotonic, so a simple `Decreases` clause is elusive.
+        if h_1 : PastaLean.pyTruthy (PastaLean.pyBitAnd target (1 : Int)) then
           target := target +ₚ (1 : Int)
         else
           target := PastaLean.pyShiftRight target (1 : Int)
         ans := ans +ₚ (1 : Int)
+      let _ := Libraries.passta.pyPassAssert (decide (target ≤ startValue))
       ans := ans +ₚ (startValue -ₚ target)
       return ans)
 

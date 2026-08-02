@@ -1,4 +1,4 @@
 import PastaBench.leetcode.CountCollisionsOnARoad.Generated
 namespace PastaBench.leetcode.CountCollisionsOnARoad
--- TODO: state and prove.
+-- TODO.
 end PastaBench.leetcode.CountCollisionsOnARoad

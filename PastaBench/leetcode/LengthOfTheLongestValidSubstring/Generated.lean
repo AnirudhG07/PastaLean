@@ -96,12 +96,21 @@ theorem longestValidSubstring_spec :
   by
   try
     mvcgen [longestValidSubstring, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓⟨cur, i, ans⟩ =>
+    · ⇓⟨cur, ans, i⟩ =>
       ⌜let j := (cur.prefix.length : Int);
         ((((0 : Int) ≤ j ∧ j ≤ PastaLean.pyLen word) ∧ (0 : Int) ≤ i ∧ i ≤ j) ∧ (0 : Int) ≤ ans ∧ ans ≤ j) ∧
           ans ≤ PastaLean.pyLen word⌝
   sorry
   all_goals sorry
+
+theorem longestValidSubstring_correct :
+    ∀ (word : String),
+      ∀ (forbidden : List String),
+        let ans := (longestValidSubstring word forbidden).run;
+        (0 : Int) ≤ ans ∧ ans ≤ PastaLean.pyLen word :=
+  by
+  intro word forbidden
+  exact longestValidSubstring_spec True.intro
 
 def longestValidSubstring'rn := fun (word : String) ↦ fun (forbidden : List String) ↦
   Id.run

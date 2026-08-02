@@ -85,6 +85,15 @@ theorem countAlternatingSubarrays_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
+theorem countAlternatingSubarrays_correct :
+    ∀ (nums : List Int),
+      PastaLean.pyLen nums > (0 : Int) →
+        let ans := (countAlternatingSubarrays nums).run;
+        ans ≥ PastaLean.pyLen nums :=
+  by
+  intro nums hpre
+  exact countAlternatingSubarrays_spec hpre
+
 def countAlternatingSubarrays'rn := fun (nums : List Int) ↦
   Id.run
     (do

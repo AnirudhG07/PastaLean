@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/25",
+  "problem": "factorize",
+  "module": "Factorize",
+  "method": "factorize",
+  "params": [
+    "n"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

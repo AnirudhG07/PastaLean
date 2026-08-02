@@ -73,8 +73,7 @@ theorem _minimumSize'check_spec :
       ∀ (nums : List Int),
         ∀ (maxOperations : Int),
           mx > (0 : Int) →
-            (PastaLean.pySum ((PastaLean.pyIter nums).map fun x => PastaLean.pyFloorDiv (x -ₚ (1 : Int)) mx) ≤
-                maxOperations) =
+            _minimumSize'check mx nums maxOperations =
               (PastaLean.pySum ((PastaLean.pyIter nums).map fun x => PastaLean.pyFloorDiv (x -ₚ (1 : Int)) mx) ≤
                 maxOperations) :=
   by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]
@@ -87,7 +86,7 @@ def minimumSize := fun (nums : List Int) ↦ fun (maxOperations : Int) ↦
 attribute [simp] minimumSize
 
 @[taste_ingr]
-theorem minimumSize_spec :
+theorem minimumSize_correct :
     ∀ (nums : List Int),
       ∀ (maxOperations : Int),
         PastaLean.pyLen nums > (0 : Int) →
@@ -95,34 +94,16 @@ theorem minimumSize_spec :
             maxOperations ≥ (0 : Int) →
               ((PastaLean.pySum
                         ((PastaLean.pyIter nums).map fun x =>
-                          PastaLean.pyFloorDiv (x -ₚ (1 : Int))
-                            (Libraries.bisect.pyBisectLeftRangeKey (1 : Int) (PastaLean.pyMax nums +ₚ (1 : Int))
-                                (1 : Int) Bool.true (key := fun (mx : Int) ↦
-                                _minimumSize'check mx nums maxOperations) +ₚ
-                              (1 : Int))) ≤
+                          PastaLean.pyFloorDiv (x -ₚ (1 : Int)) (minimumSize nums maxOperations)) ≤
                       maxOperations ∧
-                    (Libraries.bisect.pyBisectLeftRangeKey (1 : Int) (PastaLean.pyMax nums +ₚ (1 : Int)) (1 : Int)
-                            Bool.true (key := fun (mx : Int) ↦ _minimumSize'check mx nums maxOperations) +ₚ
-                          (1 : Int) =
-                        (1 : Int) ∨
+                    (minimumSize nums maxOperations = (1 : Int) ∨
                       PastaLean.pySum
                           ((PastaLean.pyIter nums).map fun x =>
-                            PastaLean.pyFloorDiv (x -ₚ (1 : Int))
-                              (Libraries.bisect.pyBisectLeftRangeKey (1 : Int) (PastaLean.pyMax nums +ₚ (1 : Int))
-                                    (1 : Int) Bool.true (key := fun (mx : Int) ↦
-                                    _minimumSize'check mx nums maxOperations) +ₚ
-                                  (1 : Int) -ₚ
-                                (1 : Int))) >
+                            PastaLean.pyFloorDiv (x -ₚ (1 : Int)) (minimumSize nums maxOperations -ₚ (1 : Int))) >
                         maxOperations)) ∧
-                  (1 : Int) ≤
-                    Libraries.bisect.pyBisectLeftRangeKey (1 : Int) (PastaLean.pyMax nums +ₚ (1 : Int)) (1 : Int)
-                        Bool.true (key := fun (mx : Int) ↦ _minimumSize'check mx nums maxOperations) +ₚ
-                      (1 : Int)) ∧
-                Libraries.bisect.pyBisectLeftRangeKey (1 : Int) (PastaLean.pyMax nums +ₚ (1 : Int)) (1 : Int) Bool.true
-                      (key := fun (mx : Int) ↦ _minimumSize'check mx nums maxOperations) +ₚ
-                    (1 : Int) ≤
-                  PastaLean.pyMax nums :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+                  (1 : Int) ≤ minimumSize nums maxOperations) ∧
+                minimumSize nums maxOperations ≤ PastaLean.pyMax nums :=
+  by sorry
 
 private def _minimumSize'check'rn := fun (mx : Int) ↦ fun (nums : List Int) ↦ fun (maxOperations : Int) ↦
   decide

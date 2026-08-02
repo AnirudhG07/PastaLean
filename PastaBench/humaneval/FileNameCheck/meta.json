@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/141",
+  "problem": "file-name-check",
+  "module": "FileNameCheck",
+  "method": "file_name_check",
+  "params": [
+    "file_name"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

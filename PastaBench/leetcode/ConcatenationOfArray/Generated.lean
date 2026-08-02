@@ -48,7 +48,7 @@ def getConcatenation := fun (nums : List Int) ↦ nums +ₚ nums
 attribute [simp] getConcatenation
 
 @[taste_ingr]
-theorem getConcatenation_spec : ∀ (nums : List Int), nums +ₚ nums = nums +ₚ nums := by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]
+theorem getConcatenation_correct : ∀ (nums : List Int), getConcatenation nums = nums +ₚ nums := by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]
 
 def getConcatenation'rn := fun (nums : List Int) ↦ nums +ₚ nums
 

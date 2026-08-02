@@ -77,6 +77,17 @@ theorem getLastMoment_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
+theorem getLastMoment_correct :
+    ∀ (n : Int),
+      ∀ (left : List Int),
+        ∀ (right : List Int),
+          n ≥ (0 : Int) →
+            let ans := (getLastMoment n left right).run;
+            ans = PastaLean.pyMax (left +ₚ [(0 : Int)] +ₚ (PastaLean.pyIter right).map fun x => n -ₚ x) :=
+  by
+  intro n left right hpre
+  exact getLastMoment_spec hpre
+
 def getLastMoment'rn := fun (n : Int) ↦ fun (left : List Int) ↦ fun (right : List Int) ↦
   Id.run
     (do

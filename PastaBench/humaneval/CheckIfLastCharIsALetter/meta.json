@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/134",
+  "problem": "check-if-last-char-is-a-letter",
+  "module": "CheckIfLastCharIsALetter",
+  "method": "check_if_last_char_is_a_letter",
+  "params": [
+    "txt"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

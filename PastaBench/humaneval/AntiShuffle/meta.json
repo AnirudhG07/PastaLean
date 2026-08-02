@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/86",
+  "problem": "anti-shuffle",
+  "module": "AntiShuffle",
+  "method": "anti_shuffle",
+  "params": [
+    "s"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

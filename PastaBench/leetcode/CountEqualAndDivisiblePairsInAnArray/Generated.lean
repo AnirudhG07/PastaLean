@@ -79,6 +79,21 @@ theorem countPairs_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
+theorem countPairs_correct :
+    ∀ (nums : List Int),
+      ∀ (k : Int),
+        k ≠ (0 : Int) →
+          let ans := (countPairs nums k).run;
+          ans =
+            PastaLean.pySum
+              ((PastaLean.pyRange (PastaLean.pyLen nums)).flatMap fun i =>
+                (List.filter (fun j => nums⦋i⦌ = nums⦋j⦌ ∧ i *ₚ j %ₚ k = (0 : Int))
+                      (PastaLean.pyRange (PastaLean.pyLen nums) (i +ₚ (1 : Int)))).map
+                  fun j => (1 : Int)) :=
+  by
+  intro nums k hpre
+  exact countPairs_spec hpre
+
 def countPairs'rn := fun (nums : List Int) ↦ fun (k : Int) ↦
   Id.run
     (do

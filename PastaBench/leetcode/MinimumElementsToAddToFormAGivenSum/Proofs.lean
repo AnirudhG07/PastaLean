@@ -51,17 +51,33 @@ def minElements := fun (nums : List Int) ↦ fun (limit : Int) ↦ fun (goal : I
 attribute [simp] minElements
 
 @[taste_ingr]
-theorem minElements_spec :
+theorem minElements_correct :
     ∀ (nums : List Int),
       ∀ (limit : Int),
         ∀ (goal : Int),
           let d := PastaLean.pyAbs (PastaLean.pySum nums -ₚ goal)
           limit > (0 : Int) →
-            PastaLean.pyFloorDiv (d +ₚ limit -ₚ (1 : Int)) limit *ₚ limit ≥
-                PastaLean.pyAbs (PastaLean.pySum nums -ₚ goal) ∧
-              (PastaLean.pyFloorDiv (d +ₚ limit -ₚ (1 : Int)) limit -ₚ (1 : Int)) *ₚ limit <
-                PastaLean.pyAbs (PastaLean.pySum nums -ₚ goal) :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+            minElements nums limit goal *ₚ limit ≥ PastaLean.pyAbs (PastaLean.pySum nums -ₚ goal) ∧
+              (minElements nums limit goal -ₚ (1 : Int)) *ₚ limit < PastaLean.pyAbs (PastaLean.pySum nums -ₚ goal) :=
+  by
+  intro nums limit goal d h
+  simp only [minElements, pyFloorDiv, PyFloorDiv.floorDiv, PyHAdd.hAdd, PyHSub.hSub, PyHMul.hMul, ge_iff_le]
+  rw [if_neg (by simp only [beq_iff_eq]; omega)]
+  have hD : (0:Int) ≤ pyAbs (pySum nums - goal) := by
+    simp only [pyAbs, PyAbs.pyAbs]; split <;> omega
+  set D := pyAbs (pySum nums - goal) with hDdef
+  rw [Int.fdiv_eq_ediv_of_nonneg _ (le_of_lt h)]
+  have hne : limit ≠ 0 := by omega
+  have h1 := Int.ediv_add_emod (D + limit - 1) limit
+  have h2 := Int.emod_nonneg (D + limit - 1) hne
+  have h3 := Int.emod_lt_of_pos (D + limit - 1) h
+  set Q := (D + limit - 1) / limit with hQ
+  set R := (D + limit - 1) % limit with hR
+  have e1 : Q * limit = limit * Q := by ring
+  have e2 : (Q - 1) * limit = limit * Q - limit := by ring
+  rw [e1, e2]
+  generalize limit * Q = t at h1 ⊢
+  omega
 
 def minElements'rn := fun (nums : List Int) ↦ fun (limit : Int) ↦ fun (goal : Int) ↦
   let d := (PastaLean.pyAbs (PastaLean.pySum nums -ₚ goal) : Int)

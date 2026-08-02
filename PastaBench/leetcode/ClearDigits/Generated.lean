@@ -90,8 +90,16 @@ theorem clearDigits_spec :
     · ⇓cur =>
       ⌜PastaLean.pyAll ((PastaLean.pyIter stk).map fun ch => !PastaLean.pyTruthy (PastaLean.pyIsDecimal ch)) ∧
           PastaLean.pyLen stk ≥ (0 : Int)⌝
-  sorry
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
+
+theorem clearDigits_correct :
+    ∀ (s : String),
+      let result := (clearDigits s).run;
+      PastaLean.pyAll ((PastaLean.pyIter result).map fun c => !PastaLean.pyTruthy (PastaLean.pyIsDecimal c)) :=
+  by
+  intro s
+  exact clearDigits_spec True.intro
 
 def clearDigits'rn := fun (s : String) ↦
   Id.run

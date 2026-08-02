@@ -1,0 +1,14 @@
+{
+  "task_id": "HumanEval/5",
+  "problem": "intersperse",
+  "module": "Intersperse",
+  "method": "intersperse",
+  "params": [
+    "numbers",
+    "delimeter"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

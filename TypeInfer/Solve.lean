@@ -1211,6 +1211,12 @@ partial def stampUnpackShape (target : Json) (ty : PyType) : Json :=
         | .tuple _ => return t.setObjVal! "_tuple_unpack" (Json.bool true)
         | _ => return t
     | _ => target
+  -- A single-`Name` comp/for target (`for group in groups`) gets its element type stamped as `_ty`,
+  -- so the lambda/loop binder is ascribed instead of defaulting (e.g. `group : String`, not `ℤ`).
+  else if nodeTypeOf target == some "Name" then
+    match toAnnotation? ty with
+    | some ann => if (getField target "_ty").isSome then target else target.setObjVal! "_ty" ann
+    | none => target
   else target
 
 /-- Is `name` assigned from a `Counter(...)`/`defaultdict(...)` call anywhere in `json` (bare or

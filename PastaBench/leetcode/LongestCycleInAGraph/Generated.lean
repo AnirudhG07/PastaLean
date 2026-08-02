@@ -144,6 +144,16 @@ theorem longestCycle_spec :
   sorry
   all_goals sorry
 
+theorem longestCycle_correct :
+    ∀ (edges : List Int),
+      PastaLean.pyAll
+          ((PastaLean.pyIter edges).map fun e => decide (-(1 : Int) ≤ e) && decide (e < PastaLean.pyLen edges)) →
+        let ans := (longestCycle edges).run;
+        -(1 : Int) ≤ ans ∧ ans ≤ PastaLean.pyLen edges :=
+  by
+  intro edges hpre
+  exact longestCycle_spec hpre
+
 def longestCycle'rn := fun (edges : List Int) ↦
   Id.run
     (do

@@ -45,10 +45,9 @@ def reverseWords := fun (s : String) ↦ PastaLean.pyStringJoin " " (PastaLean.p
 attribute [simp] reverseWords
 
 @[taste_ingr]
-theorem reverseWords_spec :
+theorem reverseWords_correct :
     ∀ (s : String),
-      PastaLean.pyStringSplit (PastaLean.pyStringJoin " " (PastaLean.pyReversed (PastaLean.pyStringSplit s))) =
-        PastaLean.pyList (PastaLean.pyReversed (PastaLean.pyStringSplit s)) :=
+      PastaLean.pyStringSplit (reverseWords s) = PastaLean.pyList (PastaLean.pyReversed (PastaLean.pyStringSplit s)) :=
   by sorry
 
 def reverseWords'rn := fun (s : String) ↦ PastaLean.pyStringJoin " " (PastaLean.pyReversed (PastaLean.pyStringSplit s))

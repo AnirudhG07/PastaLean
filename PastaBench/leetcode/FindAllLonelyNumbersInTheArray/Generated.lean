@@ -58,21 +58,10 @@ def findLonely := fun (nums : List Int) ↦
 attribute [simp] findLonely
 
 @[taste_ingr]
-theorem findLonely_spec :
+theorem findLonely_correct :
     ∀ (nums : List Int),
       let cnt := Libraries.collections.pyCounter nums
-      PastaLean.pySetEq
-          (PastaLean.pySet
-            ((List.filter
-                  (fun (_pair_2 : Int × Int) =>
-                    let x := Prod.fst _pair_2;
-                    let v := Prod.snd _pair_2;
-                    (v = (1 : Int) ∧ cnt⦋x -ₚ (1 : Int)⦌ = (0 : Int)) ∧ cnt⦋x +ₚ (1 : Int)⦌ = (0 : Int))
-                  (PastaLean.pyIter (PastaLean.pyItems cnt))).map
-              fun (_pair_1 : Int × Int) =>
-              let x := Prod.fst _pair_1;
-              let v := Prod.snd _pair_1;
-              x))
+      PastaLean.pySetEq (PastaLean.pySet (findLonely nums))
           (PastaLean.pySetFromList
             ((List.filter
                   (fun x =>

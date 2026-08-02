@@ -75,6 +75,18 @@ theorem checkAlmostEquivalent_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
+theorem checkAlmostEquivalent_correct :
+    ∀ (word1 : String),
+      ∀ (word2 : String),
+        let result := (checkAlmostEquivalent word1 word2).run;
+        result =
+          PastaLean.pyAll
+            ((PastaLean.pyIter Libraries.string.pyStringPrintable).map fun c =>
+              decide (PastaLean.pyAbs (PastaLean.pyCount word1 c -ₚ PastaLean.pyCount word2 c) ≤ (3 : Int))) :=
+  by
+  intro word1 word2
+  exact checkAlmostEquivalent_spec True.intro
+
 def checkAlmostEquivalent'rn := fun (word1 : String) ↦ fun (word2 : String) ↦
   Id.run
     (do

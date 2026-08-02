@@ -1,6 +1,9 @@
 import Mathlib
 import PastaLean.PyAPI.Core
 import PastaLean.PyAPI.Operators
+import PastaLean.PyAPI.CommonProtocols.Length
+import PastaLean.PyAPI.CommonProtocols.GetItem
+import PastaLean.PyAPI.Lists
 import PastaLean.PyAPI.TasteIngr
 import PastaLean.PyVerify.PyWhile
 
@@ -58,6 +61,64 @@ closers (`positivity`/`nlinarith`) don't see through the `^ₚ` notation, so nor
 `x ^ 2` monoid power — then `positivity` recognises the even power as nonnegative. Squares dominate
 the contract goals (sum-of-squares, variance); higher powers can get their own reductions as needed. -/
 @[taste_ingr] theorem pyHPow_two (a : Int) : a ^ₚ (2 : Int) = a ^ 2 := rfl
+
+/-- Python `len` is a non-negative `Int` (a `Nat` count), which many postconditions/invariants rely
+on (`0 ≤ len`, `i ≤ len`). One `@[taste_ingr]` lemma per concrete container. -/
+@[taste_ingr] theorem pyLen_list_nonneg {α : Type} (xs : List α) : 0 ≤ pyLen xs := by
+  simp [pyLen, PyLen.pyLen]
+@[taste_ingr] theorem pyLen_nil {α : Type} : pyLen ([] : List α) = 0 := by
+  simp [pyLen, PyLen.pyLen]
+
+/-- Indexing a returned 2-tuple: `(a,b)[0] = a`, `(a,b)[1] = b`. Reduces the postcondition of any
+function returning a pair (Python `return x, y`), which lowers to `result⦋0⦌`/`result⦋1⦌`. -/
+@[taste_ingr] theorem pyGetItem_pair_zero {α : Type} [Inhabited α] (a b : α) :
+    (a, b)⦋(0 : Int)⦌ = a := by
+  simp [pyGetItem, PyGetItem.getItem, pyIter, pyListGetItem, PyIterable.toPyList]
+@[taste_ingr] theorem pyGetItem_pair_one {α : Type} [Inhabited α] (a b : α) :
+    (a, b)⦋(1 : Int)⦌ = b := by
+  simp [pyGetItem, PyGetItem.getItem, pyIter, pyListGetItem, PyIterable.toPyList]
+@[taste_ingr] theorem pyLen_string_nonneg (s : String) : 0 ≤ pyLen s := by
+  simp [pyLen, PyLen.pyLen]
+
+/-- `append` (Python `list.append`) grows the length by one — the key rewrite for any loop whose
+invariant tracks the length of an accumulator built with `pyAppend`. `@[taste_ingr]` so it fires in
+the standard closer. -/
+@[taste_ingr] theorem pyLen_pyListAppend {α : Type} (l : List α) (x : α) :
+    pyLen (pyListAppend l x) = pyLen l + 1 := by
+  simp [pyLen, PyLen.pyLen, pyListAppend]
+@[taste_ingr] theorem pyLen_pyAppend {α : Type} (l : List α) (x : α) :
+    pyLen (pyAppend l x) = pyLen l + 1 := pyLen_pyListAppend l x
+
+/-- mvcgen's `for`-over-`List.range` cursor VCs carry a decomposition hypothesis
+`List.range n = pref ++ cur :: suff` and then need the index bound `pref.length < n` (to justify
+`i < len`). A `@[grind →]` forward rule so `grind` discharges those cursor-index VCs automatically. -/
+@[grind →] theorem pyCursor_prefix_lt {n : Nat} {pref suff : List ℕ} {cur : ℕ}
+    (h : List.range n = pref ++ cur :: suff) : pref.length < n := by
+  have hl := congrArg List.length h
+  simp [List.length_append, List.length_cons] at hl
+  omega
+
+/-- Generic list-iteration cursor bound: for `for x in xs`, the consumed prefix is a strict prefix,
+so `pref.length < xs.length`. Covers char loops (`for ch in s`) and any `for x in <list>` whose
+invariant tracks the number of elements seen. Plain (no concrete head to pattern on) — pass it to
+`grind [pyCursor_listPrefix_lt]` when a char/list loop needs the bound. -/
+theorem pyCursor_listPrefix_lt {α : Type} {xs pref suff : List α} {cur : α}
+    (h : xs = pref ++ cur :: suff) : pref.length < xs.length := by
+  have := congrArg List.length h
+  simp [List.length_append, List.length_cons] at this
+  omega
+
+/-- The cursor element `cur` of a `for i in range(n)` loop IS its index `pref.length`. mvcgen's VCs
+speak of `cur` (the value pulled from the range) while the invariant speaks of the index; this bridges
+them so index-dependent invariants (lengths, positions) discharge. `@[grind →]` like its sibling. -/
+@[grind →] theorem pyCursor_prefix_eq {n : Nat} {pref suff : List ℕ} {cur : ℕ}
+    (h : List.range n = pref ++ cur :: suff) : cur = pref.length := by
+  have hlt : pref.length < n := pyCursor_prefix_lt h
+  have hr : (List.range n)[pref.length]? = some pref.length := by
+    simp [List.getElem?_range, hlt]
+  have hs : (List.range n)[pref.length]? = some cur := by
+    rw [h, List.getElem?_append_right (Nat.le_refl pref.length)]; simp
+  rw [hr] at hs; simpa using hs.symm
 
 -- `pyWhile`, its `while` rule (`pyWhile_correct`), and the `while → for` bridge (`pyWhile_count`) now
 -- live in `PastaLean.PyVerify.PyWhile` (imported above), so all `pyWhile` material is in one file.

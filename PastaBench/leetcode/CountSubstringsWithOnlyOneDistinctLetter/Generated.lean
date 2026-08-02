@@ -32,23 +32,25 @@ from bisect import *
 from string import *
 from operator import *
 from math import *
-
 from contracts import *
-
 
 def countLetters(s: str) -> int:
     n = len(s)
+    Ensures(Result() >= 0)
+    Ensures(2 * Result() <= n * (n + 1))
+
     i = ans = 0
-    Decreases(n - i)
     while i < n:
-        Invariant(0 <= i)
-        Invariant(i <= n)
+        Invariant(0 <= i <= n)
         Invariant(ans >= 0)
+        Invariant(2 * ans <= i * (i + 1))
+        Decreases(n - i)
+
         j = i
-        Decreases(n - j)
         while j < n and s[j] == s[i]:
-            Invariant(i <= j)
-            Invariant(j <= n)
+            Invariant(i <= j <= n)
+            Decreases(n - j)
+
             j += 1
         ans += (1 + j - i) * (j - i) // 2
         i = j
@@ -62,26 +64,36 @@ def countLetters := fun (s : String) ↦
     let mut n : Int := PastaLean.pyLen s
     let mut i : Int := (0 : Int)
     let mut ans : Int := (0 : Int)
-    let _ := Libraries.passta.pyPassDecreases (n -ₚ i)
     while (i < n) do
-      let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i))
-      let _ := Libraries.passta.pyPassInvariant (decide (i ≤ n))
+      let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i) && decide (i ≤ n))
       let _ := Libraries.passta.pyPassInvariant (decide (ans ≥ (0 : Int)))
+      let _ := Libraries.passta.pyPassInvariant (decide ((2 : Int) *ₚ ans ≤ i *ₚ (i +ₚ (1 : Int))))
+      let _ := Libraries.passta.pyPassDecreases (n -ₚ i)
       let mut j : Int := i
-      let _ := Libraries.passta.pyPassDecreases (n -ₚ j)
       while (j < n ∧ s⦋j⦌ = s⦋i⦌) do
-        let _ := Libraries.passta.pyPassInvariant (decide (i ≤ j))
-        let _ := Libraries.passta.pyPassInvariant (decide (j ≤ n))
+        let _ := Libraries.passta.pyPassInvariant (decide (i ≤ j) && decide (j ≤ n))
+        let _ := Libraries.passta.pyPassDecreases (n -ₚ j)
         j := j +ₚ (1 : Int)
       ans := ans +ₚ PastaLean.pyFloorDiv (((1 : Int) +ₚ j -ₚ i) *ₚ (j -ₚ i)) (2 : Int)
       i := j
     return ans : Id _)
 
-theorem countLetters_spec : ⦃⌜True⌝⦄ countLetters s ⦃⇓_ => ⌜True⌝⦄ :=
+@[spec]
+theorem countLetters_spec :
+    ⦃⌜True⌝⦄ countLetters s ⦃⇓ans =>
+      ⌜ans ≥ (0 : Int) ∧ (2 : Int) *ₚ ans ≤ PastaLean.pyLen s *ₚ (PastaLean.pyLen s +ₚ (1 : Int))⌝⦄ :=
   by
   mvcgen [countLetters, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
   all_goals sorry
   all_goals sorry
+
+theorem countLetters_correct :
+    ∀ (s : String),
+      let ans := (countLetters s).run;
+      ans ≥ (0 : Int) ∧ (2 : Int) *ₚ ans ≤ PastaLean.pyLen s *ₚ (PastaLean.pyLen s +ₚ (1 : Int)) :=
+  by
+  intro s
+  exact countLetters_spec True.intro
 
 def countLetters'rn := fun (s : String) ↦
   Id.run
@@ -89,16 +101,15 @@ def countLetters'rn := fun (s : String) ↦
       let mut n : Int := PastaLean.pyLen s
       let mut i : Int := (0 : Int)
       let mut ans : Int := (0 : Int)
-      let _ := Libraries.passta.pyPassDecreases (n -ₚ i)
       while (i < n) do
-        let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i))
-        let _ := Libraries.passta.pyPassInvariant (decide (i ≤ n))
+        let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i) && decide (i ≤ n))
         let _ := Libraries.passta.pyPassInvariant (decide (ans ≥ (0 : Int)))
+        let _ := Libraries.passta.pyPassInvariant (decide ((2 : Int) *ₚ ans ≤ i *ₚ (i +ₚ (1 : Int))))
+        let _ := Libraries.passta.pyPassDecreases (n -ₚ i)
         let mut j : Int := i
-        let _ := Libraries.passta.pyPassDecreases (n -ₚ j)
         while (decide (j < n) && s⦋j⦌ == s⦋i⦌) do
-          let _ := Libraries.passta.pyPassInvariant (decide (i ≤ j))
-          let _ := Libraries.passta.pyPassInvariant (decide (j ≤ n))
+          let _ := Libraries.passta.pyPassInvariant (decide (i ≤ j) && decide (j ≤ n))
+          let _ := Libraries.passta.pyPassDecreases (n -ₚ j)
           j := j +ₚ (1 : Int)
         ans := ans +ₚ PastaLean.pyFloorDiv (((1 : Int) +ₚ j -ₚ i) *ₚ (j -ₚ i)) (2 : Int)
         i := j

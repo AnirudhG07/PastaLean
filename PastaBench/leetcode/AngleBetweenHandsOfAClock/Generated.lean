@@ -56,15 +56,14 @@ def angleClock := fun (hour : Int) ↦ fun (minutes : Int) ↦
 attribute [simp] angleClock
 
 @[taste_ingr]
-theorem angleClock_spec :
+theorem angleClock_correct :
     ∀ (hour : Int),
       ∀ (minutes : Int),
         let h := (30 : Int) *ₚ hour +ₚ (0.5 : Rat) *ₚ minutes
         let m := (6 : Int) *ₚ minutes
         let diff := PastaLean.pyAbs (h -ₚ m)
         (((0 : Int) ≤ hour ∧ hour ≤ (12 : Int)) ∧ (0 : Int) ≤ minutes) ∧ minutes < (60 : Int) →
-          (0 : Int) ≤ PastaLean.pyMin [diff, (360 : Int) -ₚ diff] ∧
-            PastaLean.pyMin [diff, (360 : Int) -ₚ diff] ≤ (180 : Int) :=
+          (0 : Int) ≤ angleClock hour minutes ∧ angleClock hour minutes ≤ (180 : Int) :=
   by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
 
 def angleClock'rn := fun (hour : Int) ↦ fun (minutes : Int) ↦

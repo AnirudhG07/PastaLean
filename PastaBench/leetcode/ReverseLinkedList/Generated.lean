@@ -112,6 +112,14 @@ theorem reverseList_spec :
   all_goals sorry
   all_goals sorry
 
+theorem reverseList_correct :
+    ∀ (head : Option ListNode),
+      let result := (reverseList head).run;
+      PastaLean.pyIsNone head = PastaLean.pyIsNone result :=
+  by
+  intro head
+  exact reverseList_spec True.intro
+
 def reverseList'rn : Option ListNode'rn → Option ListNode'rn := fun (head : Option ListNode'rn) ↦
   Id.run
     (do

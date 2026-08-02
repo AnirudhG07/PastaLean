@@ -107,6 +107,16 @@ theorem finalPrices_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
+theorem finalPrices_correct :
+    ∀ (prices : List Int),
+      PastaLean.pyAll ((PastaLean.pyIter prices).map fun p => decide (p ≥ (0 : Int))) →
+        let prices := (finalPrices prices).run;
+        PastaLean.pyLen prices = PastaLean.pyLen prices ∧
+          PastaLean.pyAll ((PastaLean.pyIter prices).map fun p => decide (p ≥ (0 : Int))) :=
+  by
+  intro prices hpre
+  exact finalPrices_spec hpre
+
 def finalPrices'rn := fun (prices : List Int) ↦
   Id.run
     (do

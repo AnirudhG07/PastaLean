@@ -1,0 +1,15 @@
+{
+  "task_id": "HumanEval/150",
+  "problem": "x-or-y",
+  "module": "XOrY",
+  "method": "x_or_y",
+  "params": [
+    "n",
+    "x",
+    "y"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

@@ -66,7 +66,7 @@ def circularPermutation := fun (n : Int) ↦ fun (start : Int) ↦
 attribute [simp] circularPermutation
 
 @[taste_ingr]
-theorem circularPermutation_spec :
+theorem circularPermutation_correct :
     ∀ (n : Int),
       ∀ (start : Int),
         let g :=
@@ -77,7 +77,8 @@ theorem circularPermutation_spec :
         n ≥ (0 : Int) →
           (0 : Int) ≤ start →
             start < PastaLean.pyShiftLeft (1 : Int) n →
-              ((((((PastaLean.pyLen r = PastaLean.pyShiftLeft (1 : Int) n ∧ r⦋(0 : Int)⦌ = start) ∧
+              ((((((PastaLean.pyLen (circularPermutation n start) = PastaLean.pyShiftLeft (1 : Int) n ∧
+                            (circularPermutation n start)⦋(0 : Int)⦌ = start) ∧
                           PastaLean.pyLen g = PastaLean.pyShiftLeft (1 : Int) n) ∧
                         (0 : Int) ≤ j) ∧
                       j < PastaLean.pyLen g) ∧

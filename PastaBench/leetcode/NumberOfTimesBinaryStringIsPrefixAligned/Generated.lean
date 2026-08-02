@@ -85,6 +85,17 @@ theorem numTimesAllBlue_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
+theorem numTimesAllBlue_correct :
+    ∀ (flips : List Int),
+      PastaLean.pySetEq (PastaLean.pySet flips)
+            (PastaLean.pySet (PastaLean.pyRange (PastaLean.pyLen flips +ₚ (1 : Int)) (1 : Int))) =
+          true →
+        let ans := (numTimesAllBlue flips).run;
+        (0 : Int) ≤ ans ∧ ans ≤ PastaLean.pyLen flips :=
+  by
+  intro flips hpre
+  exact numTimesAllBlue_spec hpre
+
 def numTimesAllBlue'rn := fun (flips : List Int) ↦
   Id.run
     (do

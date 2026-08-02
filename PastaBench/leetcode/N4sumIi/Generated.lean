@@ -63,7 +63,7 @@ def fourSumCount := fun (nums1 : List Int) ↦ fun (nums2 : List Int) ↦ fun (n
 attribute [simp] fourSumCount
 
 @[taste_ingr]
-theorem fourSumCount_spec :
+theorem fourSumCount_correct :
     ∀ (nums1 : List Int),
       ∀ (nums2 : List Int),
         ∀ (nums3 : List Int),
@@ -71,8 +71,7 @@ theorem fourSumCount_spec :
             let cnt :=
               Libraries.collections.pyCounter
                 ((PastaLean.pyIter nums1).flatMap fun a => (PastaLean.pyIter nums2).map fun b => a +ₚ b)
-            PastaLean.pySum
-                ((PastaLean.pyIter nums3).flatMap fun c => (PastaLean.pyIter nums4).map fun d => cnt⦋-(c +ₚ d)⦌) =
+            fourSumCount nums1 nums2 nums3 nums4 =
               PastaLean.pySum
                 ((PastaLean.pyIter nums1).flatMap fun a =>
                   (PastaLean.pyIter nums2).flatMap fun b =>

@@ -57,14 +57,14 @@ def getXORSum := fun (arr1 : List Int) ↦ fun (arr2 : List Int) ↦
 attribute [simp] getXORSum
 
 @[taste_ingr]
-theorem getXORSum_spec :
+theorem getXORSum_correct :
     ∀ (arr1 : List Int),
       ∀ (arr2 : List Int),
         let a := Libraries.functools.pyReduce arr1 PastaLean.pyBitXor
         let b := Libraries.functools.pyReduce arr2 PastaLean.pyBitXor
         PastaLean.pyLen arr1 > (0 : Int) →
           PastaLean.pyLen arr2 > (0 : Int) →
-            PastaLean.pyBitAnd a b =
+            getXORSum arr1 arr2 =
               Libraries.functools.pyReduce
                 ((PastaLean.pyIter arr1).flatMap fun a => (PastaLean.pyIter arr2).map fun b => PastaLean.pyBitAnd a b)
                 PastaLean.pyBitXor :=

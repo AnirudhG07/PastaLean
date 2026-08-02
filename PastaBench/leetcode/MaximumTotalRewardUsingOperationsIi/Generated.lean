@@ -35,11 +35,27 @@ from operator import *
 from math import *
 
 def maxTotalReward(rewardValues: List[int]) -> int:
-    Requires(all(v >= 0 for v in rewardValues))
+    Requires(len(rewardValues) >= 1)
+    Requires(all(v >= 1 for v in rewardValues))
+
+    Ensures(Result() >= 0)
+    Ensures(Result() < 2 * max(rewardValues))
+
     nums = sorted(set(rewardValues))
     f = 1
     for v in nums:
-        f |= (f & ((1 << v) - 1)) << v
+        Invariant(v >= 1)
+        Invariant(f >= 1)
+        # The maximum sum achievable so far is bounded by twice the current reward value.
+        # This holds because new sums are formed by `s + v` where `s < v`, so `s + v < 2v`.
+        # The old max sum was bounded by `2 * v_previous < 2 * v`.
+        Invariant(f.bit_length() - 1 < 2 * v)
+
+        f |= (f & (1 << v) - 1) << v
+
+    # After the loop, the invariant holds for the last value of v, which is max(rewardValues).
+    # This assertion bridges the loop invariant to the postcondition.
+    Assert(f.bit_length() - 1 < 2 * max(rewardValues))
     return f.bit_length() - 1
 -/
 
@@ -50,33 +66,68 @@ def maxTotalReward := fun (rewardValues : List Int) ↦
     let mut nums : List Int := PastaLean.pySort (PastaLean.pySet rewardValues)
     let mut f : Int := (1 : Int)
     for v in (PastaLean.pyIter nums)do
+      let _ := Libraries.passta.pyPassInvariant (decide (v ≥ (1 : Int)))
+      let _ := Libraries.passta.pyPassInvariant (decide (f ≥ (1 : Int)))
+      -- The maximum sum achievable so far is bounded by twice the current reward value.
+      -- This holds because new sums are formed by `s + v` where `s < v`, so `s + v < 2v`.
+      -- The old max sum was bounded by `2 * v_previous < 2 * v`.
+      let _ := Libraries.passta.pyPassInvariant (decide (PastaLean.pyBitLength f -ₚ (1 : Int) < (2 : Int) *ₚ v))
       f :=
         PastaLean.pyBitOr f
           (PastaLean.pyShiftLeft (PastaLean.pyBitAnd f (PastaLean.pyShiftLeft (1 : Int) v -ₚ (1 : Int))) v)
+    let _ :=
+      Libraries.passta.pyPassAssert
+        (decide (PastaLean.pyBitLength f -ₚ (1 : Int) < (2 : Int) *ₚ PastaLean.pyMax rewardValues))
     let __py_ret_1 := PastaLean.pyBitLength f -ₚ (1 : Int)
     return __py_ret_1 : Id _)
 
+@[spec]
 theorem maxTotalReward_spec :
-    ⦃⌜PastaLean.pyAll ((PastaLean.pyIter rewardValues).map fun v => decide (v ≥ (0 : Int)))⌝⦄
-      maxTotalReward rewardValues ⦃⇓_ => ⌜True⌝⦄ :=
+    ⦃⌜PastaLean.pyLen rewardValues ≥ (1 : Int) ∧
+          PastaLean.pyAll ((PastaLean.pyIter rewardValues).map fun v => decide (v ≥ (1 : Int)))⌝⦄
+      maxTotalReward rewardValues ⦃⇓result =>
+      ⌜result ≥ (0 : Int) ∧ result < (2 : Int) *ₚ PastaLean.pyMax rewardValues⌝⦄ :=
   by
   try
     mvcgen [maxTotalReward, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓⟨cur, f⟩ => ⌜True⌝
+    · ⇓⟨cur, f⟩ => ⌜(v ≥ (1 : Int) ∧ f ≥ (1 : Int)) ∧ PastaLean.pyBitLength f -ₚ (1 : Int) < (2 : Int) *ₚ v⌝
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
+
+theorem maxTotalReward_correct :
+    ∀ (rewardValues : List Int),
+      PastaLean.pyLen rewardValues ≥ (1 : Int) ∧
+          PastaLean.pyAll ((PastaLean.pyIter rewardValues).map fun v => decide (v ≥ (1 : Int))) →
+        let result := (maxTotalReward rewardValues).run;
+        result ≥ (0 : Int) ∧ result < (2 : Int) *ₚ PastaLean.pyMax rewardValues :=
+  by
+  intro rewardValues hpre
+  exact maxTotalReward_spec hpre
 
 def maxTotalReward'rn := fun (rewardValues : List Int) ↦
   Id.run
     (do
+      let _ := Libraries.passta.pyPassRequires (decide (PastaLean.pyLen rewardValues ≥ (1 : Int)))
       let _ :=
         Libraries.passta.pyPassRequires
-          (PastaLean.pyAll ((PastaLean.pyIter rewardValues).map fun v => decide (v ≥ (0 : Int))))
+          (PastaLean.pyAll ((PastaLean.pyIter rewardValues).map fun v => decide (v ≥ (1 : Int))))
       let mut nums : List Int := PastaLean.pySort (PastaLean.pySet rewardValues)
       let mut f : Int := (1 : Int)
       for v in (PastaLean.pyIter nums)do
+        let _ := Libraries.passta.pyPassInvariant (decide (v ≥ (1 : Int)))
+        let _ := Libraries.passta.pyPassInvariant (decide (f ≥ (1 : Int)))
+        -- The maximum sum achievable so far is bounded by twice the current reward value.
+        -- This holds because new sums are formed by `s + v` where `s < v`, so `s + v < 2v`.
+        -- The old max sum was bounded by `2 * v_previous < 2 * v`.
+        let _ := Libraries.passta.pyPassInvariant (decide (PastaLean.pyBitLength f -ₚ (1 : Int) < (2 : Int) *ₚ v))
         f :=
           PastaLean.pyBitOr f
             (PastaLean.pyShiftLeft (PastaLean.pyBitAnd f (PastaLean.pyShiftLeft (1 : Int) v -ₚ (1 : Int))) v)
+      -- After the loop, the invariant holds for the last value of v, which is max(rewardValues).
+      -- This assertion bridges the loop invariant to the postcondition.
+      let _ :=
+        Libraries.passta.pyPassAssert
+          (decide (PastaLean.pyBitLength f -ₚ (1 : Int) < (2 : Int) *ₚ PastaLean.pyMax rewardValues))
       let __py_ret_1 := PastaLean.pyBitLength f -ₚ (1 : Int)
       return __py_ret_1)
 

@@ -82,6 +82,23 @@ theorem escapeGhosts_spec :
   mvcgen [escapeGhosts, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
   all_goals sorry
 
+theorem escapeGhosts_correct :
+    ∀ (ghosts : List (List Int)),
+      ∀ (target : List Int),
+        PastaLean.pyLen target = (2 : Int) ∧
+            PastaLean.pyAll ((PastaLean.pyIter ghosts).map fun g => PastaLean.pyLen g == (2 : Int)) →
+          let result := (escapeGhosts ghosts target).run;
+          result =
+            PastaLean.pyAll
+              ((PastaLean.pyIter ghosts).map fun g =>
+                decide
+                  (PastaLean.pyAbs (target⦋(0 : Int)⦌ -ₚ g⦋(0 : Int)⦌) +ₚ
+                      PastaLean.pyAbs (target⦋(1 : Int)⦌ -ₚ g⦋(1 : Int)⦌) >
+                    PastaLean.pyAbs target⦋(0 : Int)⦌ +ₚ PastaLean.pyAbs target⦋(1 : Int)⦌)) :=
+  by
+  intro ghosts target hpre
+  exact escapeGhosts_spec hpre
+
 def escapeGhosts'rn := fun (ghosts : List (List Int)) ↦ fun (target : List Int) ↦
   Id.run
     (do

@@ -130,6 +130,16 @@ theorem countDifferentSubsequenceGCDs_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
+theorem countDifferentSubsequenceGCDs_correct :
+    ∀ (nums : List Int),
+      PastaLean.pyLen nums > (0 : Int) ∧
+          PastaLean.pyAll ((PastaLean.pyIter nums).map fun n => decide (n > (0 : Int))) →
+        let ans := (countDifferentSubsequenceGCDs nums).run;
+        ans ≥ (0 : Int) ∧ ans ≤ PastaLean.pyMax nums :=
+  by
+  intro nums hpre
+  exact countDifferentSubsequenceGCDs_spec hpre
+
 def countDifferentSubsequenceGCDs'rn := fun (nums : List Int) ↦
   Id.run
     (do

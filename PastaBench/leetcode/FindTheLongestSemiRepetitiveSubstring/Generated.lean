@@ -82,12 +82,21 @@ theorem longestSemiRepetitiveSubstring_spec :
   by
   try
     mvcgen [longestSemiRepetitiveSubstring, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓⟨cur, j, cnt⟩ =>
+    · ⇓⟨cur, ans, cnt, j⟩ =>
       ⌜let i := (cur.prefix.length : Int);
         ((((1 : Int) ≤ i ∧ i < n) ∧ (0 : Int) ≤ j ∧ j ≤ i) ∧ (0 : Int) ≤ cnt ∧ cnt ≤ (1 : Int)) ∧
           (1 : Int) ≤ ans ∧ ans ≤ n⌝
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
+
+theorem longestSemiRepetitiveSubstring_correct :
+    ∀ (s : String),
+      PastaLean.pyLen s ≥ (1 : Int) →
+        let ans := (longestSemiRepetitiveSubstring s).run;
+        (1 : Int) ≤ ans ∧ ans ≤ PastaLean.pyLen s :=
+  by
+  intro s hpre
+  exact longestSemiRepetitiveSubstring_spec hpre
 
 def longestSemiRepetitiveSubstring'rn := fun (s : String) ↦
   Id.run

@@ -97,6 +97,18 @@ theorem reverseBits_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
+theorem reverseBits_correct :
+    ∀ (n : Int),
+      (0 : Int) ≤ n ∧ n < (2 : Int) ^ₚ (32 : Int) →
+        let ans := (reverseBits n).run;
+        ans =
+          PastaLean.pySum
+            ((PastaLean.pyRange (32 : Int)).map fun j =>
+              PastaLean.pyShiftLeft (PastaLean.pyBitAnd (PastaLean.pyShiftRight n j) (1 : Int)) ((31 : Int) -ₚ j)) :=
+  by
+  intro n hpre
+  exact reverseBits_spec hpre
+
 def reverseBits'rn := fun (n : Int) ↦
   Id.run
     (do

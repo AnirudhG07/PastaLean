@@ -65,9 +65,20 @@ def isArmstrong := fun (n : Int) ↦
 
 theorem isArmstrong_spec : ⦃⌜n ≥ (0 : Int)⌝⦄ isArmstrong n ⦃⇓_ => ⌜True⌝⦄ :=
   by
-  mvcgen [isArmstrong, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
-  all_goals sorry
+  try
+    mvcgen [isArmstrong, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · fun s =>
+      let x := s |>.snd;
+      let s := s |>.fst;
+      (⟨(x).toNat⟩ : ULift Nat)
+    · ⇓s =>
+      ⌜Sum.elim
+          (fun st =>
+            let x := st |>.snd;
+            let s := st |>.fst;
+            x ≥ (0 : Int))
+          (fun _ => True) s⌝
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals
 
 def isArmstrong'rn := fun (n : Int) ↦
   Id.run

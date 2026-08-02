@@ -69,9 +69,18 @@ theorem waysToSplitArray_spec :
   by
   try
     mvcgen [waysToSplitArray, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓⟨cur, t, ans⟩ => ⌜s = PastaLean.pySum nums ∧ ans ≥ (0 : Int)⌝
+    · ⇓⟨cur, ans, t⟩ => ⌜s = PastaLean.pySum nums ∧ ans ≥ (0 : Int)⌝
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
+
+theorem waysToSplitArray_correct :
+    ∀ (nums : List Int),
+      PastaLean.pyLen nums ≥ (2 : Int) →
+        let ans := (waysToSplitArray nums).run;
+        (0 : Int) ≤ ans ∧ ans ≤ PastaLean.pyLen nums -ₚ (1 : Int) :=
+  by
+  intro nums hpre
+  exact waysToSplitArray_spec hpre
 
 def waysToSplitArray'rn := fun (nums : List Int) ↦
   Id.run

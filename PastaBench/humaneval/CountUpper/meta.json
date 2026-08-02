@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/98",
+  "problem": "count-upper",
+  "module": "CountUpper",
+  "method": "count_upper",
+  "params": [
+    "s"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

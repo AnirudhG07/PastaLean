@@ -47,14 +47,36 @@ def prefixCount := fun (words : List String) ↦ fun (pref : String) ↦
 
 attribute [simp] prefixCount
 
+private theorem foldl_bool_bounds (l : List Bool) (s : Int) :
+    s ≤ l.foldl (fun acc x => acc + PastaLean.pyBoolToInt x) s ∧
+      l.foldl (fun acc x => acc + PastaLean.pyBoolToInt x) s ≤ s + (l.length : Int) := by
+  induction l generalizing s with
+  | nil => simp
+  | cons a t ih =>
+    have hb : 0 ≤ PastaLean.pyBoolToInt a ∧ PastaLean.pyBoolToInt a ≤ 1 := by
+      unfold PastaLean.pyBoolToInt; split <;> omega
+    have := ih (s + PastaLean.pyBoolToInt a)
+    simp only [List.foldl_cons, List.length_cons]
+    push_cast
+    omega
+
+private theorem pySum_bool_bounds (l : List Bool) :
+    (0 : Int) ≤ PastaLean.pySum l ∧ PastaLean.pySum l ≤ (l.length : Int) := by
+  have h := foldl_bool_bounds l 0
+  refine ⟨h.1, ?_⟩
+  have h2 := h.2
+  rw [Int.zero_add] at h2
+  exact h2
+
 @[taste_ingr]
-theorem prefixCount_spec :
+theorem prefixCount_correct :
     ∀ (words : List String),
-      ∀ (pref : String),
-        (0 : Int) ≤ PastaLean.pySum ((PastaLean.pyIter words).map fun w => PastaLean.pyStringStartswith w pref) ∧
-          PastaLean.pySum ((PastaLean.pyIter words).map fun w => PastaLean.pyStringStartswith w pref) ≤
-            PastaLean.pyLen words :=
-  by intros; sorry
+      ∀ (pref : String), (0 : Int) ≤ prefixCount words pref ∧ prefixCount words pref ≤ PastaLean.pyLen words :=
+  by
+  intro words pref
+  have h := pySum_bool_bounds ((PastaLean.pyIter words).map fun w => PastaLean.pyStringStartswith w pref)
+  simp only [List.length_map] at h
+  exact h
 
 def prefixCount'rn := fun (words : List String) ↦ fun (pref : String) ↦
   PastaLean.pySum ((PastaLean.pyIter words).map fun w => PastaLean.pyStringStartswith w pref)

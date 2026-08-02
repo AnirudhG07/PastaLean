@@ -141,6 +141,16 @@ theorem findNearestRightNode_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
+theorem findNearestRightNode_correct :
+    ∀ (root : Option TreeNode),
+      ∀ (u : TreeNode),
+        !PastaLean.pyIsNone root ∧ !PastaLean.pyIsNone u →
+          let result := (findNearestRightNode root u).run;
+          result != u :=
+  by
+  intro root u hpre
+  exact findNearestRightNode_spec hpre
+
 def findNearestRightNode'rn : Option TreeNode'rn → TreeNode'rn → Option TreeNode'rn :=
   fun (root : Option TreeNode'rn) ↦ fun (u : TreeNode'rn) ↦
   Id.run

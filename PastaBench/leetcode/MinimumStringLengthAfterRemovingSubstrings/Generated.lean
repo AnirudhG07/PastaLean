@@ -78,6 +78,14 @@ theorem minLength_spec : ⦃⌜True⌝⦄ minLength s ⦃⇓result => ⌜result 
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
+theorem minLength_correct :
+    ∀ (s : String),
+      let result := (minLength s).run;
+      result ≥ (0 : Int) ∧ result ≤ PastaLean.pyLen s :=
+  by
+  intro s
+  exact minLength_spec True.intro
+
 def minLength'rn := fun (s : String) ↦
   Id.run
     (do

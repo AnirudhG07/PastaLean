@@ -89,6 +89,15 @@ theorem minAddToMakeValid_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
+theorem minAddToMakeValid_correct :
+    ∀ (s : String),
+      PastaLean.pyAll ((PastaLean.pyIter s).map fun c => PastaLean.pyContains ("(", ")") c) →
+        let result := (minAddToMakeValid s).run;
+        result ≥ (0 : Int) ∧ result ≤ PastaLean.pyLen s :=
+  by
+  intro s hpre
+  exact minAddToMakeValid_spec hpre
+
 def minAddToMakeValid'rn := fun (s : String) ↦
   Id.run
     (do

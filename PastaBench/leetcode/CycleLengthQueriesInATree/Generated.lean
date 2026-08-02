@@ -86,6 +86,16 @@ theorem cycleLengthQueries_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
+theorem cycleLengthQueries_correct :
+    ∀ (n : Int),
+      ∀ (queries : List (List Int)),
+        let ans := (cycleLengthQueries n queries).run;
+        PastaLean.pyLen ans = PastaLean.pyLen queries ∧
+          PastaLean.pyAll ((PastaLean.pyIter ans).map fun t => decide (t ≥ (1 : Int))) :=
+  by
+  intro n queries
+  exact cycleLengthQueries_spec True.intro
+
 def cycleLengthQueries'rn := fun (n : Int) ↦ fun (queries : List (List Int)) ↦
   Id.run
     (do

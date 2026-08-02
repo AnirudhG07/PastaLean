@@ -35,37 +35,44 @@ from operator import *
 from math import *
 
 def minOperations(nums: List[int]) -> int:
+    """
+    Calculates the minimum number of operations to make an array of zeros
+    equal to the target `nums` array.
+    The allowed operations are:
+    1. Add 1 to any element.
+    2. Multiply all elements by 2.
+    """
     Requires(len(nums) > 0)
     Requires(all(v >= 0 for v in nums))
+    Ensures(Result() >= 0)
+    
+    # The total number of "add 1" operations is the sum of set bits (1s)
+    # for each number. Each '1' bit in the binary representation corresponds
+    # to an "add 1" operation at some stage.
+    # The number of "multiply by 2" operations is determined by the largest
+    # number, as multiplications are applied to the whole array. This is
+    # equal to the highest power of 2 needed, which is `max(nums).bit_length() - 1`.
     return sum((v.bit_count() for v in nums)) + max(0, max(nums).bit_length() - 1)
 -/
 
 namespace PastaBench.leetcode.MinimumNumbersOfFunctionCallsToMakeTargetArray
 
 def minOperations := fun (nums : List Int) ↦
-  (do
-    let __py_ret_1 :=
-      PastaLean.pySum ((PastaLean.pyIter nums).map fun v => PastaLean.pyBitCount v) +ₚ
-        PastaLean.pyMax [(0 : Int), PastaLean.pyBitLength (PastaLean.pyMax nums) -ₚ (1 : Int)]
-    return __py_ret_1 : Id _)
+  PastaLean.pySum ((PastaLean.pyIter nums).map fun v => PastaLean.pyBitCount v) +ₚ
+    PastaLean.pyMax [(0 : Int), PastaLean.pyBitLength (PastaLean.pyMax nums) -ₚ (1 : Int)]
 
-theorem minOperations_spec :
-    ⦃⌜PastaLean.pyLen nums > (0 : Int) ∧
-          PastaLean.pyAll ((PastaLean.pyIter nums).map fun v => decide (v ≥ (0 : Int)))⌝⦄
-      minOperations nums ⦃⇓_ => ⌜True⌝⦄ :=
-  by
-  mvcgen [minOperations, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  all_goals sorry
+attribute [simp] minOperations
+
+@[taste_ingr]
+theorem minOperations_correct :
+    ∀ (nums : List Int),
+      PastaLean.pyLen nums > (0 : Int) →
+        PastaLean.pyAll ((PastaLean.pyIter nums).map fun v => decide (v ≥ (0 : Int))) →
+          minOperations nums ≥ (0 : Int) :=
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
 
 def minOperations'rn := fun (nums : List Int) ↦
-  Id.run
-    (do
-      let _ := Libraries.passta.pyPassRequires (decide (PastaLean.pyLen nums > (0 : Int)))
-      let _ :=
-        Libraries.passta.pyPassRequires (PastaLean.pyAll ((PastaLean.pyIter nums).map fun v => decide (v ≥ (0 : Int))))
-      let __py_ret_1 :=
-        PastaLean.pySum ((PastaLean.pyIter nums).map fun v => PastaLean.pyBitCount v) +ₚ
-          PastaLean.pyMax [(0 : Int), PastaLean.pyBitLength (PastaLean.pyMax nums) -ₚ (1 : Int)]
-      return __py_ret_1)
+  PastaLean.pySum ((PastaLean.pyIter nums).map fun v => PastaLean.pyBitCount v) +ₚ
+    PastaLean.pyMax [(0 : Int), PastaLean.pyBitLength (PastaLean.pyMax nums) -ₚ (1 : Int)]
 
 end PastaBench.leetcode.MinimumNumbersOfFunctionCallsToMakeTargetArray

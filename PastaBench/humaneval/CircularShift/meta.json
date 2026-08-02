@@ -1,0 +1,14 @@
+{
+  "task_id": "HumanEval/65",
+  "problem": "circular-shift",
+  "module": "CircularShift",
+  "method": "circular_shift",
+  "params": [
+    "x",
+    "shift"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

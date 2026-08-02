@@ -64,7 +64,7 @@ def nthMagicalNumber := fun (n : Int) ↦ fun (a : Int) ↦ fun (b : Int) ↦
 attribute [simp] nthMagicalNumber
 
 @[taste_ingr]
-theorem nthMagicalNumber_spec :
+theorem nthMagicalNumber_correct :
     ∀ (n : Int),
       ∀ (a : Int),
         ∀ (b : Int),
@@ -75,19 +75,9 @@ theorem nthMagicalNumber_spec :
             a ≥ (1 : Int) →
               b ≥ (1 : Int) →
                 (a %ₚ b ≠ (0 : Int) ∧ b %ₚ a ≠ (0 : Int) ∨
-                    Libraries.bisect.pyBisectLeftRangeKey (0 : Int) r (1 : Int) (key := fun (x : Int) ↦
-                          PastaLean.pyFloorDiv x a +ₚ PastaLean.pyFloorDiv x b -ₚ PastaLean.pyFloorDiv x c) (x := n) %ₚ
-                        mod =
-                      n *ₚ PastaLean.pyMin [a, b] %ₚ mod) ∧
-                  (0 : Int) ≤
-                      Libraries.bisect.pyBisectLeftRangeKey (0 : Int) r (1 : Int) (key := fun (x : Int) ↦
-                          PastaLean.pyFloorDiv x a +ₚ PastaLean.pyFloorDiv x b -ₚ PastaLean.pyFloorDiv x c) (x := n) %ₚ
-                        mod ∧
-                    Libraries.bisect.pyBisectLeftRangeKey (0 : Int) r (1 : Int) (key := fun (x : Int) ↦
-                          PastaLean.pyFloorDiv x a +ₚ PastaLean.pyFloorDiv x b -ₚ PastaLean.pyFloorDiv x c) (x := n) %ₚ
-                        mod <
-                      mod :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+                    nthMagicalNumber n a b = n *ₚ PastaLean.pyMin [a, b] %ₚ mod) ∧
+                  (0 : Int) ≤ nthMagicalNumber n a b ∧ nthMagicalNumber n a b < mod :=
+  by sorry
 
 def nthMagicalNumber'rn := fun (n : Int) ↦ fun (a : Int) ↦ fun (b : Int) ↦
   let mod := ((10 : Int) ^ₚ (9 : Int) +ₚ (7 : Int) : Int)

@@ -82,9 +82,30 @@ theorem memLeak_spec :
       ⌜(result⦋(1 : Int)⦌ ≥ (0 : Int) ∧ result⦋(2 : Int)⦌ ≥ (0 : Int)) ∧
           PastaLean.pyMax [result⦋(1 : Int)⦌, result⦋(2 : Int)⦌] < result⦋(0 : Int)⦌⌝⦄ :=
   by
-  mvcgen [memLeak, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  try
+    mvcgen [memLeak, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · fun s =>
+      let i := s;
+      (⟨(PastaLean.pyMax [memory1, memory2] -ₚ i +ₚ (1 : Int)).toNat⟩ : ULift Nat)
+    · ⇓s =>
+      ⌜Sum.elim
+          (fun st =>
+            let i := st;
+            (memory1 ≥ (0 : Int) ∧ memory2 ≥ (0 : Int)) ∧ i ≥ (1 : Int))
+          (fun _ => True) s⌝
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
+
+theorem memLeak_correct :
+    ∀ (memory1 : Int),
+      ∀ (memory2 : Int),
+        memory1 ≥ (0 : Int) ∧ memory2 ≥ (0 : Int) →
+          let result := (memLeak memory1 memory2).run;
+          (result⦋(1 : Int)⦌ ≥ (0 : Int) ∧ result⦋(2 : Int)⦌ ≥ (0 : Int)) ∧
+            PastaLean.pyMax [result⦋(1 : Int)⦌, result⦋(2 : Int)⦌] < result⦋(0 : Int)⦌ :=
+  by
+  intro memory1 memory2 hpre
+  exact memLeak_spec hpre
 
 def memLeak'rn := fun (memory1 : Int) ↦ fun (memory2 : Int) ↦
   Id.run

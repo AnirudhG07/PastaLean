@@ -70,6 +70,18 @@ theorem generateTheString_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
+theorem generateTheString_correct :
+    ∀ (n : Int),
+      n ≥ (1 : Int) →
+        let result := (generateTheString n).run;
+        PastaLean.pyLen result = n ∧
+          PastaLean.pyAll
+            ((PastaLean.pyIter (PastaLean.pySet result)).map fun c =>
+              PastaLean.pyCount result c %ₚ (2 : Int) == (1 : Int)) :=
+  by
+  intro n hpre
+  exact generateTheString_spec hpre
+
 def generateTheString'rn := fun (n : Int) ↦
   Id.run
     (do

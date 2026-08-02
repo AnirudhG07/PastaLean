@@ -68,7 +68,7 @@ def leastInterval := fun (tasks : List String) ↦ fun (n : Int) ↦
 attribute [simp] leastInterval
 
 @[taste_ingr]
-theorem leastInterval_spec :
+theorem leastInterval_correct :
     ∀ (tasks : List String),
       ∀ (n : Int),
         let cnt := Libraries.collections.pyCounter tasks
@@ -76,10 +76,7 @@ theorem leastInterval_spec :
         let s := PastaLean.pySum ((PastaLean.pyIter (PastaLean.pyAnys cnt)).map fun v => v == x)
         PastaLean.pyLen tasks > (0 : Int) →
           n ≥ (0 : Int) →
-            (((PastaLean.pyMax [PastaLean.pyLen tasks, (x -ₚ (1 : Int)) *ₚ (n +ₚ (1 : Int)) +ₚ s] ≥
-                      PastaLean.pyLen tasks ∧
-                    PastaLean.pyMax [PastaLean.pyLen tasks, (x -ₚ (1 : Int)) *ₚ (n +ₚ (1 : Int)) +ₚ s] > (0 : Int)) ∧
-                  x ≥ (1 : Int)) ∧
+            (((leastInterval tasks n ≥ PastaLean.pyLen tasks ∧ leastInterval tasks n > (0 : Int)) ∧ x ≥ (1 : Int)) ∧
                 s ≥ (1 : Int)) ∧
               s ≤ PastaLean.pyLen cnt :=
   by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry

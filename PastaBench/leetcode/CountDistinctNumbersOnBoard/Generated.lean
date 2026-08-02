@@ -31,7 +31,7 @@ def distinctIntegers := fun (n : Int) ↦ PastaLean.pyMax [(1 : Int), n -ₚ (1 
 attribute [simp] distinctIntegers
 
 @[taste_ingr]
-theorem distinctIntegers_spec : ∀ (n : Int), PastaLean.pyMax [(1 : Int), n -ₚ (1 : Int)] ≥ (1 : Int) := by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+theorem distinctIntegers_correct : ∀ (n : Int), distinctIntegers n ≥ (1 : Int) := by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]
 
 def distinctIntegers'rn := fun (n : Int) ↦ PastaLean.pyMax [(1 : Int), n -ₚ (1 : Int)]
 

@@ -70,6 +70,20 @@ theorem isReachableAtTime_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals
   all_goals sorry
 
+theorem isReachableAtTime_correct :
+    ∀ (sx : Int),
+      ∀ (sy : Int),
+        ∀ (fx : Int),
+          ∀ (fy : Int),
+            ∀ (t : Int),
+              let result := (isReachableAtTime sx sy fx fy t).run;
+              result =
+                ((sx = fx ∧ sy = fy) ∧ t ≠ (1 : Int) ∨
+                  (sx ≠ fx ∨ sy ≠ fy) ∧ PastaLean.pyMax [PastaLean.pyAbs (sx -ₚ fx), PastaLean.pyAbs (sy -ₚ fy)] ≤ t) :=
+  by
+  intro sx sy fx fy t
+  exact isReachableAtTime_spec True.intro
+
 def isReachableAtTime'rn := fun (sx : Int) ↦ fun (sy : Int) ↦ fun (fx : Int) ↦ fun (fy : Int) ↦ fun (t : Int) ↦
   if sx == fx && sy == fy then t != (1 : Int)
   else

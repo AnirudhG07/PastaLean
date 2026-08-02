@@ -107,6 +107,18 @@ theorem scheduleCourse_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
+theorem scheduleCourse_correct :
+    ∀ (courses : List (List Int)),
+      PastaLean.pyAll
+          ((PastaLean.pyIter courses).map fun c =>
+            PastaLean.pyLen c == (2 : Int) && decide (c⦋(0 : Int)⦌ > (0 : Int)) &&
+              decide (c⦋(1 : Int)⦌ > (0 : Int))) →
+        let result := (scheduleCourse courses).run;
+        (0 : Int) ≤ result ∧ result ≤ PastaLean.pyLen courses :=
+  by
+  intro courses hpre
+  exact scheduleCourse_spec hpre
+
 def scheduleCourse'rn := fun (courses : List (List Int)) ↦
   Id.run
     (do

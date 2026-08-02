@@ -123,6 +123,24 @@ theorem findKthNumber_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
+theorem findKthNumber_correct :
+    ∀ (m : Int),
+      ∀ (n : Int),
+        ∀ (k : Int),
+          (m > (0 : Int) ∧ n > (0 : Int)) ∧ (1 : Int) ≤ k ∧ k ≤ m *ₚ n →
+            let left := (findKthNumber m n k).run;
+            PastaLean.pySum
+                  ((PastaLean.pyRange (m +ₚ (1 : Int)) (1 : Int)).map fun i =>
+                    PastaLean.pyMin [PastaLean.pyFloorDiv left i, n]) ≥
+                k ∧
+              PastaLean.pySum
+                  ((PastaLean.pyRange (m +ₚ (1 : Int)) (1 : Int)).map fun i =>
+                    PastaLean.pyMin [PastaLean.pyFloorDiv (left -ₚ (1 : Int)) i, n]) <
+                k :=
+  by
+  intro m n k hpre
+  exact findKthNumber_spec hpre
+
 def findKthNumber'rn := fun (m : Int) ↦ fun (n : Int) ↦ fun (k : Int) ↦
   Id.run
     (do

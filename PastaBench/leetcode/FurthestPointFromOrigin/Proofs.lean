@@ -32,9 +32,9 @@ def furthestDistanceFromOrigin := fun (moves : String) ↦
 attribute [simp] furthestDistanceFromOrigin
 
 @[taste_ingr]
-theorem furthestDistanceFromOrigin_spec :
+theorem furthestDistanceFromOrigin_correct :
     ∀ (moves : String),
-      PastaLean.pyAbs (PastaLean.pyCount moves "L" -ₚ PastaLean.pyCount moves "R") +ₚ PastaLean.pyCount moves "_" =
+      furthestDistanceFromOrigin moves =
         PastaLean.pyAbs (PastaLean.pyCount moves "L" -ₚ PastaLean.pyCount moves "R") +ₚ PastaLean.pyCount moves "_" :=
   by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]
 

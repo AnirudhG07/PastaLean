@@ -61,7 +61,7 @@ def maximumSetSize := fun (nums1 : List Int) ↦ fun (nums2 : List Int) ↦
 attribute [simp] maximumSetSize
 
 @[taste_ingr]
-theorem maximumSetSize_spec :
+theorem maximumSetSize_correct :
     ∀ (nums1 : List Int),
       ∀ (nums2 : List Int),
         let s1 := PastaLean.pySet nums1
@@ -69,8 +69,7 @@ theorem maximumSetSize_spec :
         let n := PastaLean.pyLen nums1
         let a := PastaLean.pyMin [PastaLean.pyLen (s1 -ₚ s2), PastaLean.pyFloorDiv n (2 : Int)]
         let b := PastaLean.pyMin [PastaLean.pyLen (s2 -ₚ s1), PastaLean.pyFloorDiv n (2 : Int)]
-        (0 : Int) ≤ PastaLean.pyMin [a +ₚ b +ₚ PastaLean.pyLen (PastaLean.pyBitAnd s1 s2), n] ∧
-          PastaLean.pyMin [a +ₚ b +ₚ PastaLean.pyLen (PastaLean.pyBitAnd s1 s2), n] ≤ PastaLean.pyLen nums1 :=
+        (0 : Int) ≤ maximumSetSize nums1 nums2 ∧ maximumSetSize nums1 nums2 ≤ PastaLean.pyLen nums1 :=
   by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
 
 def maximumSetSize'rn := fun (nums1 : List Int) ↦ fun (nums2 : List Int) ↦

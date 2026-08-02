@@ -57,12 +57,8 @@ def maximumProduct := fun (nums : List Int) ↦ fun (k : Int) ↦
     return __py_ret_1 : Id _)
 
 theorem maximumProduct_spec :
-    ⦃⌜k ≥ (0 : Int) ∧ PastaLean.pyLen nums > (0 : Int)⌝⦄ maximumProduct nums k ⦃⇓_ => ⌜True⌝⦄ :=
-  by
-  try
-    mvcgen [maximumProduct, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓cur => ⌜True⌝
-  all_goals sorry
+    ⦃⌜k ≥ (0 : Int) ∧ PastaLean.pyLen nums > (0 : Int)⌝⦄ maximumProduct nums k ⦃⇓_ => ⌜True⌝⦄ := by
+  apply Std.Do.Triple.of_entails_wp; intro _; exact True.intro
 
 def maximumProduct'rn := fun (nums : List Int) ↦ fun (k : Int) ↦
   Id.run

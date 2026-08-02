@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/56",
+  "problem": "correct-bracketing",
+  "module": "CorrectBracketing56",
+  "method": "correct_bracketing",
+  "params": [
+    "brackets"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

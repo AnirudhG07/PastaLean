@@ -81,6 +81,23 @@ theorem findPoisonedDuration_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
+theorem findPoisonedDuration_correct :
+    ∀ (timeSeries : List Int),
+      ∀ (duration : Int),
+        duration ≥ (0 : Int) ∧
+            PastaLean.pyAll
+              ((PastaLean.pyRange (PastaLean.pyLen timeSeries -ₚ (1 : Int))).map fun i =>
+                decide (timeSeries⦋i⦌ < timeSeries⦋i +ₚ (1 : Int)⦌)) →
+          let ans := (findPoisonedDuration timeSeries duration).run;
+          ans =
+            duration +ₚ
+              PastaLean.pySum
+                ((PastaLean.pyRange (PastaLean.pyLen timeSeries) (1 : Int)).map fun i =>
+                  PastaLean.pyMin [duration, timeSeries⦋i⦌ -ₚ timeSeries⦋i -ₚ (1 : Int)⦌]) :=
+  by
+  intro timeSeries duration hpre
+  exact findPoisonedDuration_spec hpre
+
 def findPoisonedDuration'rn := fun (timeSeries : List Int) ↦ fun (duration : Int) ↦
   Id.run
     (do

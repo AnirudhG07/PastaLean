@@ -48,15 +48,13 @@ def countBits := fun (n : Int) ↦ (PastaLean.pyRange (n +ₚ (1 : Int))).map fu
 attribute [simp] countBits
 
 @[taste_ingr]
-theorem countBits_spec :
+theorem countBits_correct :
     ∀ (n : Int),
       n ≥ (0 : Int) →
-        PastaLean.pyLen ((PastaLean.pyRange (n +ₚ (1 : Int))).map fun i => PastaLean.pyBitCount i) = n +ₚ (1 : Int) ∧
+        PastaLean.pyLen (countBits n) = n +ₚ (1 : Int) ∧
           PastaLean.pyTruthy
               (PastaLean.pyAll
-                ((PastaLean.pyRange (n +ₚ (1 : Int))).map fun i =>
-                  ((PastaLean.pyRange (n +ₚ (1 : Int))).map fun i => PastaLean.pyBitCount i)⦋i⦌ ==
-                    PastaLean.pyBitCount i)) =
+                ((PastaLean.pyRange (n +ₚ (1 : Int))).map fun i => (countBits n)⦋i⦌ == PastaLean.pyBitCount i)) =
             true :=
   by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
 

@@ -63,9 +63,17 @@ theorem zeroFilledSubarray_spec : ⦃⌜True⌝⦄ zeroFilledSubarray nums ⦃�
   by
   try
     mvcgen [zeroFilledSubarray, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓⟨cur, cnt, ans⟩ => ⌜cnt ≥ (0 : Int) ∧ ans ≥ (0 : Int)⌝
+    · ⇓⟨cur, ans, cnt⟩ => ⌜cnt ≥ (0 : Int) ∧ ans ≥ (0 : Int)⌝
   simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals; pyany_cases <;> grind +locals
   all_goals sorry
+
+theorem zeroFilledSubarray_correct :
+    ∀ (nums : List Int),
+      let ans := (zeroFilledSubarray nums).run;
+      ans ≥ (0 : Int) :=
+  by
+  intro nums
+  exact zeroFilledSubarray_spec True.intro
 
 def zeroFilledSubarray'rn := fun (nums : List Int) ↦
   Id.run

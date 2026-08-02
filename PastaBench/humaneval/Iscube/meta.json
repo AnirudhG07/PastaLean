@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/77",
+  "problem": "iscube",
+  "module": "Iscube",
+  "method": "iscube",
+  "params": [
+    "a"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

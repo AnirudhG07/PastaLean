@@ -111,6 +111,20 @@ theorem maximumCandies_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
+theorem maximumCandies_correct :
+    ∀ (candies : List Int),
+      ∀ (k : Int),
+        (k > (0 : Int) ∧ PastaLean.pyLen candies > (0 : Int)) ∧
+            PastaLean.pyAll ((PastaLean.pyIter candies).map fun c => decide (c ≥ (0 : Int))) →
+          let l := (maximumCandies candies k).run;
+          (((0 : Int) ≤ l ∧ l ≤ PastaLean.pyMax candies) ∧
+              (l = (0 : Int) ∨
+                PastaLean.pySum ((PastaLean.pyIter candies).map fun c => PastaLean.pyFloorDiv c l) ≥ k)) ∧
+            PastaLean.pySum ((PastaLean.pyIter candies).map fun c => PastaLean.pyFloorDiv c (l +ₚ (1 : Int))) < k :=
+  by
+  intro candies k hpre
+  exact maximumCandies_spec hpre
+
 def maximumCandies'rn := fun (candies : List Int) ↦ fun (k : Int) ↦
   Id.run
     (do

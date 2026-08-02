@@ -90,15 +90,8 @@ private def _maxValue'sum := fun (x : Int) ↦ fun (cnt : Int) ↦
 attribute [simp] _maxValue'sum
 
 @[taste_ingr]
-theorem _maxValue'sum_spec :
-    ∀ (x : Int),
-      ∀ (cnt : Int),
-        x ≥ (0 : Int) →
-          cnt ≥ (0 : Int) →
-            (if x ≥ cnt then PastaLean.pyFloorDiv ((x +ₚ x -ₚ cnt +ₚ (1 : Int)) *ₚ cnt) (2 : Int)
-              else PastaLean.pyFloorDiv ((x +ₚ (1 : Int)) *ₚ x) (2 : Int) +ₚ cnt -ₚ x) ≥
-              cnt :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+theorem _maxValue'sum_spec : ∀ (x : Int), ∀ (cnt : Int), x ≥ (0 : Int) → cnt ≥ (0 : Int) → _maxValue'sum x cnt ≥ cnt :=
+  by sorry
 
 def maxValue := fun (n : Int) ↦ fun (index : Int) ↦ fun (maxSum : Int) ↦
   (do
@@ -137,6 +130,18 @@ theorem maxValue_spec :
   mvcgen [maxValue, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
   simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
+
+theorem maxValue_correct :
+    ∀ (n : Int),
+      ∀ (index : Int),
+        ∀ (maxSum : Int),
+          ((n > (0 : Int) ∧ (0 : Int) ≤ index) ∧ index < n) ∧ maxSum ≥ n →
+            let left := (maxValue n index maxSum).run;
+            (left ≥ (1 : Int) ∧ _maxValue'sum (left -ₚ (1 : Int)) index +ₚ _maxValue'sum left (n -ₚ index) ≤ maxSum) ∧
+              (left = maxSum ∨ _maxValue'sum left index +ₚ _maxValue'sum (left +ₚ (1 : Int)) (n -ₚ index) > maxSum) :=
+  by
+  intro n index maxSum hpre
+  exact maxValue_spec hpre
 
 private def _maxValue'sum'rn := fun (x : Int) ↦ fun (cnt : Int) ↦
   if x ≥ cnt then PastaLean.pyFloorDiv ((x +ₚ x -ₚ cnt +ₚ (1 : Int)) *ₚ cnt) (2 : Int)

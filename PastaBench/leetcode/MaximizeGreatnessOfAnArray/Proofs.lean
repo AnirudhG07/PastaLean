@@ -66,12 +66,7 @@ theorem maximizeGreatness_spec :
           ((PastaLean.pyRange (PastaLean.pyLen nums -ₚ (1 : Int))).map fun k =>
             decide (nums⦋k⦌ ≤ nums⦋k +ₚ (1 : Int)⦌))⌝⦄
       maximizeGreatness nums ⦃⇓_ => ⌜True⌝⦄ :=
-  by
-  try
-    mvcgen [maximizeGreatness, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓⟨cur, i⟩ => ⌜(0 : Int) ≤ i ∧ i < PastaLean.pyLen nums⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
-  all_goals sorry
+  by apply Std.Do.Triple.of_entails_wp; intro _; exact True.intro
 
 def maximizeGreatness'rn := fun (nums : List Int) ↦
   Id.run

@@ -82,9 +82,31 @@ theorem largestMerge_spec :
     ⦃⌜True⌝⦄ largestMerge word1 word2 ⦃⇓result =>
       ⌜PastaLean.pyLen result = PastaLean.pyLen word1 +ₚ PastaLean.pyLen word2⌝⦄ :=
   by
-  mvcgen [largestMerge, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
+  try
+    mvcgen [largestMerge, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · fun s =>
+      let j := s |>.snd;
+      let i := s |>.fst;
+      (⟨(PastaLean.pyLen word1 -ₚ i +ₚ (PastaLean.pyLen word2 -ₚ j)).toNat⟩ : ULift Nat)
+    · ⇓s =>
+      ⌜Sum.elim
+          (fun st =>
+            let j := st |>.snd;
+            let i := st |>.fst;
+            (((0 : Int) ≤ i ∧ i ≤ PastaLean.pyLen word1) ∧ (0 : Int) ≤ j ∧ j ≤ PastaLean.pyLen word2) ∧
+              PastaLean.pyLen ans = i +ₚ j)
+          (fun _ => True) s⌝
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
-  all_goals sorry
+
+theorem largestMerge_correct :
+    ∀ (word1 : String),
+      ∀ (word2 : String),
+        let result := (largestMerge word1 word2).run;
+        PastaLean.pyLen result = PastaLean.pyLen word1 +ₚ PastaLean.pyLen word2 :=
+  by
+  intro word1 word2
+  exact largestMerge_spec True.intro
 
 def largestMerge'rn := fun (word1 : String) ↦ fun (word2 : String) ↦
   Id.run

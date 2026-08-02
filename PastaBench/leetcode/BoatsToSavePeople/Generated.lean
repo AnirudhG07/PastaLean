@@ -108,9 +108,35 @@ theorem numRescueBoats_spec :
       numRescueBoats people limit ⦃⇓ans =>
       ⌜(2 : Int) *ₚ ans ≥ PastaLean.pyLen people ∧ ans ≤ PastaLean.pyLen people⌝⦄ :=
   by
-  mvcgen [numRescueBoats, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
+  try
+    mvcgen [numRescueBoats, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · fun s =>
+      let j := s |>.snd |>.snd;
+      let i := s |>.snd |>.fst;
+      let ans := s |>.fst;
+      (⟨(j -ₚ i).toNat⟩ : ULift Nat)
+    · ⇓s =>
+      ⌜Sum.elim
+          (fun st =>
+            let j := st |>.snd |>.snd;
+            let i := st |>.snd |>.fst;
+            let ans := st |>.fst;
+            ((((0 : Int) ≤ i ∧ j < PastaLean.pyLen people) ∧ i ≤ j +ₚ (1 : Int)) ∧ i ≤ ans) ∧
+              ans +ₚ j = PastaLean.pyLen people -ₚ (1 : Int))
+          (fun _ => True) s⌝
   simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
+
+theorem numRescueBoats_correct :
+    ∀ (people : List Int),
+      ∀ (limit : Int),
+        limit > (0 : Int) ∧
+            PastaLean.pyAll ((PastaLean.pyIter people).map fun p => decide ((0 : Int) < p) && decide (p ≤ limit)) →
+          let ans := (numRescueBoats people limit).run;
+          (2 : Int) *ₚ ans ≥ PastaLean.pyLen people ∧ ans ≤ PastaLean.pyLen people :=
+  by
+  intro people limit hpre
+  exact numRescueBoats_spec hpre
 
 def numRescueBoats'rn := fun (people : List Int) ↦ fun (limit : Int) ↦
   Id.run

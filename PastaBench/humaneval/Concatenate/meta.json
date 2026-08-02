@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/28",
+  "problem": "concatenate",
+  "module": "Concatenate",
+  "method": "concatenate",
+  "params": [
+    "strings"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

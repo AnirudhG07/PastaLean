@@ -118,6 +118,18 @@ theorem asteroidCollision_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
+theorem asteroidCollision_correct :
+    ∀ (asteroids : List Int),
+      PastaLean.pyAll ((PastaLean.pyIter asteroids).map fun a => a != (0 : Int)) →
+        let stk := (asteroidCollision asteroids).run;
+        PastaLean.pyAll
+            ((PastaLean.pyRange (PastaLean.pyLen stk -ₚ (1 : Int))).map fun i =>
+              !(decide (stk⦋i⦌ > (0 : Int)) && decide (stk⦋i +ₚ (1 : Int)⦌ < (0 : Int)))) ∧
+          PastaLean.pyAll ((PastaLean.pyIter stk).map fun a => a != (0 : Int)) :=
+  by
+  intro asteroids hpre
+  exact asteroidCollision_spec hpre
+
 def asteroidCollision'rn := fun (asteroids : List Int) ↦
   Id.run
     (do

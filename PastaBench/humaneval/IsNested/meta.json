@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/132",
+  "problem": "is-nested",
+  "module": "IsNested",
+  "method": "is_nested",
+  "params": [
+    "string"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

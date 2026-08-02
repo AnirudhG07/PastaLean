@@ -54,13 +54,8 @@ def triangularSum := fun (nums : List Int) ↦
     let __py_ret_1 := nums⦋(0 : Int)⦌
     return __py_ret_1 : Id _)
 
-theorem triangularSum_spec : ⦃⌜PastaLean.pyLen nums > (0 : Int)⌝⦄ triangularSum nums ⦃⇓_ => ⌜True⌝⦄ :=
-  by
-  try
-    mvcgen [triangularSum, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓cur => ⌜True⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
-  all_goals sorry
+theorem triangularSum_spec : ⦃⌜PastaLean.pyLen nums > (0 : Int)⌝⦄ triangularSum nums ⦃⇓_ => ⌜True⌝⦄ := by
+  apply Std.Do.Triple.of_entails_wp; intro _; exact True.intro
 
 def triangularSum'rn := fun (nums : List Int) ↦
   Id.run

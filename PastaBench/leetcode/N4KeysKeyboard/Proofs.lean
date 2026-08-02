@@ -42,11 +42,10 @@ def maxA := fun (n : Int) ↦
 
 theorem maxA_spec : ⦃⌜n ≥ (0 : Int)⌝⦄ maxA n ⦃⇓_ => ⌜True⌝⦄ :=
   by
-  try
-    mvcgen [maxA, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓cur => ⌜True⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
-  all_goals sorry
+  mvcgen [maxA, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · ⇓_ => ⌜True⌝
+    · ⇓_ => ⌜True⌝
+  all_goals (simp_all (config := { zetaDelta := true }) [taste_ingr, pyTruthy, PyTruthy.truthy] <;> (first | omega | grind | (split_ifs <;> omega) | grind +locals))
 
 def maxA'rn := fun (n : Int) ↦
   Id.run

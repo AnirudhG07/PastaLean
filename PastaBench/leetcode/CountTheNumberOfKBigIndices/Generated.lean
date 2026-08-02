@@ -205,6 +205,35 @@ theorem kBigIndices_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
+theorem kBigIndices_correct :
+    ∀ (nums : List Int),
+      ∀ (k : Int),
+        k ≥ (0 : Int) ∧
+            PastaLean.pyAll ((PastaLean.pyIter nums).map fun v => decide ((1 : Int) ≤ v) && decide (v ≤ n)) →
+          let ans := (kBigIndices nums k).run;
+          ans =
+            PastaLean.pySum
+              ((List.filter
+                    (fun (_pair_2 : Int × Int) =>
+                      let i := Prod.fst _pair_2;
+                      let v := Prod.snd _pair_2;
+                      PastaLean.pySum
+                            ((List.filter (fun j => nums⦋j⦌ < v) (PastaLean.pyRange i)).map fun j => (1 : Int)) ≥
+                          k ∧
+                        PastaLean.pySum
+                            ((List.filter (fun j => nums⦋j⦌ < v)
+                                  (PastaLean.pyRange (PastaLean.pyLen nums) (i +ₚ (1 : Int)))).map
+                              fun j => (1 : Int)) ≥
+                          k)
+                    (PastaLean.pyIter (PastaLean.pyEnumerate nums))).map
+                fun (_pair_1 : Int × Int) =>
+                let i := Prod.fst _pair_1;
+                let v := Prod.snd _pair_1;
+                (1 : Int)) :=
+  by
+  intro nums k hpre
+  exact kBigIndices_spec hpre
+
 def kBigIndices'rn := fun (nums : List Int) ↦ fun (k : Int) ↦
   Id.run
     (do

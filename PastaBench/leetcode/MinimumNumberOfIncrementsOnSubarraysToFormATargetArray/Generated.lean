@@ -57,15 +57,10 @@ def minNumberOperations := fun (target : List Int) ↦
 attribute [simp] minNumberOperations
 
 @[taste_ingr]
-theorem minNumberOperations_spec :
+theorem minNumberOperations_correct :
     ∀ (target : List Int),
       PastaLean.pyLen target > (0 : Int) →
-        target⦋(0 : Int)⦌ +ₚ
-            PastaLean.pySum
-              ((PastaLean.pyIter (Libraries.itertools.pyPairwise target)).map fun (_pair_1 : Int × Int) =>
-                let a := Prod.fst _pair_1;
-                let b := Prod.snd _pair_1;
-                PastaLean.pyMax [(0 : Int), b -ₚ a]) =
+        minNumberOperations target =
           target⦋(0 : Int)⦌ +ₚ
             PastaLean.pySum
               ((PastaLean.pyRange (PastaLean.pyLen target) (1 : Int)).map fun i =>

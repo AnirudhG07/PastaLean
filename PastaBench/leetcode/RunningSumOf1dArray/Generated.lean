@@ -47,13 +47,13 @@ def runningSum := fun (nums : List Int) ↦ PastaLean.pyList (Libraries.itertool
 attribute [simp] runningSum
 
 @[taste_ingr]
-theorem runningSum_spec :
+theorem runningSum_correct :
     ∀ (nums : List Int),
-      PastaLean.pyLen (PastaLean.pyList (Libraries.itertools.pyAccumulate nums)) = PastaLean.pyLen nums ∧
+      PastaLean.pyLen (runningSum nums) = PastaLean.pyLen nums ∧
         PastaLean.pyTruthy
             (PastaLean.pyAll
               ((PastaLean.pyRange (PastaLean.pyLen nums)).map fun i =>
-                (PastaLean.pyList (Libraries.itertools.pyAccumulate nums))⦋i⦌ ==
+                (runningSum nums)⦋i⦌ ==
                   PastaLean.pySum (PastaLean.pySlice nums none (some (i +ₚ (1 : Int))) none))) =
           true :=
   by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry

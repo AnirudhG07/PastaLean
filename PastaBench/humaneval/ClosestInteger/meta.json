@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/99",
+  "problem": "closest-integer",
+  "module": "ClosestInteger",
+  "method": "closest_integer",
+  "params": [
+    "value"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

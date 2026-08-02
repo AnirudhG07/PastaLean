@@ -56,12 +56,8 @@ def largestCombination := fun (candidates : List Int) ↦
     return ans : Id _)
 
 theorem largestCombination_spec :
-    ⦃⌜PastaLean.pyLen candidates > (0 : Int)⌝⦄ largestCombination candidates ⦃⇓_ => ⌜True⌝⦄ :=
-  by
-  try
-    mvcgen [largestCombination, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓⟨cur, ans⟩ => ⌜True⌝
-  all_goals sorry
+    ⦃⌜PastaLean.pyLen candidates > (0 : Int)⌝⦄ largestCombination candidates ⦃⇓_ => ⌜True⌝⦄ := by
+  apply Std.Do.Triple.of_entails_wp; intro _; exact True.intro
 
 def largestCombination'rn := fun (candidates : List Int) ↦
   Id.run

@@ -142,6 +142,41 @@ theorem maskPII_spec :
   sorry
   all_goals sorry
 
+theorem maskPII_correct :
+    ∀ (s : String),
+      PastaLean.pyLen s > (0 : Int) ∧
+          ((PastaLean.pyTruthy (PastaLean.pyIsAlpha s⦋(0 : Int)⦌) = true ∧ PastaLean.pyStrContainsSubstr s "@") ∧
+              PastaLean.pyStringFind s "@" > (0 : Int) ∨
+            ¬PastaLean.pyTruthy (PastaLean.pyIsAlpha s⦋(0 : Int)⦌) = true ∧
+              PastaLean.pyLen
+                  ((List.filter (fun c => PastaLean.pyTruthy (PastaLean.pyIsDecimal c)) (PastaLean.pyIter s)).map
+                    fun c => c) ≥
+                (10 : Int)) →
+        let result := (maskPII s).run;
+        (((PastaLean.pyTruthy (PastaLean.pyIsAlpha s⦋(0 : Int)⦌) = true ∧
+                  (PastaLean.pyStringSplit result "@")⦋(1 : Int)⦌ =
+                    (PastaLean.pyStringSplit (PastaLean.pyStringLower s) "@")⦋(1 : Int)⦌) ∧
+                (PastaLean.pyStringSplit result "@")⦋(0 : Int)⦌⦋(0 : Int)⦌ =
+                  (PastaLean.pyStringSplit (PastaLean.pyStringLower s) "@")⦋(0 : Int)⦌⦋(0 : Int)⦌) ∧
+              (PastaLean.pyStringSplit result "@")⦋(0 : Int)⦌⦋(-1 : Int)⦌ =
+                (PastaLean.pyStringSplit (PastaLean.pyStringLower s) "@")⦋(0 : Int)⦌⦋(-1 : Int)⦌) ∧
+            PastaLean.pyStrContainsSubstr (PastaLean.pyStringSplit result "@")⦋(0 : Int)⦌ "*****" ∨
+          (¬PastaLean.pyTruthy (PastaLean.pyIsAlpha s⦋(0 : Int)⦌) = true ∧
+              PastaLean.pyTruthy
+                  (PastaLean.pyStringEndswith result
+                    (PastaLean.pySlice
+                      (PastaLean.pyStringJoin ""
+                        ((List.filter (fun c => PastaLean.pyTruthy (PastaLean.pyIsDecimal c)) (PastaLean.pyIter s)).map
+                          fun c => c))
+                      (some (-(4 : Int))) none none)) =
+                true) ∧
+            PastaLean.pyTruthy
+                (PastaLean.pyAll ((PastaLean.pyIter result).map fun c => PastaLean.pyContains "0123456789*-+" c)) =
+              true :=
+  by
+  intro s hpre
+  exact maskPII_spec hpre
+
 def maskPII'rn := fun (s : String) ↦
   Id.run
     (do

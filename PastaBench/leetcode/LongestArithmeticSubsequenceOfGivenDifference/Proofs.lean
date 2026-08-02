@@ -53,12 +53,8 @@ def longestSubsequence := fun (arr : List Int) ↦ fun (difference : Int) ↦
     return __py_ret_1 : Id _)
 
 theorem longestSubsequence_spec :
-    ⦃⌜PastaLean.pyLen arr > (0 : Int)⌝⦄ longestSubsequence arr difference ⦃⇓_ => ⌜True⌝⦄ :=
-  by
-  try
-    mvcgen [longestSubsequence, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓cur => ⌜True⌝
-  all_goals sorry
+    ⦃⌜PastaLean.pyLen arr > (0 : Int)⌝⦄ longestSubsequence arr difference ⦃⇓_ => ⌜True⌝⦄ := by
+  apply Std.Do.Triple.of_entails_wp; intro _; exact True.intro
 
 def longestSubsequence'rn := fun (arr : List Int) ↦ fun (difference : Int) ↦
   Id.run

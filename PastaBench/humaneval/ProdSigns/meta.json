@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/128",
+  "problem": "prod-signs",
+  "module": "ProdSigns",
+  "method": "prod_signs",
+  "params": [
+    "arr"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

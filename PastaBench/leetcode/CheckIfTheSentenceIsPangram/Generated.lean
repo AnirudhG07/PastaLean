@@ -31,11 +31,9 @@ def checkIfPangram := fun (sentence : String) ↦ PastaLean.pyLen (PastaLean.pyS
 attribute [simp] checkIfPangram
 
 @[taste_ingr]
-theorem checkIfPangram_spec :
-    ∀ (sentence : String),
-      (PastaLean.pyLen (PastaLean.pySet sentence) = (26 : Int)) =
-        (PastaLean.pyLen (PastaLean.pySet sentence) = (26 : Int)) :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]
+theorem checkIfPangram_correct :
+    ∀ (sentence : String), checkIfPangram sentence = (PastaLean.pyLen (PastaLean.pySet sentence) = (26 : Int)) := by
+  intros; simp_all (config := { zetaDelta := true }) [taste_ingr]
 
 def checkIfPangram'rn := fun (sentence : String) ↦ PastaLean.pyLen (PastaLean.pySet sentence) == (26 : Int)
 

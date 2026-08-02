@@ -104,6 +104,16 @@ theorem maximumLength_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
+theorem maximumLength_correct :
+    ∀ (nums : List Int),
+      ∀ (k : Int),
+        k > (0 : Int) →
+          let ans := (maximumLength nums k).run;
+          ans ≥ (0 : Int) ∧ ans ≤ PastaLean.pyLen nums :=
+  by
+  intro nums k hpre
+  exact maximumLength_spec hpre
+
 def maximumLength'rn := fun (nums : List Int) ↦ fun (k : Int) ↦
   Id.run
     (do

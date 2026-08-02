@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/155",
+  "problem": "even-odd-count",
+  "module": "EvenOddCount",
+  "method": "even_odd_count",
+  "params": [
+    "num"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

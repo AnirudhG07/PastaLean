@@ -78,9 +78,36 @@ def findUnsortedSubarray := fun (nums : List Int) ↦
 theorem findUnsortedSubarray_spec :
     ⦃⌜True⌝⦄ findUnsortedSubarray nums ⦃⇓result => ⌜result ≥ (0 : Int) ∧ result ≤ PastaLean.pyLen nums⌝⦄ :=
   by
-  mvcgen [findUnsortedSubarray, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
+  try
+    mvcgen [findUnsortedSubarray, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · fun s =>
+      let l := s;
+      (⟨(n -ₚ l).toNat⟩ : ULift Nat)
+    · ⇓s =>
+      ⌜Sum.elim
+          (fun st =>
+            let l := st;
+            (0 : Int) ≤ l ∧ l ≤ n)
+          (fun _ => True) s⌝
+    · fun s =>
+      let r := s;
+      (⟨(r -ₚ -(1 : Int)).toNat⟩ : ULift Nat)
+    · ⇓s =>
+      ⌜Sum.elim
+          (fun st =>
+            let r := st;
+            ((0 : Int) ≤ r ∧ r < n) ∧ r ≥ -(1 : Int))
+          (fun _ => True) s⌝
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
-  all_goals sorry
+
+theorem findUnsortedSubarray_correct :
+    ∀ (nums : List Int),
+      let result := (findUnsortedSubarray nums).run;
+      result ≥ (0 : Int) ∧ result ≤ PastaLean.pyLen nums :=
+  by
+  intro nums
+  exact findUnsortedSubarray_spec True.intro
 
 def findUnsortedSubarray'rn := fun (nums : List Int) ↦
   Id.run

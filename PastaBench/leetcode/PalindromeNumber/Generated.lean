@@ -100,8 +100,16 @@ theorem isPalindrome_spec :
       ⌜result = (PastaLean.pyStr x = PastaLean.pySlice (PastaLean.pyStr x) none none (some (-(1 : Int))))⌝⦄ :=
   by
   mvcgen [isPalindrome, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  sorry
   all_goals sorry
+
+theorem isPalindrome_correct :
+    ∀ (x : Int),
+      let result := (isPalindrome x).run;
+      result = (PastaLean.pyStr x = PastaLean.pySlice (PastaLean.pyStr x) none none (some (-(1 : Int)))) :=
+  by
+  intro x
+  exact isPalindrome_spec True.intro
 
 def isPalindrome'rn := fun (x : Int) ↦
   Id.run

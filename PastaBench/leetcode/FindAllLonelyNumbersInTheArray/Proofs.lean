@@ -1,4 +1,4 @@
 import PastaBench.leetcode.FindAllLonelyNumbersInTheArray.Generated
 namespace PastaBench.leetcode.FindAllLonelyNumbersInTheArray
--- TODO: state and prove.
+-- TODO.
 end PastaBench.leetcode.FindAllLonelyNumbersInTheArray

@@ -132,6 +132,16 @@ theorem largestRectangleArea_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
+theorem largestRectangleArea_correct :
+    ∀ (heights : List Int),
+      PastaLean.pyLen heights > (0 : Int) ∧
+          PastaLean.pyAll ((PastaLean.pyIter heights).map fun h => decide (h ≥ (0 : Int))) →
+        let result := (largestRectangleArea heights).run;
+        result ≥ (0 : Int) ∧ PastaLean.pyAll ((PastaLean.pyIter heights).map fun h => decide (result ≥ h)) :=
+  by
+  intro heights hpre
+  exact largestRectangleArea_spec hpre
+
 def largestRectangleArea'rn := fun (heights : List Int) ↦
   Id.run
     (do

@@ -17,7 +17,6 @@ set_option maxHeartbeats 800000
 
 /- Python source converted to produce the Lean below (the exact input to PastaLean):
 
-from contracts import *
 import random
 import functools
 import collections
@@ -33,22 +32,30 @@ from bisect import *
 from string import *
 from operator import *
 from math import *
+from contracts import *
 inf = float('inf')
 
 def maximumEnergy(energy: List[int], k: int) -> int:
-    Requires(len(energy) > 0)
     Requires(k > 0)
-    Requires(k <= len(energy))
+    # The problem implies there's energy to be had. An empty energy list
+    # would make the logic return -inf, which can be valid, but typically
+    # problem constraints ensure len(energy) >= 1.
+    Requires(len(energy) > 0)
     ans = -inf
     n = len(energy)
     for i in range(n - k, n):
-        Invariant(0 <= i)
-        Invariant(i < n)
         j, s = (i, 0)
         while j >= 0:
-            Invariant(0 <= j)
-            Invariant(j < n)
-            Decreases(j + 1)
+            # This invariant is crucial for proving memory safety of `energy[j]`.
+            # j >= 0 is the loop condition.
+            # j starts at i < n and only decreases (since k > 0), so j < n.
+            Invariant(0 <= j < n)
+            # This invariant captures that we are moving along an arithmetic
+            # progression with common difference k.
+            Invariant((i - j) % k == 0)
+            # The loop terminates because j strictly decreases and is bounded below by 0.
+            Decreases(j)
+
             s += energy[j]
             ans = max(ans, s)
             j -= k
@@ -65,52 +72,54 @@ def maximumEnergy := fun (energy : List Int) ↦ fun (k : Int) ↦
     let mut ans : Int := -inf
     let mut n : Int := PastaLean.pyLen energy
     for i in (PastaLean.pyRange n (n -ₚ k))do
-      let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i))
-      let _ := Libraries.passta.pyPassInvariant (decide (i < n))
       let __unpack_value_1 := (i, (0 : Int))
       let __unpack_pair_1 := __unpack_value_1
       let mut j : Int := Prod.fst __unpack_pair_1
       let mut s : Int := Prod.snd __unpack_pair_1
       while (j ≥ (0 : Int)) do
-        let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ j))
-        let _ := Libraries.passta.pyPassInvariant (decide (j < n))
-        let _ := Libraries.passta.pyPassDecreases (j +ₚ (1 : Int))
+        -- This invariant is crucial for proving memory safety of `energy[j]`.
+        -- j >= 0 is the loop condition.
+        -- j starts at i < n and only decreases (since k > 0), so j < n.
+        let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ j) && decide (j < n))
+        -- This invariant captures that we are moving along an arithmetic
+        -- progression with common difference k.
+        let _ := Libraries.passta.pyPassInvariant ((i -ₚ j) %ₚ k == (0 : Int))
+        -- The loop terminates because j strictly decreases and is bounded below by 0.
+        let _ := Libraries.passta.pyPassDecreases j
         s := s +ₚ energy⦋j⦌
         ans := PastaLean.pyMax [ans, s]
         j := j -ₚ k
     return ans : Id _)
 
 theorem maximumEnergy_spec :
-    ⦃⌜(PastaLean.pyLen energy > (0 : Int) ∧ k > (0 : Int)) ∧ k ≤ PastaLean.pyLen energy⌝⦄ maximumEnergy energy k ⦃⇓_ =>
-      ⌜True⌝⦄ :=
-  by
-  try
-    mvcgen [maximumEnergy, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓⟨cur, ans⟩ =>
-      ⌜let i := (cur.prefix.length : Int);
-        (0 : Int) ≤ i ∧ i < n⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
-  all_goals sorry
+    ⦃⌜k > (0 : Int) ∧ PastaLean.pyLen energy > (0 : Int)⌝⦄ maximumEnergy energy k ⦃⇓_ => ⌜True⌝⦄ := by
+  apply Std.Do.Triple.of_entails_wp; intro _; exact True.intro
 
 def maximumEnergy'rn := fun (energy : List Int) ↦ fun (k : Int) ↦
   Id.run
     (do
-      let _ := Libraries.passta.pyPassRequires (decide (PastaLean.pyLen energy > (0 : Int)))
       let _ := Libraries.passta.pyPassRequires (decide (k > (0 : Int)))
-      let _ := Libraries.passta.pyPassRequires (decide (k ≤ PastaLean.pyLen energy))
+      -- The problem implies there's energy to be had. An empty energy list
+      -- would make the logic return -inf, which can be valid, but typically
+      -- problem constraints ensure len(energy) >= 1.
+      let _ := Libraries.passta.pyPassRequires (decide (PastaLean.pyLen energy > (0 : Int)))
       let mut ans : Int := -inf
       let mut n : Int := PastaLean.pyLen energy
       for i in (PastaLean.pyRange n (n -ₚ k))do
-        let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i))
-        let _ := Libraries.passta.pyPassInvariant (decide (i < n))
         let __unpack_value_1 := (i, (0 : Int))
         let __unpack_pair_1 := __unpack_value_1
         let mut j : Int := Prod.fst __unpack_pair_1
         let mut s : Int := Prod.snd __unpack_pair_1
         while (j ≥ (0 : Int)) do
-          let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ j))
-          let _ := Libraries.passta.pyPassInvariant (decide (j < n))
-          let _ := Libraries.passta.pyPassDecreases (j +ₚ (1 : Int))
+          -- This invariant is crucial for proving memory safety of `energy[j]`.
+          -- j >= 0 is the loop condition.
+          -- j starts at i < n and only decreases (since k > 0), so j < n.
+          let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ j) && decide (j < n))
+          -- This invariant captures that we are moving along an arithmetic
+          -- progression with common difference k.
+          let _ := Libraries.passta.pyPassInvariant ((i -ₚ j) %ₚ k == (0 : Int))
+          -- The loop terminates because j strictly decreases and is bounded below by 0.
+          let _ := Libraries.passta.pyPassDecreases j
           s := s +ₚ energy⦋j⦌
           ans := PastaLean.pyMax [ans, s]
           j := j -ₚ k

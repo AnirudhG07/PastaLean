@@ -58,12 +58,7 @@ def maximumBeauty := fun (nums : List Int) ↦ fun (k : Int) ↦
 theorem maximumBeauty_spec :
     ⦃⌜(PastaLean.pyLen nums > (0 : Int) ∧ k ≥ (0 : Int)) ∧ PastaLean.pyMin nums ≥ (0 : Int)⌝⦄
       maximumBeauty nums k ⦃⇓_ => ⌜True⌝⦄ :=
-  by
-  try
-    mvcgen [maximumBeauty, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓cur => ⌜(0 : Int) ≤ x ∧ x +ₚ (2 : Int) *ₚ k +ₚ (1 : Int) < m⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
-  all_goals sorry
+  by apply Std.Do.Triple.of_entails_wp; intro _; exact True.intro
 
 def maximumBeauty'rn := fun (nums : List Int) ↦ fun (k : Int) ↦
   Id.run

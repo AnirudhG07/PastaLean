@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/38",
+  "problem": "decode-cyclic",
+  "module": "DecodeCyclic",
+  "method": "decode_cyclic",
+  "params": [
+    "s"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

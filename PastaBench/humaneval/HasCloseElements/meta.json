@@ -1,0 +1,14 @@
+{
+  "task_id": "HumanEval/0",
+  "problem": "has-close-elements",
+  "module": "HasCloseElements",
+  "method": "has_close_elements",
+  "params": [
+    "numbers",
+    "threshold"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

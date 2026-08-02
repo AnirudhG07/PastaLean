@@ -68,6 +68,16 @@ theorem minStoneSum_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
+theorem minStoneSum_correct :
+    ∀ (piles : List Int),
+      ∀ (k : Int),
+        k ≥ (0 : Int) ∧ PastaLean.pyAll ((PastaLean.pyIter piles).map fun x => decide (x ≥ (0 : Int))) →
+          let result := (minStoneSum piles k).run;
+          (0 : Int) ≤ result ∧ result ≤ PastaLean.pySum piles :=
+  by
+  intro piles k hpre
+  exact minStoneSum_spec hpre
+
 def minStoneSum'rn := fun (piles : List Int) ↦ fun (k : Int) ↦
   Id.run
     (do

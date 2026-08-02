@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/43",
+  "problem": "pairs-sum-to-zero",
+  "module": "PairsSumToZero",
+  "method": "pairs_sum_to_zero",
+  "params": [
+    "l"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

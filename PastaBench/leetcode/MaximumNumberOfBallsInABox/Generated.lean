@@ -61,6 +61,16 @@ theorem countBalls_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
+theorem countBalls_correct :
+    ∀ (lowLimit : Int),
+      ∀ (highLimit : Int),
+        lowLimit ≥ (1 : Int) ∧ highLimit ≥ lowLimit →
+          let result := (countBalls lowLimit highLimit).run;
+          result ≥ (1 : Int) :=
+  by
+  intro lowLimit highLimit hpre
+  exact countBalls_spec hpre
+
 def countBalls'rn := fun (lowLimit : Int) ↦ fun (highLimit : Int) ↦
   Id.run
     (do

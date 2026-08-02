@@ -73,6 +73,21 @@ theorem countTestedDevices_spec :
   sorry
   all_goals sorry
 
+theorem countTestedDevices_correct :
+    ∀ (batteryPercentages : List Int),
+      let ans := (countTestedDevices batteryPercentages).run;
+      PastaLean.pySum ((List.filter (fun x => x ≥ ans) (PastaLean.pyIter batteryPercentages)).map fun x => (1 : Int)) ≥
+          ans ∧
+        PastaLean.pyAll
+          ((PastaLean.pyRange (PastaLean.pyLen batteryPercentages +ₚ (1 : Int)) (ans +ₚ (1 : Int))).map fun k =>
+            decide
+              (PastaLean.pySum
+                  ((List.filter (fun x => x ≥ k) (PastaLean.pyIter batteryPercentages)).map fun x => (1 : Int)) <
+                k)) :=
+  by
+  intro batteryPercentages
+  exact countTestedDevices_spec True.intro
+
 def countTestedDevices'rn := fun (batteryPercentages : List Int) ↦
   Id.run
     (do

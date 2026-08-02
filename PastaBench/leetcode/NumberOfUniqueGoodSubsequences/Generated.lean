@@ -97,11 +97,20 @@ theorem numberOfUniqueGoodSubsequences_spec :
   by
   try
     mvcgen [numberOfUniqueGoodSubsequences, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓⟨cur, ans, g, f⟩ =>
+    · ⇓⟨cur, f, g, ans⟩ =>
       ⌜((mod = (10 : Int) ^ₚ (9 : Int) +ₚ (7 : Int) ∧ (0 : Int) ≤ f ∧ f < mod) ∧ (0 : Int) ≤ g ∧ g < mod) ∧
           (ans = (0 : Int) ∨ ans = (1 : Int))⌝
   sorry
   all_goals sorry
+
+theorem numberOfUniqueGoodSubsequences_correct :
+    ∀ (binary : String),
+      PastaLean.pyAll ((PastaLean.pyIter binary).map fun c => PastaLean.pyContains "01" c) →
+        let ans := (numberOfUniqueGoodSubsequences binary).run;
+        (0 : Int) ≤ ans ∧ ans < (1000000007 : Int) :=
+  by
+  intro binary hpre
+  exact numberOfUniqueGoodSubsequences_spec hpre
 
 def numberOfUniqueGoodSubsequences'rn := fun (binary : String) ↦
   Id.run

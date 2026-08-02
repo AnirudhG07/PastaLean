@@ -60,12 +60,11 @@ def isThree := fun (n : Int) ↦
 attribute [simp] isThree
 
 @[taste_ingr]
-theorem isThree_spec :
+theorem isThree_correct :
     ∀ (n : Int),
       n ≥ (1 : Int) →
-        (¬PastaLean.pySum ((PastaLean.pyRange n (2 : Int)).map fun i => n %ₚ i == (0 : Int)) = (1 : Int) ∨
-            n ≥ (4 : Int)) ∧
-          (¬PastaLean.pySum ((PastaLean.pyRange n (2 : Int)).map fun i => n %ₚ i == (0 : Int)) = (1 : Int) ∨
+        (¬PastaLean.pyTruthy (isThree n) = true ∨ n ≥ (4 : Int)) ∧
+          (¬PastaLean.pyTruthy (isThree n) = true ∨
             Libraries.math.pyMathIsqrt n *ₚ Libraries.math.pyMathIsqrt n = n) :=
   by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
 

@@ -57,12 +57,8 @@ def closestToTarget := fun (arr : List Int) ↦ fun (target : Int) ↦
       ans := PastaLean.pyMin [ans, PastaLean.pyMin ((PastaLean.pyIter s).map fun y => PastaLean.pyAbs (y -ₚ target))]
     return ans : Id _)
 
-theorem closestToTarget_spec : ⦃⌜PastaLean.pyLen arr > (0 : Int)⌝⦄ closestToTarget arr target ⦃⇓_ => ⌜True⌝⦄ :=
-  by
-  try
-    mvcgen [closestToTarget, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓⟨cur, s, ans⟩ => ⌜True⌝
-  all_goals sorry
+theorem closestToTarget_spec : ⦃⌜PastaLean.pyLen arr > (0 : Int)⌝⦄ closestToTarget arr target ⦃⇓_ => ⌜True⌝⦄ := by
+  apply Std.Do.Triple.of_entails_wp; intro _; exact True.intro
 
 def closestToTarget'rn := fun (arr : List Int) ↦ fun (target : Int) ↦
   Id.run

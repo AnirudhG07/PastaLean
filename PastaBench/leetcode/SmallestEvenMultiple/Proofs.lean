@@ -32,10 +32,10 @@ def smallestEvenMultiple := fun (n : Int) ↦ if n %ₚ (2 : Int) = (0 : Int) th
 attribute [simp] smallestEvenMultiple
 
 @[taste_ingr]
-theorem smallestEvenMultiple_spec :
+theorem smallestEvenMultiple_correct :
     ∀ (n : Int),
-      n %ₚ (2 : Int) = (0 : Int) ∧ (if n %ₚ (2 : Int) = (0 : Int) then n else n *ₚ (2 : Int)) = n ∨
-        n %ₚ (2 : Int) ≠ (0 : Int) ∧ (if n %ₚ (2 : Int) = (0 : Int) then n else n *ₚ (2 : Int)) = (2 : Int) *ₚ n :=
+      n %ₚ (2 : Int) = (0 : Int) ∧ smallestEvenMultiple n = n ∨
+        n %ₚ (2 : Int) ≠ (0 : Int) ∧ smallestEvenMultiple n = (2 : Int) *ₚ n :=
   by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals
 
 def smallestEvenMultiple'rn := fun (n : Int) ↦ if n %ₚ (2 : Int) == (0 : Int) then n else n *ₚ (2 : Int)

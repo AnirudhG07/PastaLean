@@ -70,47 +70,18 @@ def minImpossibleOR := fun (nums : List Int) ↦
 attribute [simp] minImpossibleOR
 
 @[taste_ingr]
-theorem minImpossibleOR_spec :
+theorem minImpossibleOR_correct :
     ∀ (nums : List Int),
       let s := PastaLean.pySet nums
       PastaLean.pyStdAny
           ((PastaLean.pyRange (32 : Int)).map fun i =>
             !(PastaLean.pyContains (PastaLean.pySet nums) (PastaLean.pyShiftLeft (1 : Int) i))) →
-        (((PastaLean.pyIter
-                      ((List.filter (fun i => !(PastaLean.pyContains s (PastaLean.pyShiftLeft (1 : Int) i)))
-                            (PastaLean.pyRange (32 : Int))).map
-                        fun i => PastaLean.pyShiftLeft (1 : Int) i)).headD
-                  default >
-                (0 : Int) ∧
-              PastaLean.pyBitAnd
-                  ((PastaLean.pyIter
-                        ((List.filter (fun i => !(PastaLean.pyContains s (PastaLean.pyShiftLeft (1 : Int) i)))
-                              (PastaLean.pyRange (32 : Int))).map
-                          fun i => PastaLean.pyShiftLeft (1 : Int) i)).headD
-                    default)
-                  ((PastaLean.pyIter
-                          ((List.filter (fun i => !(PastaLean.pyContains s (PastaLean.pyShiftLeft (1 : Int) i)))
-                                (PastaLean.pyRange (32 : Int))).map
-                            fun i => PastaLean.pyShiftLeft (1 : Int) i)).headD
-                      default -ₚ
-                    (1 : Int)) =
-                (0 : Int)) ∧
-            !(PastaLean.pyContains (PastaLean.pySet nums)
-                ((PastaLean.pyIter
-                      ((List.filter (fun i => !(PastaLean.pyContains s (PastaLean.pyShiftLeft (1 : Int) i)))
-                            (PastaLean.pyRange (32 : Int))).map
-                        fun i => PastaLean.pyShiftLeft (1 : Int) i)).headD
-                  default))) ∧
+        ((minImpossibleOR nums > (0 : Int) ∧
+              PastaLean.pyBitAnd (minImpossibleOR nums) (minImpossibleOR nums -ₚ (1 : Int)) = (0 : Int)) ∧
+            !(PastaLean.pyContains (PastaLean.pySet nums) (minImpossibleOR nums))) ∧
           PastaLean.pyTruthy
               (PastaLean.pyAll
-                ((List.filter
-                      (fun i =>
-                        PastaLean.pyShiftLeft (1 : Int) i <
-                          (PastaLean.pyIter
-                                ((List.filter (fun i => !(PastaLean.pyContains s (PastaLean.pyShiftLeft (1 : Int) i)))
-                                      (PastaLean.pyRange (32 : Int))).map
-                                  fun i => PastaLean.pyShiftLeft (1 : Int) i)).headD
-                            default)
+                ((List.filter (fun i => PastaLean.pyShiftLeft (1 : Int) i < minImpossibleOR nums)
                       (PastaLean.pyRange (32 : Int))).map
                   fun i => PastaLean.pyContains (PastaLean.pySet nums) (PastaLean.pyShiftLeft (1 : Int) i))) =
             true :=

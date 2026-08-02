@@ -91,6 +91,15 @@ theorem countDistinctIntegers_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
+theorem countDistinctIntegers_correct :
+    ∀ (nums : List Int),
+      let result := (countDistinctIntegers nums).run;
+      result ≥ PastaLean.pyLen (PastaLean.pySet nums) ∧
+        result ≤ PastaLean.pyLen (PastaLean.pySet nums) +ₚ PastaLean.pyLen nums :=
+  by
+  intro nums
+  exact countDistinctIntegers_spec True.intro
+
 def countDistinctIntegers'rn := fun (nums : List Int) ↦
   Id.run
     (do

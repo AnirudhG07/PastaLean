@@ -134,6 +134,34 @@ theorem sortSentence_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
+theorem sortSentence_correct :
+    ∀ (s : String),
+      (PastaLean.pyAll
+              ((PastaLean.pyIter (PastaLean.pyStringSplit s)).map fun w =>
+                PastaLean.pyTruthy w && PastaLean.pyTruthy (PastaLean.pyIsDecimal w⦋(-1 : Int)⦌)) ∧
+            PastaLean.pyLen
+                (PastaLean.pySetFromList
+                  ((PastaLean.pyIter (PastaLean.pyStringSplit s)).map fun w => PastaLean.pyInt w⦋(-1 : Int)⦌)) =
+              PastaLean.pyLen (PastaLean.pyStringSplit s)) ∧
+          PastaLean.pyAll
+            ((PastaLean.pyIter (PastaLean.pyStringSplit s)).map fun w =>
+              decide ((1 : Int) ≤ PastaLean.pyInt w⦋(-1 : Int)⦌) &&
+                decide (PastaLean.pyInt w⦋(-1 : Int)⦌ ≤ PastaLean.pyLen (PastaLean.pyStringSplit s))) →
+        let result := (sortSentence s).run;
+        result =
+          PastaLean.pyStringJoin " "
+            ((PastaLean.pyIter
+                  (PastaLean.pySort
+                    ((PastaLean.pyIter (PastaLean.pyStringSplit s)).map fun w =>
+                      (PastaLean.pyInt w⦋(-1 : Int)⦌, PastaLean.pySlice w none (some (-(1 : Int))) none)))).map
+              fun (_pair_1 : Int × String) =>
+              let num := Prod.fst _pair_1;
+              let word := Prod.snd _pair_1;
+              word) :=
+  by
+  intro s hpre
+  exact sortSentence_spec hpre
+
 def sortSentence'rn := fun (s : String) ↦
   Id.run
     (do

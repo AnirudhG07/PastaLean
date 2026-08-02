@@ -74,9 +74,30 @@ theorem minDeletion_spec :
     ⦃⌜n ≥ (0 : Int)⌝⦄ minDeletion nums ⦃⇓ans =>
       ⌜((0 : Int) ≤ ans ∧ ans ≤ PastaLean.pyLen nums) ∧ (PastaLean.pyLen nums -ₚ ans) %ₚ (2 : Int) = (0 : Int)⌝⦄ :=
   by
-  mvcgen [minDeletion, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
+  try
+    mvcgen [minDeletion, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · fun s =>
+      let ans := s |>.snd;
+      let i := s |>.fst;
+      (⟨(n -ₚ i).toNat⟩ : ULift Nat)
+    · ⇓s =>
+      ⌜Sum.elim
+          (fun st =>
+            let ans := st |>.snd;
+            let i := st |>.fst;
+            (((0 : Int) ≤ i ∧ i ≤ n) ∧ (0 : Int) ≤ ans) ∧ ans ≤ n)
+          (fun _ => True) s⌝
   simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
+
+theorem minDeletion_correct :
+    ∀ (nums : List Int),
+      n ≥ (0 : Int) →
+        let ans := (minDeletion nums).run;
+        ((0 : Int) ≤ ans ∧ ans ≤ PastaLean.pyLen nums) ∧ (PastaLean.pyLen nums -ₚ ans) %ₚ (2 : Int) = (0 : Int) :=
+  by
+  intro nums hpre
+  exact minDeletion_spec hpre
 
 def minDeletion'rn := fun (nums : List Int) ↦
   Id.run

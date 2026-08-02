@@ -58,6 +58,17 @@ theorem numberOfSubstrings_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
+theorem numberOfSubstrings_correct :
+    ∀ (s : String),
+      let ans := (numberOfSubstrings s).run;
+      (2 : Int) *ₚ ans =
+        PastaLean.pySum
+          ((PastaLean.pyIter (PastaLean.pySet s)).map fun c =>
+            PastaLean.pyCount s c *ₚ (PastaLean.pyCount s c +ₚ (1 : Int))) :=
+  by
+  intro s
+  exact numberOfSubstrings_spec True.intro
+
 def numberOfSubstrings'rn := fun (s : String) ↦
   Id.run
     (do

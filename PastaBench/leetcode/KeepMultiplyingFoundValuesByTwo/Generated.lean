@@ -60,6 +60,15 @@ theorem findFinalValue_spec :
   all_goals sorry
   all_goals sorry
 
+theorem findFinalValue_correct :
+    ∀ (nums : List Int),
+      ∀ (original : Int),
+        let original := (findFinalValue nums original).run;
+        !(PastaLean.pyContains (PastaLean.pySet nums) original) :=
+  by
+  intro nums original
+  exact findFinalValue_spec True.intro
+
 def findFinalValue'rn := fun (nums : List Int) ↦ fun (original : Int) ↦
   Id.run
     (do

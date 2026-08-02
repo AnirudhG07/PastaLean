@@ -107,6 +107,15 @@ theorem maxEnvelopes_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
+theorem maxEnvelopes_correct :
+    ∀ (envelopes : List (List Int)),
+      PastaLean.pyLen envelopes > (0 : Int) →
+        let result := (maxEnvelopes envelopes).run;
+        result ≥ (1 : Int) ∧ result ≤ PastaLean.pyLen envelopes :=
+  by
+  intro envelopes hpre
+  exact maxEnvelopes_spec hpre
+
 def maxEnvelopes'rn := fun (envelopes : List (List Int)) ↦
   Id.run
     (do

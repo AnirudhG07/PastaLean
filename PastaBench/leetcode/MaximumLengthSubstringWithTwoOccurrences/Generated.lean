@@ -137,6 +137,14 @@ theorem maximumLengthSubstring_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
+theorem maximumLengthSubstring_correct :
+    ∀ (s : String),
+      let ans := (maximumLengthSubstring s).run;
+      ans ≥ (0 : Int) ∧ ans ≤ PastaLean.pyLen s :=
+  by
+  intro s
+  exact maximumLengthSubstring_spec True.intro
+
 def maximumLengthSubstring'rn := fun (s : String) ↦
   Id.run
     (do

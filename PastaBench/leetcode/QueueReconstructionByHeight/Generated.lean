@@ -181,6 +181,26 @@ theorem reconstructQueue_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
+theorem reconstructQueue_correct :
+    ∀ (people : List (List Int)),
+      PastaLean.pyAll ((PastaLean.pyIter people).map fun p => PastaLean.pyLen p == (2 : Int)) ∧
+          PastaLean.pyAll
+            ((PastaLean.pyIter people).map fun p =>
+              decide (p⦋(0 : Int)⦌ ≥ (0 : Int)) && decide (p⦋(1 : Int)⦌ ≥ (0 : Int))) →
+        let ans := (reconstructQueue people).run;
+        PastaLean.pyLen ans = PastaLean.pyLen people ∧
+          PastaLean.pyAll
+            ((PastaLean.pyIter (PastaLean.pyEnumerate ans)).map fun _pair_4 =>
+              let i := Prod.fst _pair_4;
+              let p := Prod.snd _pair_4;
+              p⦋(1 : Int)⦌ ==
+                PastaLean.pySum
+                  ((List.filter (fun j => ans⦋j⦌⦋(0 : Int)⦌ ≥ p⦋(0 : Int)⦌) (PastaLean.pyRange i)).map fun j =>
+                    (1 : Int))) :=
+  by
+  intro people hpre
+  exact reconstructQueue_spec hpre
+
 def reconstructQueue'rn := fun (people : List (List Int)) ↦
   Id.run
     (do

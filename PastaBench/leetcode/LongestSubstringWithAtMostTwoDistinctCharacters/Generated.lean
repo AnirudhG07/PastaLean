@@ -106,6 +106,14 @@ theorem lengthOfLongestSubstringTwoDistinct_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
+theorem lengthOfLongestSubstringTwoDistinct_correct :
+    ∀ (s : String),
+      let ans := (lengthOfLongestSubstringTwoDistinct s).run;
+      ans ≥ (0 : Int) ∧ ans ≤ PastaLean.pyLen s :=
+  by
+  intro s
+  exact lengthOfLongestSubstringTwoDistinct_spec True.intro
+
 def lengthOfLongestSubstringTwoDistinct'rn := fun (s : String) ↦
   Id.run
     (do

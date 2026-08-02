@@ -61,11 +61,7 @@ theorem maxEqualRowsAfterFlips_spec :
     ⦃⌜PastaLean.pyLen matrix > (0 : Int) ∧
           PastaLean.pyAll ((PastaLean.pyIter matrix).map fun row => decide (PastaLean.pyLen row > (0 : Int)))⌝⦄
       maxEqualRowsAfterFlips matrix ⦃⇓_ => ⌜True⌝⦄ :=
-  by
-  try
-    mvcgen [maxEqualRowsAfterFlips, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓cur => ⌜True⌝
-  all_goals sorry
+  by apply Std.Do.Triple.of_entails_wp; intro _; exact True.intro
 
 def maxEqualRowsAfterFlips'rn := fun (matrix : List (List Int)) ↦
   Id.run

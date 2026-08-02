@@ -90,18 +90,39 @@ def longestValidSubstring := fun (word : String) ↦ fun (forbidden : List Strin
       let _ := Libraries.passta.pyPassAssert (decide ((0 : Int) ≤ ans) && decide (ans ≤ j +ₚ (1 : Int)))
     return ans : Id _)
 
+theorem pyRange_neg1_lb {stop start x : Int} (h : x ∈ PastaLean.pyRange stop start (-1)) :
+    stop < x ∧ x ≤ start := by
+  simp only [PastaLean.pyRange] at h
+  norm_num [List.mem_map, List.mem_range'] at h
+  omega
+
+theorem pyRange_neg1_lb_eq {stop start x : Int} {pre suf : List Int}
+    (h : PastaLean.pyRange stop start (-1) = pre ++ x :: suf) : stop < x ∧ x ≤ start := by
+  apply pyRange_neg1_lb
+  rw [h]; simp [List.mem_append, List.mem_cons]
+
 @[spec]
 theorem longestValidSubstring_spec :
     ⦃⌜True⌝⦄ longestValidSubstring word forbidden ⦃⇓ans => ⌜(0 : Int) ≤ ans ∧ ans ≤ PastaLean.pyLen word⌝⦄ :=
   by
   try
     mvcgen [longestValidSubstring, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓⟨cur, i, ans⟩ =>
-      ⌜let j := (cur.prefix.length : Int);
-        ((((0 : Int) ≤ j ∧ j ≤ PastaLean.pyLen word) ∧ (0 : Int) ≤ i ∧ i ≤ j) ∧ (0 : Int) ≤ ans ∧ ans ≤ j) ∧
-          ans ≤ PastaLean.pyLen word⌝
-  sorry
-  all_goals sorry
+    · ⇓⟨cur, ans, i⟩ =>
+      ⌜(0 : Int) ≤ ans ∧ ans ≤ PastaLean.pyLen word ∧ (0 : Int) ≤ i⌝
+    · ⇓⟨cur, i⟩ =>
+      ⌜(0 : Int) ≤ i⌝
+  all_goals first
+    | (simp (config:={zetaDelta:=true}) only [taste_ingr] at * <;> omega)
+    | (simp_all (config:={zetaDelta:=true}) [taste_ingr, pyTruthy, PyTruthy.truthy, PyHSub.hSub, PyHAdd.hAdd, PyHMul.hMul] <;> (first | omega | (have hlb := (pyRange_neg1_lb_eq (by assumption)).1; omega) | grind | (split_ifs <;> omega) | grind +locals | (simp only [List.range_eq_range'] at * <;> grind [List.length_of_range'_eq_append_cons, List.eq_of_range'_eq_append_cons])))
+
+theorem longestValidSubstring_correct :
+    ∀ (word : String),
+      ∀ (forbidden : List String),
+        let ans := (longestValidSubstring word forbidden).run;
+        (0 : Int) ≤ ans ∧ ans ≤ PastaLean.pyLen word :=
+  by
+  intro word forbidden
+  exact longestValidSubstring_spec True.intro
 
 def longestValidSubstring'rn := fun (word : String) ↦ fun (forbidden : List String) ↦
   Id.run

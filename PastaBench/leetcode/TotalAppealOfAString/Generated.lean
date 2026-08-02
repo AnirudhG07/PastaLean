@@ -98,6 +98,15 @@ theorem appealSum_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
+theorem appealSum_correct :
+    ∀ (s : String),
+      PastaLean.pyAll ((PastaLean.pyIter s).map fun c => decide ("a" ≤ c) && decide (c ≤ "z")) →
+        let ans := (appealSum s).run;
+        if PastaLean.pyLen s > (0 : Int) then ans > (0 : Int) else ans = (0 : Int) :=
+  by
+  intro s hpre
+  exact appealSum_spec hpre
+
 def appealSum'rn := fun (s : String) ↦
   Id.run
     (do

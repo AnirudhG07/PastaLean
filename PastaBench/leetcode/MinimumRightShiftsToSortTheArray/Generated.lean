@@ -109,9 +109,51 @@ theorem minimumRightShifts_spec :
                             PastaLean.pySlice nums none (some (-result)) none)⦋j⦌))) =
               true⌝⦄ :=
   by
-  mvcgen [minimumRightShifts, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  try
+    mvcgen [minimumRightShifts, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · fun s =>
+      let i := s;
+      (⟨(n -ₚ i).toNat⟩ : ULift Nat)
+    · ⇓s =>
+      ⌜Sum.elim
+          (fun st =>
+            let i := st;
+            ((1 : Int) ≤ i ∧ i ≤ n) ∧
+              PastaLean.pyAll ((PastaLean.pyRange i (1 : Int)).map fun j => decide (nums⦋j -ₚ (1 : Int)⦌ < nums⦋j⦌)))
+          (fun _ => True) s⌝
+    · fun s =>
+      let k := s;
+      (⟨(n -ₚ k).toNat⟩ : ULift Nat)
+    · ⇓s =>
+      ⌜Sum.elim
+          (fun st =>
+            let k := st;
+            (i +ₚ (1 : Int) ≤ k ∧ k ≤ n) ∧
+              PastaLean.pyAll
+                ((PastaLean.pyRange k (i +ₚ (1 : Int))).map fun j =>
+                  decide (nums⦋j -ₚ (1 : Int)⦌ < nums⦋j⦌) && decide (nums⦋j⦌ < nums⦋(0 : Int)⦌)))
+          (fun _ => True) s⌝
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
+
+theorem minimumRightShifts_correct :
+    ∀ (nums : List Int),
+      PastaLean.pyLen nums > (0 : Int) →
+        let result := (minimumRightShifts nums).run;
+        result = -(1 : Int) ∨
+          ((0 : Int) ≤ result ∧ result < PastaLean.pyLen nums) ∧
+            PastaLean.pyTruthy
+                (PastaLean.pyAll
+                  ((PastaLean.pyRange (PastaLean.pyLen nums) (1 : Int)).map fun j =>
+                    decide
+                      ((PastaLean.pySlice nums (some (-result)) none none +ₚ
+                            PastaLean.pySlice nums none (some (-result)) none)⦋j -ₚ (1 : Int)⦌ <
+                        (PastaLean.pySlice nums (some (-result)) none none +ₚ
+                            PastaLean.pySlice nums none (some (-result)) none)⦋j⦌))) =
+              true :=
+  by
+  intro nums hpre
+  exact minimumRightShifts_spec hpre
 
 def minimumRightShifts'rn := fun (nums : List Int) ↦
   Id.run

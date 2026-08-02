@@ -68,30 +68,13 @@ def maximumGroups := fun (grades : List Int) ↦
 attribute [simp] maximumGroups
 
 @[taste_ingr]
-theorem maximumGroups_spec :
+theorem maximumGroups_correct :
     ∀ (grades : List Int),
       let n := PastaLean.pyLen grades
       PastaLean.pyLen grades ≥ (0 : Int) →
-        (Libraries.bisect.pyBisectRightRangeKey (0 : Int) (n +ₚ (1 : Int)) (1 : Int) (n *ₚ (2 : Int)) (key :=
-                  fun (x : Int) ↦ x *ₚ x +ₚ x) -ₚ
-                (1 : Int) ≥
-              (0 : Int) ∧
-            (Libraries.bisect.pyBisectRightRangeKey (0 : Int) (n +ₚ (1 : Int)) (1 : Int) (n *ₚ (2 : Int)) (key :=
-                    fun (x : Int) ↦ x *ₚ x +ₚ x) -ₚ
-                  (1 : Int)) *ₚ
-                (Libraries.bisect.pyBisectRightRangeKey (0 : Int) (n +ₚ (1 : Int)) (1 : Int) (n *ₚ (2 : Int)) (key :=
-                      fun (x : Int) ↦ x *ₚ x +ₚ x) -ₚ
-                    (1 : Int) +ₚ
-                  (1 : Int)) ≤
-              (2 : Int) *ₚ PastaLean.pyLen grades) ∧
-          (Libraries.bisect.pyBisectRightRangeKey (0 : Int) (n +ₚ (1 : Int)) (1 : Int) (n *ₚ (2 : Int)) (key :=
-                    fun (x : Int) ↦ x *ₚ x +ₚ x) -ₚ
-                  (1 : Int) +ₚ
-                (1 : Int)) *ₚ
-              (Libraries.bisect.pyBisectRightRangeKey (0 : Int) (n +ₚ (1 : Int)) (1 : Int) (n *ₚ (2 : Int)) (key :=
-                    fun (x : Int) ↦ x *ₚ x +ₚ x) -ₚ
-                  (1 : Int) +ₚ
-                (2 : Int)) >
+        (maximumGroups grades ≥ (0 : Int) ∧
+            maximumGroups grades *ₚ (maximumGroups grades +ₚ (1 : Int)) ≤ (2 : Int) *ₚ PastaLean.pyLen grades) ∧
+          (maximumGroups grades +ₚ (1 : Int)) *ₚ (maximumGroups grades +ₚ (2 : Int)) >
             (2 : Int) *ₚ PastaLean.pyLen grades :=
   by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
 

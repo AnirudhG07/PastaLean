@@ -60,8 +60,19 @@ theorem findTheDistanceValue_spec :
   try
     mvcgen [findTheDistanceValue, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓⟨cur, ans⟩ => ⌜ans ≥ (0 : Int) ∧ ans ≤ PastaLean.pyLen arr1⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry; simp_all (config := { zetaDelta := true }) [taste_ingr]
   all_goals sorry
+
+theorem findTheDistanceValue_correct :
+    ∀ (arr1 : List Int),
+      ∀ (arr2 : List Int),
+        ∀ (d : Int),
+          d ≥ (0 : Int) →
+            let ans := (findTheDistanceValue arr1 arr2 d).run;
+            (0 : Int) ≤ ans ∧ ans ≤ PastaLean.pyLen arr1 :=
+  by
+  intro arr1 arr2 d hpre
+  exact findTheDistanceValue_spec hpre
 
 def findTheDistanceValue'rn := fun (arr1 : List Int) ↦ fun (arr2 : List Int) ↦ fun (d : Int) ↦
   Id.run

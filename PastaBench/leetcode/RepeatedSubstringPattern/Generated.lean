@@ -54,10 +54,10 @@ def repeatedSubstringPattern := fun (s : String) ↦ decide (PastaLean.pyIndex (
 attribute [simp] repeatedSubstringPattern
 
 @[taste_ingr]
-theorem repeatedSubstringPattern_spec :
+theorem repeatedSubstringPattern_correct :
     ∀ (s : String),
       PastaLean.pyLen s > (0 : Int) →
-        (PastaLean.pyIndex (s +ₚ s) s (1 : Int) < PastaLean.pyLen s) =
+        repeatedSubstringPattern s =
           PastaLean.pyStdAny
             ((PastaLean.pyRange (PastaLean.pyLen s) (1 : Int)).map fun k =>
               PastaLean.pyLen s %ₚ k == (0 : Int) &&

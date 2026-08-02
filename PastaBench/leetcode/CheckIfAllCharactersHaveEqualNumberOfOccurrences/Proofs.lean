@@ -47,9 +47,9 @@ def areOccurrencesEqual := fun (s : String) ↦
 attribute [simp] areOccurrencesEqual
 
 @[taste_ingr]
-theorem areOccurrencesEqual_spec :
+theorem areOccurrencesEqual_correct :
     ∀ (s : String),
-      (PastaLean.pyLen (PastaLean.pySet (PastaLean.pyAnys (Libraries.collections.pyCounter s))) = (1 : Int)) =
+      areOccurrencesEqual s =
         (PastaLean.pyLen (PastaLean.pySet (PastaLean.pyAnys (Libraries.collections.pyCounter s))) = (1 : Int)) :=
   by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]
 

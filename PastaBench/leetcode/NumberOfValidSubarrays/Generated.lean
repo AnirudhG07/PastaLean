@@ -101,6 +101,14 @@ theorem validSubarrays_spec : ⦃⌜True⌝⦄ validSubarrays nums ⦃⇓result 
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
+theorem validSubarrays_correct :
+    ∀ (nums : List Int),
+      let result := (validSubarrays nums).run;
+      result ≥ (0 : Int) :=
+  by
+  intro nums
+  exact validSubarrays_spec True.intro
+
 def validSubarrays'rn := fun (nums : List Int) ↦
   Id.run
     (do

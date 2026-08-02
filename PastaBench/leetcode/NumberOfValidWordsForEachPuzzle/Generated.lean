@@ -170,6 +170,23 @@ theorem findNumOfValidWords_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
+theorem findNumOfValidWords_correct :
+    ∀ (words : List String),
+      ∀ (puzzles : List String),
+        (PastaLean.pyAll ((PastaLean.pyIter puzzles).map fun p => decide (PastaLean.pyLen p > (0 : Int))) ∧
+              PastaLean.pyAll
+                ((PastaLean.pyIter words).map fun w =>
+                  PastaLean.pyAll ((PastaLean.pyIter w).map fun c => decide ("a" ≤ c) && decide (c ≤ "z")))) ∧
+            PastaLean.pyAll
+              ((PastaLean.pyIter puzzles).map fun p =>
+                PastaLean.pyAll ((PastaLean.pyIter p).map fun c => decide ("a" ≤ c) && decide (c ≤ "z"))) →
+          let ans := (findNumOfValidWords words puzzles).run;
+          PastaLean.pyLen ans = PastaLean.pyLen puzzles ∧
+            PastaLean.pyAll ((PastaLean.pyIter ans).map fun v => decide (v ≥ (0 : Int))) :=
+  by
+  intro words puzzles hpre
+  exact findNumOfValidWords_spec hpre
+
 def findNumOfValidWords'rn := fun (words : List String) ↦ fun (puzzles : List String) ↦
   Id.run
     (do

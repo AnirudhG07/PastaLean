@@ -119,11 +119,19 @@ theorem countSubstrings_spec :
   by
   try
     mvcgen [countSubstrings, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓cur =>
+    · ⇓⟨cur, ans⟩ =>
       ⌜let k := (cur.prefix.length : Int);
         ans ≥ PastaLean.pyFloorDiv (k +ₚ (1 : Int)) (2 : Int) ∧ (0 : Int) ≤ k⌝
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
+
+theorem countSubstrings_correct :
+    ∀ (s : String),
+      let ans := (countSubstrings s).run;
+      ans ≥ PastaLean.pyLen s ∧ (2 : Int) *ₚ ans ≤ PastaLean.pyLen s *ₚ (PastaLean.pyLen s +ₚ (1 : Int)) :=
+  by
+  intro s
+  exact countSubstrings_spec True.intro
 
 def countSubstrings'rn := fun (s : String) ↦
   Id.run

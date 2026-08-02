@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/126",
+  "problem": "is-sorted",
+  "module": "IsSorted",
+  "method": "is_sorted",
+  "params": [
+    "lst"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

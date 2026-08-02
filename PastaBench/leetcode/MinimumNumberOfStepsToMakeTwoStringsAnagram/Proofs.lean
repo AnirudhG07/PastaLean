@@ -60,11 +60,18 @@ def minSteps := fun (s : String) ↦ fun (t : String) ↦
 @[spec]
 theorem minSteps_spec : ⦃⌜True⌝⦄ minSteps s t ⦃⇓ans => ⌜ans ≥ (0 : Int)⌝⦄ :=
   by
-  try
-    mvcgen [minSteps, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓⟨cur, ans⟩ => ⌜ans ≥ (0 : Int)⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
-  all_goals sorry
+  mvcgen [minSteps, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · ⇓⟨cur, ans, cnt⟩ => ⌜ans ≥ (0 : Int)⌝
+  all_goals (simp_all (config := { zetaDelta := true }) [taste_ingr, pyTruthy, PyTruthy.truthy] <;> (first | omega | grind | (split_ifs <;> omega) | grind +locals))
+
+theorem minSteps_correct :
+    ∀ (s : String),
+      ∀ (t : String),
+        let ans := (minSteps s t).run;
+        ans ≥ (0 : Int) :=
+  by
+  intro s t
+  exact minSteps_spec True.intro
 
 def minSteps'rn := fun (s : String) ↦ fun (t : String) ↦
   Id.run

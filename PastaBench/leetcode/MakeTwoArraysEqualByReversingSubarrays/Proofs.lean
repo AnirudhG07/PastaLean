@@ -47,10 +47,9 @@ def canBeEqual := fun (target : List Int) ↦ fun (arr : List Int) ↦ PastaLean
 attribute [simp] canBeEqual
 
 @[taste_ingr]
-theorem canBeEqual_spec :
+theorem canBeEqual_correct :
     ∀ (target : List Int),
-      ∀ (arr : List Int),
-        (PastaLean.pySort target = PastaLean.pySort arr) = (PastaLean.pySort target = PastaLean.pySort arr) :=
+      ∀ (arr : List Int), canBeEqual target arr = (PastaLean.pySort target = PastaLean.pySort arr) :=
   by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]
 
 def canBeEqual'rn := fun (target : List Int) ↦ fun (arr : List Int) ↦ PastaLean.pySort target == PastaLean.pySort arr

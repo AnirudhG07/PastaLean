@@ -56,16 +56,12 @@ def countTriplets := fun (nums : List Int) ↦
 attribute [simp] countTriplets
 
 @[taste_ingr]
-theorem countTriplets_spec :
+theorem countTriplets_correct :
     ∀ (nums : List Int),
       let cnt :=
         Libraries.collections.pyCounter
           ((PastaLean.pyIter nums).flatMap fun x => (PastaLean.pyIter nums).map fun y => PastaLean.pyBitAnd x y)
-      PastaLean.pySum
-          ((PastaLean.pyIter (PastaLean.pyItems cnt)).flatMap fun (_pair_1 : Int × Int) =>
-            let xy := Prod.fst _pair_1;
-            let v := Prod.snd _pair_1;
-            (List.filter (fun z => PastaLean.pyBitAnd xy z = (0 : Int)) (PastaLean.pyIter nums)).map fun z => v) =
+      countTriplets nums =
         PastaLean.pySum
           ((PastaLean.pyIter nums).flatMap fun x =>
             (PastaLean.pyIter nums).flatMap fun y =>

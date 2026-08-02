@@ -91,6 +91,14 @@ theorem numberOfSpecialSubstrings_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
+theorem numberOfSpecialSubstrings_correct :
+    ∀ (s : String),
+      let ans := (numberOfSpecialSubstrings s).run;
+      ans ≥ (0 : Int) ∧ ans ≤ PastaLean.pyFloorDiv (PastaLean.pyLen s *ₚ (PastaLean.pyLen s +ₚ (1 : Int))) (2 : Int) :=
+  by
+  intro s
+  exact numberOfSpecialSubstrings_spec True.intro
+
 def numberOfSpecialSubstrings'rn := fun (s : String) ↦
   Id.run
     (do

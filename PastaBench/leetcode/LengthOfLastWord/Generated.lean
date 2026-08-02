@@ -82,9 +82,36 @@ def lengthOfLastWord := fun (s : String) ↦
 theorem lengthOfLastWord_spec :
     ⦃⌜True⌝⦄ lengthOfLastWord s ⦃⇓result => ⌜result ≥ (0 : Int) ∧ result ≤ PastaLean.pyLen s⌝⦄ :=
   by
-  mvcgen [lengthOfLastWord, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
+  try
+    mvcgen [lengthOfLastWord, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · fun s =>
+      let i := s;
+      (⟨(i +ₚ (1 : Int)).toNat⟩ : ULift Nat)
+    · ⇓s =>
+      ⌜Sum.elim
+          (fun st =>
+            let i := st;
+            -(1 : Int) ≤ i ∧ i < PastaLean.pyLen s)
+          (fun _ => True) s⌝
+    · fun s =>
+      let j := s;
+      (⟨(j +ₚ (1 : Int)).toNat⟩ : ULift Nat)
+    · ⇓s =>
+      ⌜Sum.elim
+          (fun st =>
+            let j := st;
+            (-(1 : Int) ≤ j ∧ j ≤ i) ∧ j < PastaLean.pyLen s)
+          (fun _ => True) s⌝
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
-  all_goals sorry
+
+theorem lengthOfLastWord_correct :
+    ∀ (s : String),
+      let result := (lengthOfLastWord s).run;
+      result ≥ (0 : Int) ∧ result ≤ PastaLean.pyLen s :=
+  by
+  intro s
+  exact lengthOfLastWord_spec True.intro
 
 def lengthOfLastWord'rn := fun (s : String) ↦
   Id.run

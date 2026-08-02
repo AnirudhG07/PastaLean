@@ -88,8 +88,34 @@ theorem sumOfThree_spec :
             PastaLean.pySum res = num⌝⦄ :=
   by
   mvcgen [sumOfThree, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
-  all_goals sorry
+  all_goals (try (simp_all (config := { zetaDelta := true }) [taste_ingr, pyTruthy, PyTruthy.truthy, PastaLean.pyDivmod, PastaLean.pyMod, PastaLean.pySum, PyModulo.hMod, PyHSub.hSub, PyHAdd.hAdd] <;> (first | omega | grind | (split_ifs <;> omega) | grind +locals)))
+  all_goals (
+    right
+    have hx : (PastaLean.pyDivmod num 3).2 = num - 3 * (PastaLean.pyDivmod num 3).1 := by
+      simp only [PastaLean.pyDivmod]
+    have h0 : (PastaLean.pyDivmod num 3).2 = 0 := by
+      simp only [pyTruthy, PyTruthy.truthy, bne_iff_ne, ne_eq, Decidable.not_not,
+        Bool.not_eq_true, bne_eq_false_iff_eq] at *
+      assumption
+    have hnum : num = 3 * (PastaLean.pyDivmod num 3).1 := by omega
+    refine ⟨⟨⟨⟨?_, ?_⟩, ?_⟩, ?_⟩, ?_⟩ <;>
+      (simp (config := { decide := true, zetaDelta := true }) [PastaLean.pyMod, PyModulo.hMod,
+        PastaLean.pyLen, PyLen.pyLen, PastaLean.pyGetItem, PastaLean.pyListGetItem, PyGetItem.getItem,
+        PastaLean.pySum, PastaLean.pyIter, PyIterable.toPyList, PyHSub.hSub, PyHAdd.hAdd,
+        PySummand.toSummand]) <;>
+      omega)
+
+theorem sumOfThree_correct :
+    ∀ (num : Int),
+      let res := (sumOfThree num).run;
+      num %ₚ (3 : Int) ≠ (0 : Int) ∧ res = [] ∨
+        (((num %ₚ (3 : Int) = (0 : Int) ∧ PastaLean.pyLen res = (3 : Int)) ∧
+              res⦋(1 : Int)⦌ -ₚ res⦋(0 : Int)⦌ = (1 : Int)) ∧
+            res⦋(2 : Int)⦌ -ₚ res⦋(1 : Int)⦌ = (1 : Int)) ∧
+          PastaLean.pySum res = num :=
+  by
+  intro num
+  exact sumOfThree_spec True.intro
 
 def sumOfThree'rn := fun (num : Int) ↦
   Id.run

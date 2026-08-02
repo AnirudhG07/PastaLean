@@ -1,0 +1,202 @@
+[
+  {
+    "input": "date = '03-11-2000'",
+    "output": "True"
+  },
+  {
+    "input": "date = '15-01-2012'",
+    "output": "False"
+  },
+  {
+    "input": "date = '04-0-2040'",
+    "output": "False"
+  },
+  {
+    "input": "date = '06-04-2020'",
+    "output": "True"
+  },
+  {
+    "input": "date = '01-01-2007'",
+    "output": "True"
+  },
+  {
+    "input": "date = '03-32-2011'",
+    "output": "False"
+  },
+  {
+    "input": "date = ''",
+    "output": "False"
+  },
+  {
+    "input": "date = '04-31-3000'",
+    "output": "False"
+  },
+  {
+    "input": "date = '06-06-2005'",
+    "output": "True"
+  },
+  {
+    "input": "date = '21-31-2000'",
+    "output": "False"
+  },
+  {
+    "input": "date = '04-12-2003'",
+    "output": "True"
+  },
+  {
+    "input": "date = '04122003'",
+    "output": "False"
+  },
+  {
+    "input": "date = '20030412'",
+    "output": "False"
+  },
+  {
+    "input": "date = '2003-04'",
+    "output": "False"
+  },
+  {
+    "input": "date = '2003-04-12'",
+    "output": "False"
+  },
+  {
+    "input": "date = '04-2003'",
+    "output": "False"
+  },
+  {
+    "input": "date = '12-31-1999'",
+    "output": "True"
+  },
+  {
+    "input": "date = '02-29-2021'",
+    "output": "True"
+  },
+  {
+    "input": "date = '04-31-2022'",
+    "output": "False"
+  },
+  {
+    "input": "date = '11-31-2023'",
+    "output": "False"
+  },
+  {
+    "input": "date = '00-01-2000'",
+    "output": "False"
+  },
+  {
+    "input": "date = '13-01-2000'",
+    "output": "False"
+  },
+  {
+    "input": "date = '01-00-2000'",
+    "output": "False"
+  },
+  {
+    "input": "date = '01-32-2000'",
+    "output": "False"
+  },
+  {
+    "input": "date = '02-30-2000'",
+    "output": "False"
+  },
+  {
+    "input": "date = '06-04-202'",
+    "output": "False"
+  },
+  {
+    "input": "date = '01-000-2000'",
+    "output": "False"
+  },
+  {
+    "input": "date = '04-31-022'",
+    "output": "False"
+  },
+  {
+    "input": "date = '04-2022'",
+    "output": "False"
+  },
+  {
+    "input": "date = '01-00-20000'",
+    "output": "False"
+  },
+  {
+    "input": "date = '01-32-20000'",
+    "output": "False"
+  },
+  {
+    "input": "date = '13-01-20'",
+    "output": "False"
+  },
+  {
+    "input": "date = '11-3104-202223'",
+    "output": "False"
+  },
+  {
+    "input": "date = '01-32-01-000-200020000'",
+    "output": "False"
+  },
+  {
+    "input": "date = '02-29-204-31-202221'",
+    "output": "False"
+  },
+  {
+    "input": "date = '044-2022'",
+    "output": "False"
+  },
+  {
+    "input": "date = '11-11-31-20233104-213-01-2002223'",
+    "output": "False"
+  },
+  {
+    "input": "date = '02-230-2000'",
+    "output": "False"
+  },
+  {
+    "input": "date = '011-3104-2022231-32-01-000-200020000'",
+    "output": "False"
+  },
+  {
+    "input": "date = '11-43104-3202223'",
+    "output": "False"
+  },
+  {
+    "input": "date = '04-01-00-20001-20'",
+    "output": "False"
+  },
+  {
+    "input": "date = '192-31-1999'",
+    "output": "False"
+  },
+  {
+    "input": "date = '01-32-01-0006-04-2020-200020000'",
+    "output": "False"
+  },
+  {
+    "input": "date = '010-32-2000'",
+    "output": "False"
+  },
+  {
+    "input": "date = '002'",
+    "output": "False"
+  },
+  {
+    "input": "date = '13-031-20000'",
+    "output": "False"
+  },
+  {
+    "input": "date = '02-29-204-31-202-29-202102221'",
+    "output": "False"
+  },
+  {
+    "input": "date = '11-311-2023'",
+    "output": "False"
+  },
+  {
+    "input": "date = '0202'",
+    "output": "False"
+  },
+  {
+    "input": "date = '04-01-01-000-200000-20001-20'",
+    "output": "False"
+  }
+]

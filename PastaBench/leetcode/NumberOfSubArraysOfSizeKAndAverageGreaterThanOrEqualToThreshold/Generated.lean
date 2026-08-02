@@ -93,13 +93,24 @@ theorem numOfSubarrays_spec :
   by
   try
     mvcgen [numOfSubarrays, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓⟨cur, ans, s⟩ =>
+    · ⇓⟨cur, s, ans⟩ =>
       ⌜let i := (cur.prefix.length : Int);
         ((k ≤ i ∧ i ≤ PastaLean.pyLen arr) ∧
             s = PastaLean.pySum (PastaLean.pySlice arr (some (i -ₚ k)) (some i) none)) ∧
           (0 : Int) ≤ ans ∧ ans ≤ i -ₚ k +ₚ (1 : Int)⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry; sorry; pyany_cases <;> grind +locals
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
+
+theorem numOfSubarrays_correct :
+    ∀ (arr : List Int),
+      ∀ (k : Int),
+        ∀ (threshold : Int),
+          k > (0 : Int) ∧ PastaLean.pyLen arr ≥ k →
+            let ans := (numOfSubarrays arr k threshold).run;
+            (0 : Int) ≤ ans ∧ ans ≤ PastaLean.pyLen arr -ₚ k +ₚ (1 : Int) :=
+  by
+  intro arr k threshold hpre
+  exact numOfSubarrays_spec hpre
 
 def numOfSubarrays'rn := fun (arr : List Int) ↦ fun (k : Int) ↦ fun (threshold : Int) ↦
   Id.run

@@ -65,14 +65,44 @@ def longestConsecutive := fun (nums : List Int) ↦
       ans := PastaLean.pyMax [ans, d⦋x⦌]
     return ans : Id _)
 
+@[grind]
+private theorem pyLen_setRemove_lt (s : List Int) (x : Int) (h : PastaLean.pyContains s x = true) :
+    PastaLean.pyLen (PastaLean.pySetRemove s x) < PastaLean.pyLen s := by
+  have h' : s.contains x = true := h
+  have hmem : x ∈ s := by simpa using h'
+  have hlt : (s.filter (fun y => y != x)).length < s.length := by
+    rcases Nat.lt_or_ge (s.filter (fun y => y != x)).length s.length with h1 | h1
+    · exact h1
+    · exfalso
+      have heq : (s.filter (fun y => y != x)).length = s.length :=
+        Nat.le_antisymm (List.length_filter_le _ s) h1
+      rw [List.length_filter_eq_length_iff] at heq
+      have := heq x hmem
+      simp at this
+  show (↑(s.filter (fun y => y != x)).length : Int) < (↑s.length : Int)
+  exact_mod_cast hlt
+
 @[spec]
 theorem longestConsecutive_spec : ⦃⌜True⌝⦄ longestConsecutive nums ⦃⇓ans => ⌜ans ≥ (0 : Int)⌝⦄ :=
   by
-  try
-    mvcgen [longestConsecutive, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓⟨cur, ans⟩ => ⌜True⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
-  all_goals sorry
+  mvcgen [longestConsecutive, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · ⇓ ⟨_, ans, _, _⟩ => ⌜ans ≥ (0 : Int)⌝
+    · fun w => (⟨(PastaLean.pyLen w.1).toNat⟩ : ULift Nat)
+    · ⇓ _ => ⌜True⌝
+  all_goals (try (simp_all (config:={zetaDelta:=true}) [taste_ingr, pyTruthy, PyTruthy.truthy]))
+  all_goals (first
+    | omega
+    | (exact pyLen_setRemove_lt _ _ (by assumption))
+    | grind
+    | (split_ifs <;> omega))
+
+theorem longestConsecutive_correct :
+    ∀ (nums : List Int),
+      let ans := (longestConsecutive nums).run;
+      ans ≥ (0 : Int) :=
+  by
+  intro nums
+  exact longestConsecutive_spec True.intro
 
 def longestConsecutive'rn := fun (nums : List Int) ↦
   Id.run

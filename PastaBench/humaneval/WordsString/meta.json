@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/101",
+  "problem": "words-string",
+  "module": "WordsString",
+  "method": "words_string",
+  "params": [
+    "s"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

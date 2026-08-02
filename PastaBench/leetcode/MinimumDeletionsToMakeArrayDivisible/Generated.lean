@@ -110,6 +110,18 @@ theorem minOperations_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
+theorem minOperations_correct :
+    ∀ (nums : List Int),
+      ∀ (numsDivide : List Int),
+        (PastaLean.pyLen numsDivide > (0 : Int) ∧
+              PastaLean.pyAll ((PastaLean.pyIter numsDivide).map fun v => decide (v > (0 : Int)))) ∧
+            PastaLean.pyAll ((PastaLean.pyIter nums).map fun v => decide (v > (0 : Int))) →
+          let result := (minOperations nums numsDivide).run;
+          result = -(1 : Int) ∨ (0 : Int) ≤ result ∧ result < PastaLean.pyLen nums :=
+  by
+  intro nums numsDivide hpre
+  exact minOperations_spec hpre
+
 def minOperations'rn := fun (nums : List Int) ↦ fun (numsDivide : List Int) ↦
   Id.run
     (do

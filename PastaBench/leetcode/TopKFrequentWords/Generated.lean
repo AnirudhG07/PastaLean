@@ -17,7 +17,6 @@ set_option maxHeartbeats 800000
 
 /- Python source converted to produce the Lean below (the exact input to PastaLean):
 
-from contracts import *
 import random
 import functools
 import collections
@@ -33,9 +32,13 @@ from bisect import *
 from string import *
 from operator import *
 from math import *
+from contracts import *
 
 def topKFrequent(words: List[str], k: int) -> List[str]:
     Requires(k >= 0)
+    Ensures(len(Result()) == min(k, len(set(words))))
+    Ensures(len(set(Result())) == len(Result()))
+    Ensures(all(word in set(words) for word in Result()))
     cnt = Counter(words)
     return sorted(cnt, key=lambda x: (-cnt[x], x))[:k]
 -/
@@ -43,24 +46,28 @@ def topKFrequent(words: List[str], k: int) -> List[str]:
 namespace PastaBench.leetcode.TopKFrequentWords
 
 def topKFrequent := fun (words : List String) ↦ fun (k : Int) ↦
-  (do
-    let mut cnt : Libraries.collections.PyDefaultDict String Int := Libraries.collections.pyCounter words
-    let __py_ret_1 :=
-      PastaLean.pySlice (PastaLean.pySortBy (fun (x : String) ↦ (-cnt⦋x⦌, x)) false cnt) none (some k) none
-    return __py_ret_1 : Id _)
+  let cnt := (Libraries.collections.pyCounter words : Libraries.collections.PyDefaultDict String Int)
+  PastaLean.pySlice (PastaLean.pySortBy (fun (x : String) ↦ (-cnt⦋x⦌, x)) false cnt) none (some k) none
 
-theorem topKFrequent_spec : ⦃⌜k ≥ (0 : Int)⌝⦄ topKFrequent words k ⦃⇓_ => ⌜True⌝⦄ :=
-  by
-  mvcgen [topKFrequent, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  all_goals sorry
+attribute [simp] topKFrequent
+
+@[taste_ingr]
+theorem topKFrequent_correct :
+    ∀ (words : List String),
+      ∀ (k : Int),
+        let cnt := Libraries.collections.pyCounter words
+        k ≥ (0 : Int) →
+          (PastaLean.pyLen (topKFrequent words k) = PastaLean.pyMin [k, PastaLean.pyLen (PastaLean.pySet words)] ∧
+              PastaLean.pyLen (PastaLean.pySet (topKFrequent words k)) = PastaLean.pyLen (topKFrequent words k)) ∧
+            PastaLean.pyTruthy
+                (PastaLean.pyAll
+                  ((PastaLean.pyIter (topKFrequent words k)).map fun word =>
+                    PastaLean.pyContains (PastaLean.pySet words) word)) =
+              true :=
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
 
 def topKFrequent'rn := fun (words : List String) ↦ fun (k : Int) ↦
-  Id.run
-    (do
-      let _ := Libraries.passta.pyPassRequires (decide (k ≥ (0 : Int)))
-      let mut cnt : Libraries.collections.PyDefaultDict String Int := Libraries.collections.pyCounter words
-      let __py_ret_1 :=
-        PastaLean.pySlice (PastaLean.pySortBy (fun (x : String) ↦ (-cnt⦋x⦌, x)) false cnt) none (some k) none
-      return __py_ret_1)
+  let cnt := (Libraries.collections.pyCounter words : Libraries.collections.PyDefaultDict String Int)
+  PastaLean.pySlice (PastaLean.pySortBy (fun (x : String) ↦ (-cnt⦋x⦌, x)) false cnt) none (some k) none
 
 end PastaBench.leetcode.TopKFrequentWords

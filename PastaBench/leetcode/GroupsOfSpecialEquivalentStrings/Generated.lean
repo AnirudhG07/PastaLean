@@ -60,7 +60,7 @@ def numSpecialEquivGroups := fun (words : List String) ↦
 attribute [simp] numSpecialEquivGroups
 
 @[taste_ingr]
-theorem numSpecialEquivGroups_spec :
+theorem numSpecialEquivGroups_correct :
     ∀ (words : List String),
       let s :=
         PastaLean.pySetFromList
@@ -73,8 +73,8 @@ theorem numSpecialEquivGroups_spec :
               (PastaLean.pyAll
                 ((PastaLean.pyIter words).map fun w => PastaLean.pyLen w == PastaLean.pyLen words⦋(0 : Int)⦌)) =
             true →
-        (PastaLean.pyLen s ≥ (0 : Int) ∧ PastaLean.pyLen s ≤ PastaLean.pyLen words) ∧
-          (PastaLean.pyLen words = (0 : Int) ∨ PastaLean.pyLen s ≥ (1 : Int)) :=
+        (numSpecialEquivGroups words ≥ (0 : Int) ∧ numSpecialEquivGroups words ≤ PastaLean.pyLen words) ∧
+          (PastaLean.pyLen words = (0 : Int) ∨ numSpecialEquivGroups words ≥ (1 : Int)) :=
   by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
 
 def numSpecialEquivGroups'rn := fun (words : List String) ↦

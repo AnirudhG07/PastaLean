@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/59",
+  "problem": "largest-prime-factor",
+  "module": "LargestPrimeFactor",
+  "method": "largest_prime_factor",
+  "params": [
+    "n"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

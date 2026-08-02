@@ -1,0 +1,14 @@
+{
+  "task_id": "HumanEval/72",
+  "problem": "will-it-fly",
+  "module": "WillItFly",
+  "method": "will_it_fly",
+  "params": [
+    "q",
+    "w"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

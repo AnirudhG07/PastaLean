@@ -1,0 +1,15 @@
+{
+  "task_id": "HumanEval/71",
+  "problem": "triangle-area",
+  "module": "TriangleArea71",
+  "method": "triangle_area",
+  "params": [
+    "a",
+    "b",
+    "c"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

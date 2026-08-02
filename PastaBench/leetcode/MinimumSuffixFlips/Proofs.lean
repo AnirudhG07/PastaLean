@@ -43,11 +43,7 @@ def minFlips := fun (target : String) ↦
 theorem minFlips_spec :
     ⦃⌜PastaLean.pyAll ((PastaLean.pyIter target).map fun c => PastaLean.pyContains "01" c)⌝⦄ minFlips target ⦃⇓_ =>
       ⌜True⌝⦄ :=
-  by
-  try
-    mvcgen [minFlips, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓⟨cur, ans⟩ => ⌜True⌝
-  all_goals sorry
+  by apply Std.Do.Triple.of_entails_wp; intro _; exact True.intro
 
 def minFlips'rn := fun (target : String) ↦
   Id.run

@@ -93,6 +93,17 @@ theorem findPeakElement_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
+theorem findPeakElement_correct :
+    ∀ (nums : List Int),
+      PastaLean.pyLen nums > (0 : Int) →
+        let left := (findPeakElement nums).run;
+        ((0 : Int) ≤ left ∧ left < PastaLean.pyLen nums) ∧
+          (left = (0 : Int) ∨ nums⦋left⦌ > nums⦋left -ₚ (1 : Int)⦌) ∧
+            (left = PastaLean.pyLen nums -ₚ (1 : Int) ∨ nums⦋left⦌ > nums⦋left +ₚ (1 : Int)⦌) :=
+  by
+  intro nums hpre
+  exact findPeakElement_spec hpre
+
 def findPeakElement'rn := fun (nums : List Int) ↦
   Id.run
     (do

@@ -47,11 +47,10 @@ def makeStringsEqual := fun (s : String) ↦ fun (target : String) ↦
 attribute [simp] makeStringsEqual
 
 @[taste_ingr]
-theorem makeStringsEqual_spec :
+theorem makeStringsEqual_correct :
     ∀ (s : String),
       ∀ (target : String),
-        (PastaLean.pyStrContainsSubstr s "1" = PastaLean.pyStrContainsSubstr target "1") =
-          (PastaLean.pyStrContainsSubstr s "1" = PastaLean.pyStrContainsSubstr target "1") :=
+        makeStringsEqual s target = (PastaLean.pyStrContainsSubstr s "1" = PastaLean.pyStrContainsSubstr target "1") :=
   by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]
 
 def makeStringsEqual'rn := fun (s : String) ↦ fun (target : String) ↦

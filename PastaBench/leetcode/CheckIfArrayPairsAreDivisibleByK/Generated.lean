@@ -35,7 +35,18 @@ from operator import *
 from math import *
 
 def canArrange(arr: List[int], k: int) -> bool:
+    # This function intends to check if `arr` can be partitioned into pairs (a,b)
+    # such that `(a+b) % k == 0`. The implementation has a subtle bug for even `k`.
+    # The postcondition describes the *correct* logic, which will expose the bug
+    # during verification, as the implementation fails to establish it.
     Requires(k > 0)
+    Ensures(
+        Result() == (lambda counts:
+            counts[0] % 2 == 0 and
+            all(counts[i] == counts[k - i] for i in range(1, (k + 1) // 2)) and
+            (k % 2 != 0 or counts[k // 2] % 2 == 0)
+        )(Counter(x % k for x in arr))
+    )
     cnt = Counter((x % k for x in arr))
     return cnt[0] % 2 == 0 and all((cnt[i] == cnt[k - i] for i in range(1, k)))
 -/
@@ -43,30 +54,39 @@ def canArrange(arr: List[int], k: int) -> bool:
 namespace PastaBench.leetcode.CheckIfArrayPairsAreDivisibleByK
 
 def canArrange := fun (arr : List Int) ↦ fun (k : Int) ↦
-  (do
-    let mut cnt : Libraries.collections.PyDefaultDict Int Int :=
-      Libraries.collections.pyCounter ((PastaLean.pyIter arr).map fun x => x %ₚ k)
-    let __py_ret_1 :=
-      if PastaLean.pyTruthy (cnt⦋(0 : Int)⦌ %ₚ (2 : Int) == (0 : Int)) then
-        PastaLean.pyAll ((PastaLean.pyRange k (1 : Int)).map fun i => cnt⦋i⦌ == cnt⦋k -ₚ i⦌)
-      else cnt⦋(0 : Int)⦌ %ₚ (2 : Int) == (0 : Int)
-    return __py_ret_1 : Id _)
+  let cnt :=
+    (Libraries.collections.pyCounter ((PastaLean.pyIter arr).map fun x => x %ₚ k) :
+      Libraries.collections.PyDefaultDict Int Int)
+  if PastaLean.pyTruthy (cnt⦋(0 : Int)⦌ %ₚ (2 : Int) == (0 : Int)) then
+    PastaLean.pyAll ((PastaLean.pyRange k (1 : Int)).map fun i => cnt⦋i⦌ == cnt⦋k -ₚ i⦌)
+  else cnt⦋(0 : Int)⦌ %ₚ (2 : Int) == (0 : Int)
 
-theorem canArrange_spec : ⦃⌜k > (0 : Int)⌝⦄ canArrange arr k ⦃⇓_ => ⌜True⌝⦄ :=
-  by
-  mvcgen [canArrange, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  all_goals sorry
+attribute [simp] canArrange
+
+@[taste_ingr]
+theorem canArrange_correct :
+    ∀ (arr : List Int),
+      ∀ (k : Int),
+        let cnt := Libraries.collections.pyCounter ((PastaLean.pyIter arr).map fun x => x %ₚ k)
+        k > (0 : Int) →
+          canArrange arr k =
+            (fun {α β} [ToString α] [ToString β] (counts : α × β) ↦
+                (Prod.fst counts %ₚ (2 : Int) = (0 : Int) ∧
+                    PastaLean.pyTruthy
+                        (PastaLean.pyAll
+                          ((PastaLean.pyRange (PastaLean.pyFloorDiv (k +ₚ (1 : Int)) (2 : Int)) (1 : Int)).map fun i =>
+                            counts⦋i⦌ == counts⦋k -ₚ i⦌)) =
+                      true) ∧
+                  (k %ₚ (2 : Int) ≠ (0 : Int) ∨ counts⦋PastaLean.pyFloorDiv k (2 : Int)⦌ %ₚ (2 : Int) = (0 : Int)))
+              (Libraries.collections.pyCounter ((PastaLean.pyIter arr).map fun x => x %ₚ k)) :=
+  by sorry
 
 def canArrange'rn := fun (arr : List Int) ↦ fun (k : Int) ↦
-  Id.run
-    (do
-      let _ := Libraries.passta.pyPassRequires (decide (k > (0 : Int)))
-      let mut cnt : Libraries.collections.PyDefaultDict Int Int :=
-        Libraries.collections.pyCounter ((PastaLean.pyIter arr).map fun x => x %ₚ k)
-      let __py_ret_1 :=
-        if PastaLean.pyTruthy (cnt⦋(0 : Int)⦌ %ₚ (2 : Int) == (0 : Int)) then
-          PastaLean.pyAll ((PastaLean.pyRange k (1 : Int)).map fun i => cnt⦋i⦌ == cnt⦋k -ₚ i⦌)
-        else cnt⦋(0 : Int)⦌ %ₚ (2 : Int) == (0 : Int)
-      return __py_ret_1)
+  let cnt :=
+    (Libraries.collections.pyCounter ((PastaLean.pyIter arr).map fun x => x %ₚ k) :
+      Libraries.collections.PyDefaultDict Int Int)
+  if PastaLean.pyTruthy (cnt⦋(0 : Int)⦌ %ₚ (2 : Int) == (0 : Int)) then
+    PastaLean.pyAll ((PastaLean.pyRange k (1 : Int)).map fun i => cnt⦋i⦌ == cnt⦋k -ₚ i⦌)
+  else cnt⦋(0 : Int)⦌ %ₚ (2 : Int) == (0 : Int)
 
 end PastaBench.leetcode.CheckIfArrayPairsAreDivisibleByK

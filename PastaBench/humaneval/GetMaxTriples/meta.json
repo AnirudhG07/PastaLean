@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/147",
+  "problem": "get-max-triples",
+  "module": "GetMaxTriples",
+  "method": "get_max_triples",
+  "params": [
+    "n"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

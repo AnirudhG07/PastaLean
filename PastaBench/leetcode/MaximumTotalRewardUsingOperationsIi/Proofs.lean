@@ -59,11 +59,7 @@ def maxTotalReward := fun (rewardValues : List Int) ↦
 theorem maxTotalReward_spec :
     ⦃⌜PastaLean.pyAll ((PastaLean.pyIter rewardValues).map fun v => decide (v ≥ (0 : Int)))⌝⦄
       maxTotalReward rewardValues ⦃⇓_ => ⌜True⌝⦄ :=
-  by
-  try
-    mvcgen [maxTotalReward, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓⟨cur, f⟩ => ⌜True⌝
-  all_goals sorry
+  by apply Std.Do.Triple.of_entails_wp; intro _; exact True.intro
 
 def maxTotalReward'rn := fun (rewardValues : List Int) ↦
   Id.run

@@ -63,11 +63,8 @@ def sumOfDigits := fun (nums : List Int) ↦
     return __py_ret_1 : Id _)
 
 theorem sumOfDigits_spec :
-    ⦃⌜PastaLean.pyLen nums > (0 : Int) ∧ PastaLean.pyMin nums ≥ (0 : Int)⌝⦄ sumOfDigits nums ⦃⇓_ => ⌜True⌝⦄ :=
-  by
-  mvcgen [sumOfDigits, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
-  all_goals sorry
+    ⦃⌜PastaLean.pyLen nums > (0 : Int) ∧ PastaLean.pyMin nums ≥ (0 : Int)⌝⦄ sumOfDigits nums ⦃⇓_ => ⌜True⌝⦄ := by
+  apply Std.Do.Triple.of_entails_wp; intro _; exact True.intro
 
 def sumOfDigits'rn := fun (nums : List Int) ↦
   Id.run

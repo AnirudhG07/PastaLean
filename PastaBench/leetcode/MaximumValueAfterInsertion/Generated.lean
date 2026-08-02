@@ -82,6 +82,16 @@ theorem maxValue_spec :
   all_goals sorry
   all_goals sorry
 
+theorem maxValue_correct :
+    ∀ (n : String),
+      ∀ (x : Int),
+        (0 : Int) ≤ x ∧ x ≤ (9 : Int) →
+          let result := (maxValue n x).run;
+          PastaLean.pyLen result = PastaLean.pyLen n +ₚ (1 : Int) :=
+  by
+  intro n x hpre
+  exact maxValue_spec hpre
+
 def maxValue'rn := fun (n : String) ↦ fun (x : Int) ↦
   Id.run
     (do

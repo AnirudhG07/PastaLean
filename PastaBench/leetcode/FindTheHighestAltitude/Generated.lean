@@ -48,10 +48,9 @@ def largestAltitude := fun (gain : List Int) ↦
 attribute [simp] largestAltitude
 
 @[taste_ingr]
-theorem largestAltitude_spec :
+theorem largestAltitude_correct :
     ∀ (gain : List Int),
-      PastaLean.pyMax (Libraries.itertools.pyAccumulate gain (some (0 : Int))) =
-        PastaLean.pyMax (Libraries.itertools.pyAccumulate gain (some (0 : Int))) :=
+      largestAltitude gain = PastaLean.pyMax (Libraries.itertools.pyAccumulate gain (some (0 : Int))) :=
   by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]
 
 def largestAltitude'rn := fun (gain : List Int) ↦

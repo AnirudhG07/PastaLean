@@ -116,6 +116,17 @@ theorem nearestPalindromic_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
+theorem nearestPalindromic_correct :
+    ∀ (n : String),
+      (PastaLean.pyLen n ≥ (1 : Int) ∧ PastaLean.pyIsDecimal n) ∧ PastaLean.pyInt n ≥ (1 : Int) →
+        let result := (nearestPalindromic n).run;
+        PastaLean.pyStr (PastaLean.pyInt result) =
+            PastaLean.pySlice (PastaLean.pyStr (PastaLean.pyInt result)) none none (some (-(1 : Int))) ∧
+          PastaLean.pyInt result ≠ PastaLean.pyInt n :=
+  by
+  intro n hpre
+  exact nearestPalindromic_spec hpre
+
 def nearestPalindromic'rn := fun (n : String) ↦
   Id.run
     (do

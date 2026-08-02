@@ -40,15 +40,8 @@ def maxJump := fun (stones : List Int) ↦
       ans := PastaLean.pyMax [ans, stones⦋i⦌ -ₚ stones⦋i -ₚ (2 : Int)⦌]
     return ans : Id _)
 
-theorem maxJump_spec : ⦃⌜PastaLean.pyLen stones ≥ (2 : Int)⌝⦄ maxJump stones ⦃⇓_ => ⌜True⌝⦄ :=
-  by
-  try
-    mvcgen [maxJump, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓⟨cur, ans⟩ =>
-      ⌜let i := (cur.prefix.length : Int);
-        (2 : Int) ≤ i ∧ i < PastaLean.pyLen stones⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; grind +locals +suggestions; sorry
-  all_goals sorry
+theorem maxJump_spec : ⦃⌜PastaLean.pyLen stones ≥ (2 : Int)⌝⦄ maxJump stones ⦃⇓_ => ⌜True⌝⦄ := by
+  apply Std.Do.Triple.of_entails_wp; intro _; exact True.intro
 
 def maxJump'rn := fun (stones : List Int) ↦
   Id.run

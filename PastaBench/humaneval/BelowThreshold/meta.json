@@ -1,0 +1,14 @@
+{
+  "task_id": "HumanEval/52",
+  "problem": "below-threshold",
+  "module": "BelowThreshold",
+  "method": "below_threshold",
+  "params": [
+    "l",
+    "t"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

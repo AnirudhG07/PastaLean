@@ -130,6 +130,16 @@ theorem numWays_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
+theorem numWays_correct :
+    ∀ (n : Int),
+      ∀ (k : Int),
+        n ≥ (1 : Int) ∧ k ≥ (1 : Int) →
+          let result := (numWays n k).run;
+          result ≥ (0 : Int) ∧ result %ₚ k = (0 : Int) :=
+  by
+  intro n k hpre
+  exact numWays_spec hpre
+
 def numWays'rn := fun (n : Int) ↦ fun (k : Int) ↦
   Id.run
     (do

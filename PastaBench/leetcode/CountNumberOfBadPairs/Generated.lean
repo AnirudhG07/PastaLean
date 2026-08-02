@@ -75,6 +75,14 @@ theorem countBadPairs_spec : ⦃⌜True⌝⦄ countBadPairs nums ⦃⇓ans => �
   simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
+theorem countBadPairs_correct :
+    ∀ (nums : List Int),
+      let ans := (countBadPairs nums).run;
+      ans ≥ (0 : Int) :=
+  by
+  intro nums
+  exact countBadPairs_spec True.intro
+
 def countBadPairs'rn := fun (nums : List Int) ↦
   Id.run
     (do

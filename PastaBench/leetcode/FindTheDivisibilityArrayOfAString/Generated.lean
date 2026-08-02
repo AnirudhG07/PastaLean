@@ -92,6 +92,23 @@ theorem divisibilityArray_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
+theorem divisibilityArray_correct :
+    ∀ (word : String),
+      ∀ (m : Int),
+        m > (0 : Int) →
+          let ans := (divisibilityArray word m).run;
+          (PastaLean.pyLen ans = PastaLean.pyLen word ∧
+              PastaLean.pyAll
+                ((PastaLean.pyRange (PastaLean.pyLen word)).map fun i =>
+                  PastaLean.pyContains ((0 : Int), (1 : Int)) ans⦋i⦌)) ∧
+            PastaLean.pyAll
+              ((PastaLean.pyRange (PastaLean.pyLen word)).map fun i =>
+                (ans⦋i⦌ == (1 : Int)) ==
+                  (PastaLean.pyInt (PastaLean.pySlice word none (some (i +ₚ (1 : Int))) none) %ₚ m == (0 : Int))) :=
+  by
+  intro word m hpre
+  exact divisibilityArray_spec hpre
+
 def divisibilityArray'rn := fun (word : String) ↦ fun (m : Int) ↦
   Id.run
     (do

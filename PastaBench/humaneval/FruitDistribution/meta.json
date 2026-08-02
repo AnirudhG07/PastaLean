@@ -1,0 +1,14 @@
+{
+  "task_id": "HumanEval/67",
+  "problem": "fruit-distribution",
+  "module": "FruitDistribution",
+  "method": "fruit_distribution",
+  "params": [
+    "s",
+    "n"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

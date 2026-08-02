@@ -32,24 +32,58 @@ from bisect import *
 from string import *
 from operator import *
 from math import *
-
 from contracts import *
 
 def findMaximumLength(nums: List[int]) -> int:
+    # This algorithm finds the maximum length of a partition of `nums` into subarrays
+    # with non-decreasing sums. It requires positive numbers to ensure the prefix sums
+    # array `s` is strictly increasing, which is necessary for `bisect_left`.
+    Requires(All(x >= 1 for x in nums))
+    Ensures(0 <= Result() <= len(nums))
+
     n = len(nums)
     s = list(accumulate(nums, initial=0))
+    Assert(len(s) == n + 1)
+    Assert(s[0] == 0)
+    # Strict monotonicity of `s` is guaranteed by the precondition.
+    Assert(All(s[k] < s[k+1] for k in range(n)))
+
     f = [0] * (n + 1)
     pre = [0] * (n + 2)
+    Assert(len(f) == n + 1 and f[0] == 0)
+    Assert(len(pre) == n + 2)
+
     for i in range(1, n + 1):
-        # Bounds for indexing into f, s, pre
-        Invariant(1 <= i <= n)
-        Invariant(0 <= pre[i] <= i)
+        Invariant(1 <= i <= n + 1)
+        # `f[k]` stores the max partition length for `nums[:k]`, so `f[k] <= k`.
+        Invariant(All(0 <= f[k] <= k for k in range(i)))
+        # `pre[k]` is the start index of the last segment for `nums[:k]`, so `pre[k] < k`.
+        Invariant(All(0 <= pre[k] < k for k in range(1, i)))
+        # `pre` is maintained to be non-decreasing up to the current point.
+        Invariant(All(pre[k] <= pre[k+1] for k in range(i - 1)))
+        Decreases(n + 1 - i)
+
         pre[i] = max(pre[i], pre[i - 1])
+        # After this update, `pre[i]` is a valid index into prefixes of `f` and `s`.
+        Assert(0 <= pre[i] < i)
+
         f[i] = f[pre[i]] + 1
-        j = bisect_left(s, s[i] * 2 - s[pre[i]])
-        # bisect_left returns 0 <= j <= len(s) == n+1
-        Assert(0 <= j <= n + 1)
+        Assert(1 <= f[i] <= i)
+
+        target = s[i] * 2 - s[pre[i]]
+        j = bisect_left(s, target)
+
+        # `s` is strictly increasing, so `s[i] * 2 - s[pre[i]] > s[i]`.
+        # This guarantees `bisect_left` finds an index `j > i`.
+        # The largest possible `j` is `len(s) = n + 1`.
+        Assert(i < j <= n + 1)
+        # The update to `pre[j]` is safe as `len(pre) == n + 2`.
+        Assert(j < len(pre))
         pre[j] = i
+
+    # The loop computes f[n], which is the final result.
+    # The invariant for i = n + 1 implies this property.
+    Assert(0 <= f[n] <= n)
     return f[n]
 -/
 
@@ -59,48 +93,121 @@ def findMaximumLength := fun (nums : List Int) ↦
   (do
     let mut n : Int := PastaLean.pyLen nums
     let mut s : List Int := PastaLean.pyList (Libraries.itertools.pyAccumulate nums (some (0 : Int)))
+    let _ := Libraries.passta.pyPassAssert (PastaLean.pyLen s == n +ₚ (1 : Int))
+    let _ := Libraries.passta.pyPassAssert (s⦋(0 : Int)⦌ == (0 : Int))
+    let _ := Libraries.passta.pyPassAssert (All ((PastaLean.pyRange n).map fun k => decide (s⦋k⦌ < s⦋k +ₚ (1 : Int)⦌)))
     let mut f : List Int := PastaLean.pyListRepeat [(0 : Int)] (n +ₚ (1 : Int))
     let mut pre : List Int := PastaLean.pyListRepeat [(0 : Int)] (n +ₚ (2 : Int))
+    let _ := Libraries.passta.pyPassAssert (PastaLean.pyLen f == n +ₚ (1 : Int) && f⦋(0 : Int)⦌ == (0 : Int))
+    let _ := Libraries.passta.pyPassAssert (PastaLean.pyLen pre == n +ₚ (2 : Int))
     for i in (PastaLean.pyRange (n +ₚ (1 : Int)) (1 : Int))do
-      -- Bounds for indexing into f, s, pre
-      let _ := Libraries.passta.pyPassInvariant (decide ((1 : Int) ≤ i) && decide (i ≤ n))
-      let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ pre⦋i⦌) && decide (pre⦋i⦌ ≤ i))
+      let _ := Libraries.passta.pyPassInvariant (decide ((1 : Int) ≤ i) && decide (i ≤ n +ₚ (1 : Int)))
+      -- `f[k]` stores the max partition length for `nums[:k]`, so `f[k] <= k`.
+      let _ :=
+        Libraries.passta.pyPassInvariant
+          (All ((PastaLean.pyRange i).map fun k => decide ((0 : Int) ≤ f⦋k⦌) && decide (f⦋k⦌ ≤ k)))
+      -- `pre[k]` is the start index of the last segment for `nums[:k]`, so `pre[k] < k`.
+      let _ :=
+        Libraries.passta.pyPassInvariant
+          (All ((PastaLean.pyRange i (1 : Int)).map fun k => decide ((0 : Int) ≤ pre⦋k⦌) && decide (pre⦋k⦌ < k)))
+      -- `pre` is maintained to be non-decreasing up to the current point.
+      let _ :=
+        Libraries.passta.pyPassInvariant
+          (All ((PastaLean.pyRange (i -ₚ (1 : Int))).map fun k => decide (pre⦋k⦌ ≤ pre⦋k +ₚ (1 : Int)⦌)))
+      let _ := Libraries.passta.pyPassDecreases (n +ₚ (1 : Int) -ₚ i)
       pre := PastaLean.pySetItem pre i (PastaLean.pyMax [pre⦋i⦌, pre⦋i -ₚ (1 : Int)⦌])
+      -- After this update, `pre[i]` is a valid index into prefixes of `f` and `s`.
+      let _ := Libraries.passta.pyPassAssert (decide ((0 : Int) ≤ pre⦋i⦌) && decide (pre⦋i⦌ < i))
       f := PastaLean.pySetItem f i (f⦋pre⦋i⦌⦌ +ₚ (1 : Int))
-      let mut j := Libraries.bisect.pyBisectLeft s (s⦋i⦌ *ₚ (2 : Int) -ₚ s⦋pre⦋i⦌⦌)
-      -- bisect_left returns 0 <= j <= len(s) == n+1
-      let _ := Libraries.passta.pyPassAssert (decide ((0 : Int) ≤ j) && decide (j ≤ n +ₚ (1 : Int)))
+      let _ := Libraries.passta.pyPassAssert (decide ((1 : Int) ≤ f⦋i⦌) && decide (f⦋i⦌ ≤ i))
+      let mut target : Int := s⦋i⦌ *ₚ (2 : Int) -ₚ s⦋pre⦋i⦌⦌
+      let mut j := Libraries.bisect.pyBisectLeft s target
+      -- `s` is strictly increasing, so `s[i] * 2 - s[pre[i]] > s[i]`.
+      -- This guarantees `bisect_left` finds an index `j > i`.
+      -- The largest possible `j` is `len(s) = n + 1`.
+      let _ := Libraries.passta.pyPassAssert (decide (i < j) && decide (j ≤ n +ₚ (1 : Int)))
+      -- The update to `pre[j]` is safe as `len(pre) == n + 2`.
+      let _ := Libraries.passta.pyPassAssert (decide (j < PastaLean.pyLen pre))
       pre := PastaLean.pySetItem pre j i
+    let _ := Libraries.passta.pyPassAssert (decide ((0 : Int) ≤ f⦋n⦌) && decide (f⦋n⦌ ≤ n))
     let __py_ret_1 := f⦋n⦌
     return __py_ret_1 : Id _)
 
-theorem findMaximumLength_spec : ⦃⌜True⌝⦄ findMaximumLength nums ⦃⇓_ => ⌜True⌝⦄ :=
+@[spec]
+theorem findMaximumLength_spec :
+    ⦃⌜All ((PastaLean.pyIter nums).map fun x => decide (x ≥ (1 : Int)))⌝⦄ findMaximumLength nums ⦃⇓result =>
+      ⌜(0 : Int) ≤ result ∧ result ≤ PastaLean.pyLen nums⌝⦄ :=
   by
   try
     mvcgen [findMaximumLength, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓cur =>
       ⌜let i := (cur.prefix.length : Int);
-        ((1 : Int) ≤ i ∧ i ≤ n) ∧ (0 : Int) ≤ pre⦋i⦌ ∧ pre⦋i⦌ ≤ i⌝
+        ((((1 : Int) ≤ i ∧ i ≤ n +ₚ (1 : Int)) ∧
+              All ((PastaLean.pyRange i).map fun k => decide ((0 : Int) ≤ f⦋k⦌) && decide (f⦋k⦌ ≤ k))) ∧
+            All ((PastaLean.pyRange i (1 : Int)).map fun k => decide ((0 : Int) ≤ pre⦋k⦌) && decide (pre⦋k⦌ < k))) ∧
+          All ((PastaLean.pyRange (i -ₚ (1 : Int))).map fun k => decide (pre⦋k⦌ ≤ pre⦋k +ₚ (1 : Int)⦌))⌝
   sorry
   all_goals sorry
+
+theorem findMaximumLength_correct :
+    ∀ (nums : List Int),
+      All ((PastaLean.pyIter nums).map fun x => decide (x ≥ (1 : Int))) →
+        let result := (findMaximumLength nums).run;
+        (0 : Int) ≤ result ∧ result ≤ PastaLean.pyLen nums :=
+  by
+  intro nums hpre
+  exact findMaximumLength_spec hpre
 
 def findMaximumLength'rn := fun (nums : List Int) ↦
   Id.run
     (do
+      -- This algorithm finds the maximum length of a partition of `nums` into subarrays
+      -- with non-decreasing sums. It requires positive numbers to ensure the prefix sums
+      -- array `s` is strictly increasing, which is necessary for `bisect_left`.
+      let _ := Libraries.passta.pyPassRequires (All ((PastaLean.pyIter nums).map fun x => decide (x ≥ (1 : Int))))
       let mut n : Int := PastaLean.pyLen nums
       let mut s : List Int := PastaLean.pyList (Libraries.itertools.pyAccumulate nums (some (0 : Int)))
+      let _ := Libraries.passta.pyPassAssert (PastaLean.pyLen s == n +ₚ (1 : Int))
+      let _ := Libraries.passta.pyPassAssert (s⦋(0 : Int)⦌ == (0 : Int))
+      -- Strict monotonicity of `s` is guaranteed by the precondition.
+      let _ :=
+        Libraries.passta.pyPassAssert (All ((PastaLean.pyRange n).map fun k => decide (s⦋k⦌ < s⦋k +ₚ (1 : Int)⦌)))
       let mut f : Array Int := PastaLean.pyArrayRepeat #[(0 : Int)] (n +ₚ (1 : Int))
       let mut pre : Array Int := PastaLean.pyArrayRepeat #[(0 : Int)] (n +ₚ (2 : Int))
+      let _ := Libraries.passta.pyPassAssert (PastaLean.pyLen f == n +ₚ (1 : Int) && f⦋(0 : Int)⦌ == (0 : Int))
+      let _ := Libraries.passta.pyPassAssert (PastaLean.pyLen pre == n +ₚ (2 : Int))
       for i in (PastaLean.pyRange (n +ₚ (1 : Int)) (1 : Int))do
-        -- Bounds for indexing into f, s, pre
-        let _ := Libraries.passta.pyPassInvariant (decide ((1 : Int) ≤ i) && decide (i ≤ n))
-        let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ pre⦋i⦌) && decide (pre⦋i⦌ ≤ i))
+        let _ := Libraries.passta.pyPassInvariant (decide ((1 : Int) ≤ i) && decide (i ≤ n +ₚ (1 : Int)))
+        -- `f[k]` stores the max partition length for `nums[:k]`, so `f[k] <= k`.
+        let _ :=
+          Libraries.passta.pyPassInvariant
+            (All ((PastaLean.pyRange i).map fun k => decide ((0 : Int) ≤ f⦋k⦌) && decide (f⦋k⦌ ≤ k)))
+        -- `pre[k]` is the start index of the last segment for `nums[:k]`, so `pre[k] < k`.
+        let _ :=
+          Libraries.passta.pyPassInvariant
+            (All ((PastaLean.pyRange i (1 : Int)).map fun k => decide ((0 : Int) ≤ pre⦋k⦌) && decide (pre⦋k⦌ < k)))
+        -- `pre` is maintained to be non-decreasing up to the current point.
+        let _ :=
+          Libraries.passta.pyPassInvariant
+            (All ((PastaLean.pyRange (i -ₚ (1 : Int))).map fun k => decide (pre⦋k⦌ ≤ pre⦋k +ₚ (1 : Int)⦌)))
+        let _ := Libraries.passta.pyPassDecreases (n +ₚ (1 : Int) -ₚ i)
         pre := PastaLean.pySetItem pre i (PastaLean.pyMax [pre⦋i⦌, pre⦋i -ₚ (1 : Int)⦌])
+        -- After this update, `pre[i]` is a valid index into prefixes of `f` and `s`.
+        let _ := Libraries.passta.pyPassAssert (decide ((0 : Int) ≤ pre⦋i⦌) && decide (pre⦋i⦌ < i))
         f := PastaLean.pySetItem f i (f⦋pre⦋i⦌⦌ +ₚ (1 : Int))
-        let mut j := Libraries.bisect.pyBisectLeft s (s⦋i⦌ *ₚ (2 : Int) -ₚ s⦋pre⦋i⦌⦌)
-        -- bisect_left returns 0 <= j <= len(s) == n+1
-        let _ := Libraries.passta.pyPassAssert (decide ((0 : Int) ≤ j) && decide (j ≤ n +ₚ (1 : Int)))
+        let _ := Libraries.passta.pyPassAssert (decide ((1 : Int) ≤ f⦋i⦌) && decide (f⦋i⦌ ≤ i))
+        let mut target : Int := s⦋i⦌ *ₚ (2 : Int) -ₚ s⦋pre⦋i⦌⦌
+        let mut j := Libraries.bisect.pyBisectLeft s target
+        -- `s` is strictly increasing, so `s[i] * 2 - s[pre[i]] > s[i]`.
+        -- This guarantees `bisect_left` finds an index `j > i`.
+        -- The largest possible `j` is `len(s) = n + 1`.
+        let _ := Libraries.passta.pyPassAssert (decide (i < j) && decide (j ≤ n +ₚ (1 : Int)))
+        -- The update to `pre[j]` is safe as `len(pre) == n + 2`.
+        let _ := Libraries.passta.pyPassAssert (decide (j < PastaLean.pyLen pre))
         pre := PastaLean.pySetItem pre j i
+      -- The loop computes f[n], which is the final result.
+      -- The invariant for i = n + 1 implies this property.
+      let _ := Libraries.passta.pyPassAssert (decide ((0 : Int) ≤ f⦋n⦌) && decide (f⦋n⦌ ≤ n))
       let __py_ret_1 := f⦋n⦌
       return __py_ret_1)
 

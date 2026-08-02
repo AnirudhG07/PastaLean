@@ -51,12 +51,12 @@ def isReachable := fun (targetX : Int) ↦ fun (targetY : Int) ↦
 attribute [simp] isReachable
 
 @[taste_ingr]
-theorem isReachable_spec :
+theorem isReachable_correct :
     ∀ (targetX : Int),
       ∀ (targetY : Int),
         let x := Libraries.math.pyMathGcd targetX targetY
         targetX ≥ (0 : Int) ∧ targetY ≥ (0 : Int) →
-          (PastaLean.pyBitAnd x (x -ₚ (1 : Int)) = (0 : Int)) =
+          isReachable targetX targetY =
             (PastaLean.pyBitAnd (Libraries.math.pyMathGcd targetX targetY)
                 (Libraries.math.pyMathGcd targetX targetY -ₚ (1 : Int)) =
               (0 : Int)) :=

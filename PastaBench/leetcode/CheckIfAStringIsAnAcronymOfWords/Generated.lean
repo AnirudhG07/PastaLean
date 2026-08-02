@@ -17,34 +17,50 @@ set_option maxHeartbeats 800000
 
 /- Python source converted to produce the Lean below (the exact input to PastaLean):
 
+import random
+import functools
+import collections
+import string
+import math
+import datetime
+from typing import *
+from functools import *
+from collections import *
+from itertools import *
+from heapq import *
+from bisect import *
+from string import *
+from operator import *
+from math import *
 from contracts import *
 
 def isAcronym(words: List[str], s: str) -> bool:
     Requires(all(len(w) > 0 for w in words))
+    Ensures(Result() == (len(words) == len(s) and all(words[i][0] == s[i] for i in range(len(words)))))
     return ''.join((w[0] for w in words)) == s
 -/
 
 namespace PastaBench.leetcode.CheckIfAStringIsAnAcronymOfWords
 
 def isAcronym := fun (words : List String) ↦ fun (s : String) ↦
-  (do
-    let __py_ret_1 := PastaLean.pyStringJoin "" ((PastaLean.pyIter words).map fun w => w⦋(0 : Int)⦌) == s
-    return __py_ret_1 : Id _)
+  PastaLean.pyStringJoin "" ((PastaLean.pyIter words).map fun w => w⦋(0 : Int)⦌) == s
 
-theorem isAcronym_spec :
-    ⦃⌜PastaLean.pyAll ((PastaLean.pyIter words).map fun w => decide (PastaLean.pyLen w > (0 : Int)))⌝⦄
-      isAcronym words s ⦃⇓_ => ⌜True⌝⦄ :=
-  by
-  mvcgen [isAcronym, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  all_goals sorry
+attribute [simp] isAcronym
+
+@[taste_ingr]
+theorem isAcronym_correct :
+    ∀ (words : List String),
+      ∀ (s : String),
+        PastaLean.pyAll ((PastaLean.pyIter words).map fun w => decide (PastaLean.pyLen w > (0 : Int))) →
+          isAcronym words s =
+            (PastaLean.pyLen words = PastaLean.pyLen s ∧
+              PastaLean.pyTruthy
+                  (PastaLean.pyAll
+                    ((PastaLean.pyRange (PastaLean.pyLen words)).map fun i => words⦋i⦌⦋(0 : Int)⦌ == s⦋i⦌)) =
+                true) :=
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
 
 def isAcronym'rn := fun (words : List String) ↦ fun (s : String) ↦
-  Id.run
-    (do
-      let _ :=
-        Libraries.passta.pyPassRequires
-          (PastaLean.pyAll ((PastaLean.pyIter words).map fun w => decide (PastaLean.pyLen w > (0 : Int))))
-      let __py_ret_1 := PastaLean.pyStringJoin "" ((PastaLean.pyIter words).map fun w => w⦋(0 : Int)⦌) == s
-      return __py_ret_1)
+  PastaLean.pyStringJoin "" ((PastaLean.pyIter words).map fun w => w⦋(0 : Int)⦌) == s
 
 end PastaBench.leetcode.CheckIfAStringIsAnAcronymOfWords

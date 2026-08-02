@@ -48,17 +48,16 @@ def buildArray := fun (nums : List Int) ↦ (PastaLean.pyIter nums).map fun num 
 attribute [simp] buildArray
 
 @[taste_ingr]
-theorem buildArray_spec :
+theorem buildArray_correct :
     ∀ (nums : List Int),
       PastaLean.pyAll
           ((PastaLean.pyIter nums).map fun x => decide ((0 : Int) ≤ x) && decide (x < PastaLean.pyLen nums)) →
-        PastaLean.pyLen ((PastaLean.pyIter nums).map fun num => nums⦋num⦌) = PastaLean.pyLen nums ∧
+        PastaLean.pyLen (buildArray nums) = PastaLean.pyLen nums ∧
           PastaLean.pyTruthy
               (PastaLean.pyAll
-                ((PastaLean.pyRange (PastaLean.pyLen nums)).map fun i =>
-                  ((PastaLean.pyIter nums).map fun num => nums⦋num⦌)⦋i⦌ == nums⦋nums⦋i⦌⦌)) =
+                ((PastaLean.pyRange (PastaLean.pyLen nums)).map fun i => (buildArray nums)⦋i⦌ == nums⦋nums⦋i⦌⦌)) =
             true :=
-  by intros; sorry
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
 
 def buildArray'rn := fun (nums : List Int) ↦ (PastaLean.pyIter nums).map fun num => nums⦋num⦌
 

@@ -3,6 +3,7 @@ import PastaLean.PyAPI.TasteIngr
 
 namespace PastaLean
 
+@[grind]
 class PyHAdd (α β : Type) (γ : outParam Type) where
   hAdd : α → β → γ
 
@@ -95,6 +96,7 @@ instance (priority := high) : PyHSub Rat Int Rat where
 instance (priority := high) : PyHSub Int Rat Rat where
   hSub := fun a b => (a : Rat) - b
 
+@[grind]
 class PyHMul (α β : Type) (γ : outParam Type) where
   hMul : α → β → γ
 
@@ -159,11 +161,13 @@ instance (priority := high) : PyHMul Nat Rat Rat where hMul := fun a b => (a : R
 @[default_instance 10001]
 instance (priority := high) : PyHMul Int Int Int where hMul := fun a b => a * b
 
+@[grind]
 class PyHPow (α β : Type) (γ : outParam Type) where
   hPow : α → β → γ
 
 infixr:80 " ^ₚ " => PyHPow.hPow
 
+@[grind]
 class PyModulo (α β : Type) (γ : outParam Type) where
   hMod : α → β → γ
 
@@ -236,6 +240,12 @@ instance : PyHPow Nat Nat Nat where
 The base is widened to `Float`; the common idiom is `int(n ** 0.5)`. -/
 instance (priority := high) : PyHPow Int Float Float where
   hPow := fun a b => Float.pow (Float.ofInt a) b
+
+-- In exact mode a literal like `0.5` is a `Rat`, so `n ** 0.5` is `Int ^ Rat` — a root, which is
+-- irrational, so the provable type is noncomputable `ℝ` (via `rpow`), NOT `Float`. The approx twin
+-- never hits this: there `0.5` is already a `Float`, matching `PyHPow Int Float Float` above.
+noncomputable instance (priority := high) : PyHPow Int Rat Real where
+  hPow := fun a b => Real.rpow (a : ℝ) (b : ℝ)
 
 instance (priority := high) : PyHPow Float Float Float where
   hPow := fun a b => Float.pow a b

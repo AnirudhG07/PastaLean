@@ -81,26 +81,15 @@ def findDuplicate := fun (nums : List Int) ↦
 attribute [simp] findDuplicate
 
 @[taste_ingr]
-theorem findDuplicate_spec :
+theorem findDuplicate_correct :
     ∀ (nums : List Int),
       PastaLean.pyLen nums > (1 : Int) →
         PastaLean.pyAll
             ((PastaLean.pyIter nums).map fun v => decide ((1 : Int) ≤ v) && decide (v < PastaLean.pyLen nums)) →
           PastaLean.pySum
-                ((List.filter
-                      (fun v =>
-                        v =
-                          Libraries.bisect.pyBisectLeftRangeKey (0 : Int) (PastaLean.pyLen nums) (1 : Int) Bool.true
-                            (key := fun (x : Int) ↦ _findDuplicate'f x nums))
-                      (PastaLean.pyIter nums)).map
-                  fun v => (1 : Int)) >
+                ((List.filter (fun v => v = findDuplicate nums) (PastaLean.pyIter nums)).map fun v => (1 : Int)) >
               (1 : Int) ∧
-            (1 : Int) ≤
-                Libraries.bisect.pyBisectLeftRangeKey (0 : Int) (PastaLean.pyLen nums) (1 : Int) Bool.true (key :=
-                  fun (x : Int) ↦ _findDuplicate'f x nums) ∧
-              Libraries.bisect.pyBisectLeftRangeKey (0 : Int) (PastaLean.pyLen nums) (1 : Int) Bool.true (key :=
-                  fun (x : Int) ↦ _findDuplicate'f x nums) <
-                PastaLean.pyLen nums :=
+            (1 : Int) ≤ findDuplicate nums ∧ findDuplicate nums < PastaLean.pyLen nums :=
   by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
 
 private def _findDuplicate'f'rn := fun (x : Int) ↦ fun (nums : List Int) ↦

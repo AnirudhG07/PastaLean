@@ -76,6 +76,15 @@ theorem minOperations_spec : ⦃⌜k ≥ (0 : Int)⌝⦄ minOperations k ⦃⇓a
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry; sorry; pyany_cases <;> grind +locals
   all_goals sorry
 
+theorem minOperations_correct :
+    ∀ (k : Int),
+      k ≥ (0 : Int) →
+        let ans := (minOperations k).run;
+        ans ≤ k :=
+  by
+  intro k hpre
+  exact minOperations_spec hpre
+
 def minOperations'rn := fun (k : Int) ↦
   Id.run
     (do

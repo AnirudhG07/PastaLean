@@ -148,6 +148,15 @@ theorem levelOrderBottom_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry; sorry; sorry; aesop; sorry; sorry; sorry; sorry; sorry; sorry; sorry; sorry; sorry
   all_goals sorry
 
+theorem levelOrderBottom_correct :
+    ∀ (root : Option TreeNode),
+      let result := (levelOrderBottom root).run;
+      PastaLean.pyIsNone root = (PastaLean.pyLen result = (0 : Int)) ∧
+        (PastaLean.pyIsNone root ∨ result⦋(-1 : Int)⦌ = [((root).getD default).val]) :=
+  by
+  intro root
+  exact levelOrderBottom_spec True.intro
+
 def levelOrderBottom'rn := fun (root : Option TreeNode'rn) ↦
   Id.run
     (do

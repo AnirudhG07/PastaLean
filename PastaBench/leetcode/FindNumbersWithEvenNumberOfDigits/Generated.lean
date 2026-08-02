@@ -48,15 +48,8 @@ def findNumbers := fun (nums : List Int) ↦
 attribute [simp] findNumbers
 
 @[taste_ingr]
-theorem findNumbers_spec :
-    ∀ (nums : List Int),
-      PastaLean.pySum
-            ((PastaLean.pyIter nums).map fun x => PastaLean.pyLen (PastaLean.pyStr x) %ₚ (2 : Int) == (0 : Int)) ≥
-          (0 : Int) ∧
-        PastaLean.pySum
-            ((PastaLean.pyIter nums).map fun x => PastaLean.pyLen (PastaLean.pyStr x) %ₚ (2 : Int) == (0 : Int)) ≤
-          PastaLean.pyLen nums :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+theorem findNumbers_correct :
+    ∀ (nums : List Int), findNumbers nums ≥ (0 : Int) ∧ findNumbers nums ≤ PastaLean.pyLen nums := by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
 
 def findNumbers'rn := fun (nums : List Int) ↦
   PastaLean.pySum ((PastaLean.pyIter nums).map fun x => PastaLean.pyLen (PastaLean.pyStr x) %ₚ (2 : Int) == (0 : Int))

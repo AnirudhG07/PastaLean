@@ -87,6 +87,18 @@ theorem decode_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
+theorem decode_correct :
+    ∀ (encoded : List Int),
+      ∀ (first : Int),
+        let ans := (decode encoded first).run;
+        PastaLean.pyLen ans = PastaLean.pyLen encoded +ₚ (1 : Int) ∧
+          PastaLean.pyAll
+            ((PastaLean.pyRange (PastaLean.pyLen encoded)).map fun i =>
+              PastaLean.pyBitXor ans⦋i⦌ ans⦋i +ₚ (1 : Int)⦌ == encoded⦋i⦌) :=
+  by
+  intro encoded first
+  exact decode_spec True.intro
+
 def decode'rn := fun (encoded : List Int) ↦ fun (first : Int) ↦
   Id.run
     (do

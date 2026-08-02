@@ -69,14 +69,81 @@ def minLength := fun (s : String) ↦
     let __py_ret_1 := PastaLean.pyLen stk -ₚ (1 : Int)
     return __py_ret_1 : Id _)
 
+private theorem len_ge_two (xs : List String) (hh : xs.head? = some "")
+    (hl : xs⦋(-1 : Int)⦌ ≠ "") : 2 ≤ xs.length := by
+  match xs with
+  | [] => simp at hh
+  | [a] =>
+      simp only [List.head?, Option.some.injEq] at hh
+      have h2 : ([a] : List String)⦋(-1 : Int)⦌ = a := rfl
+      rw [h2, hh] at hl
+      exact absurd rfl hl
+  | a :: b :: rest => simp
+
+private theorem pyIter_len (s : String) :
+    (PastaLean.pyIter s).length = PastaLean.pyLen s := by
+  simp only [PastaLean.pyIter, PyIterable.toPyList, List.length_map, PastaLean.pyLen, PyLen.pyLen]
+  norm_cast
+
+private theorem pyPopRest_eq {α} [Inhabited α] (xs : List α) :
+    PastaLean.pyPopRest xs =
+      (if 0 ≤ (xs.length : Int) - 1 ∧ (xs.length : Int) - 1 < xs.length
+       then xs.eraseIdx ((xs.length : Int) - 1).toNat else xs) := rfl
+
+private theorem pop_ok (xs : List String) (hh : xs.head? = some "")
+    (hl : xs⦋(-1 : Int)⦌ ≠ "") :
+    (PastaLean.pyPopRest xs).head? = some "" ∧
+    (PastaLean.pyPopRest xs).length = xs.length - 1 := by
+  have h2 := len_ge_two xs hh hl
+  match xs, hh, h2 with
+  | a :: b :: rest, hh, _ =>
+      rw [pyPopRest_eq]
+      have hc : 0 ≤ ((a :: b :: rest).length : Int) - 1 ∧
+                ((a :: b :: rest).length : Int) - 1 < (a :: b :: rest).length := by
+        simp only [List.length_cons]; omega
+      rw [if_pos hc]
+      have hidx : (((a :: b :: rest).length : Int) - 1).toNat = rest.length + 1 := by
+        simp only [List.length_cons]; omega
+      rw [hidx]
+      refine ⟨?_, ?_⟩
+      · show (a :: (b :: rest).eraseIdx rest.length).head? = some ""
+        simpa using hh
+      · simp [List.length_eraseIdx]
+
+private theorem pop_len (xs : List String) (hh : xs.head? = some "")
+    (hcond : xs⦋(-1 : Int)⦌ = "A" ∨ xs⦋(-1 : Int)⦌ = "C") :
+    (PastaLean.pyPopRest xs).length = xs.length - 1 := by
+  have hl : xs⦋(-1 : Int)⦌ ≠ "" := by rcases hcond with h | h <;> rw [h] <;> decide
+  exact (pop_ok xs hh hl).2
+
+private theorem pop_head (xs : List String) (hh : xs.head? = some "")
+    (hcond : xs⦋(-1 : Int)⦌ = "A" ∨ xs⦋(-1 : Int)⦌ = "C") :
+    (PastaLean.pyPopRest xs).head? = some "" := by
+  have hl : xs⦋(-1 : Int)⦌ ≠ "" := by rcases hcond with h | h <;> rw [h] <;> decide
+  exact (pop_ok xs hh hl).1
+
 @[spec]
 theorem minLength_spec : ⦃⌜True⌝⦄ minLength s ⦃⇓result => ⌜result ≥ (0 : Int) ∧ result ≤ PastaLean.pyLen s⌝⦄ :=
   by
-  try
-    mvcgen [minLength, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓cur => ⌜PastaLean.pyLen stk ≥ (1 : Int)⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
-  all_goals sorry
+  mvcgen [minLength, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · ⇓⟨cur, stk⟩ =>
+      ⌜(1 : Int) ≤ PastaLean.pyLen stk ∧ PastaLean.pyLen stk ≤ 1 + (cur.prefix.length : Int) ∧ stk.head? = some ""⌝
+  all_goals (
+    simp_all (config:={zetaDelta:=true})
+      [taste_ingr, pyTruthy, PyTruthy.truthy, PastaLean.pyLen, PyLen.pyLen,
+       PastaLean.pyAppend, PastaLean.pyListAppend, pyIter_len] <;>
+    (first
+      | omega
+      | grind [pop_len, pop_head, List.head?_append, List.head?_eq_none_iff]
+      | grind +locals [pop_len, pop_head]))
+
+theorem minLength_correct :
+    ∀ (s : String),
+      let result := (minLength s).run;
+      result ≥ (0 : Int) ∧ result ≤ PastaLean.pyLen s :=
+  by
+  intro s
+  exact minLength_spec True.intro
 
 def minLength'rn := fun (s : String) ↦
   Id.run

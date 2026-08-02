@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/143",
+  "problem": "words-in-sentence",
+  "module": "WordsInSentence",
+  "method": "words_in_sentence",
+  "params": [
+    "sentence"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

@@ -17,7 +17,6 @@ set_option maxHeartbeats 800000
 
 /- Python source converted to produce the Lean below (the exact input to PastaLean):
 
-from contracts import *
 import random
 import functools
 import collections
@@ -33,10 +32,14 @@ from bisect import *
 from string import *
 from operator import *
 from math import *
+from contracts import *
 
 def sumOfDigits(nums: List[int]) -> int:
-    Requires(len(nums) > 0 and min(nums) >= 0)
+    Requires(len(nums) > 0)
+    Requires(all(n >= 0 for n in nums))
+    Ensures(Result() == 0 or Result() == 1)
     x = min(nums)
+    Assert(x >= 0)
     s = 0
     while x:
         Invariant(x >= 0)
@@ -52,6 +55,7 @@ namespace PastaBench.leetcode.SumOfDigitsInTheMinimumNumber
 def sumOfDigits := fun (nums : List Int) ↦
   (do
     let mut x : Int := PastaLean.pyMin nums
+    let _ := Libraries.passta.pyPassAssert (decide (x ≥ (0 : Int)))
     let mut s : Int := (0 : Int)
     while (PastaLean.pyTruthy x) do
       let _ := Libraries.passta.pyPassInvariant (decide (x ≥ (0 : Int)))
@@ -62,20 +66,46 @@ def sumOfDigits := fun (nums : List Int) ↦
     let __py_ret_1 := PastaLean.pyBitXor (PastaLean.pyBitAnd s (1 : Int)) (1 : Int)
     return __py_ret_1 : Id _)
 
+@[spec]
 theorem sumOfDigits_spec :
-    ⦃⌜PastaLean.pyLen nums > (0 : Int) ∧ PastaLean.pyMin nums ≥ (0 : Int)⌝⦄ sumOfDigits nums ⦃⇓_ => ⌜True⌝⦄ :=
+    ⦃⌜PastaLean.pyLen nums > (0 : Int) ∧
+          PastaLean.pyAll ((PastaLean.pyIter nums).map fun n => decide (n ≥ (0 : Int)))⌝⦄
+      sumOfDigits nums ⦃⇓result => ⌜result = (0 : Int) ∨ result = (1 : Int)⌝⦄ :=
   by
-  mvcgen [sumOfDigits, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  try
+    mvcgen [sumOfDigits, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · fun s =>
+      let s := s |>.snd;
+      let x := s |>.fst;
+      (⟨(x).toNat⟩ : ULift Nat)
+    · ⇓s =>
+      ⌜Sum.elim
+          (fun st =>
+            let s := st |>.snd;
+            let x := st |>.fst;
+            x ≥ (0 : Int) ∧ s ≥ (0 : Int))
+          (fun _ => True) s⌝
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
+
+theorem sumOfDigits_correct :
+    ∀ (nums : List Int),
+      PastaLean.pyLen nums > (0 : Int) ∧
+          PastaLean.pyAll ((PastaLean.pyIter nums).map fun n => decide (n ≥ (0 : Int))) →
+        let result := (sumOfDigits nums).run;
+        result = (0 : Int) ∨ result = (1 : Int) :=
+  by
+  intro nums hpre
+  exact sumOfDigits_spec hpre
 
 def sumOfDigits'rn := fun (nums : List Int) ↦
   Id.run
     (do
+      let _ := Libraries.passta.pyPassRequires (decide (PastaLean.pyLen nums > (0 : Int)))
       let _ :=
-        Libraries.passta.pyPassRequires
-          (decide (PastaLean.pyLen nums > (0 : Int)) && decide (PastaLean.pyMin nums ≥ (0 : Int)))
+        Libraries.passta.pyPassRequires (PastaLean.pyAll ((PastaLean.pyIter nums).map fun n => decide (n ≥ (0 : Int))))
       let mut x : Int := PastaLean.pyMin nums
+      let _ := Libraries.passta.pyPassAssert (decide (x ≥ (0 : Int)))
       let mut s : Int := (0 : Int)
       while (PastaLean.pyTruthy x) do
         let _ := Libraries.passta.pyPassInvariant (decide (x ≥ (0 : Int)))

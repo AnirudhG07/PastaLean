@@ -87,6 +87,20 @@ theorem makeTheIntegerZero_spec :
   sorry; sorry; sorry; sorry; sorry; sorry; pyany_cases <;> grind +locals; sorry
   all_goals sorry
 
+theorem makeTheIntegerZero_correct :
+    ∀ (num1 : Int),
+      ∀ (num2 : Int),
+        ((1 : Int) ≤ num1 ∧ num1 ≤ (10 : Int) ^ₚ (9 : Int)) ∧
+            -(10 : Int) ^ₚ (9 : Int) ≤ num2 ∧ num2 ≤ (10 : Int) ^ₚ (9 : Int) →
+          let result := (makeTheIntegerZero num1 num2).run;
+          result = -(1 : Int) ∨
+            ((result ≥ (1 : Int) ∧ num1 -ₚ result *ₚ num2 ≥ (0 : Int)) ∧
+                PastaLean.pyBitCount (num1 -ₚ result *ₚ num2) ≤ result) ∧
+              result ≤ num1 -ₚ result *ₚ num2 :=
+  by
+  intro num1 num2 hpre
+  exact makeTheIntegerZero_spec hpre
+
 def makeTheIntegerZero'rn := fun (num1 : Int) ↦ fun (num2 : Int) ↦
   Id.run
     (do

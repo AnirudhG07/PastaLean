@@ -17,6 +17,7 @@ set_option maxHeartbeats 800000
 
 /- Python source converted to produce the Lean below (the exact input to PastaLean):
 
+from contracts import *
 import random
 import functools
 import collections
@@ -32,13 +33,25 @@ from bisect import *
 from string import *
 from operator import *
 from math import *
-from contracts import *
 
 def longestSubsequence(arr: List[int], difference: int) -> int:
     Requires(len(arr) > 0)
+    Ensures(1 <= Result() <= len(arr))
+
     f = defaultdict(int)
     for x in arr:
+        # INVARIANT: Any value in f represents the length of an arithmetic subsequence
+        # found so far. This length must be at least 1 and cannot exceed the total
+        # number of elements in the input array.
+        Invariant(all(1 <= v <= len(arr) for v in f.values()))
+
         f[x] = f[x - difference] + 1
+
+    # POST-LOOP: The loop has run at least once since len(arr) > 0, so f is not empty.
+    # The invariant guarantees that the maximum value in f, which is the result,
+    # is bounded by 1 and the length of the array.
+    Assert(all(1 <= v <= len(arr) for v in f.values()))
+    Assert(1 <= max(f.values()) <= len(arr))
     return max(f.values())
 -/
 
@@ -48,17 +61,50 @@ def longestSubsequence := fun (arr : List Int) ↦ fun (difference : Int) ↦
   (do
     let mut f : Libraries.collections.PyDefaultDict Int Int := Libraries.collections.pyDefaultDictInt
     for x in (PastaLean.pyIter arr)do
+      -- INVARIANT: Any value in f represents the length of an arithmetic subsequence
+      -- found so far. This length must be at least 1 and cannot exceed the total
+      -- number of elements in the input array.
+      let _ :=
+        Libraries.passta.pyPassInvariant
+          (PastaLean.pyAll
+            ((PastaLean.pyIter (PastaLean.pyAnys f)).map fun v =>
+              decide ((1 : Int) ≤ v) && decide (v ≤ PastaLean.pyLen arr)))
       f := PastaLean.pySetItem f x (f⦋x -ₚ difference⦌ +ₚ (1 : Int))
+    let _ :=
+      Libraries.passta.pyPassAssert
+        (PastaLean.pyAll
+          ((PastaLean.pyIter (PastaLean.pyAnys f)).map fun v =>
+            decide ((1 : Int) ≤ v) && decide (v ≤ PastaLean.pyLen arr)))
+    let _ :=
+      Libraries.passta.pyPassAssert
+        (decide ((1 : Int) ≤ PastaLean.pyMax (PastaLean.pyAnys f)) &&
+          decide (PastaLean.pyMax (PastaLean.pyAnys f) ≤ PastaLean.pyLen arr))
     let __py_ret_1 := PastaLean.pyMax (PastaLean.pyAnys f)
     return __py_ret_1 : Id _)
 
+@[spec]
 theorem longestSubsequence_spec :
-    ⦃⌜PastaLean.pyLen arr > (0 : Int)⌝⦄ longestSubsequence arr difference ⦃⇓_ => ⌜True⌝⦄ :=
+    ⦃⌜PastaLean.pyLen arr > (0 : Int)⌝⦄ longestSubsequence arr difference ⦃⇓result =>
+      ⌜(1 : Int) ≤ result ∧ result ≤ PastaLean.pyLen arr⌝⦄ :=
   by
   try
     mvcgen [longestSubsequence, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓cur => ⌜True⌝
+    · ⇓cur =>
+      ⌜PastaLean.pyAll
+          ((PastaLean.pyIter (PastaLean.pyAnys f)).map fun v =>
+            decide ((1 : Int) ≤ v) && decide (v ≤ PastaLean.pyLen arr))⌝
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
+
+theorem longestSubsequence_correct :
+    ∀ (arr : List Int),
+      ∀ (difference : Int),
+        PastaLean.pyLen arr > (0 : Int) →
+          let result := (longestSubsequence arr difference).run;
+          (1 : Int) ≤ result ∧ result ≤ PastaLean.pyLen arr :=
+  by
+  intro arr difference hpre
+  exact longestSubsequence_spec hpre
 
 def longestSubsequence'rn := fun (arr : List Int) ↦ fun (difference : Int) ↦
   Id.run
@@ -66,7 +112,27 @@ def longestSubsequence'rn := fun (arr : List Int) ↦ fun (difference : Int) ↦
       let _ := Libraries.passta.pyPassRequires (decide (PastaLean.pyLen arr > (0 : Int)))
       let mut f : Libraries.collections.PyDefaultDict Int Int := Libraries.collections.pyDefaultDictInt
       for x in (PastaLean.pyIter arr)do
+        -- INVARIANT: Any value in f represents the length of an arithmetic subsequence
+        -- found so far. This length must be at least 1 and cannot exceed the total
+        -- number of elements in the input array.
+        let _ :=
+          Libraries.passta.pyPassInvariant
+            (PastaLean.pyAll
+              ((PastaLean.pyIter (PastaLean.pyAnys f)).map fun v =>
+                decide ((1 : Int) ≤ v) && decide (v ≤ PastaLean.pyLen arr)))
         f := PastaLean.pySetItem f x (f⦋x -ₚ difference⦌ +ₚ (1 : Int))
+      -- POST-LOOP: The loop has run at least once since len(arr) > 0, so f is not empty.
+      -- The invariant guarantees that the maximum value in f, which is the result,
+      -- is bounded by 1 and the length of the array.
+      let _ :=
+        Libraries.passta.pyPassAssert
+          (PastaLean.pyAll
+            ((PastaLean.pyIter (PastaLean.pyAnys f)).map fun v =>
+              decide ((1 : Int) ≤ v) && decide (v ≤ PastaLean.pyLen arr)))
+      let _ :=
+        Libraries.passta.pyPassAssert
+          (decide ((1 : Int) ≤ PastaLean.pyMax (PastaLean.pyAnys f)) &&
+            decide (PastaLean.pyMax (PastaLean.pyAnys f) ≤ PastaLean.pyLen arr))
       let __py_ret_1 := PastaLean.pyMax (PastaLean.pyAnys f)
       return __py_ret_1)
 

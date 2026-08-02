@@ -90,6 +90,17 @@ theorem canMeasureWater_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]
   all_goals sorry
 
+theorem canMeasureWater_correct :
+    ∀ (x : Int),
+      ∀ (y : Int),
+        ∀ (target : Int),
+          (x ≥ (0 : Int) ∧ y ≥ (0 : Int)) ∧ target ≥ (0 : Int) →
+            let result := (canMeasureWater x y target).run;
+            result = (target = (0 : Int) ∨ x +ₚ y ≥ target ∧ target %ₚ Libraries.math.pyMathGcd x y = (0 : Int)) :=
+  by
+  intro x y target hpre
+  exact canMeasureWater_spec hpre
+
 def canMeasureWater'rn := fun (x : Int) ↦ fun (y : Int) ↦ fun (target : Int) ↦
   Id.run
     (do

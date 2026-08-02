@@ -34,11 +34,10 @@ def maxNumber := fun (n : Int) ↦ PastaLean.pyShiftLeft (1 : Int) (PastaLean.py
 attribute [simp] maxNumber
 
 @[taste_ingr]
-theorem maxNumber_spec :
+theorem maxNumber_correct :
     ∀ (n : Int),
       n > (0 : Int) →
-        PastaLean.pyShiftLeft (1 : Int) (PastaLean.pyBitLength n -ₚ (1 : Int)) -ₚ (1 : Int) =
-          PastaLean.pyShiftLeft (1 : Int) (PastaLean.pyBitLength n -ₚ (1 : Int)) -ₚ (1 : Int) :=
+        maxNumber n = PastaLean.pyShiftLeft (1 : Int) (PastaLean.pyBitLength n -ₚ (1 : Int)) -ₚ (1 : Int) :=
   by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]
 
 def maxNumber'rn := fun (n : Int) ↦ PastaLean.pyShiftLeft (1 : Int) (PastaLean.pyBitLength n -ₚ (1 : Int)) -ₚ (1 : Int)

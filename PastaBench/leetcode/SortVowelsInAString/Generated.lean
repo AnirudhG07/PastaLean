@@ -147,6 +147,28 @@ theorem sortVowels_spec :
   all_goals sorry
   all_goals sorry
 
+theorem sortVowels_correct :
+    ∀ (s : String),
+      let result := (sortVowels s).run;
+      ((PastaLean.pyLen result = PastaLean.pyLen s ∧
+            PastaLean.pyAll
+              ((List.filter (fun i => !(PastaLean.pyContains "aeiou" (PastaLean.pyStringLower s⦋i⦌)))
+                    (PastaLean.pyRange (PastaLean.pyLen s))).map
+                fun i => s⦋i⦌ == result⦋i⦌)) ∧
+          PastaLean.pyAll
+            ((PastaLean.pyRange (PastaLean.pyLen s)).map fun i =>
+              PastaLean.pyContains "aeiou" (PastaLean.pyStringLower s⦋i⦌) ==
+                PastaLean.pyContains "aeiou" (PastaLean.pyStringLower result⦋i⦌))) ∧
+        ((List.filter (fun c => PastaLean.pyContains "aeiou" (PastaLean.pyStringLower c))
+                (PastaLean.pyIter result)).map
+            fun c => c) =
+          PastaLean.pySort
+            ((List.filter (fun c => PastaLean.pyContains "aeiou" (PastaLean.pyStringLower c)) (PastaLean.pyIter s)).map
+              fun c => c) :=
+  by
+  intro s
+  exact sortVowels_spec True.intro
+
 def sortVowels'rn := fun (s : String) ↦
   Id.run
     (do

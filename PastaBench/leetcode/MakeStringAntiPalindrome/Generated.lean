@@ -130,6 +130,20 @@ theorem makeAntiPalindrome_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
+theorem makeAntiPalindrome_correct :
+    ∀ (s : String),
+      PastaLean.pyLen s ≥ (2 : Int) →
+        let result := (makeAntiPalindrome s).run;
+        result = "-1" ∨
+          PastaLean.pyTruthy
+              (PastaLean.pyAll
+                ((PastaLean.pyRange (PastaLean.pyFloorDiv (PastaLean.pyLen s) (2 : Int))).map fun k =>
+                  result⦋k⦌ != result⦋PastaLean.pyLen s -ₚ (1 : Int) -ₚ k⦌)) =
+            true :=
+  by
+  intro s hpre
+  exact makeAntiPalindrome_spec hpre
+
 def makeAntiPalindrome'rn := fun (s : String) ↦
   Id.run
     (do

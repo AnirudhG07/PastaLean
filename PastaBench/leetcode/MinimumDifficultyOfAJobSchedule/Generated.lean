@@ -114,6 +114,18 @@ theorem minDifficulty_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
+theorem minDifficulty_correct :
+    ∀ (jobDifficulty : List Int),
+      ∀ (d : Int),
+        (d ≥ (1 : Int) ∧ PastaLean.pyLen jobDifficulty ≥ (1 : Int)) ∧
+            PastaLean.pyAll ((PastaLean.pyIter jobDifficulty).map fun jd => decide (jd ≥ (0 : Int))) →
+          let result := (minDifficulty jobDifficulty d).run;
+          PastaLean.pyLen jobDifficulty < d ∧ result = -(1 : Int) ∨
+            PastaLean.pyLen jobDifficulty ≥ d ∧ result ≥ (0 : Int) :=
+  by
+  intro jobDifficulty d hpre
+  exact minDifficulty_spec hpre
+
 def minDifficulty'rn := fun (jobDifficulty : List Int) ↦ fun (d : Int) ↦
   Id.run
     (do

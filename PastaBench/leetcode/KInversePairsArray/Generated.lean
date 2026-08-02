@@ -61,6 +61,16 @@ theorem kInversePairs_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
+theorem kInversePairs_correct :
+    ∀ (n : Int),
+      ∀ (k : Int),
+        n ≥ (0 : Int) ∧ k ≥ (0 : Int) →
+          let result := (kInversePairs n k).run;
+          (0 : Int) ≤ result ∧ result < (1000000007 : Int) :=
+  by
+  intro n k hpre
+  exact kInversePairs_spec hpre
+
 def kInversePairs'rn := fun (n : Int) ↦ fun (k : Int) ↦
   Id.run
     (do

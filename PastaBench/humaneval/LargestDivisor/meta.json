@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/24",
+  "problem": "largest-divisor",
+  "module": "LargestDivisor",
+  "method": "largest_divisor",
+  "params": [
+    "n"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

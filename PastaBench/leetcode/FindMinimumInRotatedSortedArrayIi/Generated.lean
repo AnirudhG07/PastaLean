@@ -91,6 +91,15 @@ theorem findMin_spec : ⦃⌜PastaLean.pyLen nums > (0 : Int)⌝⦄ findMin nums
   simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
+theorem findMin_correct :
+    ∀ (nums : List Int),
+      PastaLean.pyLen nums > (0 : Int) →
+        let result := (findMin nums).run;
+        result = PastaLean.pyMin nums :=
+  by
+  intro nums hpre
+  exact findMin_spec hpre
+
 def findMin'rn := fun (nums : List Int) ↦
   Id.run
     (do

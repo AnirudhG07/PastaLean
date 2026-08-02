@@ -70,7 +70,6 @@ def getDescentPeriods := fun (prices : List Int) ↦
     let mut ans : Int := (0 : Int)
     let mut i : Int := (0 : Int)
     let mut n : Int := PastaLean.pyLen prices
-    let _ := Libraries.passta.pyPassEnsures (decide (ans ≥ (0 : Int)))
     while (i < n) do
       let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i))
       let _ := Libraries.passta.pyPassInvariant (decide (i ≤ n))
@@ -91,11 +90,20 @@ def getDescentPeriods := fun (prices : List Int) ↦
       i := j
     return ans : Id _)
 
-theorem getDescentPeriods_spec : ⦃⌜True⌝⦄ getDescentPeriods prices ⦃⇓_ => ⌜True⌝⦄ :=
+@[spec]
+theorem getDescentPeriods_spec : ⦃⌜True⌝⦄ getDescentPeriods prices ⦃⇓ans => ⌜ans ≥ (0 : Int)⌝⦄ :=
   by
   mvcgen [getDescentPeriods, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
   all_goals sorry
   all_goals sorry
+
+theorem getDescentPeriods_correct :
+    ∀ (prices : List Int),
+      let ans := (getDescentPeriods prices).run;
+      ans ≥ (0 : Int) :=
+  by
+  intro prices
+  exact getDescentPeriods_spec True.intro
 
 def getDescentPeriods'rn := fun (prices : List Int) ↦
   Id.run
@@ -105,7 +113,6 @@ def getDescentPeriods'rn := fun (prices : List Int) ↦
       let mut ans : Int := (0 : Int)
       let mut i : Int := (0 : Int)
       let mut n : Int := PastaLean.pyLen prices
-      let _ := Libraries.passta.pyPassEnsures (decide (ans ≥ (0 : Int)))
       -- outer loop: scan start of each descent segment
       while (i < n) do
         let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i))

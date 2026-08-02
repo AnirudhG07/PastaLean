@@ -97,6 +97,15 @@ theorem maximumSum_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
+theorem maximumSum_correct :
+    ∀ (nums : List Int),
+      PastaLean.pyAll ((PastaLean.pyIter nums).map fun v => decide (v ≥ (0 : Int))) →
+        let ans := (maximumSum nums).run;
+        ans ≥ -(1 : Int) ∧ (PastaLean.pyLen nums ≤ (1 : Int) ∨ ans = -(1 : Int)) :=
+  by
+  intro nums hpre
+  exact maximumSum_spec hpre
+
 def maximumSum'rn := fun (nums : List Int) ↦
   Id.run
     (do

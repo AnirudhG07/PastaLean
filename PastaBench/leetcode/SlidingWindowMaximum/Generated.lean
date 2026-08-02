@@ -134,6 +134,16 @@ theorem maxSlidingWindow_spec :
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
+theorem maxSlidingWindow_correct :
+    ∀ (nums : List Int),
+      ∀ (k : Int),
+        k > (0 : Int) →
+          let ans := (maxSlidingWindow nums k).run;
+          PastaLean.pyLen ans = PastaLean.pyMax [(0 : Int), PastaLean.pyLen nums -ₚ k +ₚ (1 : Int)] :=
+  by
+  intro nums k hpre
+  exact maxSlidingWindow_spec hpre
+
 def maxSlidingWindow'rn := fun (nums : List Int) ↦ fun (k : Int) ↦
   Id.run
     (do
