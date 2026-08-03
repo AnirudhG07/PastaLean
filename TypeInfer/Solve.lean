@@ -338,10 +338,38 @@ private partial def containsOrdOf (name : String) (json : Json) : Bool :=
       | .obj fs => fs.toList.any (fun (_, v) => containsOrdOf name v)
       | _ => false)
 
+/-- The static type of a *literal* expression (needs no environment): `[]`→list, `""`→str, `5`→int,
+`3.0`→float, `True`→bool, `None`→none, plus list/set/tuple literals recursively. `none` for a
+non-literal (a name, a call, …) so the caller learns nothing. Covers every PyAny subtype. -/
+private partial def literalType? (e : Json) : Option PyType :=
+  let elts := ((e.getObjValAs? (Array Json) "elts").toOption.getD #[]).toList
+  match nodeTypeOf e with
+  | some "Constant" => some (ofValue e)
+  | some "List"  => some (.list  (PyType.joinAll (elts.filterMap literalType?)))
+  | some "Set"   => some (.set   (PyType.joinAll (elts.filterMap literalType?)))
+  | some "Tuple" => some (.tuple (elts.map (fun x => (literalType? x).getD .unknown)))
+  | _ => none
+
+/-- `side` is a subscript read `name[…]` (a direct element access of `name`). -/
+private def isSubscriptOf (name : String) (side : Option Json) : Bool :=
+  match side with
+  | some s => nodeTypeOf s == some "Subscript" && (getField s "value").bind nameId? == some name
+  | none => false
+
+/-- `name[…]` appears ANYWHERE in `j` — used to propagate an element constraint down through nested
+arithmetic (`(array[0] + array[-1]) % 2` still teaches `array`'s element from the outer `% 2`). -/
+private partial def containsSubscriptOf (name : String) (j : Json) : Bool :=
+  (nodeTypeOf j == some "Subscript" && (getField j "value").bind nameId? == some name)
+  || (match j with
+      | .arr xs => xs.any (containsSubscriptOf name)
+      | .obj fs => fs.toList.any (fun (_, v) => containsSubscriptOf name v)
+      | _ => false)
+
 /-- What `name`'s usage in one expression unambiguously tells us — enumerated exhaustively over the
 Python signals that pin exactly one type: a type-exclusive method on it (`p.split()` → str), an
 int-only operator over it (`p << 1`, `p >> 1`, `~p` — bitwise `& | ^` are int OR set, so NOT here),
-or a type-fixing builtin arg (`ord(p)` → str, `chr(p)` → int). Genuinely ambiguous uses (`p[i]`,
+a type-fixing builtin arg (`ord(p)` → str, `chr(p)` → int), or a comparison against a literal
+(`p == []` → list, `p == ""` → str, `p in "abc"` → str element). Genuinely ambiguous uses (`p[i]`,
 `for x in p`, `len(p)`, `p + q`) stay `unknown` — the fixpoint fills them in. -/
 private partial def usageType (name : String) (json : Json) : PyType :=
   let isName (j : Option Json) : Bool := j.bind nameId? == some name
@@ -354,6 +382,12 @@ private partial def usageType (name : String) (json : Json) : PyType :=
             if nodeTypeOf func == some "Attribute" then
               if isName (getField func "value") then
                 (func.getObjValAs? String "attr").toOption.elim .unknown Libraries.builtinMethodReceiver?
+              -- `p[i].method()`: a type-exclusive method on an ELEMENT ⇒ `p : list[<receiver>]`
+              -- (e.g. `words[0].upper()` ⇒ `words : list[str]`).
+              else if isSubscriptOf name (getField func "value") then
+                match (func.getObjValAs? String "attr").toOption.map Libraries.builtinMethodReceiver? with
+                | some t => if t == .unknown then .unknown else .list t
+                | none => .unknown
               else .unknown
             -- `ord(p)` → p is a one-char str; `chr(p)` → p is an int.
             else match nameId? func with
@@ -367,14 +401,25 @@ private partial def usageType (name : String) (json : Json) : PyType :=
                   else .unknown
               | none => .unknown
         | none => .unknown
-    -- Shift is int-only in Python (`p << 1`); `& | ^` also work on sets, so they pin nothing.
+    -- Shift is int-only in Python (`p << 1`); `& | ^` also work on sets, so they pin nothing for a
+    -- bare name. But over an ELEMENT (`p[i]`) these int-only ops teach `p : list[int]`, and an
+    -- arithmetic op against a literal teaches the element from the literal.
     | some "BinOp" =>
-        match (json.getObjValAs? String "op").toOption with
-        | some op =>
-            if ["lshift", "rshift"].contains op
-               && (isName (getField json "left") || isName (getField json "right")) then .int
-            else .unknown
-        | none => .unknown
+        let op := (json.getObjValAs? String "op").toOption.getD ""
+        let left := getField json "left"
+        let right := getField json "right"
+        -- `p << 1`: `p` itself is int.
+        if ["lshift", "rshift"].contains op && (isName left || isName right) then .int
+        -- an int-only op anywhere over an element of `p` — however nested, e.g. `(p[0]+p[-1]) % 2` —
+        -- forces the element int ⇒ `p : list[int]`.
+        else if ["mod", "lshift", "rshift", "bitand", "bitor", "bitxor"].contains op
+                && (left.elim false (containsSubscriptOf name) || right.elim false (containsSubscriptOf name)) then .list .int
+        -- `p[i] <arith> <literal>` (or the reverse): the element has the literal's type.
+        else if ["add", "sub", "mul", "div", "floordiv", "pow"].contains op then
+          if isSubscriptOf name left then (right.bind literalType?).elim .unknown .list
+          else if isSubscriptOf name right then (left.bind literalType?).elim .unknown .list
+          else .unknown
+        else .unknown
     -- `~p` (bitwise NOT) is int-only.
     | some "UnaryOp" =>
         if (json.getObjValAs? String "op").toOption == some "invert" && isName (getField json "operand")
@@ -389,6 +434,34 @@ private partial def usageType (name : String) (json : Json) : PyType :=
             if isName (some it) && containsOrdOf c (Json.arr ((json.getObjValAs? (Array Json) "body").toOption.getD #[]))
             then .str else .unknown
         | _, _ => .unknown
+    -- `p <cmp> <literal>` (or the reverse) pins `p` to the literal's type — the only type a concrete
+    -- value can be compared at. `in`/`notin` mean `p` is an ELEMENT of the literal container → its
+    -- element type. `is`/`isnot` are identity (usually `x is None` ⇒ nullable, NOT `none`), so they
+    -- teach nothing. Conflicting usages join to `unknown` (→ PyAny); a type-CHANGING reassignment is
+    -- still resolved per-segment by codegen's rebind-shadow, so this only ever refines a single-typed
+    -- parameter (e.g. an unannotated `array` used as `array == []`).
+    | some "Compare" =>
+        let op := (json.getObjValAs? String "op").toOption.getD ""
+        let left := getField json "left"
+        let right := getField json "right"
+        let membership := op == "in" || op == "notin"
+        let valueCmp := ["eq", "ne", "lt", "le", "gt", "ge"].contains op
+        let elemOf : PyType → PyType
+          | .list e => e | .set e => e | .tuple es => PyType.joinAll es | _ => .unknown
+        let fromLeft : PyType :=
+          if isName left then
+            match right.bind literalType? with
+            | some t => if membership then elemOf t else if valueCmp then t else .unknown
+            | none => .unknown
+          else .unknown
+        let fromRight : PyType :=
+          if valueCmp && isName right then (left.bind literalType?).getD .unknown else .unknown
+        -- `p[i] <cmp> <literal>` pins the ELEMENT type ⇒ `p : list[<that>]`.
+        let fromLeftElem : PyType :=
+          if valueCmp && isSubscriptOf name left then (right.bind literalType?).elim .unknown .list else .unknown
+        let fromRightElem : PyType :=
+          if valueCmp && isSubscriptOf name right then (left.bind literalType?).elim .unknown .list else .unknown
+        fromLeft.join fromRight |>.join (fromLeftElem.join fromRightElem)
     | _ => .unknown
   let sub := match json with
     | .arr xs => PyType.joinAll (xs.toList.map (usageType name))

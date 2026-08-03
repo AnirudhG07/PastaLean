@@ -43,7 +43,7 @@ def even_odd_palindrome(n):
 
 namespace PastaBench.humaneval.EvenOddPalindrome
 
-def even_odd_palindrome := fun n ↦
+def even_odd_palindrome := fun (n : Int) ↦
   (do
     let __unpack_value_1 := ((0 : Int), (0 : Int))
     let __unpack_pair_1 := __unpack_value_1
@@ -70,11 +70,11 @@ theorem even_odd_palindrome_spec :
     · ⇓⟨cur, odd_cnt, even_cnt⟩ =>
       ⌜let i := (cur.prefix.length : Int);
         odd_cnt +ₚ even_cnt ≤ i -ₚ (1 : Int)⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals; pyany_cases <;> grind +locals; pyany_cases <;> grind +locals; sorry; sorry
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals; pyany_cases <;> grind +locals; pyany_cases <;> grind +locals; sorry; pyany_cases <;> grind +locals
   all_goals sorry
 
 theorem even_odd_palindrome_correct :
-    ∀ n,
+    ∀ (n : Int),
       n ≥ (1 : Int) →
         let result := (even_odd_palindrome n).run;
         result⦋(0 : Int)⦌ +ₚ result⦋(1 : Int)⦌ ≤ n :=
@@ -82,7 +82,7 @@ theorem even_odd_palindrome_correct :
   intro n hpre
   exact even_odd_palindrome_spec hpre
 
-def even_odd_palindrome'rn := fun n ↦
+def even_odd_palindrome'rn := fun (n : Int) ↦
   Id.run
     (do
       /-

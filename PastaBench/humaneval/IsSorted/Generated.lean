@@ -46,7 +46,7 @@ def is_sorted(lst: List[int]):
         if x not in count: count[x] = 0
         count[x] += 1
         if count[x] > 2: return False
-
+    
     Assert(all(lst.count(x) <= 2 for x in set(lst)))
     return lst == sorted(lst)
 -/
@@ -63,12 +63,12 @@ def is_sorted := fun (lst : List Int) ↦
       let _ :=
         Libraries.passta.pyPassInvariant
           (PastaLean.pyAll ((PastaLean.pyIter (PastaLean.pyKeys count)).map fun k => decide (k ≥ (0 : Int))))
-      if h_1 : !(PastaLean.pyContains count x) then
+      if h_1 : !(PastaLean.pyContains count x) then 
         count := PastaLean.pySetItem count x (0 : Int)
       else
         let _ := ()
       count := PastaLean.pySetItem count x (count⦋x⦌ +ₚ (1 : Int))
-      if h_2 : count⦋x⦌ > (2 : Int) then
+      if h_2 : count⦋x⦌ > (2 : Int) then 
         return Bool.false
       else
         let _ := ()
@@ -115,11 +115,11 @@ def is_sorted'rn := fun (lst : List Int) ↦
   Id.run
     (do
       /-
-
+      
           Given a list of numbers, return whether or not they are sorted
           in ascending order. If list has more than 1 duplicate of the same
           number, return False. Assume no negative numbers and only integers.
-
+      
           Examples
           is_sorted([5]) ➞ True
           is_sorted([1, 2, 3, 4, 5]) ➞ True
@@ -129,7 +129,7 @@ def is_sorted'rn := fun (lst : List Int) ↦
           is_sorted([1, 3, 2, 4, 5, 6, 7]) ➞ False
           is_sorted([1, 2, 2, 3, 3, 4]) ➞ True
           is_sorted([1, 2, 2, 2, 3, 4]) ➞ False
-
+          
       -/
       let _ :=
         Libraries.passta.pyPassRequires (PastaLean.pyAll ((PastaLean.pyIter lst).map fun x => decide (x ≥ (0 : Int))))
@@ -141,12 +141,12 @@ def is_sorted'rn := fun (lst : List Int) ↦
         let _ :=
           Libraries.passta.pyPassInvariant
             (PastaLean.pyAll ((PastaLean.pyIter (PastaLean.pyKeys count)).map fun k => decide (k ≥ (0 : Int))))
-        if h_1 : !(PastaLean.pyContains count x) then
+        if h_1 : !(PastaLean.pyContains count x) then 
           count := PastaLean.pySetItem count x (0 : Int)
         else
           let _ := ()
         count := PastaLean.pySetItem count x (count⦋x⦌ +ₚ (1 : Int))
-        if h_2 : count⦋x⦌ > (2 : Int) then
+        if h_2 : count⦋x⦌ > (2 : Int) then 
           return Bool.false
         else
           let _ := ()

@@ -126,6 +126,16 @@ def cmd_translate(args) -> int:
     _emit(result.lean_code, args.output)
     if not args.check:
         return 0
+    # `--no-prove-asserts` leaves `taste?` (an interactive proof-SEARCH tactic) in the output.
+    # Compile-checking that re-runs the search — i.e. proves the very obligations you asked to leave
+    # unproven — which is what makes the process appear to "hang" for up to `--timeout` seconds after
+    # the code has already printed. Skip the check in that case (the default, proving path pre-solves
+    # `taste?` and splices a concrete tactic, so its check stays fast).
+    if not getattr(args, "prove_asserts", True) and "taste?" in (result.lean_code or ""):
+        print("note: skipped compile-check — output contains unsolved `taste?` (from "
+              "--no-prove-asserts); checking it would re-run proof search. Drop --no-prove-asserts "
+              "to compile-check with proofs.", file=sys.stderr)
+        return 0
     return _report_compile(args.file, result.lean_code, args.timeout)
 
 

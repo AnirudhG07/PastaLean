@@ -4,6 +4,7 @@ import PastaLean.PyAPI.Operators
 import PastaLean.PyAPI.CommonProtocols.Length
 import PastaLean.PyAPI.CommonProtocols.GetItem
 import PastaLean.PyAPI.Lists
+import PastaLean.PyAPI.Strings
 import PastaLean.PyAPI.TasteIngr
 import PastaLean.PyVerify.PyWhile
 
@@ -68,6 +69,17 @@ on (`0 ≤ len`, `i ≤ len`). One `@[taste_ingr]` lemma per concrete container.
   simp [pyLen, PyLen.pyLen]
 @[taste_ingr] theorem pyLen_nil {α : Type} : pyLen ([] : List α) = 0 := by
   simp [pyLen, PyLen.pyLen]
+
+/-! String length is `.toList.length` (modern Lean's `String` is byte-backed but `String.toList_ofList`
+recovers the char list, so it is NOT opaque). These let a loop building a `String` accumulator track its
+length, the string analogue of `pyLen_pyAppend`. -/
+@[taste_ingr] theorem pyLen_string_append (a b : String) : pyLen (a ++ b) = pyLen a + pyLen b := by
+  simp [pyLen, PyLen.pyLen, String.length]
+@[taste_ingr] theorem pyLen_string_hAdd_char (a : String) (c : Char) : pyLen (a +ₚ c) = pyLen a + 1 := by
+  simp [pyLen, PyLen.pyLen, PyHAdd.hAdd, String.length]
+/-- `swapcase` maps each character to one character, so it preserves length. -/
+@[taste_ingr] theorem pyLen_pyStringSwapcase (s : String) : pyLen (pyStringSwapcase s) = pyLen s := by
+  simp [pyLen, PyLen.pyLen, pyStringSwapcase, String.length, String.toList_ofList]
 
 /-- Indexing a returned 2-tuple: `(a,b)[0] = a`, `(a,b)[1] = b`. Reduces the postcondition of any
 function returning a pair (Python `return x, y`), which lowers to `result⦋0⦌`/`result⦋1⦌`. -/

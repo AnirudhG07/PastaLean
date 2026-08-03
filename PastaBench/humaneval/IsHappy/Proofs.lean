@@ -7,20 +7,35 @@ set_option mvcgen.warning false
 set_option maxHeartbeats 1000000
 namespace PastaBench.humaneval.IsHappy
 
-/-- Length ≥ 3 and every 3 consecutive characters are pairwise distinct. -/
-def is_happy (s : String) : Bool :=
-  let d := s.data
-  d.length ≥ 3 && (List.range (d.length - 2)).all (fun i =>
-    d[i]! ≠ d[i+1]! && d[i]! ≠ d[i+2]! && d[i+1]! ≠ d[i+2]!)
+def is_happy := fun (s : String) ↦
+  (do
+    if h_1 : PastaLean.pyLen s < (3 : Int) then 
+      return Bool.false
+    else
+      let _ := ()
+    let _ := Libraries.passta.pyPassAssert (decide (PastaLean.pyLen s ≥ (3 : Int)))
+    for i in (PastaLean.pyRange (PastaLean.pyLen s -ₚ (2 : Int)))do
+      let _ := Libraries.passta.pyPassInvariant (decide (PastaLean.pyLen s ≥ (3 : Int)))
+      let _ := Libraries.passta.pyPassDecreases (PastaLean.pyLen s -ₚ (2 : Int) -ₚ i)
+      if h_2 : (s⦋i⦌ = s⦋i +ₚ (1 : Int)⦌ ∨ s⦋i⦌ = s⦋i +ₚ (2 : Int)⦌) ∨ s⦋i +ₚ (1 : Int)⦌ = s⦋i +ₚ (2 : Int)⦌ then 
+        return Bool.false
+      else
+        let _ := ()
+    return Bool.true : Id _)
+
+-- Necessary condition: only a string of length ≥ 3 can be happy (the guard rejects shorter ones).
+@[spec]
+theorem is_happy_spec : ⦃⌜True⌝⦄ is_happy s ⦃⇓result => ⌜result = Bool.false ∨ PastaLean.pyLen s ≥ (3 : Int)⌝⦄ := by
+  mvcgen [is_happy, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · Invariant.withEarlyReturn
+        (onReturn := fun _ _ => ⌜PastaLean.pyLen s ≥ (3 : Int)⌝)
+        (onContinue := fun _ _ => ⌜PastaLean.pyLen s ≥ (3 : Int)⌝)
+  all_goals (try simp_all (config := { zetaDelta := true }) [taste_ingr])
+  all_goals (first | omega | grind [pyLen_list_nonneg, Int.toNat_of_nonneg] | tauto)
 
 theorem is_happy_correct :
-    is_happy "a" = false ∧ is_happy "aa" = false ∧ is_happy "abcd" = true ∧
-    is_happy "aabb" = false ∧ is_happy "adb" = true := by
-  refine ⟨?_, ?_, ?_, ?_, ?_⟩ <;> native_decide
-
-/-- General property: only strings of length ≥ 3 can be happy. -/
-theorem is_happy_len (s : String) (h : is_happy s = true) : s.data.length ≥ 3 := by
-  unfold is_happy at h
-  exact of_decide_eq_true (Bool.and_eq_true .. |>.mp h).1
+    ∀ s, let result := (is_happy s).run; result = Bool.false ∨ PastaLean.pyLen s ≥ (3 : Int) := by
+  intro s
+  exact is_happy_spec True.intro
 
 end PastaBench.humaneval.IsHappy

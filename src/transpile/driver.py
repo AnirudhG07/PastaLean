@@ -1683,10 +1683,15 @@ def translate_to_lean(source_code, target="term", filepath = None, imports_add =
                 # Every `import` must precede the first command in a Lean file. We list the
                 # runtime imports, then the user's cross-file modules, then the `open`s.
                 crossfile_imports = _crossfile_import_lines(body)
-                # Heartbeats bound proof *search*. A program with no proof obligations is pure
-                # elaboration and must scale to any program size, so leave it unbounded (`0`).
+                # Heartbeats are the ONLY backstop against a non-terminating elaboration. A closed
+                # program over reducible library fns can loop the elaborator (the "closed-program
+                # kernel hang"); `maxHeartbeats 0` (unbounded) turns that into an infinite hang that
+                # blocks the whole batch/overnight run. The limit is PER-DECLARATION, so a finite cap
+                # never penalises large programs — it only fails a genuinely looping declaration.
+                # NEVER 0: a bare def gets Lean's default (200000); proving gets 4× headroom for
+                # `taste?`/`mvcgen` search.
                 proving = "taste?" in body_code or "theorem " in body_code
-                heartbeats = 800000 if proving else 0
+                heartbeats = 800000 if proving else 200000
                 preamble_lines = [
                     "import PastaLean",
                     "import Libraries",

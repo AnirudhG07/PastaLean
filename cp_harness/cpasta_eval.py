@@ -1128,13 +1128,31 @@ class CPastaEval:
 
     # -- convert -----------------------------------------------------------------------
 
-    def compile_check(self, lean_path):
-        """Elaborate a generated Lean file; return (ok, error_text)."""
+    def compile_check(self, lean_path, timeout=180):
+        """Elaborate a generated Lean file; return (ok, error_text).
+
+        A generated program can hang the elaborator/kernel (e.g. a closed program over reducible
+        library fns, which emits `set_option maxHeartbeats 0` so there is no heartbeat backstop). A
+        bare `subprocess.run` with no timeout then blocks the ENTIRE sweep forever. We cap it and, on
+        timeout, kill the whole process group (`lake` spawns `lean`, which would otherwise orphan and
+        keep burning a core) so one bad file becomes a single `compile_fail`, not a dead run.
+        """
         # Resolve to absolute: the command runs with cwd=REPO_ROOT but `lean_path` is relative to the
         # dataset, so a relative `--dataset` yields a spurious "no such file" compile_fail otherwise.
-        proc = subprocess.run(["lake", "env", "lean", str(Path(lean_path).resolve())],
-                              cwd=REPO_ROOT, capture_output=True, text=True)
-        return (True, "") if proc.returncode == 0 else (False, proc.stderr or proc.stdout)
+        proc = subprocess.Popen(["lake", "env", "lean", str(Path(lean_path).resolve())],
+                                cwd=REPO_ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                text=True, start_new_session=True)
+        try:
+            out, err = proc.communicate(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            import signal
+            try:
+                os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+            proc.communicate()
+            return (False, f"compile timed out after {timeout}s (elaboration/kernel hang)")
+        return (True, "") if proc.returncode == 0 else (False, err or out)
 
     def convert_solution(self, sol_path, lean_dir, wrap):
         """Translate one solution and compile-check it. Returns (status, concise_error_or_None)."""

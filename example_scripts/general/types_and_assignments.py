@@ -148,3 +148,44 @@ def grid_float_dp(m: int, n: int) -> float:
             if i > 0:
                 f[i][j] += f[i - 1][j] / 2
     return f[m - 1][n - 1]
+
+
+# --- Back-inference from comparisons (unannotated params pinned by `== <literal>` / `in`) ---
+# Each param below is UN-annotated; its type is recovered from a comparison against a literal, so the
+# body type-checks WITHOUT boxing to PyAny. If the inference regressed, `PyAny == <literal>` would not
+# compile — so these compiling IS the regression test, one per PyAny subtype.
+
+def eq_pins_str(s):
+    # `s == "hello"` ⇒ s : str, so `.upper()` (a str-only method) resolves.
+    return s.upper() if s == "hello" else s
+
+def eq_pins_int(x):
+    # `x == 42` ⇒ x : int, so the int-only shift `x << 1` type-checks.
+    return x << 1 if x == 42 else x
+
+def eq_pins_float(v):
+    # `v == 3.14` ⇒ v : float.
+    return v * 2.0 if v == 3.14 else v
+
+def eq_pins_list_elem(xs):
+    # `xs == []` ⇒ xs : list; `xs[0] + 1` pins the ELEMENT to int ⇒ xs : list[int] (no PyAny box).
+    return 0 if xs == [] else xs[0] + 1
+
+def eq_pins_list_nested(a):
+    # Element int recovered from a NESTED int-forcing op: `(a[0] + a[-1]) % 2` (the SortArray pattern).
+    return (a[0] + a[-1]) % 2 if a != [] else 0
+
+def eq_pins_list_method(words):
+    # `words[0].upper()` — a str-only method on an element ⇒ words : list[str].
+    return words[0].upper() if words != [] else ""
+
+def membership_pins_str(ch):
+    # `ch in "aeiou"` ⇒ ch is an element of a str literal ⇒ ch : str.
+    return 1 if ch in "aeiou" else 0
+
+def reassign_type_change_still_ok():
+    # SAFETY: a type-CHANGING reassignment must keep working — `m` is str then int. Back-inference must
+    # not clobber it (codegen's rebind-shadow re-types the post-`int(m)` segment).
+    m = "1"
+    m = int(m)
+    return m ** 2
