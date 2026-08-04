@@ -9,7 +9,9 @@ open Std.Do
 set_option linter.all false
 set_option mvcgen.warning false
 
-set_option maxHeartbeats 0
+set_option maxHeartbeats 200000
+
+namespace PastaLean.User.Root
 
 def nested_loops := fun n ↦
   Id.run
@@ -177,9 +179,9 @@ def loop_leak_conflicting := fun (n : Int) ↦
       let mut z : PyAny := default
       for i in (PastaLean.pyRange n)do
         if h_1 : i %ₚ (2 : Int) = (0 : Int) then 
-          z := i
+          let mut z'rb0 := i
         else
-          z := "odd"
+          let mut z'rb1 := "odd"
       let __py_ret_1 := PastaLean.pyStr z
       return __py_ret_1)
 
@@ -193,8 +195,10 @@ def loop_leak_conflicting'rn := fun (n : Int) ↦
       let mut z : PyAny := default
       for i in (PastaLean.pyRange n)do
         if h_1 : i %ₚ (2 : Int) == (0 : Int) then 
-          z := i
+          let mut z'rb0 := i
         else
-          z := "odd"
+          let mut z'rb1 := "odd"
       let __py_ret_1 := PastaLean.pyStr z
       return __py_ret_1)
+
+end PastaLean.User.Root

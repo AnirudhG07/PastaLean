@@ -11,6 +11,8 @@ set_option mvcgen.warning false
 
 set_option maxHeartbeats 800000
 
+namespace PastaLean.User.Root
+
 -- Multi-loop pipeline with assert checkpoints between phases (mirrors pipeline.lean).
 -- Accumulator-style invariants (acc = prefix sum, cnt = prefix length) — no closed form.
 def pipeline := fun (xs : List Int) ↦
@@ -25,15 +27,26 @@ def pipeline := fun (xs : List Int) ↦
       cnt := cnt +ₚ (1 : Int)
     let _ := Libraries.passta.pyPassAssert (cnt == PastaLean.pyLen xs)
     let mut result : Int := acc +ₚ cnt
-    let _ := Libraries.passta.pyPassEnsures (result == (2 : Int) *ₚ PastaLean.pySum xs +ₚ PastaLean.pyLen xs)
     return result : Id _)
 
-theorem pipeline_spec : ⦃⌜True⌝⦄ pipeline xs ⦃⇓_ => ⌜True⌝⦄ :=
+@[spec]
+theorem pipeline_spec :
+    ⦃⌜True⌝⦄ pipeline xs ⦃⇓result => ⌜result = (2 : Int) *ₚ PastaLean.pySum xs +ₚ PastaLean.pyLen xs⌝⦄ :=
   by
-  mvcgen [pipeline, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-  · ⇓⟨cur, acc⟩ => ⌜acc = (cur.prefix.map (fun x => x)).sum⌝
-  · ⇓⟨cur, cnt⟩ => ⌜cnt = (cur.prefix.map (fun x => (1 : Int))).sum⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]
+  try
+    mvcgen [pipeline, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · ⇓⟨cur, acc⟩ => ⌜acc = (cur.prefix.map (fun x => x)).sum⌝
+    · ⇓⟨cur, cnt⟩ => ⌜cnt = (cur.prefix.map (fun x => (1 : Int))).sum⌝
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  all_goals sorry
+
+theorem pipeline_correct :
+    ∀ (xs : List Int),
+      let result := (pipeline xs).run;
+      result = (2 : Int) *ₚ PastaLean.pySum xs +ₚ PastaLean.pyLen xs :=
+  by
+  intro xs
+  exact pipeline_spec True.intro
 
 def pipeline'rn := fun (xs : List Int) ↦
   Id.run
@@ -48,5 +61,6 @@ def pipeline'rn := fun (xs : List Int) ↦
         cnt := cnt +ₚ (1 : Int)
       let _ := Libraries.passta.pyPassAssert (cnt == PastaLean.pyLen xs)
       let mut result : Int := acc +ₚ cnt
-      let _ := Libraries.passta.pyPassEnsures (result == (2 : Int) *ₚ PastaLean.pySum xs +ₚ PastaLean.pyLen xs)
       return result)
+
+end PastaLean.User.Root

@@ -9,7 +9,9 @@ open Std.Do
 set_option linter.all false
 set_option mvcgen.warning false
 
-set_option maxHeartbeats 0
+set_option maxHeartbeats 200000
+
+namespace PastaLean.User.Root
 
 def f := fun n ↦
   let x := n +ₚ (1 : Int)
@@ -24,3 +26,5 @@ def f'rn := fun n ↦
   let y := x *ₚ (2 : Int)
   let x := y -ₚ (1 : Int)
   x +ₚ y
+
+end PastaLean.User.Root

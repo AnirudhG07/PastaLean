@@ -9,7 +9,9 @@ open Std.Do
 set_option linter.all false
 set_option mvcgen.warning false
 
-set_option maxHeartbeats 0
+set_option maxHeartbeats 200000
+
+namespace PastaLean.User.Root
 
 -- !/usr/bin/env python3
 /-
@@ -69,22 +71,24 @@ def smallest'rn := fun (xs : List Int) ↦
 
 -- The same global in a float slot — must still be usable there.
 def scaled := fun (xs : List Rat) ↦
-  Id.run
-    (do
-      let mut hi := -inf
-      for x in (PastaLean.pyIter xs)do
-        hi := PastaLean.pyMax [hi, x *ₚ (2.0 : Rat)]
-      return hi)
+  (show Rat from
+    Id.run
+      (do
+        let mut hi := -inf
+        for x in (PastaLean.pyIter xs)do
+          hi := PastaLean.pyMax [hi, x *ₚ (2.0 : Rat)]
+        return hi))
 
 attribute [simp, taste_ingr] scaled
 
 def scaled'rn := fun (xs : List Float) ↦
-  Id.run
-    (do
-      let mut hi := -inf
-      for x in (PastaLean.pyIter xs)do
-        hi := PastaLean.pyMax [hi, x *ₚ (2.0 : Float)]
-      return hi)
+  (show Float from
+    Id.run
+      (do
+        let mut hi := -inf
+        for x in (PastaLean.pyIter xs)do
+          hi := PastaLean.pyMax [hi, x *ₚ (2.0 : Float)]
+        return hi))
 
 -- Tuple-unpack seed: `mi` is `inf`, `ans` is `0`. Both binders must pin to `int` — otherwise the
 -- polymorphic sentinel defaults `mi` to `ℚ` (via its `Prod.snd` binder) and poisons `ans`.
@@ -179,3 +183,5 @@ def main : IO Unit := do
 def main'rn : IO Unit := do
   let _ := main''rn
   pure ()
+
+end PastaLean.User.Root

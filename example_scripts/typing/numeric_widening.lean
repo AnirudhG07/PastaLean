@@ -9,7 +9,9 @@ open Std.Do
 set_option linter.all false
 set_option mvcgen.warning false
 
-set_option maxHeartbeats 0
+set_option maxHeartbeats 200000
+
+namespace PastaLean.User.Root
 
 -- !/usr/bin/env python3
 /-
@@ -58,56 +60,60 @@ def car_fleet'rn := fun (target : Int) ↦ fun (position : List Int) ↦ fun (sp
 -- `heappush` must teach the heap its element type and `heappop` must return it, else `x` is `unknown`,
 -- `acc + x` is `unknown` (not float), and `acc` never widens to ℚ. Scalar-float heap (no tuple key).
 def heap_float_sum := fun (vals : List Int) ↦
-  Id.run
-    (do
-      let mut h := ([] : List Rat)
-      for v in (PastaLean.pyIter vals)do
-        h := Libraries.heapq.pyHeappush h (v /ₚ (2 : Int))
-      let mut acc := (0 : Rat)
-      while (PastaLean.pyTruthy h) do
-        let mut __popv_1 := Libraries.heapq.pyHeappopVal h
-        h := Libraries.heapq.pyHeappopRest h
-        acc := acc +ₚ __popv_1
-      return acc)
+  (show Rat from
+    Id.run
+      (do
+        let mut h := ([] : List Rat)
+        for v in (PastaLean.pyIter vals)do
+          h := Libraries.heapq.pyHeappush h (v /ₚ (2 : Int))
+        let mut acc := (0 : Rat)
+        while (PastaLean.pyTruthy h) do
+          let mut __popv_1 := Libraries.heapq.pyHeappopVal h
+          h := Libraries.heapq.pyHeappopRest h
+          acc := acc +ₚ __popv_1
+        return acc))
 
 attribute [simp, taste_ingr] heap_float_sum
 
 def heap_float_sum'rn := fun (vals : List Int) ↦
-  Id.run
-    (do
-      let mut h := ([] : List Float)
-      for v in (PastaLean.pyIter vals)do
-        h := Libraries.heapq.pyHeappush h (PastaLean.pyFloat v /ₚ (2 : Int))
-      let mut acc := (0 : Float)
-      while (PastaLean.pyTruthy h) do
-        let mut __popv_1 := Libraries.heapq.pyHeappopVal h
-        h := Libraries.heapq.pyHeappopRest h
-        acc := acc +ₚ __popv_1
-      return acc)
+  (show Float from
+    Id.run
+      (do
+        let mut h := ([] : List Float)
+        for v in (PastaLean.pyIter vals)do
+          h := Libraries.heapq.pyHeappush h (PastaLean.pyFloat v /ₚ (2 : Int))
+        let mut acc := (0 : Float)
+        while (PastaLean.pyTruthy h) do
+          let mut __popv_1 := Libraries.heapq.pyHeappopVal h
+          h := Libraries.heapq.pyHeappopRest h
+          acc := acc +ₚ __popv_1
+        return acc))
 
 -- Container-element widening via an indexed write: `dist` starts `list[int]` (`[0]*n`), then a float
 -- write (`dist[i] = s / t`) widens the whole container to `List ℚ`, with the `0`s coerced.
 def widen_container := fun (n : Int) ↦ fun (s : Int) ↦ fun (t : Int) ↦
-  Id.run
-    (do
-      let mut dist := (PastaLean.pyListRepeat [(0 : Rat)] n : List Rat)
-      dist := PastaLean.pySetItem dist (0 : Int) (1 : Rat)
-      for i in (PastaLean.pyRange n (1 : Int))do
-        dist := PastaLean.pySetItem dist i (dist⦋i -ₚ (1 : Int)⦌ *ₚ s /ₚ t : Rat)
-      let __py_ret_1 := dist⦋n -ₚ (1 : Int)⦌
-      return __py_ret_1)
+  (show Rat from
+    Id.run
+      (do
+        let mut dist := (PastaLean.pyListRepeat [(0 : Rat)] n : List Rat)
+        dist := PastaLean.pySetItem dist (0 : Int) (1 : Rat)
+        for i in (PastaLean.pyRange n (1 : Int))do
+          dist := PastaLean.pySetItem dist i (dist⦋i -ₚ (1 : Int)⦌ *ₚ s /ₚ t : Rat)
+        let __py_ret_1 := dist⦋n -ₚ (1 : Int)⦌
+        return __py_ret_1))
 
 attribute [simp, taste_ingr] widen_container
 
 def widen_container'rn := fun (n : Int) ↦ fun (s : Int) ↦ fun (t : Int) ↦
-  Id.run
-    (do
-      let mut dist := (PastaLean.pyListRepeat [(0 : Float)] n : List Float)
-      dist := PastaLean.pySetItem dist (0 : Int) (1 : Float)
-      for i in (PastaLean.pyRange n (1 : Int))do
-        dist := PastaLean.pySetItem dist i (PastaLean.pyFloat (dist⦋i -ₚ (1 : Int)⦌ *ₚ s) /ₚ t : Float)
-      let __py_ret_1 := dist⦋n -ₚ (1 : Int)⦌
-      return __py_ret_1)
+  (show Float from
+    Id.run
+      (do
+        let mut dist := (PastaLean.pyArrayRepeat #[(0 : Float)] n : Array Float)
+        dist := PastaLean.pySetItem dist (0 : Int) (1 : Float)
+        for i in (PastaLean.pyRange n (1 : Int))do
+          dist := PastaLean.pySetItem dist i (PastaLean.pyFloat (dist⦋i -ₚ (1 : Int)⦌ *ₚ s) /ₚ t : Float)
+        let __py_ret_1 := dist⦋n -ₚ (1 : Int)⦌
+        return __py_ret_1))
 
 def main' :=
   ((do
@@ -141,3 +147,5 @@ def main : IO Unit := do
 def main'rn : IO Unit := do
   let _ := main''rn
   pure ()
+
+end PastaLean.User.Root

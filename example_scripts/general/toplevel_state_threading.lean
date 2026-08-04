@@ -9,7 +9,9 @@ open Std.Do
 set_option linter.all false
 set_option mvcgen.warning false
 
-set_option maxHeartbeats 0
+set_option maxHeartbeats 200000
+
+namespace PastaLean.User.Root
 
 -- Bare top-level `for`/`if`/`while` are not executable in Lean, so we thread the names
 -- each block mutates as state: the block becomes a value returning the updated names,
@@ -94,3 +96,5 @@ def i :=
 
 def total :=
   Prod.snd __py_while_958610
+
+end PastaLean.User.Root

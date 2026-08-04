@@ -9,7 +9,9 @@ open Std.Do
 set_option linter.all false
 set_option mvcgen.warning false
 
-set_option maxHeartbeats 0
+set_option maxHeartbeats 200000
+
+namespace PastaLean.User.Root
 
 def len_protocols :=
   let xs := ([(1 : Int), (2 : Int), (3 : Int)] : List Int)
@@ -40,3 +42,5 @@ attribute [simp, taste_ingr] iteration_protocols
 def iteration_protocols'rn :=
   let xs := ([(4 : Int), (5 : Int), (6 : Int)] : List Int)
   (PastaLean.pyIter xs).map fun x => x
+
+end PastaLean.User.Root

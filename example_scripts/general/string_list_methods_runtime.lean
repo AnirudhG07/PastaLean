@@ -9,7 +9,9 @@ open Std.Do
 set_option linter.all false
 set_option mvcgen.warning false
 
-set_option maxHeartbeats 0
+set_option maxHeartbeats 200000
+
+namespace PastaLean.User.Root
 
 def string_pipeline :=
   let s := ("  Py Ast Lean  " : String)
@@ -50,3 +52,5 @@ def list_pipeline'rn :=
       let mut count : Int := PastaLean.pyLen xs
       let __py_ret_1 := (xs, count)
       return __py_ret_1)
+
+end PastaLean.User.Root

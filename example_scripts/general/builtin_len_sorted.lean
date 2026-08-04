@@ -9,7 +9,9 @@ open Std.Do
 set_option linter.all false
 set_option mvcgen.warning false
 
-set_option maxHeartbeats 0
+set_option maxHeartbeats 200000
+
+namespace PastaLean.User.Root
 
 def builtin_len_sorted :=
   let xs := ([(5 : Int), (1 : Int), (3 : Int)] : List Int)
@@ -52,3 +54,5 @@ def in_place_sort'rn :=
       let mut xs : List Int := [(4 : Int), (1 : Int), (3 : Int), (2 : Int)]
       xs := PastaLean.pySort xs
       return xs)
+
+end PastaLean.User.Root

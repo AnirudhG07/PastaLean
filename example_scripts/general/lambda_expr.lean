@@ -9,7 +9,9 @@ open Std.Do
 set_option linter.all false
 set_option mvcgen.warning false
 
-set_option maxHeartbeats 0
+set_option maxHeartbeats 200000
+
+namespace PastaLean.User.Root
 
 def lmbda_expr := fun x ↦ x +ₚ (1 : Int)
 
@@ -116,3 +118,5 @@ attribute [simp, taste_ingr] lmbda_with_generator_expression
 
 def lmbda_with_generator_expression'rn := fun () ↦
   (PastaLean.pyIter ((PastaLean.pyRange (5 : Int)).map fun i => i)).map fun x => x *ₚ x
+
+end PastaLean.User.Root

@@ -9,7 +9,9 @@ open Std.Do
 set_option linter.all false
 set_option mvcgen.warning false
 
-set_option maxHeartbeats 0
+set_option maxHeartbeats 200000
+
+namespace PastaLean.User.Root
 
 -- Test: Nested try-catch with IO
 def main' :=
@@ -53,3 +55,5 @@ def main''rn :=
         else
           throw caught) :
     PastaLean.PyExcept _)
+
+end PastaLean.User.Root

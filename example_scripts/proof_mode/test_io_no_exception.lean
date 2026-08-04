@@ -9,7 +9,9 @@ open Std.Do
 set_option linter.all false
 set_option mvcgen.warning false
 
-set_option maxHeartbeats 0
+set_option maxHeartbeats 200000
+
+namespace PastaLean.User.Root
 
 -- Test: IO without explicit exception handling
 def main' :=
@@ -25,3 +27,5 @@ def main''rn :=
       let mut x : String := (← PastaLean.pyInputIO "")
       let _ ← pyPrintIO [pyPrintArg x]) :
     IO _)
+
+end PastaLean.User.Root

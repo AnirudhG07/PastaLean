@@ -50,8 +50,14 @@ Run as a **command** *after* `Val` (not a `deriving` clause): with native per-st
 `structure` must precede `Val`, so its instance — which needs `Val` — cannot be produced at
 definition time. `Val` is referenced by raw name so it resolves in the generated program's scope. -/
 elab "derive_storable% " structId:ident : command => do
-  let structName := structId.getId
   let env ← getEnv
+  -- Resolve the structure name honoring the current namespace: codegen wraps user classes in a
+  -- `namespace PastaLean.User.<path>`, so the bare ident (`Counter`) must be qualified to the
+  -- enclosing namespace (`PastaLean.User.Root.Counter`) to be found.
+  let currNs ← getCurrNamespace
+  let structName :=
+    if isStructure env structId.getId then structId.getId
+    else currNs ++ structId.getId
   unless isStructure env structName do
     throwError "derive_storable%: '{structName}' is not a structure"
   let fields := getStructureFields env structName

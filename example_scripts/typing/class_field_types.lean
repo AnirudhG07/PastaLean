@@ -9,7 +9,9 @@ open Std.Do
 set_option linter.all false
 set_option mvcgen.warning false
 
-set_option maxHeartbeats 0
+set_option maxHeartbeats 200000
+
+namespace PastaLean.User.Root
 
 -- !/usr/bin/env python3
 /-
@@ -39,17 +41,23 @@ partial def UnionFind.find := fun (self : UnionFind) ↦ fun (x : Int) ↦
     (do
       let mut self := self
       if h_1 : self.p⦋x⦌ ≠ x then 
-        self := { self with p := PastaLean.pySetItem self.p x (UnionFind.find self self.p⦋x⦌) }
+        let _popval'rb1 := UnionFind.find self self.p⦋x⦌ |>.1
+        self := UnionFind.find self self.p⦋x⦌ |>.2
+        self := { self with p := PastaLean.pySetItem self.p x _popval'rb1 }
       else
         let _ := ()
-      let __py_ret_1 := self.p⦋x⦌
+      let __py_ret_1 := (self.p⦋x⦌, self)
       return __py_ret_1)
 
 def UnionFind.union := fun (self : UnionFind) ↦ fun (a : Int) ↦ fun (b : Int) ↦
   Id.run
     (do
       let mut self := self
-      let __unpack_value_1 := (UnionFind.find self a, UnionFind.find self b)
+      let mut __popv_1 := UnionFind.find self a |>.1
+      self := UnionFind.find self a |>.2
+      let mut __popv_2 := UnionFind.find self b |>.1
+      self := UnionFind.find self b |>.2
+      let __unpack_value_1 := (__popv_1, __popv_2)
       let __unpack_pair_1 := __unpack_value_1
       let mut ra : Int := Prod.fst __unpack_pair_1
       let mut rb : Int := Prod.snd __unpack_pair_1
@@ -82,17 +90,23 @@ partial def UnionFind'rn.find := fun (self : UnionFind'rn) ↦ fun (x : Int) ↦
     (do
       let mut self := self
       if h_1 : self.p⦋x⦌ != x then 
-        self := { self with p := PastaLean.pySetItem self.p x (UnionFind'rn.find self self.p⦋x⦌) }
+        let _popval'rb1 := UnionFind'rn.find self self.p⦋x⦌ |>.1
+        self := UnionFind'rn.find self self.p⦋x⦌ |>.2
+        self := { self with p := PastaLean.pySetItem self.p x _popval'rb1 }
       else
         let _ := ()
-      let __py_ret_1 := self.p⦋x⦌
+      let __py_ret_1 := (self.p⦋x⦌, self)
       return __py_ret_1)
 
 def UnionFind'rn.union := fun (self : UnionFind'rn) ↦ fun (a : Int) ↦ fun (b : Int) ↦
   Id.run
     (do
       let mut self := self
-      let __unpack_value_1 := (UnionFind'rn.find self a, UnionFind'rn.find self b)
+      let mut __popv_1 := UnionFind'rn.find self a |>.1
+      self := UnionFind'rn.find self a |>.2
+      let mut __popv_2 := UnionFind'rn.find self b |>.1
+      self := UnionFind'rn.find self b |>.2
+      let __unpack_value_1 := (__popv_1, __popv_2)
       let __unpack_pair_1 := __unpack_value_1
       let mut ra : Int := Prod.fst __unpack_pair_1
       let mut rb : Int := Prod.snd __unpack_pair_1
@@ -140,8 +154,16 @@ def main' :=
       let mut uf := UnionFind.new (6 : Int)
       uf := UnionFind.union uf (0 : Int) (1 : Int)
       uf := UnionFind.union uf (1 : Int) (2 : Int)
-      let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg (UnionFind.find uf (0 : Int) == UnionFind.find uf (2 : Int))]
-      let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg (UnionFind.find uf (0 : Int) == UnionFind.find uf (5 : Int))]
+      let mut __popv_3 := UnionFind.find uf (0 : Int) |>.1
+      uf := UnionFind.find uf (0 : Int) |>.2
+      let mut __popv_4 := UnionFind.find uf (2 : Int) |>.1
+      uf := UnionFind.find uf (2 : Int) |>.2
+      let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg (__popv_3 == __popv_4)]
+      let mut __popv_5 := UnionFind.find uf (0 : Int) |>.1
+      uf := UnionFind.find uf (0 : Int) |>.2
+      let mut __popv_6 := UnionFind.find uf (5 : Int) |>.1
+      uf := UnionFind.find uf (5 : Int) |>.2
+      let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg (__popv_5 == __popv_6)]
       let mut b := Bag.new ["pear", "apple"]
       let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg (Bag.first b)]
       let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg b.n]) :
@@ -154,8 +176,16 @@ def main''rn :=
       let mut uf := UnionFind'rn.new (6 : Int)
       uf := UnionFind'rn.union uf (0 : Int) (1 : Int)
       uf := UnionFind'rn.union uf (1 : Int) (2 : Int)
-      let _ ← pyPrintIO [pyPrintArg (UnionFind'rn.find uf (0 : Int) == UnionFind'rn.find uf (2 : Int))]
-      let _ ← pyPrintIO [pyPrintArg (UnionFind'rn.find uf (0 : Int) == UnionFind'rn.find uf (5 : Int))]
+      let mut __popv_3 := UnionFind'rn.find uf (0 : Int) |>.1
+      uf := UnionFind'rn.find uf (0 : Int) |>.2
+      let mut __popv_4 := UnionFind'rn.find uf (2 : Int) |>.1
+      uf := UnionFind'rn.find uf (2 : Int) |>.2
+      let _ ← pyPrintIO [pyPrintArg (__popv_3 == __popv_4)]
+      let mut __popv_5 := UnionFind'rn.find uf (0 : Int) |>.1
+      uf := UnionFind'rn.find uf (0 : Int) |>.2
+      let mut __popv_6 := UnionFind'rn.find uf (5 : Int) |>.1
+      uf := UnionFind'rn.find uf (5 : Int) |>.2
+      let _ ← pyPrintIO [pyPrintArg (__popv_5 == __popv_6)]
       let mut b := Bag'rn.new ["pear", "apple"]
       let _ ← pyPrintIO [pyPrintArg (Bag'rn.first b)]
       let _ ← pyPrintIO [pyPrintArg b.n]) :
@@ -168,3 +198,5 @@ def main : IO Unit := do
 def main'rn : IO Unit := do
   let _ := main''rn
   pure ()
+
+end PastaLean.User.Root

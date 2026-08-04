@@ -9,7 +9,9 @@ open Std.Do
 set_option linter.all false
 set_option mvcgen.warning false
 
-set_option maxHeartbeats 0
+set_option maxHeartbeats 200000
+
+namespace PastaLean.User.Root
 
 def set_method_ops := fun (a : List Int) ↦ fun (b : List Int) ↦
   -- The pure (non-mutating) set methods return a new set, mirroring the `|`/`&`/`-`/`^` operators.
@@ -48,3 +50,5 @@ attribute [simp, taste_ingr] set_operator_ops
 def set_operator_ops'rn := fun (a : List Int) ↦ fun (b : List Int) ↦
   -- The operator forms lower to the same runtime functions as the methods above.
   (PastaLean.pyBitOr a b, (PastaLean.pyBitAnd a b, (a -ₚ b, PastaLean.pyBitXor a b)))
+
+end PastaLean.User.Root

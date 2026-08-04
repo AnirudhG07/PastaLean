@@ -277,6 +277,13 @@ partial def annotationMentionsFloat (json : Json) : Bool :=
     || (match (json.getObjValAs? (Array Json) "elts").toOption with
         | some es => es.any annotationMentionsFloat | none => false)
 
+/-- Whether a return annotation is a SCALAR `float`/`Float` (a bare `Name`). Used for `retFloat`,
+whose mixed int/float→ℚ coercion applies to a scalar float return ONLY — a `list[float]` return has
+its elements coerce individually and its codomain must stay a list, never be ascribed scalar `ℚ`. -/
+def annotationIsScalarFloat (json : Json) : Bool :=
+  json.getObjValAs? String "node_type" == .ok "Name"
+    && (json.getObjValAs? String "id" == .ok "float" || json.getObjValAs? String "id" == .ok "Float")
+
 /-- Read a Python function return annotation when it maps cleanly to a Lean runtime type. -/
 def functionReturnTypeSyntax? (json : Json) : PygenM (Option (TSyntax `term)) := do
   -- A boxed function (returns disagree in type) returns `PyAny` regardless of any union annotation.
@@ -574,9 +581,12 @@ def functionValueSyntax (argInfos : Array (TSyntax `ident × Option (TSyntax `te
     let floatTy? : Option (TSyntax `term) ←
       if retFloat then pure (some (if (← getNumericMode) == .exact then mkIdent ``Rat else mkIdent ``Float))
       else pure none
+    -- `show T from body`, not `(body : T)`: a pure body that begins with a comment/statement `let`
+    -- (`let __PastaLean_comment := (); …`) re-parses wrong under a trailing `: T` ascription
+    -- ("expected ';' or line break"); `show … from` takes the whole `let`-expression as its argument.
     let ascribeResult (body : TSyntax `term) : PygenM (TSyntax `term) :=
-      if boxReturn then `(($body : $boxTy))
-      else match floatTy? with | some t => `(($body : $t)) | none => pure body
+      if boxReturn then `((show $boxTy from $body))
+      else match floatTy? with | some t => `((show $t from $body)) | none => pure body
     try
       let bodyStx ← ascribeResult (← pureFunctionBodySyntax bodyElems)
       if argInfos.isEmpty then
@@ -1095,7 +1105,7 @@ def funcDefSyntax : (kind : SyntaxNodeKind) → Json →
           -- (`median`) needs its result ascribed to `ℚ`/`Float` so the `int` branch coerces — same
           -- `retFloat` reconcile the generic path uses below (Track P doesn't reach it).
           let annFloat := match (jsonFieldOption json "returns").orElse (fun _ => jsonFieldOption json "_ret_ty") with
-            | some r => annotationMentionsFloat r
+            | some r => annotationIsScalarFloat r
             | none => false
           let retFloatP := ((json.getObjValAs? Bool "_ret_float" == .ok true) || annFloat) &&
             ((← getNumericMode) != .exact || json.getObjValAs? Bool "_real_fn" != .ok true)
@@ -1140,7 +1150,7 @@ def funcDefSyntax : (kind : SyntaxNodeKind) → Json →
             -- A `float`-annotated body whose `return` is a mixed `int`/true-division ternary needs the
             -- `retFloat` context so the `IfExp`'s `int` branch coerces to `ℚ` (see `Assign.lean`).
             let annFloatM := match (jsonFieldOption json "returns").orElse (fun _ => jsonFieldOption json "_ret_ty") with
-              | some r => annotationMentionsFloat r
+              | some r => annotationIsScalarFloat r
               | none => false
             let retFloatM := ((json.getObjValAs? Bool "_ret_float" == .ok true) || annFloatM) &&
               json.getObjValAs? Bool "_real_fn" != .ok true
@@ -1189,7 +1199,7 @@ def funcDefSyntax : (kind : SyntaxNodeKind) → Json →
         -- whose branches mix `int` and true-division (`median`'s `s[k] if odd else (a+b)/2`) needs the
         -- `ℚ` ascription so the `int` branch coerces — without it the `if` branches disagree in type.
         let annFloat := match (jsonFieldOption json "returns").orElse (fun _ => jsonFieldOption json "_ret_ty") with
-          | some r => annotationMentionsFloat r
+          | some r => annotationIsScalarFloat r
           | none => false
         let retFloat := ((json.getObjValAs? Bool "_ret_float" == .ok true) || annFloat) &&
           ((← getNumericMode) != .exact || json.getObjValAs? Bool "_real_fn" != .ok true)

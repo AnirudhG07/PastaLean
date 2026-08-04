@@ -11,6 +11,8 @@ set_option mvcgen.warning false
 
 set_option maxHeartbeats 800000
 
+namespace PastaLean.User.Root
+
 /-
 2x2 matrix algebra + a discrete linear dynamical system.
 
@@ -36,96 +38,108 @@ reach the proofs directly.
 -- (a b ; c d); a product of A=(a b ; c d) and B=(e f ; g h) has the four entries below.
 -- ----------------------------------------------------------------------------------------------
 def det := fun (a : Rat) ↦ fun (b : Rat) ↦ fun (c : Rat) ↦ fun (d : Rat) ↦
-  /-
-  Determinant of (a b ; c d).
-  -/
-  a *ₚ d -ₚ b *ₚ c
+  (show Rat from
+    /-
+    Determinant of (a b ; c d).
+    -/
+    a *ₚ d -ₚ b *ₚ c)
 
 attribute [simp, taste_ingr] det
 
 def det'rn := fun (a : Float) ↦ fun (b : Float) ↦ fun (c : Float) ↦ fun (d : Float) ↦
-  /-
-  Determinant of (a b ; c d).
-  -/
-  a *ₚ d -ₚ b *ₚ c
+  (show Float from
+    /-
+    Determinant of (a b ; c d).
+    -/
+    a *ₚ d -ₚ b *ₚ c)
 
 def trace := fun (a : Rat) ↦ fun (b : Rat) ↦ fun (c : Rat) ↦ fun (d : Rat) ↦
-  /-
-  Trace of (a b ; c d).
-  -/
-  a +ₚ d
+  (show Rat from
+    /-
+    Trace of (a b ; c d).
+    -/
+    a +ₚ d)
 
 attribute [simp, taste_ingr] trace
 
 def trace'rn := fun (a : Float) ↦ fun (b : Float) ↦ fun (c : Float) ↦ fun (d : Float) ↦
-  /-
-  Trace of (a b ; c d).
-  -/
-  a +ₚ d
+  (show Float from
+    /-
+    Trace of (a b ; c d).
+    -/
+    a +ₚ d)
 
 def mul11 := fun (a : Rat) ↦ fun (b : Rat) ↦ fun (c : Rat) ↦ fun (d : Rat) ↦ fun (e : Rat) ↦ fun (f : Rat) ↦
   fun (g : Rat) ↦ fun (h : Rat) ↦
-  /-
-  (1,1) entry of A B.
-  -/
-  a *ₚ e +ₚ b *ₚ g
+  (show Rat from
+    /-
+    (1,1) entry of A B.
+    -/
+    a *ₚ e +ₚ b *ₚ g)
 
 attribute [simp, taste_ingr] mul11
 
 def mul11'rn := fun (a : Float) ↦ fun (b : Float) ↦ fun (c : Float) ↦ fun (d : Float) ↦ fun (e : Float) ↦
   fun (f : Float) ↦ fun (g : Float) ↦ fun (h : Float) ↦
-  /-
-  (1,1) entry of A B.
-  -/
-  a *ₚ e +ₚ b *ₚ g
+  (show Float from
+    /-
+    (1,1) entry of A B.
+    -/
+    a *ₚ e +ₚ b *ₚ g)
 
 def mul12 := fun (a : Rat) ↦ fun (b : Rat) ↦ fun (c : Rat) ↦ fun (d : Rat) ↦ fun (e : Rat) ↦ fun (f : Rat) ↦
   fun (g : Rat) ↦ fun (h : Rat) ↦
-  /-
-  (1,2) entry of A B.
-  -/
-  a *ₚ f +ₚ b *ₚ h
+  (show Rat from
+    /-
+    (1,2) entry of A B.
+    -/
+    a *ₚ f +ₚ b *ₚ h)
 
 attribute [simp, taste_ingr] mul12
 
 def mul12'rn := fun (a : Float) ↦ fun (b : Float) ↦ fun (c : Float) ↦ fun (d : Float) ↦ fun (e : Float) ↦
   fun (f : Float) ↦ fun (g : Float) ↦ fun (h : Float) ↦
-  /-
-  (1,2) entry of A B.
-  -/
-  a *ₚ f +ₚ b *ₚ h
+  (show Float from
+    /-
+    (1,2) entry of A B.
+    -/
+    a *ₚ f +ₚ b *ₚ h)
 
 def mul21 := fun (a : Rat) ↦ fun (b : Rat) ↦ fun (c : Rat) ↦ fun (d : Rat) ↦ fun (e : Rat) ↦ fun (f : Rat) ↦
   fun (g : Rat) ↦ fun (h : Rat) ↦
-  /-
-  (2,1) entry of A B.
-  -/
-  c *ₚ e +ₚ d *ₚ g
+  (show Rat from
+    /-
+    (2,1) entry of A B.
+    -/
+    c *ₚ e +ₚ d *ₚ g)
 
 attribute [simp, taste_ingr] mul21
 
 def mul21'rn := fun (a : Float) ↦ fun (b : Float) ↦ fun (c : Float) ↦ fun (d : Float) ↦ fun (e : Float) ↦
   fun (f : Float) ↦ fun (g : Float) ↦ fun (h : Float) ↦
-  /-
-  (2,1) entry of A B.
-  -/
-  c *ₚ e +ₚ d *ₚ g
+  (show Float from
+    /-
+    (2,1) entry of A B.
+    -/
+    c *ₚ e +ₚ d *ₚ g)
 
 def mul22 := fun (a : Rat) ↦ fun (b : Rat) ↦ fun (c : Rat) ↦ fun (d : Rat) ↦ fun (e : Rat) ↦ fun (f : Rat) ↦
   fun (g : Rat) ↦ fun (h : Rat) ↦
-  /-
-  (2,2) entry of A B.
-  -/
-  c *ₚ f +ₚ d *ₚ h
+  (show Rat from
+    /-
+    (2,2) entry of A B.
+    -/
+    c *ₚ f +ₚ d *ₚ h)
 
 attribute [simp, taste_ingr] mul22
 
 def mul22'rn := fun (a : Float) ↦ fun (b : Float) ↦ fun (c : Float) ↦ fun (d : Float) ↦ fun (e : Float) ↦
   fun (f : Float) ↦ fun (g : Float) ↦ fun (h : Float) ↦
-  /-
-  (2,2) entry of A B.
-  -/
-  c *ₚ f +ₚ d *ₚ h
+  (show Float from
+    /-
+    (2,2) entry of A B.
+    -/
+    c *ₚ f +ₚ d *ₚ h)
 
 -- ----------------------------------------------------------------------------------------------
 -- Provable invariants: ring identities  (lone `assert` -> named `theorem`, closed by `ring`)
@@ -299,3 +313,5 @@ def main : IO Unit := do
 def main'rn : IO Unit := do
   let _ ← main''rn
   pure ()
+
+end PastaLean.User.Root

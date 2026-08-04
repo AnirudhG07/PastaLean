@@ -9,7 +9,9 @@ open Std.Do
 set_option linter.all false
 set_option mvcgen.warning false
 
-set_option maxHeartbeats 0
+set_option maxHeartbeats 200000
+
+namespace PastaLean.User.Root
 
 def read_int_list :=
   ((do
@@ -27,3 +29,5 @@ def read_int_list'rn :=
         PastaLean.pyList (PastaLean.pyMap PastaLean.pyInt (PastaLean.pyStringSplit (← PastaLean.pyInputIO "")))
       return xs) :
     IO _)
+
+end PastaLean.User.Root

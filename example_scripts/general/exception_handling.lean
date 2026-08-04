@@ -9,29 +9,27 @@ open Std.Do
 set_option linter.all false
 set_option mvcgen.warning false
 
-set_option maxHeartbeats 0
+set_option maxHeartbeats 200000
 
-def fail := fun x ↦
-  ((do
-      if h_1 : x < (0 : Int) then 
-        throw (PastaLean.PyException.Raise "ValueError" (ToString.toString "negative"))
-      else
-        let _ := ()
-      let __py_ret_1 := s! "value {x}"
-      return __py_ret_1) :
-    PastaLean.ProofMode.PyProofM _)
+namespace PastaLean.User.Root
+
+def fail : Int → PastaLean.ProofMode.PyProofM String := fun (x : Int) ↦ do
+  if h_1 : x < (0 : Int) then 
+    throw (PastaLean.PyException.Raise "ValueError" (ToString.toString "negative"))
+  else
+    let _ := ()
+  let __py_ret_1 := s! "value {x}"
+  return __py_ret_1
 
 attribute [simp] fail
 
-def fail'rn := fun x ↦
-  ((do
-      if h_1 : x < (0 : Int) then 
-        throw (PastaLean.PyException.Raise "ValueError" (ToString.toString "negative"))
-      else
-        let _ := ()
-      let __py_ret_1 := s! "value {x}"
-      return __py_ret_1) :
-    PastaLean.PyExcept _)
+def fail'rn : Int → PastaLean.PyExcept String := fun (x : Int) ↦ do
+  if h_1 : x < (0 : Int) then 
+    throw (PastaLean.PyException.Raise "ValueError" (ToString.toString "negative"))
+  else
+    let _ := ()
+  let __py_ret_1 := s! "value {x}"
+  return __py_ret_1
 
 def call_fail := fun x ↦
   ((do
@@ -193,89 +191,81 @@ def nested_try'rn : PastaLean.PyExcept String := do
     else
       throw caught
 
-def try_with_else_finally := fun num ↦
-  ((do
-      try
-        if h_1 : num < (0 : Int) then 
-          throw (PastaLean.PyException.Raise "ValueError" (ToString.toString "Negative number"))
-        else
-          if h_2 : num = (0 : Int) then 
-            throw (PastaLean.PyException.Raise "ZeroDivisionError" (ToString.toString "Zero is not allowed"))
-          else
-            let __py_ret_1 := s! "Number is {num}"
-            return __py_ret_1
-      catch caught =>
-        if (caught).OfKind == "ValueError" then 
-          let e := caught
-          let __py_ret_1 := s! "Caught ValueError: {e}"
-          return __py_ret_1
-        else
-          if (caught).OfKind == "ZeroDivisionError" then 
-            let e := caught
-            let __py_ret_2 := s! "Caught ZeroDivisionError: {e}"
-            return __py_ret_2
-          else
-            throw caught
-      finally
-        do
-          let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg "Finally block executed"]) :
-    PastaLean.ProofMode.PyProofM _)
+def try_with_else_finally : Int → PastaLean.ProofMode.PyProofM String := fun (num : Int) ↦ do
+  try
+    if h_1 : num < (0 : Int) then 
+      throw (PastaLean.PyException.Raise "ValueError" (ToString.toString "Negative number"))
+    else
+      if h_2 : num = (0 : Int) then 
+        throw (PastaLean.PyException.Raise "ZeroDivisionError" (ToString.toString "Zero is not allowed"))
+      else
+        let __py_ret_1 := s! "Number is {num}"
+        return __py_ret_1
+  catch caught =>
+    if (caught).OfKind == "ValueError" then 
+      let e := caught
+      let __py_ret_1 := s! "Caught ValueError: {e}"
+      return __py_ret_1
+    else
+      if (caught).OfKind == "ZeroDivisionError" then 
+        let e := caught
+        let __py_ret_2 := s! "Caught ZeroDivisionError: {e}"
+        return __py_ret_2
+      else
+        throw caught
+  finally
+    do
+      let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg "Finally block executed"]
 
 attribute [simp] try_with_else_finally
 
-def try_with_else_finally'rn := fun num ↦
-  ((do
-      try
-        if h_1 : num < (0 : Int) then 
-          throw (PastaLean.PyException.Raise "ValueError" (ToString.toString "Negative number"))
-        else
-          if h_2 : num == (0 : Int) then 
-            throw (PastaLean.PyException.Raise "ZeroDivisionError" (ToString.toString "Zero is not allowed"))
-          else
-            let __py_ret_1 := s! "Number is {num}"
-            return __py_ret_1
-      catch caught =>
-        if (caught).OfKind == "ValueError" then 
-          let e := caught
-          let __py_ret_1 := s! "Caught ValueError: {e}"
-          return __py_ret_1
-        else
-          if (caught).OfKind == "ZeroDivisionError" then 
-            let e := caught
-            let __py_ret_2 := s! "Caught ZeroDivisionError: {e}"
-            return __py_ret_2
-          else
-            throw caught
-      finally
-        do
-          let _ ← pyPrintIO [pyPrintArg "Finally block executed"]) :
-    PastaLean.PyExcept _)
-
-def raise_error := fun num ↦
-  ((do
-      if h_1 : num < (0 : Int) then 
-        throw (PastaLean.PyException.Raise "ValueError" (ToString.toString "Negative number"))
+def try_with_else_finally'rn : Int → PastaLean.PyExcept String := fun (num : Int) ↦ do
+  try
+    if h_1 : num < (0 : Int) then 
+      throw (PastaLean.PyException.Raise "ValueError" (ToString.toString "Negative number"))
+    else
+      if h_2 : num == (0 : Int) then 
+        throw (PastaLean.PyException.Raise "ZeroDivisionError" (ToString.toString "Zero is not allowed"))
       else
-        if h_2 : num = (0 : Int) then 
-          throw (PastaLean.PyException.Raise "ZeroDivisionError" (ToString.toString "Zero is not allowed"))
-        else
-          let __py_ret_1 := s! "Number is {num}"
-          return __py_ret_1) :
-    PastaLean.ProofMode.PyProofM _)
+        let __py_ret_1 := s! "Number is {num}"
+        return __py_ret_1
+  catch caught =>
+    if (caught).OfKind == "ValueError" then 
+      let e := caught
+      let __py_ret_1 := s! "Caught ValueError: {e}"
+      return __py_ret_1
+    else
+      if (caught).OfKind == "ZeroDivisionError" then 
+        let e := caught
+        let __py_ret_2 := s! "Caught ZeroDivisionError: {e}"
+        return __py_ret_2
+      else
+        throw caught
+  finally
+    do
+      let _ ← pyPrintIO [pyPrintArg "Finally block executed"]
+
+def raise_error : Int → PastaLean.ProofMode.PyProofM String := fun (num : Int) ↦ do
+  if h_1 : num < (0 : Int) then 
+    throw (PastaLean.PyException.Raise "ValueError" (ToString.toString "Negative number"))
+  else
+    if h_2 : num = (0 : Int) then 
+      throw (PastaLean.PyException.Raise "ZeroDivisionError" (ToString.toString "Zero is not allowed"))
+    else
+      let __py_ret_1 := s! "Number is {num}"
+      return __py_ret_1
 
 attribute [simp] raise_error
 
-def raise_error'rn := fun num ↦
-  ((do
-      if h_1 : num < (0 : Int) then 
-        throw (PastaLean.PyException.Raise "ValueError" (ToString.toString "Negative number"))
-      else
-        if h_2 : num == (0 : Int) then 
-          throw (PastaLean.PyException.Raise "ZeroDivisionError" (ToString.toString "Zero is not allowed"))
-        else
-          let __py_ret_1 := s! "Number is {num}"
-          return __py_ret_1) :
-    PastaLean.PyExcept _)
+def raise_error'rn : Int → PastaLean.PyExcept String := fun (num : Int) ↦ do
+  if h_1 : num < (0 : Int) then 
+    throw (PastaLean.PyException.Raise "ValueError" (ToString.toString "Negative number"))
+  else
+    if h_2 : num == (0 : Int) then 
+      throw (PastaLean.PyException.Raise "ZeroDivisionError" (ToString.toString "Zero is not allowed"))
+    else
+      let __py_ret_1 := s! "Number is {num}"
+      return __py_ret_1
 
 def catch_loop := fun num ↦
   ((do
@@ -324,3 +314,5 @@ def catch_loop'rn := fun num ↦
             else
               throw caught) :
     PastaLean.PyExcept _)
+
+end PastaLean.User.Root

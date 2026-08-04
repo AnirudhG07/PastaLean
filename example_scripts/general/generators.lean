@@ -9,7 +9,9 @@ open Std.Do
 set_option linter.all false
 set_option mvcgen.warning false
 
-set_option maxHeartbeats 0
+set_option maxHeartbeats 200000
+
+namespace PastaLean.User.Root
 
 def squares := fun (n : Int) ↦
   Id.run
@@ -253,3 +255,5 @@ def use_generators'rn :=
         PastaLean.pyLen f +ₚ
       PastaLean.pySum g +ₚ
     PastaLean.pySum h
+
+end PastaLean.User.Root

@@ -265,15 +265,28 @@ partial def bodyMutatesElemInPlace (name : String) (json : Json) : Bool :=
     | .obj fs => fs.toList.any (fun (_, v) => bodyMutatesElemInPlace name v)
     | _ => false)
 
-/-- `for x in C:` whose body mutates `x` in place — the element-writeback pattern. Returns `(C, x)`
-(both plain `Name`s) when writeback applies: `C` is the iterated Name, the body mutates `x` in place,
-`C` is not itself grown, and there is no `break`/`continue` (which would skip the bottom writeback). -/
+/-- Does the body REBIND `name` with a plain `name = …` (a `Name`-target assign, not a subscript/
+attribute/aug mutation)? Such a rebind gives the loop variable a fresh (possibly differently-typed)
+value, so it is NOT an in-place element mutation — writing it back into the container is wrong. -/
+partial def bodyReboundsName (name : String) (json : Json) : Bool :=
+  let here := match jsonNodeType? json with
+    | some "Assign" => (json.getObjVal? "target").toOption.any fun t =>
+        jsonNodeType? t == some "Name" && (t.getObjValAs? String "id").toOption == some name
+    | _ => false
+  here || (match json with
+    | .arr xs => xs.any (bodyReboundsName name)
+    | .obj fs => fs.toList.any (fun (_, v) => bodyReboundsName name v)
+    | _ => false)
+
 def forElemWriteback? (iterJson targetJson : Json) (bodyElems : Array Json) : Option String :=
   if jsonNodeType? iterJson != some "Name" || jsonNodeType? targetJson != some "Name" then none
   else do
     let iterName ← (iterJson.getObjValAs? String "id").toOption
     let tgtName ← (targetJson.getObjValAs? String "id").toOption
     guard (bodyElems.any (bodyMutatesElemInPlace tgtName))
+    -- A `w = …` rebind of the loop var (`w = len(w)`) makes the writeback write a fresh value/type
+    -- back into the container — not an in-place mutation. Fall back to a plain iteration.
+    guard (!bodyElems.any (bodyReboundsName tgtName))
     guard (!bodyElems.any (jsonContainsNodeType · ["Break", "Continue"]))
     guard (!bodyElems.any (bodyGrowsListVar iterName))
     pure iterName

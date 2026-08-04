@@ -11,6 +11,8 @@ set_option mvcgen.warning false
 
 set_option maxHeartbeats 800000
 
+namespace PastaLean.User.Root
+
 /-
 3D coupled two-body harmonic oscillator with a symplectic velocity-Verlet integrator.
 
@@ -38,106 +40,120 @@ rationals -- which is exactly what keeps the proofs in reach of the automation.
 -- Tier-0 vector-algebra leaves  (each one expression; provable, and everything below composes them)
 -- ----------------------------------------------------------------------------------------------
 def dot := fun (ax : Rat) ↦ fun (ay : Rat) ↦ fun (az : Rat) ↦ fun (bx : Rat) ↦ fun («by» : Rat) ↦ fun (bz : Rat) ↦
-  /-
-  Euclidean inner product a . b.
-  -/
-  ax *ₚ bx +ₚ ay *ₚ «by» +ₚ az *ₚ bz
+  (show Rat from
+    /-
+    Euclidean inner product a . b.
+    -/
+    ax *ₚ bx +ₚ ay *ₚ «by» +ₚ az *ₚ bz)
 
 attribute [simp, taste_ingr] dot
 
 def dot'rn := fun (ax : Float) ↦ fun (ay : Float) ↦ fun (az : Float) ↦ fun (bx : Float) ↦ fun («by» : Float) ↦
   fun (bz : Float) ↦
-  /-
-  Euclidean inner product a . b.
-  -/
-  ax *ₚ bx +ₚ ay *ₚ «by» +ₚ az *ₚ bz
+  (show Float from
+    /-
+    Euclidean inner product a . b.
+    -/
+    ax *ₚ bx +ₚ ay *ₚ «by» +ₚ az *ₚ bz)
 
 def cross_x := fun (ax : Rat) ↦ fun (ay : Rat) ↦ fun (az : Rat) ↦ fun (bx : Rat) ↦ fun («by» : Rat) ↦ fun (bz : Rat) ↦
-  /-
-  x-component of a x b.
-  -/
-  ay *ₚ bz -ₚ az *ₚ «by»
+  (show Rat from
+    /-
+    x-component of a x b.
+    -/
+    ay *ₚ bz -ₚ az *ₚ «by»)
 
 attribute [simp, taste_ingr] cross_x
 
 def cross_x'rn := fun (ax : Float) ↦ fun (ay : Float) ↦ fun (az : Float) ↦ fun (bx : Float) ↦ fun («by» : Float) ↦
   fun (bz : Float) ↦
-  /-
-  x-component of a x b.
-  -/
-  ay *ₚ bz -ₚ az *ₚ «by»
+  (show Float from
+    /-
+    x-component of a x b.
+    -/
+    ay *ₚ bz -ₚ az *ₚ «by»)
 
 def cross_y := fun (ax : Rat) ↦ fun (ay : Rat) ↦ fun (az : Rat) ↦ fun (bx : Rat) ↦ fun («by» : Rat) ↦ fun (bz : Rat) ↦
-  /-
-  y-component of a x b.
-  -/
-  az *ₚ bx -ₚ ax *ₚ bz
+  (show Rat from
+    /-
+    y-component of a x b.
+    -/
+    az *ₚ bx -ₚ ax *ₚ bz)
 
 attribute [simp, taste_ingr] cross_y
 
 def cross_y'rn := fun (ax : Float) ↦ fun (ay : Float) ↦ fun (az : Float) ↦ fun (bx : Float) ↦ fun («by» : Float) ↦
   fun (bz : Float) ↦
-  /-
-  y-component of a x b.
-  -/
-  az *ₚ bx -ₚ ax *ₚ bz
+  (show Float from
+    /-
+    y-component of a x b.
+    -/
+    az *ₚ bx -ₚ ax *ₚ bz)
 
 def cross_z := fun (ax : Rat) ↦ fun (ay : Rat) ↦ fun (az : Rat) ↦ fun (bx : Rat) ↦ fun («by» : Rat) ↦ fun (bz : Rat) ↦
-  /-
-  z-component of a x b.
-  -/
-  ax *ₚ «by» -ₚ ay *ₚ bx
+  (show Rat from
+    /-
+    z-component of a x b.
+    -/
+    ax *ₚ «by» -ₚ ay *ₚ bx)
 
 attribute [simp, taste_ingr] cross_z
 
 def cross_z'rn := fun (ax : Float) ↦ fun (ay : Float) ↦ fun (az : Float) ↦ fun (bx : Float) ↦ fun («by» : Float) ↦
   fun (bz : Float) ↦
-  /-
-  z-component of a x b.
-  -/
-  ax *ₚ «by» -ₚ ay *ₚ bx
+  (show Float from
+    /-
+    z-component of a x b.
+    -/
+    ax *ₚ «by» -ₚ ay *ₚ bx)
 
 def norm_sq := fun (ax : Rat) ↦ fun (ay : Rat) ↦ fun (az : Rat) ↦
-  /-
-  Squared Euclidean norm |a|^2 = a . a.
-  -/
-  ax *ₚ ax +ₚ ay *ₚ ay +ₚ az *ₚ az
+  (show Rat from
+    /-
+    Squared Euclidean norm |a|^2 = a . a.
+    -/
+    ax *ₚ ax +ₚ ay *ₚ ay +ₚ az *ₚ az)
 
 attribute [simp, taste_ingr] norm_sq
 
 def norm_sq'rn := fun (ax : Float) ↦ fun (ay : Float) ↦ fun (az : Float) ↦
-  /-
-  Squared Euclidean norm |a|^2 = a . a.
-  -/
-  ax *ₚ ax +ₚ ay *ₚ ay +ₚ az *ₚ az
+  (show Float from
+    /-
+    Squared Euclidean norm |a|^2 = a . a.
+    -/
+    ax *ₚ ax +ₚ ay *ₚ ay +ₚ az *ₚ az)
 
 def kinetic := fun (m : Rat) ↦ fun (vx : Rat) ↦ fun (vy : Rat) ↦ fun (vz : Rat) ↦
-  /-
-  Kinetic energy (1/2) m |v|^2.
-  -/
-  (0.5 : Rat) *ₚ m *ₚ norm_sq vx vy vz
+  (show Rat from
+    /-
+    Kinetic energy (1/2) m |v|^2.
+    -/
+    (0.5 : Rat) *ₚ m *ₚ norm_sq vx vy vz)
 
 attribute [simp, taste_ingr] kinetic
 
 def kinetic'rn := fun (m : Float) ↦ fun (vx : Float) ↦ fun (vy : Float) ↦ fun (vz : Float) ↦
-  /-
-  Kinetic energy (1/2) m |v|^2.
-  -/
-  (0.5 : Float) *ₚ m *ₚ norm_sq'rn vx vy vz
+  (show Float from
+    /-
+    Kinetic energy (1/2) m |v|^2.
+    -/
+    (0.5 : Float) *ₚ m *ₚ norm_sq'rn vx vy vz)
 
 def spring_energy := fun (k : Rat) ↦ fun (dx : Rat) ↦ fun (dy : Rat) ↦ fun (dz : Rat) ↦
-  /-
-  Hooke potential energy (1/2) k |d|^2 stored in a spring stretched by displacement d.
-  -/
-  (0.5 : Rat) *ₚ k *ₚ norm_sq dx dy dz
+  (show Rat from
+    /-
+    Hooke potential energy (1/2) k |d|^2 stored in a spring stretched by displacement d.
+    -/
+    (0.5 : Rat) *ₚ k *ₚ norm_sq dx dy dz)
 
 attribute [simp, taste_ingr] spring_energy
 
 def spring_energy'rn := fun (k : Float) ↦ fun (dx : Float) ↦ fun (dy : Float) ↦ fun (dz : Float) ↦
-  /-
-  Hooke potential energy (1/2) k |d|^2 stored in a spring stretched by displacement d.
-  -/
-  (0.5 : Float) *ₚ k *ₚ norm_sq'rn dx dy dz
+  (show Float from
+    /-
+    Hooke potential energy (1/2) k |d|^2 stored in a spring stretched by displacement d.
+    -/
+    (0.5 : Float) *ₚ k *ₚ norm_sq'rn dx dy dz)
 
 -- ----------------------------------------------------------------------------------------------
 -- Provable invariants: vector identities  (lone `assert` -> named `theorem`, closed by `ring`)
@@ -495,3 +511,5 @@ def main : IO Unit := do
 def main'rn : IO Unit := do
   let _ ← main''rn
   pure ()
+
+end PastaLean.User.Root

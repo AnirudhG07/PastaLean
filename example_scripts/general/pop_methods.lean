@@ -9,7 +9,9 @@ open Std.Do
 set_option linter.all false
 set_option mvcgen.warning false
 
-set_option maxHeartbeats 0
+set_option maxHeartbeats 200000
+
+namespace PastaLean.User.Root
 
 -- `list.pop()` removes and returns the last element; `list.pop(i)` the element at index i.
 -- Both lower to a value read (`pyPopValue`) plus a container update (`pyPopRest`), since the
@@ -71,3 +73,5 @@ def set_pop'rn :=
       let mut x := PastaLean.pyPopValue seen
       seen := PastaLean.pyPopRest seen
       return x)
+
+end PastaLean.User.Root

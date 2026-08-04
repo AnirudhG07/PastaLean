@@ -9,15 +9,17 @@ open Std.Do
 set_option linter.all false
 set_option mvcgen.warning false
 
-set_option maxHeartbeats 0
+set_option maxHeartbeats 200000
 
-def check_nesting := fun n ↦ fun m ↦
+namespace PastaLean.User.Root
+
+def check_nesting := fun (n : Int) ↦ fun (m : Int) ↦
   if n > (0 : Int) then if m ≥ (0 : Int) then "Both positive" else "n positive, m non-positive"
   else if m > (0 : Int) then "n non-positive, m positive" else "Both non-positive"
 
 attribute [simp, taste_ingr] check_nesting
 
-def check_nesting'rn := fun n ↦ fun m ↦
+def check_nesting'rn := fun (n : Int) ↦ fun (m : Int) ↦
   if n > (0 : Int) then if m ≥ (0 : Int) then "Both positive" else "n positive, m non-positive"
   else if m > (0 : Int) then "n non-positive, m positive" else "Both non-positive"
 
@@ -37,12 +39,12 @@ def super_nested_if'rn := fun (a : Bool) ↦ fun (b : Bool) ↦ fun (c : Bool) �
     else (4 : Int)
   else (5 : Int)
 
-def complex_branching := fun x ↦
+def complex_branching := fun (x : Int) ↦
   if x = (1 : Int) then "one" else if x = (2 : Int) then "two" else if x = (3 : Int) then "three" else "other"
 
 attribute [simp, taste_ingr] complex_branching
 
-def complex_branching'rn := fun x ↦
+def complex_branching'rn := fun (x : Int) ↦
   if x == (1 : Int) then "one" else if x == (2 : Int) then "two" else if x == (3 : Int) then "three" else "other"
 
 def cond_multi := fun (x : Int) ↦
@@ -139,9 +141,9 @@ def hoist_conflicting_branches := fun (c : Int) ↦
       -- each branch REASSIGNS (boxing): `v = 5` / `v = "hi"` all mutate one PyAny variable.
       let mut v : PyAny := default
       if h_1 : c > (0 : Int) then 
-        v := (5 : Int)
+        let mut v'rb0 := (5 : Int)
       else
-        v := "hi"
+        let mut v'rb1 := "hi"
       let __py_ret_1 := PastaLean.pyStr v
       return __py_ret_1)
 
@@ -155,9 +157,9 @@ def hoist_conflicting_branches'rn := fun (c : Int) ↦
       -- each branch REASSIGNS (boxing): `v = 5` / `v = "hi"` all mutate one PyAny variable.
       let mut v : PyAny := default
       if h_1 : c > (0 : Int) then 
-        v := (5 : Int)
+        let mut v'rb0 := (5 : Int)
       else
-        v := "hi"
+        let mut v'rb1 := "hi"
       let __py_ret_1 := PastaLean.pyStr v
       return __py_ret_1)
 
@@ -186,3 +188,5 @@ def hoist_partial_branch'rn := fun (c : Int) ↦
       else
         total := -(1 : Int)
       return total)
+
+end PastaLean.User.Root

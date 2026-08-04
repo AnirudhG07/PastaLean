@@ -9,7 +9,9 @@ open Std.Do
 set_option linter.all false
 set_option mvcgen.warning false
 
-set_option maxHeartbeats 0
+set_option maxHeartbeats 200000
+
+namespace PastaLean.User.Root
 
 -- !/usr/bin/env python3
 /-
@@ -66,7 +68,7 @@ def appeal'rn := fun (s : String) ↦
     (do
       let mut ans : Int := (0 : Int)
       let mut t : Int := (0 : Int)
-      let mut pos : List Int := PastaLean.pyListRepeat [-(1 : Int)] (26 : Int)
+      let mut pos : Array Int := PastaLean.pyArrayRepeat #[-(1 : Int)] (26 : Int)
       for _pair_1 in (PastaLean.pyIter (PastaLean.pyEnumerate s))do
         let i := Prod.fst _pair_1
         let c := Prod.snd _pair_1
@@ -124,3 +126,5 @@ def main : IO Unit := do
 def main'rn : IO Unit := do
   let _ := main''rn
   pure ()
+
+end PastaLean.User.Root

@@ -9,7 +9,9 @@ open Std.Do
 set_option linter.all false
 set_option mvcgen.warning false
 
-set_option maxHeartbeats 0
+set_option maxHeartbeats 200000
+
+namespace PastaLean.User.Root
 
 def arr :=
   [(1 : Int), (2 : Int), (3 : Int)]
@@ -44,3 +46,5 @@ def bar'rn :=
   let x := ("hi" : String)
   let y := (PastaLean.pySlice x (some (100 : Int)) (some (-(2000 : Int))) none : String)
   y
+
+end PastaLean.User.Root

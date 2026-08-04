@@ -11,44 +11,46 @@ set_option mvcgen.warning false
 
 set_option maxHeartbeats 800000
 
+namespace PastaLean.User.Root
+
 -- Multiple return types and per-variable type mutation, both handled by inference boxing the slot to
 -- PyAny (the dynamic fallback) and dispatching operations on the runtime tag.
 -- A function whose branches return different types (str vs int) → its result is PyAny.
-def classify := fun (n : Int) ↦ (if n > (0 : Int) then "positive" else (0 : Int) : PastaLean.PyAny)
+def classify := fun (n : Int) ↦ (show PastaLean.PyAny from if n > (0 : Int) then "positive" else (0 : Int))
 
 attribute [simp] classify
 
-def classify'rn := fun (n : Int) ↦ (if n > (0 : Int) then "positive" else (0 : Int) : PastaLean.PyAny)
+def classify'rn := fun (n : Int) ↦ (show PastaLean.PyAny from if n > (0 : Int) then "positive" else (0 : Int))
 
 -- A parameter/local rebound to a different type mid-function, with operations on each type.
 def reassigned :=
-  (let x := (1 : Int)
+  (show PastaLean.PyAny from
+    let x := (1 : Int)
     let x := x +ₚ (5 : Int)
     let x := "hi"
     let x := x +ₚ "world"
     let y := (3 : Int)
     let y := x
-    x +ₚ y :
-    PastaLean.PyAny)
+    x +ₚ y)
 
 attribute [simp] reassigned
 
 def reassigned'rn :=
-  (let x := (1 : Int)
+  (show PastaLean.PyAny from
+    let x := (1 : Int)
     let x := x +ₚ (5 : Int)
     let x := "hi"
     let x := x +ₚ "world"
     let y := (3 : Int)
     let y := x
-    x +ₚ y :
-    PastaLean.PyAny)
+    x +ₚ y)
 
 -- One `add` used at both int and str (the flagship polymorphic case).
-def add := fun (a : PyAny) ↦ fun (b : PyAny) ↦ (a +ₚ b : PastaLean.PyAny)
+def add := fun (a : PyAny) ↦ fun (b : PyAny) ↦ (show PastaLean.PyAny from a +ₚ b)
 
 attribute [simp] add
 
-def add'rn := fun (a : PyAny) ↦ fun (b : PyAny) ↦ (a +ₚ b : PastaLean.PyAny)
+def add'rn := fun (a : PyAny) ↦ fun (b : PyAny) ↦ (show PastaLean.PyAny from a +ₚ b)
 
 @[taste_ingr]
 theorem add_thm : ∀ a, ∀ b, a +ₚ b +ₚ b = a +ₚ (b +ₚ b) := by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals
@@ -131,3 +133,5 @@ def main'rn : IO Unit := do
     pure ()
   | .error err =>
     throw (IO.userError (toString err))
+
+end PastaLean.User.Root

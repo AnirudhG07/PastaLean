@@ -11,6 +11,8 @@ set_option mvcgen.warning false
 
 set_option maxHeartbeats 800000
 
+namespace PastaLean.User.Root
+
 -- Running maximum over a non-empty list. Monotone invariant: the running max never drops below
 -- the first element. (A full "m ≥ every seen element" invariant is the harder follow-up.)
 def running_max := fun (xs : List Int) ↦
@@ -22,14 +24,25 @@ def running_max := fun (xs : List Int) ↦
         m := x
       else
         let _ := ()
-    let _ := Libraries.passta.pyPassEnsures (decide (m ≥ xs⦋(0 : Int)⦌))
     return m : Id _)
 
-theorem running_max_spec : ⦃⌜PastaLean.pyLen xs > (0 : Int)⌝⦄ running_max xs ⦃⇓_ => ⌜True⌝⦄ :=
+@[spec]
+theorem running_max_spec : ⦃⌜PastaLean.pyLen xs > (0 : Int)⌝⦄ running_max xs ⦃⇓m => ⌜m ≥ xs⦋(0 : Int)⦌⌝⦄ :=
   by
-  mvcgen [running_max, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-  · ⇓⟨cur, m⟩ => ⌜m ≥ xs⦋(0 : Int)⦌⌝
+  try
+    mvcgen [running_max, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · ⇓⟨cur, m⟩ => ⌜m ≥ xs⦋(0 : Int)⦌⌝
   simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals
+  all_goals sorry
+
+theorem running_max_correct :
+    ∀ (xs : List Int),
+      PastaLean.pyLen xs > (0 : Int) →
+        let m := (running_max xs).run;
+        m ≥ xs⦋(0 : Int)⦌ :=
+  by
+  intro xs hpre
+  exact running_max_spec hpre
 
 def running_max'rn := fun (xs : List Int) ↦
   Id.run
@@ -42,5 +55,6 @@ def running_max'rn := fun (xs : List Int) ↦
           m := x
         else
           let _ := ()
-      let _ := Libraries.passta.pyPassEnsures (decide (m ≥ xs⦋(0 : Int)⦌))
       return m)
+
+end PastaLean.User.Root

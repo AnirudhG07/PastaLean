@@ -9,7 +9,9 @@ open Std.Do
 set_option linter.all false
 set_option mvcgen.warning false
 
-set_option maxHeartbeats 0
+set_option maxHeartbeats 200000
+
+namespace PastaLean.User.Root
 
 -- Default parameter values (Python `def f(a, b=10)`) become Lean `optParam` binders
 -- (`def f (a) (b := 10)`), so a call with fewer args applies the defaults instead of being a partial
@@ -143,3 +145,5 @@ def main'rn : IO Unit := do
   let mut root := TreeNode'rn.new (1 : Int) leaf
   let _ ← pyPrintIO [pyPrintArg root.val]
   pure ()
+
+end PastaLean.User.Root

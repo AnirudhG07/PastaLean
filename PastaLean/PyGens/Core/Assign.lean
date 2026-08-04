@@ -588,10 +588,14 @@ def assignSyntax : (kind : SyntaxNodeKind) → Json →
               then (List.range n).drop 1 ++ [0] else List.range n
             for i in order do
               let acc ← unpackAccessTerm isTuple unpackTmpIdent i n
+              let mut elt := elts[i]!
               if ← getHeapMode then
-                if (containerMask?.bind (·[i]?)).getD false && jsonNodeType? elts[i]! == some "Name" then
-                  registerHeapVarContainer (← getCode elts[i]! `ident).getId
-              binds := binds.push (← tupleElementAssignDoElem nestedIsTuple elts[i]! acc)
+                if (containerMask?.bind (·[i]?)).getD false && jsonNodeType? elt == some "Name" then
+                  registerHeapVarContainer (← getCode elt `ident).getId
+                  -- The slot binds a `Ref (List …)`, not the plain container the `_ty` stamp records;
+                  -- drop the ascription so Lean infers the ref type from the `Prod.fst`/`.snd` projection.
+                  elt := elt.setObjVal! "_ty" Json.null
+              binds := binds.push (← tupleElementAssignDoElem nestedIsTuple elt acc)
             -- Return the bindings as siblings (a flattened null-node), NOT wrapped in a
             -- nested `do` — wrapping would scope the unpacked names away from following
             -- statements. Consumers flatten via `appendDoElems`.

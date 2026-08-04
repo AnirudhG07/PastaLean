@@ -9,7 +9,9 @@ open Std.Do
 set_option linter.all false
 set_option mvcgen.warning false
 
-set_option maxHeartbeats 0
+set_option maxHeartbeats 200000
+
+namespace PastaLean.User.Root
 
 def builtin_functional :=
   let xs := ([(1 : Int), (2 : Int), (3 : Int), (4 : Int)] : List Int)
@@ -58,3 +60,5 @@ attribute [simp, taste_ingr] reduce_no_init_literal
 
 def reduce_no_init_literal'rn :=
   Libraries.functools.pyReduce [(1 : Int), (2 : Int), (3 : Int)] fun (acc : Int) ↦ fun (x : Int) ↦ acc +ₚ x
+
+end PastaLean.User.Root

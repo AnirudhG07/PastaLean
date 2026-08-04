@@ -11,83 +11,48 @@ set_option mvcgen.warning false
 
 set_option maxHeartbeats 800000
 
+namespace PastaLean.User.Root
+
 def factorial := fun (n : Int) ↦
-  (pure
-      (let __py_sf :=
-        PastaLean.pyWhile
-          (fun s =>
-            let result := (s).1;
-            let i := (s).2;
-            (n +ₚ (1 : Int) -ₚ i : Int).toNat)
-          (fun s =>
-            let result := (s).1;
-            let i := (s).2;
-            i ≤ n)
-          (fun s =>
-            let result := (s).1;
-            let i := (s).2;
-            let result := result *ₚ i;
-            let i := i +ₚ (1 : Int);
-            (result, i))
-          ((1 : Int), (1 : Int));
-      let result := (__py_sf).1;
-      let i := (__py_sf).2;
-      result) :
-    Id _)
+  (do
+    let mut result : Int := (1 : Int)
+    let mut i : Int := (1 : Int)
+    while (i ≤ n) do
+      let _ := Libraries.passta.pyPassInvariant (decide ((1 : Int) ≤ i))
+      let _ := Libraries.passta.pyPassInvariant (decide (i ≤ n +ₚ (1 : Int)))
+      let _ := Libraries.passta.pyPassInvariant (decide (result ≥ (1 : Int)))
+      let _ := Libraries.passta.pyPassDecreases (n +ₚ (1 : Int) -ₚ i)
+      result := result *ₚ i
+      i := i +ₚ (1 : Int)
+    return result : Id _)
 
 @[spec]
-theorem factorial_spec : ⦃⌜n ≥ (0 : Int)⌝⦄ factorial n ⦃⇓__py_r => ⌜__py_r ≥ (1 : Int)⌝⦄ :=
+theorem factorial_spec : ⦃⌜n ≥ (0 : Int)⌝⦄ factorial n ⦃⇓result => ⌜result ≥ (1 : Int)⌝⦄ :=
   by
-  mvcgen [factorial]
-  ·
-    exact
-      PastaLean.pyWhile_correct (I := fun s =>
-        let result := (s).1;
-        let i := (s).2;
-        ((1 : Int) ≤ i ∧ i ≤ n +ₚ (1 : Int)) ∧ result ≥ (1 : Int))
-        (Q := fun s =>
-        let result := (s).1;
-        let i := (s).2;
-        result ≥ (1 : Int))
-        (fun s =>
-          let result := (s).1;
-          let i := (s).2;
-          (n +ₚ (1 : Int) -ₚ i : Int).toNat)
-        (fun s =>
-          let result := (s).1;
-          let i := (s).2;
-          i ≤ n)
-        (fun s =>
-          let result := (s).1;
-          let i := (s).2;
-          let result := result *ₚ i;
-          let i := i +ₚ (1 : Int);
-          (result, i))
-        ((1 : Int), (1 : Int))
-        (by
-          intros <;> (try simp_all (config := { zetaDelta := true })) <;> (try and_intros) <;>
-            first
-            | omega
-            | nlinarith
-            | positivity
-            | grind
-            | sorry)
-        (by
-          intros <;> (try simp_all (config := { zetaDelta := true })) <;> (try and_intros) <;>
-            first
-            | omega
-            | nlinarith
-            | positivity
-            | grind
-            | sorry)
-        (by
-          intros <;> (try simp_all (config := { zetaDelta := true })) <;> (try and_intros) <;>
-            first
-            | omega
-            | nlinarith
-            | positivity
-            | grind
-            | sorry)
+  try
+    mvcgen [factorial, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · fun s =>
+      let i := s |>.snd;
+      let result := s |>.fst;
+      (⟨(n +ₚ (1 : Int) -ₚ i).toNat⟩ : ULift Nat)
+    · ⇓s =>
+      ⌜Sum.elim
+          (fun st =>
+            let i := st |>.snd;
+            let result := st |>.fst;
+            ((1 : Int) ≤ i ∧ i ≤ n +ₚ (1 : Int)) ∧ result ≥ (1 : Int))
+          (fun _ => True) s⌝
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry; pyany_cases <;> grind +locals; sorry
+  all_goals sorry
+
+theorem factorial_correct :
+    ∀ (n : Int),
+      n ≥ (0 : Int) →
+        let result := (factorial n).run;
+        result ≥ (1 : Int) :=
+  by
+  intro n hpre
+  exact factorial_spec hpre
 
 def factorial'rn := fun (n : Int) ↦
   Id.run
@@ -103,3 +68,5 @@ def factorial'rn := fun (n : Int) ↦
         result := result *ₚ i
         i := i +ₚ (1 : Int)
       return result)
+
+end PastaLean.User.Root

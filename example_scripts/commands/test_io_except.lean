@@ -9,7 +9,9 @@ open Std.Do
 set_option linter.all false
 set_option mvcgen.warning false
 
-set_option maxHeartbeats 0
+set_option maxHeartbeats 200000
+
+namespace PastaLean.User.Root
 
 -- !/usr/bin/env python3
 /-
@@ -32,3 +34,5 @@ def get_validated'rn : PastaLean.PyExcept Int := do
   else
     let _ := ()
   return x
+
+end PastaLean.User.Root

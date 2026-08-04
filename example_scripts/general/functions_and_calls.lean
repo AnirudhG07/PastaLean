@@ -9,7 +9,9 @@ open Std.Do
 set_option linter.all false
 set_option mvcgen.warning false
 
-set_option maxHeartbeats 0
+set_option maxHeartbeats 200000
+
+namespace PastaLean.User.Root
 
 def add := fun a ↦ fun (b : Int) ↦ a +ₚ b
 
@@ -46,3 +48,5 @@ def complex_func'rn := fun x ↦ fun y ↦ fun z ↦
   let res := x *ₚ y
   let res := res +ₚ z
   res
+
+end PastaLean.User.Root

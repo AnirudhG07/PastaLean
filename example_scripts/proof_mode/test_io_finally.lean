@@ -9,7 +9,9 @@ open Std.Do
 set_option linter.all false
 set_option mvcgen.warning false
 
-set_option maxHeartbeats 0
+set_option maxHeartbeats 200000
+
+namespace PastaLean.User.Root
 
 -- Test: Try-finally with IO
 def main' :=
@@ -35,3 +37,5 @@ def main''rn :=
         do
           let _ ← pyPrintIO [pyPrintArg "cleanup"]) :
     PastaLean.PyExcept _)
+
+end PastaLean.User.Root

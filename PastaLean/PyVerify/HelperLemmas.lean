@@ -116,9 +116,7 @@ invariant tracks the number of elements seen. Plain (no concrete head to pattern
 `grind [pyCursor_listPrefix_lt]` when a char/list loop needs the bound. -/
 theorem pyCursor_listPrefix_lt {α : Type} {xs pref suff : List α} {cur : α}
     (h : xs = pref ++ cur :: suff) : pref.length < xs.length := by
-  have := congrArg List.length h
-  simp [List.length_append, List.length_cons] at this
-  omega
+  grind only [= List.length_append, = List.length_cons]
 
 /-- The cursor element `cur` of a `for i in range(n)` loop IS its index `pref.length`. mvcgen's VCs
 speak of `cur` (the value pulled from the range) while the invariant speaks of the index; this bridges
@@ -127,10 +125,8 @@ them so index-dependent invariants (lengths, positions) discharge. `@[grind →]
     (h : List.range n = pref ++ cur :: suff) : cur = pref.length := by
   have hlt : pref.length < n := pyCursor_prefix_lt h
   have hr : (List.range n)[pref.length]? = some pref.length := by
-    simp [List.getElem?_range, hlt]
-  have hs : (List.range n)[pref.length]? = some cur := by
-    rw [h, List.getElem?_append_right (Nat.le_refl pref.length)]; simp
-  rw [hr] at hs; simpa using hs.symm
+    simp [hlt]
+  grind
 
 -- `pyWhile`, its `while` rule (`pyWhile_correct`), and the `while → for` bridge (`pyWhile_count`) now
 -- live in `PastaLean.PyVerify.PyWhile` (imported above), so all `pyWhile` material is in one file.

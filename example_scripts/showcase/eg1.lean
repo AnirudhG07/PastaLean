@@ -9,7 +9,9 @@ open Std.Do
 set_option linter.all false
 set_option mvcgen.warning false
 
-set_option maxHeartbeats 0
+set_option maxHeartbeats 200000
+
+namespace PastaLean.User.Root
 
 noncomputable def euclidean_distance := fun (p1 : List Int) ↦ fun (p2 : List Int) ↦
   ((do
@@ -120,7 +122,7 @@ noncomputable def run_example :=
       -- Valid Case
       let __unpack_value_1 ← find_nearest_neighbor target_point dataset
       let __unpack_pair_1 := __unpack_value_1
-      let mut dist := Prod.fst __unpack_pair_1
+      let mut dist : Rat := ↑(Prod.fst __unpack_pair_1)
       let mut nearest : List Int := Prod.snd __unpack_pair_1
       let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg "Nearest Neighbor to Target:"]
       let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg "Point:", pyPrintArg nearest]
@@ -129,7 +131,7 @@ noncomputable def run_example :=
       let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg "\nTesting Invalid Point:"]
       let __unpack_value_2 ← find_nearest_neighbor invalid_point dataset
       let __unpack_pair_2 := __unpack_value_2
-      let mut dist_inv := Prod.fst __unpack_pair_2
+      let mut dist_inv : Rat := ↑(Prod.fst __unpack_pair_2)
       let mut nearest_inv : List Int := Prod.snd __unpack_pair_2
       let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg "Fallback Distance:", pyPrintArg dist_inv]) :
     PastaLean.ProofMode.PyProofM _)
@@ -148,7 +150,7 @@ def run_example'rn :=
       -- Valid Case
       let __unpack_value_1 ← find_nearest_neighbor'rn target_point dataset
       let __unpack_pair_1 := __unpack_value_1
-      let mut dist := Prod.fst __unpack_pair_1
+      let mut dist : Float := ↑(Prod.fst __unpack_pair_1)
       let mut nearest : List Int := Prod.snd __unpack_pair_1
       let _ ← pyPrintIO [pyPrintArg "Nearest Neighbor to Target:"]
       let _ ← pyPrintIO [pyPrintArg "Point:", pyPrintArg nearest]
@@ -157,7 +159,7 @@ def run_example'rn :=
       let _ ← pyPrintIO [pyPrintArg "\nTesting Invalid Point:"]
       let __unpack_value_2 ← find_nearest_neighbor'rn invalid_point dataset
       let __unpack_pair_2 := __unpack_value_2
-      let mut dist_inv := Prod.fst __unpack_pair_2
+      let mut dist_inv : Float := ↑(Prod.fst __unpack_pair_2)
       let mut nearest_inv : List Int := Prod.snd __unpack_pair_2
       let _ ← pyPrintIO [pyPrintArg "Fallback Distance:", pyPrintArg dist_inv]) :
     PastaLean.PyExcept _)
@@ -194,3 +196,5 @@ def main'rn : IO Unit := do
     pure ()
   | .error err =>
     throw (IO.userError (toString err))
+
+end PastaLean.User.Root

@@ -11,6 +11,8 @@ set_option mvcgen.warning false
 
 set_option maxHeartbeats 800000
 
+namespace PastaLean.User.Root
+
 -- Kitchen-sink: two loops (with invariants), if/else, exponentiation, try/except, and the math
 -- library — a small "summary statistic" over a list of measurements.
 noncomputable def analyze := fun (xs : List Int) ↦ fun (threshold : Int) ↦
@@ -44,15 +46,27 @@ noncomputable def analyze := fun (xs : List Int) ↦ fun (threshold : Int) ↦
       avg := (0.0 : Rat)
       spread := (0.0 : Real)
     let mut result := avg +ₚ spread
-    let _ := Libraries.passta.pyPassEnsures (decide (result ≥ (0.0 : Rat)))
     return result : ExceptT PastaLean.PyException Id _)
 
-theorem analyze_spec : ⦃⌜PastaLean.pyLen xs > (0 : Int)⌝⦄ analyze xs threshold ⦃⇓_ => ⌜True⌝⦄ :=
+@[spec]
+theorem analyze_spec : ⦃⌜PastaLean.pyLen xs > (0 : Int)⌝⦄ analyze xs threshold ⦃⇓result => ⌜result ≥ (0.0 : Rat)⌝⦄ :=
   by
-  mvcgen [analyze, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-  · ⇓⟨cur, count, total⟩ => ⌜count ≥ (0 : Int)⌝
-  · ⇓⟨cur, ss⟩ => ⌜ss ≥ (0 : Int)⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; positivity
+  try
+    mvcgen [analyze, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · ⇓⟨cur, total, count⟩ => ⌜count ≥ (0 : Int)⌝
+    · ⇓⟨cur, ss⟩ => ⌜ss ≥ (0 : Int)⌝
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  all_goals sorry
+
+theorem analyze_correct :
+    ∀ (xs : List Int),
+      ∀ (threshold : Int),
+        PastaLean.pyLen xs > (0 : Int) →
+          let result := (analyze xs threshold).run;
+          result ≥ (0.0 : Rat) :=
+  by
+  intro xs threshold hpre
+  exact analyze_spec hpre
 
 def analyze'rn : List Int → Int → PastaLean.PyExcept Float := fun (xs : List Int) ↦ fun (threshold : Int) ↦ do
   let _ := Libraries.passta.pyPassRequires (decide (PastaLean.pyLen xs > (0 : Int)))
@@ -90,3 +104,5 @@ def analyze'rn : List Int → Int → PastaLean.PyExcept Float := fun (xs : List
   let mut result := avg +ₚ spread
   let _ := Libraries.passta.pyPassEnsures (decide (result ≥ (0.0 : Float)))
   return result
+
+end PastaLean.User.Root

@@ -9,17 +9,19 @@ open Std.Do
 set_option linter.all false
 set_option mvcgen.warning false
 
-set_option maxHeartbeats 0
+set_option maxHeartbeats 200000
+
+namespace PastaLean.User.Root
 
 -- Un-inferrable parameters that are used as containers (subscript / iterate / len) box to PyAny,
 -- so the program stays total. In prove mode each PyAny binder is flagged as unprovable.
 -- `data` has no annotation and its element type is never pinned (indexing is ambiguous), so it boxes
 -- to PyAny and `data[0]` still elaborates via the delegating PyGetItem instance.
-def first_item := fun (data : PyAny) ↦ (data⦋(0 : Int)⦌ : PastaLean.PyAny)
+def first_item := fun (data : PyAny) ↦ (show PastaLean.PyAny from data⦋(0 : Int)⦌)
 
 attribute [simp] first_item
 
-def first_item'rn := fun (data : PyAny) ↦ (data⦋(0 : Int)⦌ : PastaLean.PyAny)
+def first_item'rn := fun (data : PyAny) ↦ (show PastaLean.PyAny from data⦋(0 : Int)⦌)
 
 -- `xs` used by len() and a for-loop; still un-inferrable, boxed to PyAny.
 def count_items := fun (xs : List Int) ↦
@@ -69,3 +71,5 @@ def main'rn : IO Unit := do
   let _ ← pyPrintIO [pyPrintArg (first_item'rn ["a", "b"])]
   let _ ← pyPrintIO [pyPrintArg (count_items'rn [(1 : Int), (2 : Int), (3 : Int), (4 : Int)])]
   pure ()
+
+end PastaLean.User.Root

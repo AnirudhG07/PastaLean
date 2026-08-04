@@ -11,6 +11,8 @@ set_option mvcgen.warning false
 
 set_option maxHeartbeats 800000
 
+namespace PastaLean.User.Root
+
 def functions_append_closure :=
   ((do
       let mut f : List (Unit → String) := []
@@ -191,12 +193,13 @@ def multi_capture'rn := fun (a : Int) ↦ fun (b : Int) ↦ fun (c : Int) ↦
   -- One closure capturing THREE outer variables at once.
   fun (x : Int) ↦ _multi_capture'poly'rn x a b c
 
-mutual
-  partial def _sibling_closures'lin : Int → Int → Int → Int := fun (x : Int) ↦ fun (a : Int) ↦ fun (b : Int) ↦
-    a *ₚ x +ₚ b
-  partial def _sibling_closures'apply3 : Int → Int → Int := fun (a : Int) ↦ fun (b : Int) ↦
-    _sibling_closures'lin (3 : Int) a b
-end
+private def _sibling_closures'lin := fun (x : Int) ↦ fun (a : Int) ↦ fun (b : Int) ↦ a *ₚ x +ₚ b
+
+attribute [simp, taste_ingr] _sibling_closures'lin
+
+private def _sibling_closures'apply3 := fun (a : Int) ↦ fun (b : Int) ↦ _sibling_closures'lin (3 : Int) a b
+
+attribute [simp, taste_ingr] _sibling_closures'apply3
 
 def sibling_closures := fun (a : Int) ↦ fun (b : Int) ↦
   -- `apply3` (a 0-arg closure) CALLS the sibling closure `lin`, and is RETURNED. Calling the returned
@@ -205,12 +208,9 @@ def sibling_closures := fun (a : Int) ↦ fun (b : Int) ↦
 
 attribute [simp, taste_ingr] sibling_closures
 
-mutual
-  partial def _sibling_closures'lin'rn : Int → Int → Int → Int := fun (x : Int) ↦ fun (a : Int) ↦ fun (b : Int) ↦
-    a *ₚ x +ₚ b
-  partial def _sibling_closures'apply3'rn : Int → Int → Int := fun (a : Int) ↦ fun (b : Int) ↦
-    _sibling_closures'lin'rn (3 : Int) a b
-end
+private def _sibling_closures'lin'rn := fun (x : Int) ↦ fun (a : Int) ↦ fun (b : Int) ↦ a *ₚ x +ₚ b
+
+private def _sibling_closures'apply3'rn := fun (a : Int) ↦ fun (b : Int) ↦ _sibling_closures'lin'rn (3 : Int) a b
 
 def sibling_closures'rn := fun (a : Int) ↦ fun (b : Int) ↦
   -- `apply3` (a 0-arg closure) CALLS the sibling closure `lin`, and is RETURNED. Calling the returned
@@ -314,7 +314,7 @@ def closure_theorems :=
   have ht_2 : ((curry_add (1 : Int)) (2 : Int)) (3 : Int) = (6 : Int) := by simp_all (config := { zetaDelta := true }) [taste_ingr]
   have ht_3 : (make_adder (2 : Int)) ((make_adder (3 : Int)) (10 : Int)) = (15 : Int) := by simp_all (config := { zetaDelta := true }) [taste_ingr]
   have ht_4 : (multi_capture (1 : Int) (2 : Int) (3 : Int)) (4 : Int) = (27 : Int) := by simp_all (config := { zetaDelta := true }) [taste_ingr]
-  have ht_5 : (sibling_closures (2 : Int) (1 : Int)) () = (7 : Int) := by simp_all (config := { zetaDelta := true }) [taste_ingr]; aesop
+  have ht_5 : (sibling_closures (2 : Int) (1 : Int)) () = (7 : Int) := by simp_all (config := { zetaDelta := true }) [taste_ingr]
   ()
 
 attribute [simp] closure_theorems
@@ -323,3 +323,5 @@ def closure_theorems'rn :=
   -- Properties of the closures above, PROVED automatically on conversion (`--prove-asserts`): each
   -- `assert` becomes a Lean theorem `:= by taste?` and the proof search splices the winning tactic.
   ()
+
+end PastaLean.User.Root

@@ -9,7 +9,9 @@ open Std.Do
 set_option linter.all false
 set_option mvcgen.warning false
 
-set_option maxHeartbeats 0
+set_option maxHeartbeats 200000
+
+namespace PastaLean.User.Root
 
 def simple_lc :=
   (PastaLean.pyRange (10 : Int)).map fun x => x
@@ -221,7 +223,7 @@ def lc_with_if_else :=
 attribute [simp, taste_ingr] lc_with_if_else
 
 def lc_with_if_else'rn :=
-  let a := ((PastaLean.pyRange (10 : Int)).map fun x => x : List Int)
+  let a := (((PastaLean.pyRange (10 : Int)).map fun x => x) |>.toArray : Array Int)
   (PastaLean.pyRange (10 : Int)).map fun x => if x %ₚ (2 : Int) == (0 : Int) then x else -x
 
 def lc_with_string_literal_list :=
@@ -289,3 +291,5 @@ def lc_multi_invoke'rn :=
         (PastaLean.pyRange (5 : Int)).flatMap fun y => (PastaLean.pyRange (5 : Int)).map fun z => (x, (y, z)) :
       List (Int × Int × Int))
   (a, b)
+
+end PastaLean.User.Root
