@@ -61,7 +61,7 @@ def f(n):
 
 namespace PastaBench.humaneval.F
 
-def f := fun n ↦
+def f := fun (n : Int) ↦
   (do
     if h_1 : n = (0 : Int) then 
       let __py_ret_1 := []
@@ -114,7 +114,7 @@ theorem f_spec :
   all_goals sorry
 
 theorem f_correct :
-    ∀ n,
+    ∀ (n : Int),
       n ≥ (0 : Int) →
         let ans := (f n).run;
         (PastaLean.pyLen ans = n ∧ (n < (1 : Int) ∨ ans⦋(0 : Int)⦌ = (1 : Int))) ∧
@@ -123,7 +123,7 @@ theorem f_correct :
   intro n hpre
   exact f_spec hpre
 
-def f'rn := fun n ↦
+def f'rn := fun (n : Int) ↦
   Id.run
     (do
       /-

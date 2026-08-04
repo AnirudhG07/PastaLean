@@ -76,7 +76,7 @@ theorem encode_shift_correct :
                   PastaLean.pyOrd (encode_shift s)⦋i⦌ ==
                     (PastaLean.pyOrd s⦋i⦌ -ₚ PastaLean.pyOrd "a" +ₚ (5 : Int)) %ₚ (26 : Int) +ₚ PastaLean.pyOrd "a")) =
             true :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  by taste?
 
 def encode_shift'rn := fun (s : String) ↦
   PastaLean.pyStringJoin ""
@@ -111,7 +111,7 @@ theorem decode_shift_correct :
                     (PastaLean.pyOrd s⦋i⦌ -ₚ PastaLean.pyOrd "a" -ₚ (5 : Int) +ₚ (26 : Int)) %ₚ (26 : Int) +ₚ
                       PastaLean.pyOrd "a")) =
             true :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  by taste?
 
 def decode_shift'rn := fun (s : String) ↦
   PastaLean.pyStringJoin ""

@@ -42,14 +42,14 @@ def decimal_to_binary(decimal):
 
 namespace PastaBench.humaneval.DecimalToBinary
 
-def decimal_to_binary := fun decimal ↦
+def decimal_to_binary := fun (decimal : Int) ↦
   "db" +ₚ PastaLean.pySlice (PastaLean.pyBin decimal) (some (2 : Int)) none none +ₚ "db"
 
 attribute [simp] decimal_to_binary
 
 @[taste_ingr]
 theorem decimal_to_binary_correct :
-    ∀ decimal,
+    ∀ (decimal : Int),
       isinstance decimal int →
         decimal ≥ (0 : Int) →
           (PastaLean.pyTruthy (PastaLean.pyStringStartswith (decimal_to_binary decimal) "db") = true ∧
@@ -59,7 +59,7 @@ theorem decimal_to_binary_correct :
               decimal :=
   by sorry
 
-def decimal_to_binary'rn := fun decimal ↦
+def decimal_to_binary'rn := fun (decimal : Int) ↦
   "db" +ₚ PastaLean.pySlice (PastaLean.pyBin decimal) (some (2 : Int)) none none +ₚ "db"
 
 end PastaBench.humaneval.DecimalToBinary

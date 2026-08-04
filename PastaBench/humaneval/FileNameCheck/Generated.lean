@@ -97,7 +97,7 @@ theorem file_name_check_spec :
             PastaLean.pyContains ["txt", "exe", "dll"] (PastaLean.pyStringSplit file_name ".")⦋(1 : Int)⦌)⌝⦄ :=
   by
   mvcgen [file_name_check, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; intros; sorry; sorry; pyany_cases <;> grind +locals; pyany_cases <;> grind +locals; pyany_cases <;> grind +locals; sorry
+  sorry
   all_goals sorry
 
 theorem file_name_check_correct :

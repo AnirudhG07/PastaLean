@@ -379,11 +379,9 @@ environment) is left bare — qualifying it would break the recursive reference.
 fix for user-name-vs-Mathlib clashes, without wrapping the program in a namespace. -/
 def userCallIdent (funcName : String) : PygenM (TSyntax `term) := do
   let mapped ← leanName (← suffixIfUserName funcName).toName
-  if (← userNamesRef.get).contains funcName && !(← hasVar funcName.toName)
-      && (← nameClashesWithGlobal funcName) then
-    return (mkIdent (`_root_ ++ mapped) : TSyntax `term)
-  else
-    return (mkIdent mapped : TSyntax `term)
+  -- User defs live in `namespace PastaLean.User.<path>`, so a bare call resolves to the user's own
+  -- function by namespace precedence — no `_root_` needed (it misfired for globals under a namespace).
+  return (mkIdent mapped : TSyntax `term)
 
 @[pygen "Call"]
 def callSyntax : (kind : SyntaxNodeKind) → Json →

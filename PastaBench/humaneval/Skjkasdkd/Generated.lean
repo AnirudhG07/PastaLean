@@ -54,7 +54,7 @@ def skjkasdkd(lst):
 
 namespace PastaBench.humaneval.Skjkasdkd
 
-private def _skjkasdkd'is_prime := fun (a : Int) ↦
+private noncomputable def _skjkasdkd'is_prime := fun (a : Int) ↦
   !if PastaLean.pyTruthy (decide (a < (2 : Int))) then decide (a < (2 : Int))
     else
       PastaLean.pyStdAny

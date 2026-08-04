@@ -63,7 +63,7 @@ theorem _add_elements'digits_spec :
       (_add_elements'digits x ≤ (2 : Int)) = (-(99 : Int) ≤ x ∧ x ≤ (99 : Int)) :=
   by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
 
-def add_elements := fun (arr : PyAny) ↦ fun k ↦
+def add_elements := fun (arr : PyAny) ↦ fun (k : Int) ↦
   PastaLean.pySum
     (PastaLean.pyFilter (fun x ↦ decide (_add_elements'digits x ≤ (2 : Int)))
       (PastaLean.pySlice arr none (some k) none))
@@ -73,7 +73,7 @@ attribute [simp] add_elements
 @[taste_ingr]
 theorem add_elements_correct :
     ∀ (arr : PyAny),
-      ∀ k,
+      ∀ (k : Int),
         (1 : Int) ≤ PastaLean.pyLen arr ∧ PastaLean.pyLen arr ≤ (100 : Int) →
           (1 : Int) ≤ k ∧ k ≤ PastaLean.pyLen arr →
             -(99 : Int) *ₚ k ≤ add_elements arr k ∧ add_elements arr k ≤ (99 : Int) *ₚ k :=
@@ -83,7 +83,7 @@ private def _add_elements'digits'rn := fun (x : Int) ↦
   let s := (PastaLean.pyStr x : String)
   if s⦋(0 : Int)⦌ == "-" then PastaLean.pyLen s -ₚ (1 : Int) else PastaLean.pyLen s
 
-def add_elements'rn := fun (arr : PyAny) ↦ fun k ↦
+def add_elements'rn := fun (arr : PyAny) ↦ fun (k : Int) ↦
   PastaLean.pySum
     (PastaLean.pyFilter (fun x ↦ decide (_add_elements'digits'rn x ≤ (2 : Int)))
       (PastaLean.pySlice arr none (some k) none))

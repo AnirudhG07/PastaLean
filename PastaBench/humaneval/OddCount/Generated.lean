@@ -143,7 +143,7 @@ theorem odd_count_spec :
                     (PastaLean.pyLen
                       (PastaLean.pyList
                         (PastaLean.pyFilter (fun ch ↦ PastaLean.pyInt ch %ₚ (2 : Int) == (1 : Int)) lst⦋k⦌)))))⌝
-  intros; sorry
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
 theorem odd_count_correct :

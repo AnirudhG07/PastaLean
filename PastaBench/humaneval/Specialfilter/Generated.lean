@@ -41,7 +41,7 @@ def specialFilter(nums):
 
 namespace PastaBench.humaneval.Specialfilter
 
-def specialFilter := fun (nums : PyAny) ↦
+def specialFilter := fun (nums : List Int) ↦
   (do
     let __unpack_value_1 := ((0 : Int), ["1", "3", "5", "7", "9"])
     let __unpack_pair_1 := __unpack_value_1
@@ -65,18 +65,18 @@ theorem specialFilter_spec : ⦃⌜True⌝⦄ specialFilter nums ⦃⇓ans => �
   try
     mvcgen [specialFilter, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓⟨cur, ans⟩ => ⌜ans ≥ (0 : Int) ∧ ans ≤ PastaLean.pyLen nums⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry; simp_all (config := { zetaDelta := true }) [taste_ingr]
   all_goals sorry
 
 theorem specialFilter_correct :
-    ∀ (nums : PyAny),
+    ∀ (nums : List Int),
       let ans := (specialFilter nums).run;
       ans ≥ (0 : Int) ∧ ans ≤ PastaLean.pyLen nums :=
   by
   intro nums
   exact specialFilter_spec True.intro
 
-def specialFilter'rn := fun (nums : PyAny) ↦
+def specialFilter'rn := fun (nums : List Int) ↦
   Id.run
     (do
       /-

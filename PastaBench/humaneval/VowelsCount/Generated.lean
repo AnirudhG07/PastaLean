@@ -61,7 +61,7 @@ namespace PastaBench.humaneval.VowelsCount
 def FIX :=
   "\nAdd more test cases.\n"
 
-def vowels_count := fun (s : PyAny) ↦
+def vowels_count := fun (s : String) ↦
   (do
     if h_1 : s = "" then 
       return (0 : Int)
@@ -86,18 +86,18 @@ def vowels_count := fun (s : PyAny) ↦
 theorem vowels_count_spec : ⦃⌜True⌝⦄ vowels_count s ⦃⇓cnt => ⌜(0 : Int) ≤ cnt ∧ cnt ≤ PastaLean.pyLen s⌝⦄ :=
   by
   mvcgen [vowels_count, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  sorry
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
 theorem vowels_count_correct :
-    ∀ (s : PyAny),
+    ∀ (s : String),
       let cnt := (vowels_count s).run;
       (0 : Int) ≤ cnt ∧ cnt ≤ PastaLean.pyLen s :=
   by
   intro s
   exact vowels_count_spec True.intro
 
-def vowels_count'rn := fun (s : PyAny) ↦
+def vowels_count'rn := fun (s : String) ↦
   Id.run
     (do
       /-

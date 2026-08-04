@@ -78,9 +78,9 @@ def search(lst):
 
 namespace PastaBench.humaneval.Search
 
-def search := fun (lst : PyAny) ↦
+def search := fun (lst : List Int) ↦
   (do
-    let mut count : Std.HashMap PyAny Int := Std.HashMap.ofList []
+    let mut count : Std.HashMap Int Int := Std.HashMap.ofList []
     for num in (PastaLean.pyIter lst)do
       if h_1 : !(PastaLean.pyContains count num) then 
         count := PastaLean.pySetItem count num (0 : Int)
@@ -92,7 +92,7 @@ def search := fun (lst : PyAny) ↦
     let _ :=
       Libraries.passta.pyPassAssert
         (PastaLean.pyAll ((PastaLean.pyIter (PastaLean.pyKeys count)).map fun k => count⦋k⦌ == PastaLean.pyCount lst k))
-    let mut ans : PyAny := -(1 : Int)
+    let mut ans : Int := -(1 : Int)
     for _pair_1 in (PastaLean.pyIter (PastaLean.pyItems count))do
       let num := Prod.fst _pair_1
       let cnt := Prod.snd _pair_1
@@ -103,7 +103,7 @@ def search := fun (lst : PyAny) ↦
           (decide (ans ≤ -(1 : Int)) ||
             PastaLean.pyContains (PastaLean.pyKeys count) ans && decide (count⦋ans⦌ ≥ ans))
       if h_1 : cnt ≥ num then 
-        let mut ans'rb0 := PastaLean.pyMax [ans, num]
+        ans := PastaLean.pyMax [ans, num]
       else
         let _ := ()
     let _ :=
@@ -135,11 +135,11 @@ theorem search_spec :
   try
     mvcgen [search, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓cur => ⌜True⌝
-  sorry
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
 theorem search_correct :
-    ∀ (lst : PyAny),
+    ∀ (lst : List Int),
       PastaLean.pyLen lst > (0 : Int) ∧ PastaLean.pyAll ((PastaLean.pyIter lst).map fun x => decide (x > (0 : Int))) →
         let ans := (search lst).run;
         (ans ≥ -(1 : Int) ∧
@@ -160,7 +160,7 @@ theorem search_correct :
   intro lst hpre
   exact search_spec hpre
 
-def search'rn := fun (lst : PyAny) ↦
+def search'rn := fun (lst : List Int) ↦
   Id.run
     (do
       /-
@@ -181,7 +181,7 @@ def search'rn := fun (lst : PyAny) ↦
       -- If the result is positive, it must be an element of the list that satisfies
       -- the frequency condition, and it must be the greatest such element.
       -- If the result is -1, it must be that no element in the list satisfies the condition.
-      let mut count : Std.HashMap PyAny Int := Std.HashMap.ofList []
+      let mut count : Std.HashMap Int Int := Std.HashMap.ofList []
       for num in (PastaLean.pyIter lst)do
         if h_1 : !(PastaLean.pyContains count num) then 
           count := PastaLean.pySetItem count num (0 : Int)
@@ -195,7 +195,7 @@ def search'rn := fun (lst : PyAny) ↦
         Libraries.passta.pyPassAssert
           (PastaLean.pyAll
             ((PastaLean.pyIter (PastaLean.pyKeys count)).map fun k => count⦋k⦌ == PastaLean.pyCount lst k))
-      let mut ans : PyAny := -(1 : Int)
+      let mut ans : Int := -(1 : Int)
       for _pair_1 in (PastaLean.pyIter (PastaLean.pyItems count))do
         let num := Prod.fst _pair_1
         let cnt := Prod.snd _pair_1
@@ -206,7 +206,7 @@ def search'rn := fun (lst : PyAny) ↦
             (decide (ans ≤ -(1 : Int)) ||
               PastaLean.pyContains (PastaLean.pyKeys count) ans && decide (count⦋ans⦌ ≥ ans))
         if h_1 : cnt ≥ num then 
-          let mut ans'rb0 := PastaLean.pyMax [ans, num]
+          ans := PastaLean.pyMax [ans, num]
         else
           let _ := ()
       -- After checking all numbers, ans must be greater than or equal to any valid number.

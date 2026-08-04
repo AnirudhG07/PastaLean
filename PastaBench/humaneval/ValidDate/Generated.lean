@@ -29,7 +29,7 @@ def valid_date(date: str):
     3. The months should not be less than 1 or higher than 12.
     4. The date should be in the format: mm-dd-yyyy
 
-    for example:
+    for example: 
     valid_date('03-11-2000') => True
 
     valid_date('15-01-2012') => False
@@ -89,12 +89,12 @@ def valid_date := fun (date : String) ↦
     let mut days : List Int :=
       [(31 : Int), (29 : Int), (31 : Int), (30 : Int), (31 : Int), (30 : Int), (31 : Int), (31 : Int), (30 : Int),
         (31 : Int), (30 : Int), (31 : Int)]
-    if h_1 : PastaLean.pyLen date ≠ (10 : Int) then
+    if h_1 : PastaLean.pyLen date ≠ (10 : Int) then 
       return Bool.false
     else
       let _ := ()
     let _ := Libraries.passta.pyPassAssert (PastaLean.pyLen date == (10 : Int))
-    if h_2 : date⦋(2 : Int)⦌ ≠ "-" ∨ date⦋(5 : Int)⦌ ≠ "-" then
+    if h_2 : date⦋(2 : Int)⦌ ≠ "-" ∨ date⦋(5 : Int)⦌ ≠ "-" then 
       return Bool.false
     else
       let _ := ()
@@ -111,7 +111,7 @@ def valid_date := fun (date : String) ↦
         (¬PastaLean.pyTruthy (PastaLean.pyIsDecimal m) = true ∨
             ¬PastaLean.pyTruthy (PastaLean.pyIsDecimal d) = true) ∨
           ¬PastaLean.pyTruthy (PastaLean.pyIsDecimal y) = true then
-
+      
       return Bool.false
     else
       let _ := ()
@@ -124,7 +124,7 @@ def valid_date := fun (date : String) ↦
     let __unpack_pair_2 := __unpack_value_2
     m := Prod.fst __unpack_pair_2
     d := Prod.snd __unpack_pair_2
-    if h_4 : ¬((1 : Int) ≤ m ∧ m ≤ (12 : Int)) then
+    if h_4 : ¬((1 : Int) ≤ m ∧ m ≤ (12 : Int)) then 
       return Bool.false
     else
       let _ := ()
@@ -132,7 +132,7 @@ def valid_date := fun (date : String) ↦
     let _ :=
       Libraries.passta.pyPassAssert
         (decide ((0 : Int) ≤ m -ₚ (1 : Int)) && decide (m -ₚ (1 : Int) < PastaLean.pyLen days))
-    if h_5 : ¬((1 : Int) ≤ d ∧ d ≤ days⦋m -ₚ (1 : Int)⦌) then
+    if h_5 : ¬((1 : Int) ≤ d ∧ d ≤ days⦋m -ₚ (1 : Int)⦌) then 
       return Bool.false
     else
       let _ := ()
@@ -203,18 +203,18 @@ def valid_date'rn := fun (date : String) ↦
           2. The number of days is not less than 1 or higher than 31 days for months 1,3,5,7,8,10,12. And the number of days is not less than 1 or higher than 30 days for months 4,6,9,11. And, the number of days is not less than 1 or higher than 29 for the month 2.
           3. The months should not be less than 1 or higher than 12.
           4. The date should be in the format: mm-dd-yyyy
-
-          for example:
+      
+          for example: 
           valid_date('03-11-2000') => True
-
+      
           valid_date('15-01-2012') => False
-
+      
           valid_date('04-0-2040') => False
-
+      
           valid_date('06-04-2020') => True
-
+      
           valid_date('06/04/2020') => False
-
+          
       -/
       -- The postcondition states that the function returns True if and only if
       -- the input string satisfies the full set of validation criteria.
@@ -223,12 +223,12 @@ def valid_date'rn := fun (date : String) ↦
       let mut days : Array Int :=
         #[(31 : Int), (29 : Int), (31 : Int), (30 : Int), (31 : Int), (30 : Int), (31 : Int), (31 : Int), (30 : Int),
           (31 : Int), (30 : Int), (31 : Int)]
-      if h_1 : PastaLean.pyLen date != (10 : Int) then
+      if h_1 : PastaLean.pyLen date != (10 : Int) then 
         return Bool.false
       else
         let _ := ()
       let _ := Libraries.passta.pyPassAssert (PastaLean.pyLen date == (10 : Int))
-      if h_2 : date⦋(2 : Int)⦌ != "-" || date⦋(5 : Int)⦌ != "-" then
+      if h_2 : date⦋(2 : Int)⦌ != "-" || date⦋(5 : Int)⦌ != "-" then 
         return Bool.false
       else
         let _ := ()
@@ -244,7 +244,7 @@ def valid_date'rn := fun (date : String) ↦
       if h_3 :
           !PastaLean.pyTruthy (PastaLean.pyIsDecimal m) || !PastaLean.pyTruthy (PastaLean.pyIsDecimal d) ||
             !PastaLean.pyTruthy (PastaLean.pyIsDecimal y) then
-
+        
         return Bool.false
       else
         let _ := ()
@@ -257,7 +257,7 @@ def valid_date'rn := fun (date : String) ↦
       let __unpack_pair_2 := __unpack_value_2
       m := Prod.fst __unpack_pair_2
       d := Prod.snd __unpack_pair_2
-      if h_4 : !(decide ((1 : Int) ≤ m) && decide (m ≤ (12 : Int))) then
+      if h_4 : !(decide ((1 : Int) ≤ m) && decide (m ≤ (12 : Int))) then 
         return Bool.false
       else
         let _ := ()
@@ -267,7 +267,7 @@ def valid_date'rn := fun (date : String) ↦
       let _ :=
         Libraries.passta.pyPassAssert
           (decide ((0 : Int) ≤ m -ₚ (1 : Int)) && decide (m -ₚ (1 : Int) < PastaLean.pyLen days))
-      if h_5 : !(decide ((1 : Int) ≤ d) && decide (d ≤ days⦋m -ₚ (1 : Int)⦌)) then
+      if h_5 : !(decide ((1 : Int) ≤ d) && decide (d ≤ days⦋m -ₚ (1 : Int)⦌)) then 
         return Bool.false
       else
         let _ := ()

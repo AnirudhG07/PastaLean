@@ -22,12 +22,12 @@ from contracts import *
 
 def encode(message: str) -> str:
     """
-    Write a function that takes a message, and encodes in such a
-    way that it swaps case of all letters, replaces all vowels in
-    the message with the letter that appears 2 places ahead of that
-    vowel in the english alphabet.
-    Assume only letters.
-
+    Write a function that takes a message, and encodes in such a 
+    way that it swaps case of all letters, replaces all vowels in 
+    the message with the letter that appears 2 places ahead of that 
+    vowel in the english alphabet. 
+    Assume only letters. 
+    
     Examples:
     >>> encode('test')
     'TGST'
@@ -46,12 +46,12 @@ def encode(message: str) -> str:
             return chr(ord(ch) - 32)
         else:
             return ch
-
+    
     def vowel_change(ch: str) -> str:
         Requires(len(ch) == 1)
         Ensures(len(Result()) == 1)
         return ch if ch not in "aeiouAEIOU" else chr(ord(ch) + 2)
-
+    
     m = "".join(map(switch_case, message))
     Assert(len(m) == len(message))
     return "".join(map(vowel_change, m))
@@ -60,25 +60,18 @@ def encode(message: str) -> str:
 namespace PastaBench.humaneval.Encode
 
 private def _encode'switch_case := fun (ch : String) ↦
-  (do
-    if h_1 : PastaLean.pyOrd "A" ≤ PastaLean.pyOrd ch ∧ PastaLean.pyOrd ch ≤ PastaLean.pyOrd "Z" then
-      let __py_ret_1 := PastaLean.pyChr (PastaLean.pyOrd ch +ₚ (32 : Int))
-      return __py_ret_1
-    else
-      if h_2 : PastaLean.pyOrd "a" ≤ PastaLean.pyOrd ch ∧ PastaLean.pyOrd ch ≤ PastaLean.pyOrd "z" then
-        let __py_ret_1 := PastaLean.pyChr (PastaLean.pyOrd ch -ₚ (32 : Int))
-        return __py_ret_1
-      else
-        return ch :
-    Id _)
+  if PastaLean.pyOrd "A" ≤ PastaLean.pyOrd ch ∧ PastaLean.pyOrd ch ≤ PastaLean.pyOrd "Z" then
+    PastaLean.pyChr (PastaLean.pyOrd ch +ₚ (32 : Int))
+  else
+    if PastaLean.pyOrd "a" ≤ PastaLean.pyOrd ch ∧ PastaLean.pyOrd ch ≤ PastaLean.pyOrd "z" then
+      PastaLean.pyChr (PastaLean.pyOrd ch -ₚ (32 : Int))
+    else ch
 
-@[spec]
+attribute [simp] _encode'switch_case
+
+@[taste_ingr]
 theorem _encode'switch_case_spec :
-    ⦃⌜PastaLean.pyLen ch = (1 : Int)⌝⦄ _encode'switch_case ch ⦃⇓result => ⌜PastaLean.pyLen result = (1 : Int)⌝⦄ :=
-  by
-  mvcgen [_encode'switch_case, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
-  all_goals sorry
+    ∀ (ch : String), PastaLean.pyLen ch = (1 : Int) → PastaLean.pyLen (_encode'switch_case ch) = (1 : Int) := by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
 
 private def _encode'vowel_change := fun (ch : String) ↦
   if !(PastaLean.pyContains "aeiouAEIOU" ch) then ch else PastaLean.pyChr (PastaLean.pyOrd ch +ₚ (2 : Int))
@@ -103,22 +96,12 @@ theorem encode_correct :
   by sorry
 
 private def _encode'switch_case'rn := fun (ch : String) ↦
-  Id.run
-    (do
-      let _ := Libraries.passta.pyPassRequires (PastaLean.pyLen ch == (1 : Int))
-      if h_1 :
-          decide (PastaLean.pyOrd "A" ≤ PastaLean.pyOrd ch) && decide (PastaLean.pyOrd ch ≤ PastaLean.pyOrd "Z") then
-        let __py_ret_1 := PastaLean.pyChr (PastaLean.pyOrd ch +ₚ (32 : Int))
-        return __py_ret_1
-      else
-        if h_2 :
-            decide (PastaLean.pyOrd "a" ≤ PastaLean.pyOrd ch) &&
-              decide (PastaLean.pyOrd ch ≤ PastaLean.pyOrd "z") then
-
-          let __py_ret_1 := PastaLean.pyChr (PastaLean.pyOrd ch -ₚ (32 : Int))
-          return __py_ret_1
-        else
-          return ch)
+  if decide (PastaLean.pyOrd "A" ≤ PastaLean.pyOrd ch) && decide (PastaLean.pyOrd ch ≤ PastaLean.pyOrd "Z") then
+    PastaLean.pyChr (PastaLean.pyOrd ch +ₚ (32 : Int))
+  else
+    if decide (PastaLean.pyOrd "a" ≤ PastaLean.pyOrd ch) && decide (PastaLean.pyOrd ch ≤ PastaLean.pyOrd "z") then
+      PastaLean.pyChr (PastaLean.pyOrd ch -ₚ (32 : Int))
+    else ch
 
 private def _encode'vowel_change'rn := fun (ch : String) ↦
   if !(PastaLean.pyContains "aeiouAEIOU" ch) then ch else PastaLean.pyChr (PastaLean.pyOrd ch +ₚ (2 : Int))

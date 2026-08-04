@@ -92,16 +92,9 @@ def fib4(n: int):
 namespace PastaBench.humaneval.Fib4
 
 def fib4 := fun (n : Int) ↦
-  (do
-    if h_1 : n = (0 : Int) then 
-      return (0 : Int)
-      -- Establish that the initial state corresponds to the spec's base cases,
-      -- which forms the base case for the loop invariant.
-      -- When the loop terminates, the loop counter i is conceptually n + 1.
-      -- The invariant, evaluated at this exit value, gives us the desired property.
-      -- Specifically, `d` now holds the value for `fib4((n+1)-1)`, which is `fib4(n)`.
-    else
-      if h_2 : n = (1 : Int) then 
+  Id.run
+    (do
+      if h_1 : n = (0 : Int) then 
         return (0 : Int)
         -- Establish that the initial state corresponds to the spec's base cases,
         -- which forms the base case for the loop invariant.
@@ -109,113 +102,88 @@ def fib4 := fun (n : Int) ↦
         -- The invariant, evaluated at this exit value, gives us the desired property.
         -- Specifically, `d` now holds the value for `fib4((n+1)-1)`, which is `fib4(n)`.
       else
-        if h_3 : n = (2 : Int) then 
-          return (2 : Int)
+        if h_2 : n = (1 : Int) then 
+          return (0 : Int)
           -- Establish that the initial state corresponds to the spec's base cases,
           -- which forms the base case for the loop invariant.
           -- When the loop terminates, the loop counter i is conceptually n + 1.
           -- The invariant, evaluated at this exit value, gives us the desired property.
           -- Specifically, `d` now holds the value for `fib4((n+1)-1)`, which is `fib4(n)`.
         else
-          if h_4 : n = (3 : Int) then 
-            return (0 : Int)
+          if h_3 : n = (2 : Int) then 
+            return (2 : Int)
             -- Establish that the initial state corresponds to the spec's base cases,
             -- which forms the base case for the loop invariant.
             -- When the loop terminates, the loop counter i is conceptually n + 1.
             -- The invariant, evaluated at this exit value, gives us the desired property.
             -- Specifically, `d` now holds the value for `fib4((n+1)-1)`, which is `fib4(n)`.
           else
-            let _ := Libraries.passta.pyPassAssert (decide (n ≥ (4 : Int)))
-            let __unpack_value_1 := ((0 : Int), ((0 : Int), ((2 : Int), (0 : Int))))
-            let __unpack_pair_1 := __unpack_value_1
-            let mut a : Int := Prod.fst __unpack_pair_1
-            let mut b : Int := Prod.fst (Prod.snd __unpack_pair_1)
-            let mut c : Int := Prod.fst (Prod.snd (Prod.snd __unpack_pair_1))
-            let mut d : Int := Prod.snd (Prod.snd (Prod.snd __unpack_pair_1))
-            -- Establish that the initial state corresponds to the spec's base cases,
-            -- which forms the base case for the loop invariant.
-            let _ := Libraries.passta.pyPassAssert (a == fib4 (0 : Int))
-            let _ := Libraries.passta.pyPassAssert (b == fib4 (1 : Int))
-            let _ := Libraries.passta.pyPassAssert (c == fib4 (2 : Int))
-            let _ := Libraries.passta.pyPassAssert (d == fib4 (3 : Int))
-            for i in (PastaLean.pyRange (n +ₚ (1 : Int)) (4 : Int))do
-              -- The loop counter is bounded. This is crucial for proving memory safety
-              -- if we were indexing, and helps reason about termination and the state.
-              let _ := Libraries.passta.pyPassInvariant (decide ((4 : Int) ≤ i))
-              let _ := Libraries.passta.pyPassInvariant (decide (i ≤ n +ₚ (1 : Int)))
-              -- The core invariant: the variables track the four preceding fib4 numbers,
-              -- allowing the next one to be computed.
-              let _ := Libraries.passta.pyPassInvariant (a == fib4 (i -ₚ (4 : Int)))
-              let _ := Libraries.passta.pyPassInvariant (b == fib4 (i -ₚ (3 : Int)))
-              let _ := Libraries.passta.pyPassInvariant (c == fib4 (i -ₚ (2 : Int)))
-              let _ := Libraries.passta.pyPassInvariant (d == fib4 (i -ₚ (1 : Int)))
-              -- Termination is obvious for a `range` loop, but for more complex loops,
-              -- a `Decreases` clause would be necessary.
-              let _ := Libraries.passta.pyPassDecreases (n +ₚ (1 : Int) -ₚ i)
-              let __unpack_value_2 := (b, (c, (d, a +ₚ b +ₚ c +ₚ d)))
-              let __unpack_pair_2 := __unpack_value_2
-              a := Prod.fst __unpack_pair_2
-              b := Prod.fst (Prod.snd __unpack_pair_2)
-              c := Prod.fst (Prod.snd (Prod.snd __unpack_pair_2))
-              d := Prod.snd (Prod.snd (Prod.snd __unpack_pair_2))
-            -- When the loop terminates, the loop counter i is conceptually n + 1.
-            -- The invariant, evaluated at this exit value, gives us the desired property.
-            -- Specifically, `d` now holds the value for `fib4((n+1)-1)`, which is `fib4(n)`.
-            let _ :=
-              Libraries.passta.pyPassAssert
-                (d == fib4 (n -ₚ (1 : Int)) +ₚ fib4 (n -ₚ (2 : Int)) +ₚ fib4 (n -ₚ (3 : Int)) +ₚ fib4 (n -ₚ (4 : Int)))
-            return d :
-    Id _)
+            if h_4 : n = (3 : Int) then 
+              return (0 : Int)
+              -- Establish that the initial state corresponds to the spec's base cases,
+              -- which forms the base case for the loop invariant.
+              -- When the loop terminates, the loop counter i is conceptually n + 1.
+              -- The invariant, evaluated at this exit value, gives us the desired property.
+              -- Specifically, `d` now holds the value for `fib4((n+1)-1)`, which is `fib4(n)`.
+            else
+              let _ := Libraries.passta.pyPassAssert (decide (n ≥ (4 : Int)))
+              let __unpack_value_1 := ((0 : Int), ((0 : Int), ((2 : Int), (0 : Int))))
+              let __unpack_pair_1 := __unpack_value_1
+              let mut a : Int := Prod.fst __unpack_pair_1
+              let mut b : Int := Prod.fst (Prod.snd __unpack_pair_1)
+              let mut c : Int := Prod.fst (Prod.snd (Prod.snd __unpack_pair_1))
+              let mut d : Int := Prod.snd (Prod.snd (Prod.snd __unpack_pair_1))
+              -- Establish that the initial state corresponds to the spec's base cases,
+              -- which forms the base case for the loop invariant.
+              let _ := Libraries.passta.pyPassAssert (a == fib4 (0 : Int))
+              let _ := Libraries.passta.pyPassAssert (b == fib4 (1 : Int))
+              let _ := Libraries.passta.pyPassAssert (c == fib4 (2 : Int))
+              let _ := Libraries.passta.pyPassAssert (d == fib4 (3 : Int))
+              for i in (PastaLean.pyRange (n +ₚ (1 : Int)) (4 : Int))do
+                -- The loop counter is bounded. This is crucial for proving memory safety
+                -- if we were indexing, and helps reason about termination and the state.
+                let _ := Libraries.passta.pyPassInvariant (decide ((4 : Int) ≤ i))
+                let _ := Libraries.passta.pyPassInvariant (decide (i ≤ n +ₚ (1 : Int)))
+                -- The core invariant: the variables track the four preceding fib4 numbers,
+                -- allowing the next one to be computed.
+                let _ := Libraries.passta.pyPassInvariant (a == fib4 (i -ₚ (4 : Int)))
+                let _ := Libraries.passta.pyPassInvariant (b == fib4 (i -ₚ (3 : Int)))
+                let _ := Libraries.passta.pyPassInvariant (c == fib4 (i -ₚ (2 : Int)))
+                let _ := Libraries.passta.pyPassInvariant (d == fib4 (i -ₚ (1 : Int)))
+                -- Termination is obvious for a `range` loop, but for more complex loops,
+                -- a `Decreases` clause would be necessary.
+                let _ := Libraries.passta.pyPassDecreases (n +ₚ (1 : Int) -ₚ i)
+                let __unpack_value_2 := (b, (c, (d, a +ₚ b +ₚ c +ₚ d)))
+                let __unpack_pair_2 := __unpack_value_2
+                a := Prod.fst __unpack_pair_2
+                b := Prod.fst (Prod.snd __unpack_pair_2)
+                c := Prod.fst (Prod.snd (Prod.snd __unpack_pair_2))
+                d := Prod.snd (Prod.snd (Prod.snd __unpack_pair_2))
+              -- When the loop terminates, the loop counter i is conceptually n + 1.
+              -- The invariant, evaluated at this exit value, gives us the desired property.
+              -- Specifically, `d` now holds the value for `fib4((n+1)-1)`, which is `fib4(n)`.
+              let _ :=
+                Libraries.passta.pyPassAssert
+                  (d ==
+                    fib4 (n -ₚ (1 : Int)) +ₚ fib4 (n -ₚ (2 : Int)) +ₚ fib4 (n -ₚ (3 : Int)) +ₚ fib4 (n -ₚ (4 : Int)))
+              return d)
 
-@[spec]
-theorem fib4_spec :
-    ⦃⌜n ≥ (0 : Int)⌝⦄ fib4 n ⦃⇓result =>
-      ⌜(((n = (0 : Int) ∧ result = (0 : Int) ∨ n = (1 : Int) ∧ result = (0 : Int)) ∨
-              n = (2 : Int) ∧ result = (2 : Int)) ∨
-            n = (3 : Int) ∧ result = (0 : Int)) ∨
-          n ≥ (4 : Int) ∧
-            result =
-              fib4 (n -ₚ (1 : Int)) +ₚ fib4 (n -ₚ (2 : Int)) +ₚ fib4 (n -ₚ (3 : Int)) +ₚ fib4 (n -ₚ (4 : Int))⌝⦄ :=
-  by
-  mvcgen [fib4, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  intros; sorry
-  all_goals sorry
+attribute [simp] fib4
 
+@[taste_ingr]
 theorem fib4_correct :
     ∀ (n : Int),
       n ≥ (0 : Int) →
-        let result := (fib4 n).run;
-        (((n = (0 : Int) ∧ result = (0 : Int) ∨ n = (1 : Int) ∧ result = (0 : Int)) ∨
-              n = (2 : Int) ∧ result = (2 : Int)) ∨
-            n = (3 : Int) ∧ result = (0 : Int)) ∨
+        (((n = (0 : Int) ∧ fib4 n = (0 : Int) ∨ n = (1 : Int) ∧ fib4 n = (0 : Int)) ∨
+              n = (2 : Int) ∧ fib4 n = (2 : Int)) ∨
+            n = (3 : Int) ∧ fib4 n = (0 : Int)) ∨
           n ≥ (4 : Int) ∧
-            result = fib4 (n -ₚ (1 : Int)) +ₚ fib4 (n -ₚ (2 : Int)) +ₚ fib4 (n -ₚ (3 : Int)) +ₚ fib4 (n -ₚ (4 : Int)) :=
-  by
-  intro n hpre
-  exact fib4_spec hpre
+            fib4 n = fib4 (n -ₚ (1 : Int)) +ₚ fib4 (n -ₚ (2 : Int)) +ₚ fib4 (n -ₚ (3 : Int)) +ₚ fib4 (n -ₚ (4 : Int)) :=
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
 
-partial def fib4'rn : Int → Int := fun (n : Int) ↦
+def fib4'rn := fun (n : Int) ↦
   Id.run
     (do
-      /-
-      The Fib4 number sequence is a sequence similar to the Fibbonacci sequnece that's defined as follows:
-          fib4(0) -> 0
-          fib4(1) -> 0
-          fib4(2) -> 2
-          fib4(3) -> 0
-          fib4(n) -> fib4(n-1) + fib4(n-2) + fib4(n-3) + fib4(n-4).
-          Please write a function to efficiently compute the n-th element of the fib4 number sequence.  Do not use recursion.
-          >>> fib4(5)
-          4
-          >>> fib4(6)
-          8
-          >>> fib4(7)
-          14
-          
-      -/
-      let _ := Libraries.passta.pyPassRequires (decide (n ≥ (0 : Int)))
-      -- The postcondition states that the function correctly implements the spec.
-      -- We assume `fib4(k)` in a contract refers to the pure mathematical function.
       if h_1 : n == (0 : Int) then 
         return (0 : Int)
         -- Establish that the initial state corresponds to the spec's base cases,

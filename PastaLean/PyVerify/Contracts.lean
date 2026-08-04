@@ -170,6 +170,16 @@ def contractShape? (fnName : String) (referenceFn : Bool) (paramNames : Array St
         seen := seen.push tname
         lets := lets.push s
         clean := clean.push s
+      -- A pure control-flow body that returns on every path (an `if`/`elif: return` chain, e.g. a
+      -- classification helper) lowers to a pure `if _ then _ else _` term, so it can stay on Track P
+      -- instead of falling to the monadic `Id` path (which would make the value `Id α` and break a
+      -- caller that uses it purely). Only when `referenceFn` — the spec then refers to the function by
+      -- name rather than a single returned expression (which these branches don't provide).
+      | some "If" =>
+        if referenceFn && statementDefinitelyReturns s then
+          sawReturn := true
+          clean := clean.push s
+        else return none
       | _ => return none
   if !sawContract || concls.isEmpty || !sawReturn then return none
   let concl0 := if concls.size == 1 then concls[0]!

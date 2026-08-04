@@ -32,10 +32,7 @@ def is_palindrome(text: str):
     >>> is_palindrome('zbcd')
     False
     """
-    Ensures(
-        Result()
-        == all(text[i] == text[len(text) - 1 - i] for i in range(len(text) // 2))
-    )
+    Ensures(Result() == (text == text[::-1]))
 
     return text == text[::-1]
 -/
@@ -48,12 +45,8 @@ attribute [simp] is_palindrome
 
 @[taste_ingr]
 theorem is_palindrome_correct :
-    ∀ (text : String),
-      is_palindrome text =
-        PastaLean.pyAll
-          ((PastaLean.pyRange (PastaLean.pyFloorDiv (PastaLean.pyLen text) (2 : Int))).map fun i =>
-            text⦋i⦌ == text⦋PastaLean.pyLen text -ₚ (1 : Int) -ₚ i⦌) :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+    ∀ (text : String), is_palindrome text = (text = PastaLean.pySlice text none none (some (-(1 : Int)))) := by
+  intros; simp_all (config := { zetaDelta := true }) [taste_ingr]
 
 def is_palindrome'rn := fun (text : String) ↦ text == PastaLean.pySlice text none none (some (-(1 : Int)))
 

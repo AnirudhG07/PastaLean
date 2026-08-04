@@ -45,7 +45,7 @@ def prime_length(string):
 
 namespace PastaBench.humaneval.PrimeLength
 
-private def _prime_length'is_prime := fun (a : Int) ↦
+private noncomputable def _prime_length'is_prime := fun (a : Int) ↦
   !if PastaLean.pyTruthy (decide (a < (2 : Int))) then decide (a < (2 : Int))
     else
       PastaLean.pyStdAny
@@ -62,7 +62,7 @@ theorem _prime_length'is_prime_spec :
             ((¬PastaLean.pyTruthy (_prime_length'is_prime a) = true ∨ a = (2 : Int)) ∨ a %ₚ (2 : Int) ≠ (0 : Int))) ∧
           (¬(((a = (4 : Int) ∨ a = (6 : Int)) ∨ a = (8 : Int)) ∨ a = (9 : Int)) ∨
             ¬PastaLean.pyTruthy (_prime_length'is_prime a) = true) :=
-  by intros; sorry
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
 
 def prime_length := fun (string : PyAny) ↦
   /-

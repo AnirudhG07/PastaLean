@@ -21,11 +21,11 @@ from typing import *
 from contracts import *
 
 def unique_digits(x: List[int]):
-    """Given a list of positive integers x. return a sorted list of all
+    """Given a list of positive integers x. return a sorted list of all 
     elements that hasn't any even digit.
 
     Note: Returned list should be sorted in increasing order.
-
+    
     For example:
     >>> unique_digits([15, 33, 1422, 1])
     [1, 15, 33]
@@ -41,7 +41,7 @@ def unique_digits(x: List[int]):
         for ch in str(num):
             if int(ch) % 2 == 0:
                 return False
-
+        
         Assert(all(int(c) % 2 != 0 for c in str(num)))
         return True
 
@@ -51,7 +51,7 @@ def unique_digits(x: List[int]):
     # The multiset of the result must be exactly the multiset of elements from x
     # for which `judge` returns true. This covers filtering and duplicate preservation.
     Ensures(all(Result().count(v) == (x.count(v) if judge(v) else 0) for v in set(x)))
-
+    
     return sorted(list(filter(judge, x)))
 -/
 
@@ -60,7 +60,7 @@ namespace PastaBench.humaneval.UniqueDigits
 private def _unique_digits'judge := fun (num : Int) ↦
   (do
     for ch in (PastaLean.pyIter (PastaLean.pyStr num))do
-      if h_1 : PastaLean.pyInt ch %ₚ (2 : Int) = (0 : Int) then
+      if h_1 : PastaLean.pyInt ch %ₚ (2 : Int) = (0 : Int) then 
         return Bool.false
       else
         let _ := ()
@@ -110,7 +110,7 @@ private def _unique_digits'judge'rn := fun (num : Int) ↦
     (do
       let _ := Libraries.passta.pyPassRequires (decide (num ≥ (0 : Int)))
       for ch in (PastaLean.pyIter (PastaLean.pyStr num))do
-        if h_1 : PastaLean.pyInt ch %ₚ (2 : Int) == (0 : Int) then
+        if h_1 : PastaLean.pyInt ch %ₚ (2 : Int) == (0 : Int) then 
           return Bool.false
         else
           let _ := ()

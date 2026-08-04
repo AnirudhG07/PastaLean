@@ -27,8 +27,7 @@ def incr_list(l: list[int]) -> list[int]:
     >>> incr_list([5, 3, 5, 2, 3, 3, 9, 0, 123])
     [6, 4, 6, 3, 4, 4, 10, 1, 124]
     """
-    Ensures(len(Result()) == len(l))
-    Ensures(all(Result()[i] == l[i] + 1 for i in range(len(l))))
+    Ensures(Result() == [x + 1 for x in l])
 
     return [x + 1 for x in l]
 -/
@@ -40,14 +39,8 @@ def incr_list := fun (l : List Int) ↦ (PastaLean.pyIter l).map fun x => x +ₚ
 attribute [simp] incr_list
 
 @[taste_ingr]
-theorem incr_list_correct :
-    ∀ (l : List Int),
-      PastaLean.pyLen (incr_list l) = PastaLean.pyLen l ∧
-        PastaLean.pyTruthy
-            (PastaLean.pyAll
-              ((PastaLean.pyRange (PastaLean.pyLen l)).map fun i => (incr_list l)⦋i⦌ == l⦋i⦌ +ₚ (1 : Int))) =
-          true :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+theorem incr_list_correct : ∀ (l : List Int), incr_list l = (PastaLean.pyIter l).map fun x => x +ₚ (1 : Int) := by
+  intros; simp_all (config := { zetaDelta := true }) [taste_ingr]
 
 def incr_list'rn := fun (l : List Int) ↦ (PastaLean.pyIter l).map fun x => x +ₚ (1 : Int)
 

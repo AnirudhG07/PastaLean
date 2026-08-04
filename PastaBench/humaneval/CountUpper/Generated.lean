@@ -29,9 +29,9 @@ def count_upper(s):
     count_upper('dBBE') returns 0
     """
     Ensures(Result() >= 0)
-    # The number of even indices is ceil(len(s)/2), which is (len(s)+1)//2.
-    # The count cannot exceed this.
-    Ensures(Result() <= (len(s) + 1) // 2)
+    # The count of vowels at even indices cannot exceed the number of even indices,
+    # which is exactly len(range(0, len(s), 2)) == (len(s)+1)//2.
+    Ensures(Result() <= len(range(0, len(s), 2)))
 
     cnt = 0
     for i in range(0, len(s), 2):
@@ -69,7 +69,7 @@ def count_upper := fun (s : PyAny) ↦
 @[spec]
 theorem count_upper_spec :
     ⦃⌜True⌝⦄ count_upper s ⦃⇓cnt =>
-      ⌜cnt ≥ (0 : Int) ∧ cnt ≤ PastaLean.pyFloorDiv (PastaLean.pyLen s +ₚ (1 : Int)) (2 : Int)⌝⦄ :=
+      ⌜cnt ≥ (0 : Int) ∧ cnt ≤ PastaLean.pyLen (PastaLean.pyRange (PastaLean.pyLen s) (0 : Int) (2 : Int))⌝⦄ :=
   by
   try
     mvcgen [count_upper, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
@@ -83,7 +83,7 @@ theorem count_upper_spec :
 theorem count_upper_correct :
     ∀ (s : PyAny),
       let cnt := (count_upper s).run;
-      cnt ≥ (0 : Int) ∧ cnt ≤ PastaLean.pyFloorDiv (PastaLean.pyLen s +ₚ (1 : Int)) (2 : Int) :=
+      cnt ≥ (0 : Int) ∧ cnt ≤ PastaLean.pyLen (PastaLean.pyRange (PastaLean.pyLen s) (0 : Int) (2 : Int)) :=
   by
   intro s
   exact count_upper_spec True.intro
@@ -101,8 +101,8 @@ def count_upper'rn := fun (s : PyAny) ↦
           count_upper('dBBE') returns 0
           
       -/
-      -- The number of even indices is ceil(len(s)/2), which is (len(s)+1)//2.
-      -- The count cannot exceed this.
+      -- The count of vowels at even indices cannot exceed the number of even indices,
+      -- which is exactly len(range(0, len(s), 2)) == (len(s)+1)//2.
       let mut cnt : Int := (0 : Int)
       for i in (PastaLean.pyRange (PastaLean.pyLen s) (0 : Int) (2 : Int))do
         let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i))

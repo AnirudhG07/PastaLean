@@ -91,8 +91,8 @@ def prod_signs := fun (arr : PyAny) ↦
     let _ := Libraries.passta.pyPassAssert !(PastaLean.pyContains arr (0 : Int))
     let __unpack_value_1 := ((0 : Int), (1 : Int))
     let __unpack_pair_1 := __unpack_value_1
-    let mut s : PyAny := Prod.fst __unpack_pair_1
-    let mut sgn : PyAny := Prod.snd __unpack_pair_1
+    let mut s : Int := Prod.fst __unpack_pair_1
+    let mut sgn : Int := Prod.snd __unpack_pair_1
     for _pair_1 in (PastaLean.pyIter (PastaLean.pyEnumerate arr))do
       let i := Prod.fst _pair_1
       let x := Prod.snd _pair_1
@@ -190,8 +190,8 @@ def prod_signs'rn := fun (arr : PyAny) ↦
       let _ := Libraries.passta.pyPassAssert !(PastaLean.pyContains arr (0 : Int))
       let __unpack_value_1 := ((0 : Int), (1 : Int))
       let __unpack_pair_1 := __unpack_value_1
-      let mut s : PyAny := Prod.fst __unpack_pair_1
-      let mut sgn : PyAny := Prod.snd __unpack_pair_1
+      let mut s : Int := Prod.fst __unpack_pair_1
+      let mut sgn : Int := Prod.snd __unpack_pair_1
       -- To write index-style invariants that capture the function's core logic, we use
       -- enumerate to track the loop index `i`. This does not change runtime behavior.
       for _pair_1 in (PastaLean.pyIter (PastaLean.pyEnumerate arr))do

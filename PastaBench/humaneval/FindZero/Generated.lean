@@ -111,7 +111,7 @@ def find_zero := fun xs ↦
     let _ := Libraries.passta.pyPassAssert (PastaLean.pyLen dxs == PastaLean.pyLen xs -ₚ (1 : Int))
     let __unpack_value_1 := ((0 : Int), (OfScientific.ofScientific 1 true 5 : Rat))
     let __unpack_pair_1 := __unpack_value_1
-    let mut x : Rat := ↑(Prod.fst __unpack_pair_1)
+    let mut x : Int := Prod.fst __unpack_pair_1
     let mut tol : Rat := ↑(Prod.snd __unpack_pair_1)
     for _ in (PastaLean.pyRange (1000 : Int))do
       let mut fx := _find_zero'func x xs
@@ -178,7 +178,7 @@ def find_zero'rn := fun xs ↦
         let _ := Libraries.passta.pyPassAssert (PastaLean.pyLen dxs == PastaLean.pyLen xs -ₚ (1 : Int))
         let __unpack_value_1 := ((0 : Int), Float.ofScientific 1 true 5)
         let __unpack_pair_1 := __unpack_value_1
-        let mut x : Float := ↑(Prod.fst __unpack_pair_1)
+        let mut x : Int := Prod.fst __unpack_pair_1
         let mut tol : Float := ↑(Prod.snd __unpack_pair_1)
         for _ in (PastaLean.pyRange (1000 : Int))do
           let mut fx := _find_zero'func'rn x xs

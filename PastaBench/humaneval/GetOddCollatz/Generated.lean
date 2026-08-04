@@ -63,12 +63,12 @@ def get_odd_collatz(n):
 
 namespace PastaBench.humaneval.GetOddCollatz
 
-def get_odd_collatz := fun n ↦
+def get_odd_collatz := fun (n : Int) ↦
   (do
     let __unpack_value_1 := ([], n)
     let __unpack_pair_1 := __unpack_value_1
     let mut ans : List Int := Prod.fst __unpack_pair_1
-    let mut x := Prod.snd __unpack_pair_1
+    let mut x : Int := Prod.snd __unpack_pair_1
     while (x ≠ (1 : Int)) do
       let _ := Libraries.passta.pyPassInvariant (decide (x > (0 : Int)))
       let _ :=
@@ -101,7 +101,7 @@ theorem get_odd_collatz_spec :
   all_goals sorry
 
 theorem get_odd_collatz_correct :
-    ∀ n,
+    ∀ (n : Int),
       n > (0 : Int) →
         let result := (get_odd_collatz n).run;
         (PastaLean.pyContains result (1 : Int) ∧
@@ -113,7 +113,7 @@ theorem get_odd_collatz_correct :
   intro n hpre
   exact get_odd_collatz_spec hpre
 
-def get_odd_collatz'rn := fun n ↦
+def get_odd_collatz'rn := fun (n : Int) ↦
   Id.run
     (do
       /-
@@ -138,7 +138,7 @@ def get_odd_collatz'rn := fun n ↦
       let __unpack_value_1 := ([], n)
       let __unpack_pair_1 := __unpack_value_1
       let mut ans : List Int := Prod.fst __unpack_pair_1
-      let mut x := Prod.snd __unpack_pair_1
+      let mut x : Int := Prod.snd __unpack_pair_1
       -- Termination is equivalent to the Collatz conjecture, an open problem.
       -- The contracts below establish partial correctness: if the loop terminates,
       -- the result has the specified properties.

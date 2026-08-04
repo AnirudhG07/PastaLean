@@ -56,7 +56,7 @@ theorem encrypt_correct :
     ∀ (s : String),
       let d := "abcdefghijklmnopqrstuvwxyz"
       PastaLean.pyLen (encrypt s) = PastaLean.pyLen s :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  by sorry
 
 def encrypt'rn := fun (s : String) ↦
   let d := ("abcdefghijklmnopqrstuvwxyz" : String)

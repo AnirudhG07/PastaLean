@@ -47,7 +47,7 @@ def x_or_y(n, x, y):
 
 namespace PastaBench.humaneval.XOrY
 
-private def _x_or_y'is_prime := fun a ↦
+private noncomputable def _x_or_y'is_prime := fun (a : Int) ↦
   !if PastaLean.pyTruthy (decide (a < (2 : Int))) then decide (a < (2 : Int))
     else
       PastaLean.pyStdAny
@@ -58,7 +58,7 @@ attribute [simp] _x_or_y'is_prime
 
 @[taste_ingr]
 theorem _x_or_y'is_prime_spec :
-    ∀ a,
+    ∀ (a : Int),
       a ≥ (0 : Int) →
         _x_or_y'is_prime a =
           (a ≥ (2 : Int) ∧
@@ -67,15 +67,15 @@ theorem _x_or_y'is_prime_spec :
                   ((PastaLean.pyRange (PastaLean.pyInt (a ^ₚ (0.5 : Rat)) +ₚ (1 : Int)) (2 : Int)).map fun d =>
                     a %ₚ d != (0 : Int))) =
               true) :=
-  by intros; sorry
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
 
-def x_or_y := fun n ↦ fun (x : Int) ↦ fun y ↦ if PastaLean.pyTruthy (_x_or_y'is_prime n) then x else y
+def x_or_y := fun (n : Int) ↦ fun (x : Int) ↦ fun y ↦ if PastaLean.pyTruthy (_x_or_y'is_prime n) then x else y
 
 attribute [simp] x_or_y
 
 @[taste_ingr]
 theorem x_or_y_correct :
-    ∀ n,
+    ∀ (n : Int),
       ∀ (x : Int),
         ∀ y,
           n ≥ (0 : Int) →
@@ -93,15 +93,15 @@ theorem x_or_y_correct :
                             n %ₚ d != (0 : Int))) =
                       true) ∧
                 x_or_y n x y = y :=
-  by intros; sorry
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
 
-private def _x_or_y'is_prime'rn := fun a ↦
+private def _x_or_y'is_prime'rn := fun (a : Int) ↦
   !if PastaLean.pyTruthy (decide (a < (2 : Int))) then decide (a < (2 : Int))
     else
       PastaLean.pyStdAny
         ((PastaLean.pyRange (PastaLean.pyInt (a ^ₚ (0.5 : Float)) +ₚ (1 : Int)) (2 : Int)).map fun x =>
           a %ₚ x == (0 : Int))
 
-def x_or_y'rn := fun n ↦ fun (x : Int) ↦ fun y ↦ if PastaLean.pyTruthy (_x_or_y'is_prime'rn n) then x else y
+def x_or_y'rn := fun (n : Int) ↦ fun (x : Int) ↦ fun y ↦ if PastaLean.pyTruthy (_x_or_y'is_prime'rn n) then x else y
 
 end PastaBench.humaneval.XOrY

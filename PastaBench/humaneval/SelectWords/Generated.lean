@@ -49,7 +49,7 @@ def select_words(s, n):
 
 namespace PastaBench.humaneval.SelectWords
 
-def select_words := fun (s : String) ↦ fun n ↦
+def select_words := fun (s : String) ↦ fun (n : Int) ↦
   (do
     let mut ans : List String := []
     for word in (PastaLean.pyIter (PastaLean.pyStringSplit s " "))do
@@ -99,7 +99,7 @@ theorem select_words_spec :
 
 theorem select_words_correct :
     ∀ (s : String),
-      ∀ n,
+      ∀ (n : Int),
         n ≥ (0 : Int) →
           let ans := (select_words s n).run;
           PastaLean.pyAll
@@ -112,7 +112,7 @@ theorem select_words_correct :
   intro s n hpre
   exact select_words_spec hpre
 
-def select_words'rn := fun (s : String) ↦ fun n ↦
+def select_words'rn := fun (s : String) ↦ fun (n : Int) ↦
   Id.run
     (do
       /-

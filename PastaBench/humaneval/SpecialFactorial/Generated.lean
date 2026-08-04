@@ -67,7 +67,7 @@ namespace PastaBench.humaneval.SpecialFactorial
 
 -- In the verification environment, we assume the existence of a logical function
 -- Factorial(k: int) -> int defined as k!
-def special_factorial := fun n ↦
+def special_factorial := fun (n : Int) ↦
   (do
     let __unpack_value_1 := ((1 : Int), (1 : Int))
     let __unpack_pair_1 := __unpack_value_1
@@ -103,7 +103,7 @@ theorem special_factorial_spec : ⦃⌜n ≥ (0 : Int)⌝⦄ special_factorial n
   all_goals sorry
 
 theorem special_factorial_correct :
-    ∀ n,
+    ∀ (n : Int),
       n ≥ (0 : Int) →
         let ans := (special_factorial n).run;
         ans ≥ (1 : Int) :=
@@ -111,7 +111,7 @@ theorem special_factorial_correct :
   intro n hpre
   exact special_factorial_spec hpre
 
-def special_factorial'rn := fun n ↦
+def special_factorial'rn := fun (n : Int) ↦
   Id.run
     (do
       /-

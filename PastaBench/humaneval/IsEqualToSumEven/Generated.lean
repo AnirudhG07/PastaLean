@@ -41,16 +41,16 @@ def is_equal_to_sum_even(n):
 
 namespace PastaBench.humaneval.IsEqualToSumEven
 
-def is_equal_to_sum_even := fun n ↦
+def is_equal_to_sum_even := fun (n : Int) ↦
   if PastaLean.pyTruthy (decide (n ≥ (8 : Int))) then n %ₚ (2 : Int) == (0 : Int) else decide (n ≥ (8 : Int))
 
 attribute [simp] is_equal_to_sum_even
 
 @[taste_ingr]
-theorem is_equal_to_sum_even_correct : ∀ n, is_equal_to_sum_even n = (n ≥ (8 : Int) ∧ n %ₚ (2 : Int) = (0 : Int)) := by
-  intros; simp_all (config := { zetaDelta := true }) [taste_ingr]
+theorem is_equal_to_sum_even_correct :
+    ∀ (n : Int), is_equal_to_sum_even n = (n ≥ (8 : Int) ∧ n %ₚ (2 : Int) = (0 : Int)) := by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]
 
-def is_equal_to_sum_even'rn := fun n ↦
+def is_equal_to_sum_even'rn := fun (n : Int) ↦
   if PastaLean.pyTruthy (decide (n ≥ (8 : Int))) then n %ₚ (2 : Int) == (0 : Int) else decide (n ≥ (8 : Int))
 
 end PastaBench.humaneval.IsEqualToSumEven

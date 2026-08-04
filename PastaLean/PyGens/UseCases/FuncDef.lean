@@ -163,7 +163,20 @@ partial def jsonUsesRealTranscendental (json : Json) : Bool :=
     match json.getObjValAs? String "library_module", json.getObjValAs? String "library_member" with
     | .ok m, .ok mem => (Libraries.pythonLibraryMapReal? m mem).isSome
     | _, _ => false
-  if directMatch then true
+  -- `a ** <float-literal>` (e.g. `x ** 0.5` for a square root) resolves to `PyHPow Int Rat Real`
+  -- (`rpow`), which is `noncomputable` in exact mode. An integer exponent (`x ** 2`) stays computable,
+  -- so only a Constant with a non-zero decimal exponent (0.5, 2.0, …) fires this.
+  let powReal :=
+    json.getObjValAs? String "node_type" == .ok "BinOp"
+    && json.getObjValAs? String "op" == .ok "pow"
+    && (match (json.getObjVal? "right").toOption with
+        | some r =>
+            r.getObjValAs? String "node_type" == .ok "Constant"
+            && (match (r.getObjVal? "value").toOption with
+                | some (.num n) => n.exponent != 0
+                | _ => false)
+        | none => false)
+  if directMatch || powReal then true
   else
     match json with
     | .arr elems => elems.toList.any jsonUsesRealTranscendental
@@ -963,7 +976,14 @@ def funcDefSyntax : (kind : SyntaxNodeKind) → Json →
           let retFloatP := ((json.getObjValAs? Bool "_ret_float" == .ok true) || annFloat) &&
             ((← getNumericMode) != .exact || json.getObjValAs? Bool "_real_fn" != .ok true)
           let valueStx ← withRetFloatContext retFloatP <| functionValueSyntax argInfos cleanBody false retFloatP
-          let finalDef ← applyPrivacy name (← `(command| def $nameIdent := $valueStx))
+          -- A Track-P body that reaches `ℝ` (a transcendental, or `x ** 0.5` via `rpow`) is
+          -- noncomputable in exact mode — same rule as the monadic path below, which this pure path
+          -- also needs (e.g. an unannotated `is_prime` helper that computes `int(a ** 0.5)`).
+          let ncP ← (pure (json.getObjValAs? Bool "_real_fn" == .ok true)) <||>
+            bodyNeedsNoncomputable cleanBody
+          let defCmdP ← if ncP then `(command| noncomputable def $nameIdent := $valueStx)
+            else `(command| def $nameIdent := $valueStx)
+          let finalDef ← applyPrivacy name defCmdP
           if (← getNumericMode) == .approx then
             return ⟨mkNullNode #[finalDef.raw]⟩
           -- The one top-level readable correctness theorem is `_correct`; a helper (`_`-prefixed,

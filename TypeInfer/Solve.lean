@@ -63,7 +63,16 @@ def applyMutation (sigs : Sigs) (env : Env) (value : Json) : Env :=
             (Libraries.bareBehaviour? ((func.getObjValAs? String "id").toOption.getD "")).map (·, args)
         | some "Attribute" => match getField func "value" with
             | some recv =>
-                (Libraries.methodBehaviour? ((func.getObjValAs? String "attr").toOption.getD "")).map (·, recv :: args)
+                -- A user class instance's method (`node.insert(...)`) must NOT be read as a same-named
+                -- container method (`list.insert`): that would re-teach the receiver as a list and
+                -- corrupt its `.cls C` type. Skip library behaviours when the receiver is a class. Only
+                -- a bare-name receiver is checked (via `env`, cheap) — never a full `typeOfExpr` on an
+                -- arbitrary receiver expression, which can recurse badly on nested calls/subscripts.
+                let recvIsClass := match (nameId? recv).bind env.get? with
+                  | some (.cls _) | some (.opt (.cls _)) => true
+                  | _ => false
+                if recvIsClass then none
+                else (Libraries.methodBehaviour? ((func.getObjValAs? String "attr").toOption.getD "")).map (·, recv :: args)
             | none => none
         | _ => none
       match behArgs?.bind (fun (b, ea) => b.teaches?.map (·, ea)) with
@@ -371,8 +380,22 @@ int-only operator over it (`p << 1`, `p >> 1`, `~p` — bitwise `& | ^` are int 
 a type-fixing builtin arg (`ord(p)` → str, `chr(p)` → int), or a comparison against a literal
 (`p == []` → list, `p == ""` → str, `p in "abc"` → str element). Genuinely ambiguous uses (`p[i]`,
 `for x in p`, `len(p)`, `p + q`) stay `unknown` — the fixpoint fills them in. -/
-private partial def usageType (name : String) (json : Json) : PyType :=
+private partial def usageType (fuel : Nat) (name : String) (json : Json) : PyType :=
   let isName (j : Option Json) : Bool := j.bind nameId? == some name
+  -- Element type of an iterable whose loop variable `c` is used as `ctx`: `ord(c)` ⇒ the iterable is
+  -- a `str` (char iteration); any other concrete usage ⇒ `list[<c's type>]`. `fuel` bounds how deep
+  -- loop-variable inference may nest — each level re-scans a body via `usageType`, so unbounded
+  -- nesting (comprehension inside comprehension in a big contract) blows up exponentially.
+  let loopElemType (c : String) (ctx : Json) : PyType :=
+    if fuel == 0 then .unknown
+    else if containsOrdOf c ctx then .str
+    else match usageType (fuel - 1) c ctx with
+      | .unknown => .unknown
+      -- a `str`-typed loop var is ambiguous: iterating a STRING yields 1-char strings, so `str` usage
+      -- could mean `p : str` (char iteration) OR `p : list[str]`. Leave it to other signals rather
+      -- than force `list[str]` (which mis-typed a plain-string param iterated char by char).
+      | .str => .unknown
+      | t => .list t
   let here : PyType :=
     match nodeTypeOf json with
     | some "Call" =>
@@ -424,16 +447,34 @@ private partial def usageType (name : String) (json : Json) : PyType :=
     | some "UnaryOp" =>
         if (json.getObjValAs? String "op").toOption == some "invert" && isName (getField json "operand")
         then .int else .unknown
-    -- `for c in p` where the loop variable `c` is fed to `ord(c)` pins `p` to `str`: `ord` requires a
-    -- ONE-character string, so `p` is iterated character by character (the common unannotated-word
-    -- pattern). Only the `ord` signal fires — a general str usage (`c.split()`) would instead mean
-    -- `p : list[str]`, and a nested `for word in words: … ord(c)` must not mis-tag `words`.
+    -- `for c in p`: infer `p`'s element from how the loop variable `c` is used in the body. `ord(c)`
+    -- means `p` is a `str` iterated CHARACTER by character (the unannotated-word pattern); any other
+    -- concrete usage (`c > 0`, `c.split()`) means `p : list[<that element>]`. A `str`-forcing usage is
+    -- ambiguous (str-of-chars vs list[str]) so only `ord` decides `str`; the general lift covers
+    -- `int`/`float`/container elements. Conflicting evidence joins to `unknown` (→ PyAny), so a dict
+    -- param iterated for its keys is not mis-tagged when a `.keys()`/`d[k]=v` signal is also present.
     | some "For" =>
         match getField json "iter", (getField json "target").bind nameId? with
         | some it, some c =>
-            if isName (some it) && containsOrdOf c (Json.arr ((json.getObjValAs? (Array Json) "body").toOption.getD #[]))
-            then .str else .unknown
+            if isName (some it)
+            then loopElemType c (Json.arr ((json.getObjValAs? (Array Json) "body").toOption.getD #[]))
+            else .unknown
         | _, _ => .unknown
+    -- A comprehension `[<elt> for c in p if <ifs>]` (or `all(<elt> for c in p)` in a spec): each
+    -- generator iterating `p` teaches `p`'s element from how its target `c` is used in `elt`/`ifs` —
+    -- the comprehension analogue of the `For` rule. This is what recovers `lst : list[int]` from an
+    -- injected `Requires(all(x > 0 for x in lst))`, keeping the param concrete instead of `PyAny`.
+    | some "ListComp" | some "SetComp" | some "GeneratorExp" =>
+        let elt := (getField json "elt").toArray
+        let gens := (json.getObjValAs? (Array Json) "generators").toOption.getD #[]
+        PyType.joinAll (gens.toList.map (fun g =>
+          match getField g "iter", (getField g "target").bind nameId? with
+          | some it, some c =>
+              if nameId? it == some name then
+                let ifs := (g.getObjValAs? (Array Json) "ifs").toOption.getD #[]
+                loopElemType c (Json.arr (elt ++ ifs))
+              else .unknown
+          | _, _ => .unknown))
     -- `p <cmp> <literal>` (or the reverse) pins `p` to the literal's type — the only type a concrete
     -- value can be compared at. `in`/`notin` mean `p` is an ELEMENT of the literal container → its
     -- element type. `is`/`isnot` are identity (usually `x is None` ⇒ nullable, NOT `none`), so they
@@ -464,8 +505,8 @@ private partial def usageType (name : String) (json : Json) : PyType :=
         fromLeft.join fromRight |>.join (fromLeftElem.join fromRightElem)
     | _ => .unknown
   let sub := match json with
-    | .arr xs => PyType.joinAll (xs.toList.map (usageType name))
-    | .obj fs => PyType.joinAll (fs.toList.map (fun (_, v) => usageType name v))
+    | .arr xs => PyType.joinAll (xs.toList.map (usageType fuel name))
+    | .obj fs => PyType.joinAll (fs.toList.map (fun (_, v) => usageType fuel name v))
     | _ => .unknown
   here.join sub
 
@@ -476,7 +517,8 @@ private def paramUsageSeed (fn : Json) : Env := Id.run do
   let body := fn.getObjValAs? (Array Json) "body" |>.toOption.getD #[]
   let mut env : Env := {}
   for name in paramNames fn do
-    let t := usageType name (Json.arr body)
+    -- fuel 1: loop-variable inference may fire at the top level but not nest (see `usageType`).
+    let t := usageType 1 name (Json.arr body)
     if t != .unknown then env := env.insert name t
   return env
 

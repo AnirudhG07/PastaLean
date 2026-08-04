@@ -69,9 +69,9 @@ def do_algebra(operator, operand):
 
 namespace PastaBench.humaneval.DoAlgebra
 
-def do_algebra := fun (operator : PyAny) ↦ fun (operand : PyAny) ↦
+def do_algebra := fun (operator : List String) ↦ fun (operand : List Int) ↦
   (do
-    let mut exp : PyAny := ""
+    let mut exp : String := ""
     for i in (PastaLean.pyRange (PastaLean.pyLen operator))do
       -- Bounded-index invariant to prove memory safety of accesses inside the loop.
       let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i) && decide (i ≤ PastaLean.pyLen operator))
@@ -91,7 +91,7 @@ theorem do_algebra_spec :
       do_algebra operator operand ⦃⇓_ => ⌜True⌝⦄ :=
   by apply Std.Do.Triple.of_entails_wp; intro _; exact True.intro
 
-def do_algebra'rn := fun (operator : PyAny) ↦ fun (operand : PyAny) ↦
+def do_algebra'rn := fun (operator : List String) ↦ fun (operand : List Int) ↦
   Id.run
     (do
       /-
@@ -136,7 +136,7 @@ def do_algebra'rn := fun (operator : PyAny) ↦ fun (operand : PyAny) ↦
           (PastaLean.pyAll
             ((PastaLean.pyRange (PastaLean.pyLen operator)).map fun i =>
               operator⦋i⦌ != "//" || operand⦋i +ₚ (1 : Int)⦌ != (0 : Int)))
-      let mut exp : PyAny := ""
+      let mut exp : String := ""
       for i in (PastaLean.pyRange (PastaLean.pyLen operator))do
         -- Bounded-index invariant to prove memory safety of accesses inside the loop.
         let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i) && decide (i ≤ PastaLean.pyLen operator))

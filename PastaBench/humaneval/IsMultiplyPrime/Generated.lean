@@ -69,7 +69,7 @@ def is_multiply_prime(a):
 
 namespace PastaBench.humaneval.IsMultiplyPrime
 
-def is_multiply_prime := fun a ↦
+def is_multiply_prime := fun (a : Int) ↦
   (do
     if h_1 : a ≤ (1 : Int) then 
       return Bool.false
@@ -92,7 +92,7 @@ def is_multiply_prime := fun a ↦
     let __unpack_value_1 := ((0 : Int), a)
     let __unpack_pair_1 := __unpack_value_1
     let mut cnt : Int := Prod.fst __unpack_pair_1
-    let mut tmp := Prod.snd __unpack_pair_1
+    let mut tmp : Int := Prod.snd __unpack_pair_1
     for i in (PastaLean.pyRange (a +ₚ (1 : Int)) (2 : Int))do
       let _ := Libraries.passta.pyPassInvariant (decide ((2 : Int) ≤ i) && decide (i ≤ a +ₚ (1 : Int)))
       let _ := Libraries.passta.pyPassInvariant (decide (cnt ≥ (0 : Int)))
@@ -111,7 +111,7 @@ def is_multiply_prime := fun a ↦
 theorem is_multiply_prime_spec : ⦃⌜(0 : Int) ≤ a ∧ a < (100 : Int)⌝⦄ is_multiply_prime a ⦃⇓_ => ⌜True⌝⦄ := by
   apply Std.Do.Triple.of_entails_wp; intro _; exact True.intro
 
-def is_multiply_prime'rn := fun a ↦
+def is_multiply_prime'rn := fun (a : Int) ↦
   Id.run
     (do
       /-
@@ -145,7 +145,7 @@ def is_multiply_prime'rn := fun a ↦
       let __unpack_value_1 := ((0 : Int), a)
       let __unpack_pair_1 := __unpack_value_1
       let mut cnt : Int := Prod.fst __unpack_pair_1
-      let mut tmp := Prod.snd __unpack_pair_1
+      let mut tmp : Int := Prod.snd __unpack_pair_1
       for i in (PastaLean.pyRange (a +ₚ (1 : Int)) (2 : Int))do
         let _ := Libraries.passta.pyPassInvariant (decide ((2 : Int) ≤ i) && decide (i ≤ a +ₚ (1 : Int)))
         let _ := Libraries.passta.pyPassInvariant (decide (cnt ≥ (0 : Int)))

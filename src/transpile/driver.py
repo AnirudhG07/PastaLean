@@ -1706,9 +1706,17 @@ def translate_to_lean(source_code, target="term", filepath = None, imports_add =
                     "set_option mvcgen.warning false",
                     "",
                     f"set_option maxHeartbeats {heartbeats}",
+                    "",
+                    # User code lives in a dedicated namespace so a `def compare`/`def unique` resolves
+                    # to the user's own definition (namespace precedence) instead of clashing with the
+                    # Lean/Mathlib global of the same name — replacing the old `_root_`-qualification.
+                    # `Root` is the placeholder for a single file; multi-file conversion uses
+                    # `PastaLean.User.<Dir>.<File>`. PastaBench renames this placeholder to its
+                    # per-problem namespace (no nesting).
+                    "namespace PastaLean.User.Root",
                     "\n",
                 ]
-                full_code = "\n".join(preamble_lines) + body_code
+                full_code = "\n".join(preamble_lines) + body_code + "\n\nend PastaLean.User.Root\n"
             else:
                 full_code = body_code
             # Lay an `mvcgen … invariants` spec's `with` closer on its own line (cosmetic), for both

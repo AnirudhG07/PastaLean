@@ -56,9 +56,9 @@ def add(lst):
 
 namespace PastaBench.humaneval.Add85
 
-def add := fun (lst : PyAny) ↦
+def add := fun (lst : List Int) ↦
   (do
-    let mut s : PyAny := (0 : Int)
+    let mut s : Int := (0 : Int)
     for i in (PastaLean.pyRange (PastaLean.pyLen lst) (1 : Int) (2 : Int))do
       -- The running sum `s` is always even because we only add even numbers to it.
       -- This invariant is the key to proving the postcondition.
@@ -84,11 +84,11 @@ theorem add_spec : ⦃⌜PastaLean.pyLen lst > (0 : Int)⌝⦄ add lst ⦃⇓s =
     · ⇓⟨cur, s⟩ =>
       ⌜let i := (cur.prefix.length : Int);
         ((s %ₚ (2 : Int) = (0 : Int) ∧ (1 : Int) ≤ i) ∧ i < PastaLean.pyLen lst) ∧ i %ₚ (2 : Int) = (1 : Int)⌝
-  intros; sorry; sorry; pyany_cases <;> grind +locals
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry; sorry; sorry; pyany_cases <;> grind +locals
   all_goals sorry
 
 theorem add_correct :
-    ∀ (lst : PyAny),
+    ∀ (lst : List Int),
       PastaLean.pyLen lst > (0 : Int) →
         let s := (add lst).run;
         s %ₚ (2 : Int) = (0 : Int) :=
@@ -96,7 +96,7 @@ theorem add_correct :
   intro lst hpre
   exact add_spec hpre
 
-def add'rn := fun (lst : PyAny) ↦
+def add'rn := fun (lst : List Int) ↦
   Id.run
     (do
       /-
@@ -111,7 +111,7 @@ def add'rn := fun (lst : PyAny) ↦
       -- The code would work for an empty list, but we follow the stated intent.
       let _ := Libraries.passta.pyPassRequires (decide (PastaLean.pyLen lst > (0 : Int)))
       -- The function sums even numbers, so the result must also be even.
-      let mut s : PyAny := (0 : Int)
+      let mut s : Int := (0 : Int)
       -- The loop iterates through odd indices i = 1, 3, 5, ... up to len(lst).
       for i in (PastaLean.pyRange (PastaLean.pyLen lst) (1 : Int) (2 : Int))do
         -- The running sum `s` is always even because we only add even numbers to it.

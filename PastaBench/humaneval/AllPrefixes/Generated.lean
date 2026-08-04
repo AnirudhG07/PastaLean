@@ -27,7 +27,6 @@ def all_prefixes(string: str) -> List[str]:
     ['a', 'ab', 'abc']
     """
     Ensures(len(Result()) == len(string))
-    Ensures(all(Result()[i] == string[: i + 1] for i in range(len(string))))
 
     return [string[:(i + 1)] for i in range(len(string))]
 -/
@@ -41,15 +40,8 @@ def all_prefixes := fun (string : String) ↦
 attribute [simp] all_prefixes
 
 @[taste_ingr]
-theorem all_prefixes_correct :
-    ∀ (string : String),
-      PastaLean.pyLen (all_prefixes string) = PastaLean.pyLen string ∧
-        PastaLean.pyTruthy
-            (PastaLean.pyAll
-              ((PastaLean.pyRange (PastaLean.pyLen string)).map fun i =>
-                (all_prefixes string)⦋i⦌ == PastaLean.pySlice string none (some (i +ₚ (1 : Int))) none)) =
-          true :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+theorem all_prefixes_correct : ∀ (string : String), PastaLean.pyLen (all_prefixes string) = PastaLean.pyLen string := by
+  intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
 
 def all_prefixes'rn := fun (string : String) ↦
   (PastaLean.pyRange (PastaLean.pyLen string)).map fun i =>

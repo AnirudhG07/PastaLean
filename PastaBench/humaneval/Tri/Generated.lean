@@ -86,7 +86,7 @@ def tri(n):
 
 namespace PastaBench.humaneval.Tri
 
-def tri := fun n ↦
+def tri := fun (n : Int) ↦
   (do
     if h_1 : n = (0 : Int) then 
       let __py_ret_1 := [(1 : Int)]
@@ -159,7 +159,7 @@ theorem tri_spec :
   all_goals sorry
 
 theorem tri_correct :
-    ∀ n,
+    ∀ (n : Int),
       n ≥ (0 : Int) →
         let ans := (tri n).run;
         ((PastaLean.pyLen ans = n +ₚ (1 : Int) ∧ ans⦋(0 : Int)⦌ = (1 : Int)) ∧
@@ -177,7 +177,7 @@ theorem tri_correct :
   intro n hpre
   exact tri_spec hpre
 
-def tri'rn := fun n ↦
+def tri'rn := fun (n : Int) ↦
   (Id.run
       (do
         /-

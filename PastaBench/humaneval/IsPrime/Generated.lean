@@ -74,7 +74,7 @@ def is_prime(n):
 
 namespace PastaBench.humaneval.IsPrime
 
-def is_prime := fun n ↦
+def is_prime := fun (n : Int) ↦
   (do
     if h_1 : n ≤ (1 : Int) then 
       return Bool.false
@@ -130,7 +130,7 @@ theorem is_prime_spec :
   all_goals sorry
 
 theorem is_prime_correct :
-    ∀ n,
+    ∀ (n : Int),
       let result := (is_prime n).run;
       result =
         (n > (1 : Int) ∧
@@ -140,7 +140,7 @@ theorem is_prime_correct :
   intro n
   exact is_prime_spec True.intro
 
-def is_prime'rn := fun n ↦
+def is_prime'rn := fun (n : Int) ↦
   Id.run
     (do
       /-

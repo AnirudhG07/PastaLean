@@ -30,13 +30,21 @@ path (e.g. `accumulate` with no `initial`, handled via the member map). -/
 def lowerItertoolsCallTerm? (funcJson : Json) (argsArray : Array Json) (argsCodes : Array (TSyntax `term))
     (keyWordsMap : PyKeywordArgs) : PygenM (Option (TSyntax `term)) := do
   let some member := itertoolsMember? funcJson | return none
+  -- A single `*iterable` spread (`chain(*g)`, `product(*t)`) means the ONE argument already IS the
+  -- list of iterables, so pass it straight to `pyX` (like `chain.from_iterable`); wrapping it in a
+  -- list would nest one level too deep. Fixed-arity `chain(a, b)` still wraps its args in a list.
+  let singleStarred := argsArray.size == 1 && jsonNodeType? argsArray[0]! == some "Starred"
   match member with
   -- Variadic: `chain(a, b, …)` / `product(a, b, …)` → `pyX [a, b, …]`.
   | "chain" =>
       let ident := mkIdent ``Libraries.itertools.pyChain
+      if singleStarred then
+        return some (← buildIOPureApplicationFromArgs argsArray argsCodes fun r => `($ident $(r[0]!)))
       return some (← buildIOPureApplicationFromArgs argsArray argsCodes fun r => `($ident [$r,*]))
   | "product" =>
       let ident := mkIdent ``Libraries.itertools.pyProduct
+      if singleStarred then
+        return some (← buildIOPureApplicationFromArgs argsArray argsCodes fun r => `($ident $(r[0]!)))
       return some (← buildIOPureApplicationFromArgs argsArray argsCodes fun r => `($ident [$r,*]))
   -- `chain.from_iterable(xss)`: `xss` is already the list of iterables.
   | "from_iterable" =>

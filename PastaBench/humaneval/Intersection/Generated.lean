@@ -69,14 +69,14 @@ def intersection(interval1, interval2):
 
 namespace PastaBench.humaneval.Intersection
 
-private def _intersection'is_prime := fun (a : PyAny) ↦
+private noncomputable def _intersection'is_prime := fun (a : PyAny) ↦
   !if PastaLean.pyTruthy (decide (a < (2 : Int))) then decide (a < (2 : Int))
     else
       PastaLean.pyStdAny
         ((PastaLean.pyRange (PastaLean.pyInt (a ^ₚ (0.5 : Rat)) +ₚ (1 : Int)) (2 : Int)).map fun x =>
           a %ₚ x == (0 : Int))
 
-attribute [simp, taste_ingr] _intersection'is_prime
+attribute [simp] _intersection'is_prime
 
 def intersection := fun (interval1 : PyAny) ↦ fun (interval2 : PyAny) ↦
   (do
@@ -110,7 +110,7 @@ theorem intersection_spec :
                 PastaLean.pyMax [interval1⦋(0 : Int)⦌, interval2⦋(0 : Int)⦌])⌝⦄ :=
   by
   mvcgen [intersection, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  all_goals sorry
+  intros; sorry
   all_goals sorry
 
 theorem intersection_correct :

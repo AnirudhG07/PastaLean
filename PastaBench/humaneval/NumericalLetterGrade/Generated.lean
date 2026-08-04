@@ -112,65 +112,53 @@ def numerical_letter_grade(grades: list[float]) -> list[str]:
 namespace PastaBench.humaneval.NumericalLetterGrade
 
 private def _numerical_letter_grade'to_letter_grade := fun (score : Rat) ↦
-  (do
-    if h_1 : score = (4.0 : Rat) then 
-      return "A+"
+  if score = (4.0 : Rat) then "A+"
+  else
+    if score > (3.7 : Rat) then "A"
     else
-      if h_2 : score > (3.7 : Rat) then 
-        return "A"
+      if score > (3.3 : Rat) then "A-"
       else
-        if h_3 : score > (3.3 : Rat) then 
-          return "A-"
+        if score > (3.0 : Rat) then "B+"
         else
-          if h_4 : score > (3.0 : Rat) then 
-            return "B+"
+          if score > (2.7 : Rat) then "B"
           else
-            if h_5 : score > (2.7 : Rat) then 
-              return "B"
+            if score > (2.3 : Rat) then "B-"
             else
-              if h_6 : score > (2.3 : Rat) then 
-                return "B-"
+              if score > (2.0 : Rat) then "C+"
               else
-                if h_7 : score > (2.0 : Rat) then 
-                  return "C+"
+                if score > (1.7 : Rat) then "C"
                 else
-                  if h_8 : score > (1.7 : Rat) then 
-                    return "C"
+                  if score > (1.3 : Rat) then "C-"
                   else
-                    if h_9 : score > (1.3 : Rat) then 
-                      return "C-"
-                    else
-                      if h_10 : score > (1.0 : Rat) then 
-                        return "D+"
-                      else
-                        if h_11 : score > (0.7 : Rat) then 
-                          return "D"
-                        else
-                          if h_12 : score > (0.0 : Rat) then 
-                            return "D-"
-                          else
-                            return "E" :
-    Id _)
+                    if score > (1.0 : Rat) then "D+"
+                    else if score > (0.7 : Rat) then "D" else if score > (0.0 : Rat) then "D-" else "E"
 
-@[spec]
+attribute [simp] _numerical_letter_grade'to_letter_grade
+
+@[taste_ingr]
 theorem _numerical_letter_grade'to_letter_grade_spec :
-    ⦃⌜(0.0 : Rat) ≤ score ∧ score ≤ (4.0 : Rat)⌝⦄ _numerical_letter_grade'to_letter_grade score ⦃⇓result =>
-      ⌜(((((((((((score = (4.0 : Rat) ∧ result = "A+" ∨ ((3.7 : Rat) < score ∧ score < (4.0 : Rat)) ∧ result = "A") ∨
-                              ((3.3 : Rat) < score ∧ score ≤ (3.7 : Rat)) ∧ result = "A-") ∨
-                            ((3.0 : Rat) < score ∧ score ≤ (3.3 : Rat)) ∧ result = "B+") ∨
-                          ((2.7 : Rat) < score ∧ score ≤ (3.0 : Rat)) ∧ result = "B") ∨
-                        ((2.3 : Rat) < score ∧ score ≤ (2.7 : Rat)) ∧ result = "B-") ∨
-                      ((2.0 : Rat) < score ∧ score ≤ (2.3 : Rat)) ∧ result = "C+") ∨
-                    ((1.7 : Rat) < score ∧ score ≤ (2.0 : Rat)) ∧ result = "C") ∨
-                  ((1.3 : Rat) < score ∧ score ≤ (1.7 : Rat)) ∧ result = "C-") ∨
-                ((1.0 : Rat) < score ∧ score ≤ (1.3 : Rat)) ∧ result = "D+") ∨
-              ((0.7 : Rat) < score ∧ score ≤ (1.0 : Rat)) ∧ result = "D") ∨
-            ((0.0 : Rat) < score ∧ score ≤ (0.7 : Rat)) ∧ result = "D-") ∨
-          score = (0.0 : Rat) ∧ result = "E"⌝⦄ :=
-  by
-  mvcgen [_numerical_letter_grade'to_letter_grade, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals; pyany_cases <;> grind +locals; pyany_cases <;> grind +locals; pyany_cases <;> grind +locals; pyany_cases <;> grind +locals; pyany_cases <;> grind +locals; pyany_cases <;> grind +locals; pyany_cases <;> grind +locals; pyany_cases <;> grind +locals; pyany_cases <;> grind +locals; pyany_cases <;> grind +locals; pyany_cases <;> grind +locals
-  all_goals sorry
+    ∀ (score : Rat),
+      (0.0 : Rat) ≤ score ∧ score ≤ (4.0 : Rat) →
+        (((((((((((score = (4.0 : Rat) ∧ _numerical_letter_grade'to_letter_grade score = "A+" ∨
+                                ((3.7 : Rat) < score ∧ score < (4.0 : Rat)) ∧
+                                  _numerical_letter_grade'to_letter_grade score = "A") ∨
+                              ((3.3 : Rat) < score ∧ score ≤ (3.7 : Rat)) ∧
+                                _numerical_letter_grade'to_letter_grade score = "A-") ∨
+                            ((3.0 : Rat) < score ∧ score ≤ (3.3 : Rat)) ∧
+                              _numerical_letter_grade'to_letter_grade score = "B+") ∨
+                          ((2.7 : Rat) < score ∧ score ≤ (3.0 : Rat)) ∧
+                            _numerical_letter_grade'to_letter_grade score = "B") ∨
+                        ((2.3 : Rat) < score ∧ score ≤ (2.7 : Rat)) ∧
+                          _numerical_letter_grade'to_letter_grade score = "B-") ∨
+                      ((2.0 : Rat) < score ∧ score ≤ (2.3 : Rat)) ∧
+                        _numerical_letter_grade'to_letter_grade score = "C+") ∨
+                    ((1.7 : Rat) < score ∧ score ≤ (2.0 : Rat)) ∧ _numerical_letter_grade'to_letter_grade score = "C") ∨
+                  ((1.3 : Rat) < score ∧ score ≤ (1.7 : Rat)) ∧ _numerical_letter_grade'to_letter_grade score = "C-") ∨
+                ((1.0 : Rat) < score ∧ score ≤ (1.3 : Rat)) ∧ _numerical_letter_grade'to_letter_grade score = "D+") ∨
+              ((0.7 : Rat) < score ∧ score ≤ (1.0 : Rat)) ∧ _numerical_letter_grade'to_letter_grade score = "D") ∨
+            ((0.0 : Rat) < score ∧ score ≤ (0.7 : Rat)) ∧ _numerical_letter_grade'to_letter_grade score = "D-") ∨
+          score = (0.0 : Rat) ∧ _numerical_letter_grade'to_letter_grade score = "E" :=
+  by intros; sorry
 
 def numerical_letter_grade := fun (grades : List Rat) ↦
   (PastaLean.pyIter grades).map fun x => _numerical_letter_grade'to_letter_grade x
@@ -213,46 +201,26 @@ theorem numerical_letter_grade_correct :
   by intros; sorry
 
 private def _numerical_letter_grade'to_letter_grade'rn := fun (score : Float) ↦
-  Id.run
-    (do
-      let _ := Libraries.passta.pyPassRequires (decide ((0.0 : Float) ≤ score) && decide (score ≤ (4.0 : Float)))
-      if h_1 : score == (4.0 : Float) then 
-        return "A+"
+  if score == (4.0 : Float) then "A+"
+  else
+    if score > (3.7 : Float) then "A"
+    else
+      if score > (3.3 : Float) then "A-"
       else
-        if h_2 : score > (3.7 : Float) then 
-          return "A"
+        if score > (3.0 : Float) then "B+"
         else
-          if h_3 : score > (3.3 : Float) then 
-            return "A-"
+          if score > (2.7 : Float) then "B"
           else
-            if h_4 : score > (3.0 : Float) then 
-              return "B+"
+            if score > (2.3 : Float) then "B-"
             else
-              if h_5 : score > (2.7 : Float) then 
-                return "B"
+              if score > (2.0 : Float) then "C+"
               else
-                if h_6 : score > (2.3 : Float) then 
-                  return "B-"
+                if score > (1.7 : Float) then "C"
                 else
-                  if h_7 : score > (2.0 : Float) then 
-                    return "C+"
+                  if score > (1.3 : Float) then "C-"
                   else
-                    if h_8 : score > (1.7 : Float) then 
-                      return "C"
-                    else
-                      if h_9 : score > (1.3 : Float) then 
-                        return "C-"
-                      else
-                        if h_10 : score > (1.0 : Float) then 
-                          return "D+"
-                        else
-                          if h_11 : score > (0.7 : Float) then 
-                            return "D"
-                          else
-                            if h_12 : score > (0.0 : Float) then 
-                              return "D-"
-                            else
-                              return "E")
+                    if score > (1.0 : Float) then "D+"
+                    else if score > (0.7 : Float) then "D" else if score > (0.0 : Float) then "D-" else "E"
 
 def numerical_letter_grade'rn := fun (grades : List Float) ↦
   (PastaLean.pyIter grades).map fun x => _numerical_letter_grade'to_letter_grade'rn x

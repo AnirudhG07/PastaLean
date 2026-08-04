@@ -57,7 +57,7 @@ def circular_shift(x, shift):
 
 namespace PastaBench.humaneval.CircularShift
 
-def circular_shift := fun x ↦ fun shift ↦
+def circular_shift := fun (x : Int) ↦ fun (shift : Int) ↦
   (do
     let mut shift := shift
     let mut s : String := PastaLean.pyStr x
@@ -96,8 +96,8 @@ theorem circular_shift_spec :
   all_goals sorry
 
 theorem circular_shift_correct :
-    ∀ x,
-      ∀ shift,
+    ∀ (x : Int),
+      ∀ (shift : Int),
         x ≥ (0 : Int) ∧ shift ≥ (0 : Int) →
           let result := (circular_shift x shift).run;
           PastaLean.pyLen result = PastaLean.pyLen (PastaLean.pyStr x) :=
@@ -105,7 +105,7 @@ theorem circular_shift_correct :
   intro x shift hpre
   exact circular_shift_spec hpre
 
-def circular_shift'rn := fun x ↦ fun shift ↦
+def circular_shift'rn := fun (x : Int) ↦ fun (shift : Int) ↦
   Id.run
     (do
       let mut shift := shift

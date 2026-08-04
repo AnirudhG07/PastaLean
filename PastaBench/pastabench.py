@@ -251,6 +251,14 @@ def namespaced(lean_src: str, module: str, prefix: str = LEAN_NAMESPACE,
         banner += ["/- Python source converted to produce the Lean below "
                    "(the exact input to PastaLean):", ""] \
             + safe.splitlines() + ["-/", ""]
+    # The core transpiler wraps user code in a placeholder `namespace PastaLean.User.Root`. Rename it
+    # in place to this module's namespace (flat, no nesting) so 300+ problems don't clash and the
+    # `Proofs.lean` references still resolve to `<prefix>.<module>.<name>`.
+    if any(l.strip() == "namespace PastaLean.User.Root" for l in body):
+        body = [f"namespace {ns}" if l.strip() == "namespace PastaLean.User.Root"
+                else f"end {ns}" if l.strip() == "end PastaLean.User.Root"
+                else l for l in body]
+        return "\n".join(header + banner + body + [""])
     banner += [f"namespace {ns}", ""]
     return "\n".join(header + banner + body + ["", f"end {ns}", ""])
 

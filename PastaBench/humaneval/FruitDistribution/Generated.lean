@@ -33,7 +33,7 @@ def fruit_distribution(s: str, n: int) -> int:
     fruit_distribution("100 apples and 1 oranges",120) -> 120 - 100 - 1 = 19
     """
     Requires(n >= 0)
-    Ensures(Result() >= 0)
+    Ensures(Result() == n - int(s.split(" ")[0]) - int(s.split(" ")[3]))
 
     words = s.split(" ")
     c1, c2 = int(words[0]), int(words[3])
@@ -70,10 +70,12 @@ def fruit_distribution := fun (s : String) ↦ fun (n : Int) ↦
 
 @[spec]
 theorem fruit_distribution_spec :
-    ⦃⌜(n ≥ (0 : Int) ∧ c1 ≥ (0 : Int)) ∧ c2 ≥ (0 : Int)⌝⦄ fruit_distribution s n ⦃⇓result => ⌜result ≥ (0 : Int)⌝⦄ :=
+    ⦃⌜(n ≥ (0 : Int) ∧ c1 ≥ (0 : Int)) ∧ c2 ≥ (0 : Int)⌝⦄ fruit_distribution s n ⦃⇓result =>
+      ⌜result =
+          n -ₚ PastaLean.pyInt (PastaLean.pyStringSplit s " ")⦋(0 : Int)⦌ -ₚ
+            PastaLean.pyInt (PastaLean.pyStringSplit s " ")⦋(3 : Int)⦌⌝⦄ :=
   by
   mvcgen [fruit_distribution, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
 theorem fruit_distribution_correct :
@@ -81,7 +83,9 @@ theorem fruit_distribution_correct :
       ∀ (n : Int),
         (n ≥ (0 : Int) ∧ c1 ≥ (0 : Int)) ∧ c2 ≥ (0 : Int) →
           let result := (fruit_distribution s n).run;
-          result ≥ (0 : Int) :=
+          result =
+            n -ₚ PastaLean.pyInt (PastaLean.pyStringSplit s " ")⦋(0 : Int)⦌ -ₚ
+              PastaLean.pyInt (PastaLean.pyStringSplit s " ")⦋(3 : Int)⦌ :=
   by
   intro s n hpre
   exact fruit_distribution_spec hpre

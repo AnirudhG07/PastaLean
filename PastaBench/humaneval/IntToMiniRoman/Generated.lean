@@ -55,7 +55,7 @@ def int_to_mini_roman(number):
 
 namespace PastaBench.humaneval.IntToMiniRoman
 
-def int_to_mini_roman := fun number ↦
+def int_to_mini_roman := fun (number : Int) ↦
   let m := (["", "m"] : List String)
   let c := (["", "c", "cc", "ccc", "cd", "d", "dc", "dcc", "dccc", "cm"] : List String)
   let x := (["", "x", "xx", "xxx", "xl", "l", "lx", "lxx", "lxxx", "xc"] : List String)
@@ -70,7 +70,7 @@ attribute [simp] int_to_mini_roman
 
 @[taste_ingr]
 theorem int_to_mini_roman_correct :
-    ∀ number,
+    ∀ (number : Int),
       let m := ["", "m"]
       let c := ["", "c", "cc", "ccc", "cd", "d", "dc", "dcc", "dccc", "cm"]
       let x := ["", "x", "xx", "xxx", "xl", "l", "lx", "lxx", "lxxx", "xc"]
@@ -89,7 +89,7 @@ theorem int_to_mini_roman_correct :
           (0 : Int) ≤ number %ₚ (10 : Int) ∧ number %ₚ (10 : Int) < PastaLean.pyLen i :=
   by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
 
-def int_to_mini_roman'rn := fun number ↦
+def int_to_mini_roman'rn := fun (number : Int) ↦
   let m := (#["", "m"] : Array String)
   let c := (#["", "c", "cc", "ccc", "cd", "d", "dc", "dcc", "dccc", "cm"] : Array String)
   let x := (#["", "x", "xx", "xxx", "xl", "l", "lx", "lxx", "lxxx", "xc"] : Array String)

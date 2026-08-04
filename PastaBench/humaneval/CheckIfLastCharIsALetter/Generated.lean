@@ -50,7 +50,7 @@ def check_if_last_char_is_a_letter(txt):
 
 namespace PastaBench.humaneval.CheckIfLastCharIsALetter
 
-def check_if_last_char_is_a_letter := fun (txt : String) ↦
+def check_if_last_char_is_a_letter := fun (txt : PyAny) ↦
   (do
     if h_1 : PastaLean.pyLen txt = (0 : Int) then 
       let _ := Libraries.passta.pyPassAssert (PastaLean.pyLen txt == (0 : Int))
@@ -78,11 +78,11 @@ theorem check_if_last_char_is_a_letter_spec :
             (PastaLean.pyLen txt = (1 : Int) ∨ txt⦋(-2 : Int)⦌ = " "))⌝⦄ :=
   by
   mvcgen [check_if_last_char_is_a_letter, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  grind; sorry; sorry
   all_goals sorry
 
 theorem check_if_last_char_is_a_letter_correct :
-    ∀ (txt : String),
+    ∀ (txt : PyAny),
       let result := (check_if_last_char_is_a_letter txt).run;
       result =
         ((PastaLean.pyLen txt > (0 : Int) ∧ PastaLean.pyTruthy (PastaLean.pyIsAlpha txt⦋(-1 : Int)⦌) = true) ∧
@@ -91,7 +91,7 @@ theorem check_if_last_char_is_a_letter_correct :
   intro txt
   exact check_if_last_char_is_a_letter_spec True.intro
 
-def check_if_last_char_is_a_letter'rn := fun (txt : String) ↦
+def check_if_last_char_is_a_letter'rn := fun (txt : PyAny) ↦
   Id.run
     (do
       /-

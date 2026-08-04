@@ -19,7 +19,7 @@ only the files you actually need.
   `pastalean translate <the file you're fixing>`, not PALC.
 - **Batch builds.** `lake build` is slow (Mathlib); group related edits, build once, test once.
 - **Comments: minimal and precise** (see Code writing tips below).
-
+- **STOP** only after significant changes are done. Donot stop after any small change. Edit your fix properly, test, edit again. Only stop when it's a good place to stop.
 ---
 
 ## The pipeline (Python text → Lean text)

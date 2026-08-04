@@ -57,7 +57,7 @@ def triangle_area(a, b, c):
 
 namespace PastaBench.humaneval.TriangleArea71
 
-def triangle_area := fun a ↦ fun b ↦ fun c ↦
+noncomputable def triangle_area := fun (a : Int) ↦ fun (b : Int) ↦ fun (c : Int) ↦
   (do
     if h_1 : (a +ₚ b ≤ c ∨ a +ₚ c ≤ b) ∨ b +ₚ c ≤ a then 
       let __py_ret_1 := -(1 : Int)
@@ -81,9 +81,9 @@ theorem triangle_area_spec :
   all_goals sorry
 
 theorem triangle_area_correct :
-    ∀ a,
-      ∀ b,
-        ∀ c,
+    ∀ (a : Int),
+      ∀ (b : Int),
+        ∀ (c : Int),
           (a > (0 : Int) ∧ b > (0 : Int)) ∧ c > (0 : Int) →
             let result := (triangle_area a b c).run;
             ((a +ₚ b ≤ c ∨ a +ₚ c ≤ b) ∨ b +ₚ c ≤ a) ∧ result = -(1 : Int) ∨
@@ -92,7 +92,7 @@ theorem triangle_area_correct :
   intro a b c hpre
   exact triangle_area_spec hpre
 
-def triangle_area'rn := fun a ↦ fun b ↦ fun c ↦
+def triangle_area'rn := fun (a : Int) ↦ fun (b : Int) ↦ fun (c : Int) ↦
   Id.run
     (do
       /-

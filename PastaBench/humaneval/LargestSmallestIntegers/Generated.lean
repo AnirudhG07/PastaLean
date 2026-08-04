@@ -56,7 +56,7 @@ def largest_smallest_integers(lst):
 
 namespace PastaBench.humaneval.LargestSmallestIntegers
 
-def largest_smallest_integers := fun lst ↦
+def largest_smallest_integers := fun (lst : List Int) ↦
   let neg := PastaLean.pyList (PastaLean.pyFilter (fun x ↦ decide (x < (0 : Int))) lst)
   let pos := PastaLean.pyList (PastaLean.pyFilter (fun x ↦ decide (x > (0 : Int))) lst)
   (if neg = [] then none else some (PastaLean.pyMax neg), if pos = [] then none else some (PastaLean.pyMin pos))
@@ -65,7 +65,7 @@ attribute [simp] largest_smallest_integers
 
 @[taste_ingr]
 theorem largest_smallest_integers_correct :
-    ∀ lst,
+    ∀ (lst : List Int),
       let neg := PastaLean.pyList (PastaLean.pyFilter (fun x ↦ decide (x < (0 : Int))) lst)
       let pos := PastaLean.pyList (PastaLean.pyFilter (fun x ↦ decide (x > (0 : Int))) lst)
       (((((!PastaLean.pyIsNone (largest_smallest_integers lst)⦋(0 : Int)⦌) =
@@ -92,7 +92,7 @@ theorem largest_smallest_integers_correct :
             true) :=
   by intros; sorry
 
-def largest_smallest_integers'rn := fun lst ↦
+def largest_smallest_integers'rn := fun (lst : List Int) ↦
   let neg := PastaLean.pyList (PastaLean.pyFilter (fun x ↦ decide (x < (0 : Int))) lst)
   let pos := PastaLean.pyList (PastaLean.pyFilter (fun x ↦ decide (x > (0 : Int))) lst)
   (if neg == [] then none else some (PastaLean.pyMax neg), if pos == [] then none else some (PastaLean.pyMin pos))

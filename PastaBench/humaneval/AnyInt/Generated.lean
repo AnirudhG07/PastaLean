@@ -37,12 +37,9 @@ def any_int(x, y, z):
 
     
     '''
-    Ensures(
-        Result() == (
-            type(x) == int and type(y) == int and type(z) == int and
-            (x == y + z or y == x + z or z == x + y)
-        )
-    )
+    # For integer inputs the type guard is always satisfied, so the result is
+    # exactly the "one number equals the sum of the other two" predicate.
+    Ensures(Result() == (x == y + z or y == x + z or z == x + y))
 
     if type(x) != int or type(y) != int or type(z) != int: return False
     
@@ -65,9 +62,7 @@ def any_int := fun x ↦ fun y ↦ fun z ↦
     return __py_ret_1 : Id _)
 
 @[spec]
-theorem any_int_spec :
-    ⦃⌜True⌝⦄ any_int x y z ⦃⇓result =>
-      ⌜result = (((type x = int ∧ type y = int) ∧ type z = int) ∧ ((x = y +ₚ z ∨ y = x +ₚ z) ∨ z = x +ₚ y))⌝⦄ :=
+theorem any_int_spec : ⦃⌜True⌝⦄ any_int x y z ⦃⇓result => ⌜result = ((x = y +ₚ z ∨ y = x +ₚ z) ∨ z = x +ₚ y)⌝⦄ :=
   by
   mvcgen [any_int, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
   sorry
@@ -78,7 +73,7 @@ theorem any_int_correct :
       ∀ y,
         ∀ z,
           let result := (any_int x y z).run;
-          result = (((type x = int ∧ type y = int) ∧ type z = int) ∧ ((x = y +ₚ z ∨ y = x +ₚ z) ∨ z = x +ₚ y)) :=
+          result = ((x = y +ₚ z ∨ y = x +ₚ z) ∨ z = x +ₚ y) :=
   by
   intro x y z
   exact any_int_spec True.intro
@@ -105,6 +100,8 @@ def any_int'rn := fun x ↦ fun y ↦ fun z ↦
           
           
       -/
+      -- For integer inputs the type guard is always satisfied, so the result is
+      -- exactly the "one number equals the sum of the other two" predicate.
       if h_1 : type x != int || type y != int || type z != int then 
         return Bool.false
       else

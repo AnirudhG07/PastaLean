@@ -86,7 +86,7 @@ def minPath(grid, k):
 
 namespace PastaBench.humaneval.Minpath
 
-def minPath := fun (grid : PyAny) ↦ fun k ↦
+def minPath := fun (grid : PyAny) ↦ fun (k : Int) ↦
   (do
     let mut N : Int := PastaLean.pyLen grid
     let __unpack_value_1 := ((0 : Int), (0 : Int))
@@ -149,7 +149,7 @@ theorem minPath_spec :
 
 theorem minPath_correct :
     ∀ (grid : PyAny),
-      ∀ k,
+      ∀ (k : Int),
         (k ≥ (1 : Int) ∧ PastaLean.pyLen grid ≥ (2 : Int)) ∧
             PastaLean.pyAll ((PastaLean.pyIter grid).map fun row => PastaLean.pyLen row == PastaLean.pyLen grid) →
           let result := (minPath grid k).run;
@@ -160,7 +160,7 @@ theorem minPath_correct :
   intro grid k hpre
   exact minPath_spec hpre
 
-def minPath'rn := fun (grid : PyAny) ↦ fun k ↦
+def minPath'rn := fun (grid : PyAny) ↦ fun (k : Int) ↦
   Id.run
     (do
       /-

@@ -8,7 +8,12 @@ import PastaLean.PyAPI.CommonProtocols.IsNone
 import PastaLean.PyAPI.Operators
 import PastaLean.PyAPI.Builtins.Casting
 import PastaLean.PyAPI.Builtins.Math
+import PastaLean.PyAPI.Builtins.Functional
 import PastaLean.PyAPI.Strings
+import PastaLean.PyAPI.Lists
+import PastaLean.PyAPI.CommonProtocols.Membership
+import PastaLean.PyAPI.CommonProtocols.Count
+import PastaLean.PyAPI.CommonProtocols.Sorting
 
 /-!
 # `PyAny` — the dynamic-value fallback
@@ -40,6 +45,38 @@ variable Python assigns only inside a block (`if`/`try`) — Lean has no such le
 pre-declares the variable before the block. `none` (Python `None`) is the honest empty; it does not
 faithfully model `UnboundLocalError`, which the linter flags separately. -/
 def emptyPyAny : PyAny := .none
+
+/- Structural decidable equality on the boxed value (`=`), distinct from the numeric `BEq` below
+(`==`, which makes `5 == 5.0` true). `deriving DecidableEq` fails on the nested `List PyAny`, so this
+is a hand-written *mutual* recursion over `PyAny` and `List PyAny`. It lets a boxed comparison against a
+literal — `s = PyAny.str ""` — resolve when `s` could not be un-boxed to a concrete type. -/
+mutual
+def PyAny.decEq : (a b : PyAny) → Decidable (a = b)
+  | .int x,   .int y   => if h : x = y then .isTrue (by subst h; rfl) else .isFalse (by intro he; injection he; exact h ‹_›)
+  | .bool x,  .bool y  => if h : x = y then .isTrue (by subst h; rfl) else .isFalse (by intro he; injection he; exact h ‹_›)
+  | .str x,   .str y   => if h : x = y then .isTrue (by subst h; rfl) else .isFalse (by intro he; injection he; exact h ‹_›)
+  | .float x, .float y => if h : x = y then .isTrue (by subst h; rfl) else .isFalse (by intro he; injection he; exact h ‹_›)
+  | .none,    .none    => .isTrue rfl
+  | .list x,  .list y  => match PyAny.decEqList x y with
+      | .isTrue h  => .isTrue (by subst h; rfl)
+      | .isFalse h => .isFalse (by intro he; injection he; exact h ‹_›)
+  | .int _,.bool _ | .int _,.str _ | .int _,.float _ | .int _,.list _ | .int _,.none
+  | .bool _,.int _ | .bool _,.str _ | .bool _,.float _ | .bool _,.list _ | .bool _,.none
+  | .str _,.int _ | .str _,.bool _ | .str _,.float _ | .str _,.list _ | .str _,.none
+  | .float _,.int _ | .float _,.bool _ | .float _,.str _ | .float _,.list _ | .float _,.none
+  | .list _,.int _ | .list _,.bool _ | .list _,.str _ | .list _,.float _ | .list _,.none
+  | .none,.int _ | .none,.bool _ | .none,.str _ | .none,.float _ | .none,.list _ =>
+      .isFalse (by intro h; injection h)
+def PyAny.decEqList : (a b : List PyAny) → Decidable (a = b)
+  | [], []       => .isTrue rfl
+  | [], _::_     => .isFalse (by intro h; injection h)
+  | _::_, []     => .isFalse (by intro h; injection h)
+  | x::xs, y::ys => match PyAny.decEq x y, PyAny.decEqList xs ys with
+      | .isTrue h1, .isTrue h2 => .isTrue (by subst h1; subst h2; rfl)
+      | .isFalse h1, _         => .isFalse (by intro he; injection he with a b; exact h1 a)
+      | _, .isFalse h2         => .isFalse (by intro he; injection he with a b; exact h2 b)
+end
+instance : DecidableEq PyAny := PyAny.decEq
 
 /-- Default a `PyAny` to `emptyPyAny` (Python `None`), not `int 0` (the derived first-constructor
 default), so a hoisted dynamic binding reads as "unset" rather than a spurious zero. -/
@@ -284,6 +321,12 @@ instance : PyGetItem PyAny PyAny PyAny where
         | _ => .none
     | _ => .none
 
+/-- `s[k]` on a concrete `String` indexed by a *boxed* index (`k` is a dynamic value that stayed
+`PyAny`, e.g. an un-inferred loop variable) — unbox an integer index and delegate to the string
+instance; any other index yields the empty string. -/
+instance : PyGetItem String PyAny String where
+  getItem s i := match i with | .int n => pyStringGetItemStr s n | _ => ""
+
 instance : PySetItem PyAny Int PyAny where
   setItem v i x :=
     match v with
@@ -340,5 +383,61 @@ instance : PyStringJoin PyAny where toJoinString := PyAny.toStr false
 
 /-- `float('inf')`/`float('nan')` in a boxed slot becomes a boxed float. -/
 instance : PyNonFinite PyAny where nonFinite s := .float (PyNonFinite.nonFinite s)
+
+/-! ### More container/value protocols on a boxed value — same delegate-by-tag design as above.
+These let an un-inferred (`PyAny`) parameter be `int()`-cast, membership-tested, `count`-ed, sliced,
+sorted, and summed, reusing the concrete `List`/`String` runtime and reboxing results. -/
+
+/-- `int(x)` on a boxed value: numeric tags read directly (float truncates toward zero, matching
+Python `int()`); a numeric string parses; everything else is `0`. -/
+instance : PyIntCast PyAny where
+  pyInt
+    | .int n => n
+    | .bool b => if b then 1 else 0
+    | .float q => q.num.tdiv (q.den : Int)
+    | .str s => (s.trim.toInt?).getD 0
+    | _ => 0
+
+/-- `needle in x` on a boxed container: list membership (element equality) or substring test.
+`β` is an `outParam`, so a concrete needle (e.g. `ℤ`) coerces to `PyAny` via `CoeTail`; only this
+single `PyAny PyAny` instance may exist for the boxed container (extra ones break resolution). -/
+instance : PyContains PyAny PyAny where
+  contains
+    | .list xs, v => xs.contains v
+    | .str s, .str t => pyStrContainsSubstr s t
+    | _, _ => false
+
+/-- `x.count(v)` on a boxed list (occurrence count) or string (substring count). -/
+instance : PyCount PyAny PyAny where
+  pyCount
+    | .list xs, v => pyListCount xs v
+    | .str s, .str t => pyStringCount s t
+    | _, _ => 0
+instance : PyCount PyAny Int where
+  pyCount
+    | .list xs, x => pyListCount xs (PyAny.int x)
+    | _, _ => 0
+instance : PyCount PyAny String where
+  pyCount
+    | .list xs, x => pyListCount xs (PyAny.str x)
+    | .str s, t => pyStringCount s t
+    | _, _ => 0
+
+/-- `sum(x)` over a boxed iterable: each element is already a `PyAny`, folded with boxed `+`. -/
+instance : PySummand PyAny PyAny := ⟨id⟩
+
+/-- `x[lo:hi:step]` on a boxed list/string; other tags pass through unchanged. -/
+instance : PySlice PyAny where
+  slice v lo hi step := match v with
+    | .list xs => .list (pyListSliceStep xs lo hi step)
+    | .str s => .str (pyStringSliceStep s lo hi step)
+    | _ => v
+
+/-- `sorted(x)` on a boxed list (or string → sorted chars); reuses `Ord PyAny`. -/
+instance : PySort PyAny PyAny where
+  pySort
+    | .list xs => PySort.pySort xs
+    | .str s => PySort.pySort (s.toList.map (fun c => PyAny.str c.toString))
+    | _ => []
 
 end PastaLean

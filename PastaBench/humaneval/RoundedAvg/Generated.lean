@@ -45,7 +45,7 @@ def rounded_avg(n, m):
 
 namespace PastaBench.humaneval.RoundedAvg
 
-def rounded_avg := fun n ↦ fun m ↦
+def rounded_avg := fun (n : Int) ↦ fun (m : Int) ↦
   (do
     if h_1 : n > m then 
       let __py_ret_1 := -(1 : Int)
@@ -67,8 +67,8 @@ theorem rounded_avg_spec :
   all_goals sorry
 
 theorem rounded_avg_correct :
-    ∀ n,
-      ∀ m,
+    ∀ (n : Int),
+      ∀ (m : Int),
         n > (0 : Int) ∧ m > (0 : Int) →
           let result := (rounded_avg n m).run;
           if n > m then result = -(1 : Int) else result = PastaLean.pyBin (PastaLean.pyRound ((n +ₚ m) /ₚ (2 : Int))) :=
@@ -76,7 +76,7 @@ theorem rounded_avg_correct :
   intro n m hpre
   exact rounded_avg_spec hpre
 
-def rounded_avg'rn := fun n ↦ fun m ↦
+def rounded_avg'rn := fun (n : Int) ↦ fun (m : Int) ↦
   (Id.run
       (do
         /-

@@ -36,7 +36,7 @@ def starts_one_ends(n):
 
 namespace PastaBench.humaneval.StartsOneEnds
 
-def starts_one_ends := fun n ↦
+def starts_one_ends := fun (n : Int) ↦
   (do
     if h_1 : n = (1 : Int) then 
       return (1 : Int)
@@ -56,7 +56,7 @@ theorem starts_one_ends_spec :
   all_goals sorry
 
 theorem starts_one_ends_correct :
-    ∀ n,
+    ∀ (n : Int),
       n ≥ (1 : Int) →
         let result := (starts_one_ends n).run;
         n = (1 : Int) ∧ result = (1 : Int) ∨ n > (1 : Int) ∧ result = (18 : Int) *ₚ (10 : Int) ^ₚ (n -ₚ (2 : Int)) :=
@@ -64,7 +64,7 @@ theorem starts_one_ends_correct :
   intro n hpre
   exact starts_one_ends_spec hpre
 
-def starts_one_ends'rn := fun n ↦
+def starts_one_ends'rn := fun (n : Int) ↦
   Id.run
     (do
       /-

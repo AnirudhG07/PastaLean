@@ -60,9 +60,9 @@ def sum_squares(lst):
 
 namespace PastaBench.humaneval.SumSquares142
 
-def sum_squares := fun (lst : PyAny) ↦
+def sum_squares := fun (lst : List Int) ↦
   (do
-    let mut ans : PyAny := (0 : Int)
+    let mut ans : Int := (0 : Int)
     for _pair_1 in (PastaLean.pyIter (PastaLean.pyEnumerate lst))do
       let i := Prod.fst _pair_1
       let num := Prod.snd _pair_1
@@ -104,7 +104,7 @@ theorem sum_squares_spec :
   all_goals sorry
 
 theorem sum_squares_correct :
-    ∀ (lst : PyAny),
+    ∀ (lst : List Int),
       let ans := (sum_squares lst).run;
       ans =
         PastaLean.pySum
@@ -115,7 +115,7 @@ theorem sum_squares_correct :
   intro lst
   exact sum_squares_spec True.intro
 
-def sum_squares'rn := fun (lst : PyAny) ↦
+def sum_squares'rn := fun (lst : List Int) ↦
   Id.run
     (do
       /-
@@ -130,7 +130,7 @@ def sum_squares'rn := fun (lst : PyAny) ↦
           For lst = [-1,-5,2,-1,-5]  the output should be -126
           
       -/
-      let mut ans : PyAny := (0 : Int)
+      let mut ans : Int := (0 : Int)
       for _pair_1 in (PastaLean.pyIter (PastaLean.pyEnumerate lst))do
         let i := Prod.fst _pair_1
         let num := Prod.snd _pair_1

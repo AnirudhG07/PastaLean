@@ -69,87 +69,27 @@ def eat(number, need, remaining):
 
 namespace PastaBench.humaneval.Eat
 
-def eat := fun number ↦ fun need ↦ fun remaining ↦
-  (do
-    if h_1 : need ≤ remaining then 
-      let __py_ret_1 := [number +ₚ need, remaining -ₚ need]
-      return __py_ret_1
-    else
-      let __py_ret_1 := [number +ₚ remaining, (0 : Int)]
-      return __py_ret_1 :
-    Id _)
+def eat := fun (number : Int) ↦ fun (need : Int) ↦ fun (remaining : Int) ↦
+  if need ≤ remaining then [number +ₚ need, remaining -ₚ need] else [number +ₚ remaining, (0 : Int)]
 
-@[spec]
-theorem eat_spec :
-    ⦃⌜(((0 : Int) ≤ number ∧ number ≤ (1000 : Int)) ∧ (0 : Int) ≤ need ∧ need ≤ (1000 : Int)) ∧
-          (0 : Int) ≤ remaining ∧ remaining ≤ (1000 : Int)⌝⦄
-      eat number need remaining ⦃⇓result =>
-      ⌜((result⦋(0 : Int)⦌ = number +ₚ if need ≤ remaining then need else remaining) ∧
-            result⦋(1 : Int)⦌ = remaining -ₚ if need ≤ remaining then need else remaining) ∧
-          result⦋(0 : Int)⦌ +ₚ result⦋(1 : Int)⦌ = number +ₚ remaining⌝⦄ :=
-  by
-  mvcgen [eat, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
-  all_goals sorry
+attribute [simp] eat
 
+@[taste_ingr]
 theorem eat_correct :
-    ∀ number,
-      ∀ need,
-        ∀ remaining,
-          (((0 : Int) ≤ number ∧ number ≤ (1000 : Int)) ∧ (0 : Int) ≤ need ∧ need ≤ (1000 : Int)) ∧
+    ∀ (number : Int),
+      ∀ (need : Int),
+        ∀ (remaining : Int),
+          (0 : Int) ≤ number ∧ number ≤ (1000 : Int) →
+            (0 : Int) ≤ need ∧ need ≤ (1000 : Int) →
               (0 : Int) ≤ remaining ∧ remaining ≤ (1000 : Int) →
-            let result := (eat number need remaining).run;
-            ((result⦋(0 : Int)⦌ = number +ₚ if need ≤ remaining then need else remaining) ∧
-                result⦋(1 : Int)⦌ = remaining -ₚ if need ≤ remaining then need else remaining) ∧
-              result⦋(0 : Int)⦌ +ₚ result⦋(1 : Int)⦌ = number +ₚ remaining :=
-  by
-  intro number need remaining hpre
-  exact eat_spec hpre
+                (((eat number need remaining)⦋(0 : Int)⦌ = number +ₚ if need ≤ remaining then need else remaining) ∧
+                    (eat number need remaining)⦋(1 : Int)⦌ =
+                      remaining -ₚ if need ≤ remaining then need else remaining) ∧
+                  (eat number need remaining)⦋(0 : Int)⦌ +ₚ (eat number need remaining)⦋(1 : Int)⦌ =
+                    number +ₚ remaining :=
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
 
-def eat'rn := fun number ↦ fun need ↦ fun remaining ↦
-  Id.run
-    (do
-      /-
-      
-          You're a hungry rabbit, and you already have eaten a certain number of carrots,
-          but now you need to eat more carrots to complete the day's meals.
-          you should return an array of [ total number of eaten carrots after your meals,
-                                          the number of carrots left after your meals ]
-          if there are not enough remaining carrots, you will eat all remaining carrots, but will still be hungry.
-          
-          Example:
-          * eat(5, 6, 10) -> [11, 4]
-          * eat(4, 8, 9) -> [12, 1]
-          * eat(1, 10, 10) -> [11, 0]
-          * eat(2, 11, 5) -> [7, 0]
-          
-          Variables:
-          @number : integer
-              the number of carrots that you have eaten.
-          @need : integer
-              the number of carrots that you need to eat.
-          @remaining : integer
-              the number of remaining carrots thet exist in stock
-          
-          Constrain:
-          * 0 <= number <= 1000
-          * 0 <= need <= 1000
-          * 0 <= remaining <= 1000
-      
-          Have fun :)
-          
-      -/
-      let _ := Libraries.passta.pyPassRequires (decide ((0 : Int) ≤ number) && decide (number ≤ (1000 : Int)))
-      let _ := Libraries.passta.pyPassRequires (decide ((0 : Int) ≤ need) && decide (need ≤ (1000 : Int)))
-      let _ := Libraries.passta.pyPassRequires (decide ((0 : Int) ≤ remaining) && decide (remaining ≤ (1000 : Int)))
-      -- The number of carrots eaten in this meal is the minimum of what is needed and what is available.
-      -- The postconditions precisely define the result based on this logic.
-      -- Also, as a consequence, the total number of carrots (eaten + remaining) is conserved.
-      if h_1 : need ≤ remaining then 
-        let __py_ret_1 := [number +ₚ need, remaining -ₚ need]
-        return __py_ret_1
-      else
-        let __py_ret_1 := [number +ₚ remaining, (0 : Int)]
-        return __py_ret_1)
+def eat'rn := fun (number : Int) ↦ fun (need : Int) ↦ fun (remaining : Int) ↦
+  if need ≤ remaining then [number +ₚ need, remaining -ₚ need] else [number +ₚ remaining, (0 : Int)]
 
 end PastaBench.humaneval.Eat

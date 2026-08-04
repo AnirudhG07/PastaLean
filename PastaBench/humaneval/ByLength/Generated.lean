@@ -111,11 +111,11 @@ private def _by_length'to_word := fun (x : Int) ↦
 
 attribute [simp, taste_ingr] _by_length'to_word
 
-def by_length := fun arr ↦
+def by_length := fun (arr : List Int) ↦
   (do
     let __unpack_value_1 := (PastaLean.pySlice (PastaLean.pySort arr) none none (some (-(1 : Int))), [])
     let __unpack_pair_1 := __unpack_value_1
-    let mut sorted_list := Prod.fst __unpack_pair_1
+    let mut sorted_list : List Int := Prod.fst __unpack_pair_1
     let mut ans := Prod.snd __unpack_pair_1
     for x in (PastaLean.pyIter sorted_list)do
       if h_1 : (1 : Int) ≤ x ∧ x ≤ (9 : Int) then 
@@ -136,11 +136,11 @@ theorem by_length_spec :
   try
     mvcgen [by_length, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓cur => ⌜True⌝
-  sorry
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
 theorem by_length_correct :
-    ∀ arr,
+    ∀ (arr : List Int),
       let ans := (by_length arr).run;
       ans =
         (PastaLean.pyIter
@@ -181,7 +181,7 @@ private def _by_length'to_word'rn := fun (x : Int) ↦
                     else
                       return "Nine")
 
-def by_length'rn := fun arr ↦
+def by_length'rn := fun (arr : List Int) ↦
   Id.run
     (do
       /-
@@ -213,7 +213,7 @@ def by_length'rn := fun arr ↦
       -- the entire intent of the function.
       let __unpack_value_1 := (PastaLean.pySlice (PastaLean.pySort arr) none none (some (-(1 : Int))), [])
       let __unpack_pair_1 := __unpack_value_1
-      let mut sorted_list := Prod.fst __unpack_pair_1
+      let mut sorted_list : List Int := Prod.fst __unpack_pair_1
       let mut ans := Prod.snd __unpack_pair_1
       for x in (PastaLean.pyIter sorted_list)do
         if h_1 : decide ((1 : Int) ≤ x) && decide (x ≤ (9 : Int)) then 

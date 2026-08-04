@@ -76,7 +76,7 @@ def max_fill(grid, capacity):
 
 namespace PastaBench.humaneval.MaxFill
 
-def max_fill := fun (grid : PyAny) ↦ fun capacity ↦
+def max_fill := fun (grid : List (List Int)) ↦ fun (capacity : Int) ↦
   (do
     let mut ans : Int := (0 : Int)
     for l in (PastaLean.pyIter grid)do
@@ -104,12 +104,12 @@ theorem max_fill_spec :
   try
     mvcgen [max_fill, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓⟨cur, ans⟩ => ⌜ans ≥ (0 : Int)⌝
-  intros; sorry
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
 theorem max_fill_correct :
-    ∀ (grid : PyAny),
-      ∀ capacity,
+    ∀ (grid : List (List Int)),
+      ∀ (capacity : Int),
         capacity ≥ (1 : Int) ∧
             PastaLean.pyAll
               ((PastaLean.pyIter grid).map fun l =>
@@ -122,7 +122,7 @@ theorem max_fill_correct :
   intro grid capacity hpre
   exact max_fill_spec hpre
 
-def max_fill'rn := fun (grid : PyAny) ↦ fun capacity ↦
+def max_fill'rn := fun (grid : List (List Int)) ↦ fun (capacity : Int) ↦
   Id.run
     (do
       /-

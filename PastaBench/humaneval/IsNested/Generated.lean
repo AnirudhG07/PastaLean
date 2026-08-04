@@ -76,7 +76,7 @@ def is_nested(string):
 
 namespace PastaBench.humaneval.IsNested
 
-def is_nested := fun (string : PyAny) ↦
+def is_nested := fun (string : List String) ↦
   (do
     for i in (PastaLean.pyRange (PastaLean.pyLen string))do
       let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i) && decide (i ≤ PastaLean.pyLen string))
@@ -125,7 +125,7 @@ theorem is_nested_spec :
       ⌜True⌝⦄ :=
   by apply Std.Do.Triple.of_entails_wp; intro _; exact True.intro
 
-def is_nested'rn := fun (string : PyAny) ↦
+def is_nested'rn := fun (string : List String) ↦
   Id.run
     (do
       /-

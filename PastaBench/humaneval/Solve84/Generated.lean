@@ -53,7 +53,7 @@ def solve(N):
 
 namespace PastaBench.humaneval.Solve84
 
-def solve := fun N ↦
+def solve := fun (N : Int) ↦
   let s := PastaLean.pySum (PastaLean.pyMap (fun x ↦ PastaLean.pyInt x) (PastaLean.pyStr N))
   PastaLean.pySlice (PastaLean.pyBin s) (some (2 : Int)) none none
 
@@ -61,7 +61,7 @@ attribute [simp] solve
 
 @[taste_ingr]
 theorem solve_correct :
-    ∀ N,
+    ∀ (N : Int),
       let s := PastaLean.pySum (PastaLean.pyMap (fun x ↦ PastaLean.pyInt x) (PastaLean.pyStr N))
       (0 : Int) ≤ N ∧ N ≤ (10000 : Int) →
         ((PastaLean.pyIntBase (solve N) (2 : Int) =
@@ -69,9 +69,9 @@ theorem solve_correct :
               (0 : Int) ≤ s) ∧
             s ≤ (36 : Int)) ∧
           N %ₚ (9 : Int) = s %ₚ (9 : Int) :=
-  by intros; sorry
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
 
-def solve'rn := fun N ↦
+def solve'rn := fun (N : Int) ↦
   let s := PastaLean.pySum (PastaLean.pyMap (fun x ↦ PastaLean.pyInt x) (PastaLean.pyStr N))
   PastaLean.pySlice (PastaLean.pyBin s) (some (2 : Int)) none none
 

@@ -18,7 +18,15 @@ set_option maxHeartbeats 800000
 /- Python source converted to produce the Lean below (the exact input to PastaLean):
 
 from contracts import *
-import Spec
+
+
+def fib_spec(k: int) -> int:
+    Requires(k >= 0)
+    if k == 0:
+        return 0
+    if k == 1:
+        return 1
+    return fib_spec(k - 1) + fib_spec(k - 2)
 
 
 def fib(n: int):
@@ -31,7 +39,7 @@ def fib(n: int):
     21
     """
     Requires(n >= 0)
-    Ensures(Result() == Spec.fib(n))
+    Ensures(Result() == fib_spec(n))
 
     if n == 0: return 0
     Assert(n > 0)
@@ -43,23 +51,52 @@ def fib(n: int):
     for i in range(3, n + 1):
         Invariant(3 <= i)
         Invariant(i <= n + 1)
-        Invariant(a == Spec.fib(i - 2))
-        Invariant(b == Spec.fib(i - 1))
+        Invariant(a == fib_spec(i - 2))
+        Invariant(b == fib_spec(i - 1))
         Decreases(n + 1 - i)
-        
+
         a, b = b, a + b
-    
+
     # After the loop, i = n + 1. The invariant for b gives:
-    # b == Spec.fib((n + 1) - 1) == Spec.fib(n)
-    Assert(b == Spec.fib(n))
+    # b == fib_spec((n + 1) - 1) == fib_spec(n)
+    Assert(b == fib_spec(n))
     return b
 -/
 
 namespace PastaBench.humaneval.Fib
 
+partial def fib_spec : Int → Int := fun (k : Int) ↦
+  Id.run
+    (do
+      let _ := Libraries.passta.pyPassRequires (decide (k ≥ (0 : Int)))
+      if h_1 : k = (0 : Int) then 
+        return (0 : Int)
+      else
+        let _ := ()
+      if h_2 : k = (1 : Int) then 
+        return (1 : Int)
+      else
+        let _ := ()
+      let __py_ret_1 := fib_spec (k -ₚ (1 : Int)) +ₚ fib_spec (k -ₚ (2 : Int))
+      return __py_ret_1)
+
+partial def fib_spec'rn : Int → Int := fun (k : Int) ↦
+  Id.run
+    (do
+      let _ := Libraries.passta.pyPassRequires (decide (k ≥ (0 : Int)))
+      if h_1 : k == (0 : Int) then 
+        return (0 : Int)
+      else
+        let _ := ()
+      if h_2 : k == (1 : Int) then 
+        return (1 : Int)
+      else
+        let _ := ()
+      let __py_ret_1 := fib_spec'rn (k -ₚ (1 : Int)) +ₚ fib_spec'rn (k -ₚ (2 : Int))
+      return __py_ret_1)
+
 def fib := fun (n : Int) ↦
   (do
-    let _ := pyUnsupported "Ensures(Result() == Spec.fib(n))"
     if h_1 : n = (0 : Int) then 
       return (0 : Int)
     else
@@ -77,18 +114,35 @@ def fib := fun (n : Int) ↦
     for i in (PastaLean.pyRange (n +ₚ (1 : Int)) (3 : Int))do
       let _ := Libraries.passta.pyPassInvariant (decide ((3 : Int) ≤ i))
       let _ := Libraries.passta.pyPassInvariant (decide (i ≤ n +ₚ (1 : Int)))
-      let _ := pyUnsupported "Invariant(a == Spec.fib(i - 2))"
-      let _ := pyUnsupported "Invariant(b == Spec.fib(i - 1))"
+      let _ := Libraries.passta.pyPassInvariant (a == fib_spec (i -ₚ (2 : Int)))
+      let _ := Libraries.passta.pyPassInvariant (b == fib_spec (i -ₚ (1 : Int)))
       let _ := Libraries.passta.pyPassDecreases (n +ₚ (1 : Int) -ₚ i)
       let __unpack_value_2 := (b, a +ₚ b)
       let __unpack_pair_2 := __unpack_value_2
       a := Prod.fst __unpack_pair_2
       b := Prod.snd __unpack_pair_2
-    let _ := pyUnsupported "Assert(b == Spec.fib(n))"
+    let _ := Libraries.passta.pyPassAssert (b == fib_spec n)
     return b : Id _)
 
-theorem fib_spec : ⦃⌜n ≥ (0 : Int)⌝⦄ fib n ⦃⇓_ => ⌜True⌝⦄ := by apply Std.Do.Triple.of_entails_wp; intro _;
-  exact True.intro
+@[spec]
+theorem fib_spec : ⦃⌜n ≥ (0 : Int)⌝⦄ fib n ⦃⇓b => ⌜b = fib_spec n⌝⦄ :=
+  by
+  try
+    mvcgen [fib, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · ⇓cur =>
+      ⌜let i := (cur.prefix.length : Int);
+        (((3 : Int) ≤ i ∧ i ≤ n +ₚ (1 : Int)) ∧ a = fib_spec (i -ₚ (2 : Int))) ∧ b = fib_spec (i -ₚ (1 : Int))⌝
+  sorry
+  all_goals sorry
+
+theorem fib_correct :
+    ∀ (n : Int),
+      n ≥ (0 : Int) →
+        let b := (fib n).run;
+        b = fib_spec n :=
+  by
+  intro n hpre
+  exact fib_spec hpre
 
 def fib'rn := fun (n : Int) ↦
   Id.run
@@ -104,7 +158,6 @@ def fib'rn := fun (n : Int) ↦
           
       -/
       let _ := Libraries.passta.pyPassRequires (decide (n ≥ (0 : Int)))
-      let _ := pyUnsupported "Ensures(Result() == Spec.fib(n))"
       if h_1 : n == (0 : Int) then 
         return (0 : Int)
       else
@@ -123,16 +176,16 @@ def fib'rn := fun (n : Int) ↦
       for i in (PastaLean.pyRange (n +ₚ (1 : Int)) (3 : Int))do
         let _ := Libraries.passta.pyPassInvariant (decide ((3 : Int) ≤ i))
         let _ := Libraries.passta.pyPassInvariant (decide (i ≤ n +ₚ (1 : Int)))
-        let _ := pyUnsupported "Invariant(a == Spec.fib(i - 2))"
-        let _ := pyUnsupported "Invariant(b == Spec.fib(i - 1))"
+        let _ := Libraries.passta.pyPassInvariant (a == fib_spec'rn (i -ₚ (2 : Int)))
+        let _ := Libraries.passta.pyPassInvariant (b == fib_spec'rn (i -ₚ (1 : Int)))
         let _ := Libraries.passta.pyPassDecreases (n +ₚ (1 : Int) -ₚ i)
         let __unpack_value_2 := (b, a +ₚ b)
         let __unpack_pair_2 := __unpack_value_2
         a := Prod.fst __unpack_pair_2
         b := Prod.snd __unpack_pair_2
       -- After the loop, i = n + 1. The invariant for b gives:
-      -- b == Spec.fib((n + 1) - 1) == Spec.fib(n)
-      let _ := pyUnsupported "Assert(b == Spec.fib(n))"
+      -- b == fib_spec((n + 1) - 1) == fib_spec(n)
+      let _ := Libraries.passta.pyPassAssert (b == fib_spec'rn n)
       return b)
 
 end PastaBench.humaneval.Fib

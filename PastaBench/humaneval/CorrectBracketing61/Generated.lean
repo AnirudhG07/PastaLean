@@ -35,6 +35,8 @@ def correct_bracketing(brackets: str):
     """
 
     Requires(all(c == '(' or c == ')' for c in brackets))
+    # If the function returns True, the total number of opening and closing brackets must be equal.
+    Ensures((not Result()) or (brackets.count('(') == brackets.count(')')))
 
     cnt = 0
     for x in brackets:
@@ -83,10 +85,26 @@ def correct_bracketing := fun (brackets : String) ↦
     let __py_ret_1 := cnt == (0 : Int)
     return __py_ret_1 : Id _)
 
+@[spec]
 theorem correct_bracketing_spec :
     ⦃⌜PastaLean.pyAll ((PastaLean.pyIter brackets).map fun c => c == "(" || c == ")")⌝⦄
-      correct_bracketing brackets ⦃⇓_ => ⌜True⌝⦄ :=
-  by apply Std.Do.Triple.of_entails_wp; intro _; exact True.intro
+      correct_bracketing brackets ⦃⇓result =>
+      ⌜¬PastaLean.pyTruthy result = true ∨ PastaLean.pyCount brackets "(" = PastaLean.pyCount brackets ")"⌝⦄ :=
+  by
+  try
+    mvcgen [correct_bracketing, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · Invariant.withEarlyReturn (onReturn := fun _ _ => ⌜True⌝) (onContinue := fun _ _ => ⌜True⌝)
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  all_goals sorry
+
+theorem correct_bracketing_correct :
+    ∀ (brackets : String),
+      PastaLean.pyAll ((PastaLean.pyIter brackets).map fun c => c == "(" || c == ")") →
+        let result := (correct_bracketing brackets).run;
+        ¬PastaLean.pyTruthy result = true ∨ PastaLean.pyCount brackets "(" = PastaLean.pyCount brackets ")" :=
+  by
+  intro brackets hpre
+  exact correct_bracketing_spec hpre
 
 def correct_bracketing'rn := fun (brackets : String) ↦
   Id.run
@@ -108,6 +126,7 @@ def correct_bracketing'rn := fun (brackets : String) ↦
       let _ :=
         Libraries.passta.pyPassRequires
           (PastaLean.pyAll ((PastaLean.pyIter brackets).map fun c => c == "(" || c == ")"))
+      -- If the function returns True, the total number of opening and closing brackets must be equal.
       let mut cnt : Int := (0 : Int)
       for x in (PastaLean.pyIter brackets)do
         -- The running balance of open minus closed brackets must never be negative.

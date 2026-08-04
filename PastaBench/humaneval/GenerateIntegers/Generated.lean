@@ -44,7 +44,7 @@ def generate_integers(a, b):
 
 namespace PastaBench.humaneval.GenerateIntegers
 
-def generate_integers := fun a ↦ fun b ↦
+def generate_integers := fun (a : Int) ↦ fun (b : Int) ↦
   (do
     let mut a := a
     let mut b := b
@@ -74,8 +74,8 @@ theorem generate_integers_spec :
   all_goals sorry
 
 theorem generate_integers_correct :
-    ∀ a,
-      ∀ b,
+    ∀ (a : Int),
+      ∀ (b : Int),
         a > (0 : Int) ∧ b > (0 : Int) →
           let result := (generate_integers a b).run;
           (((«forall» result fun x ↦ x %ₚ (2 : Int) = (0 : Int)) ∧ «forall» result fun x ↦ x < (10 : Int)) ∧
@@ -86,7 +86,7 @@ theorem generate_integers_correct :
   intro a b hpre
   exact generate_integers_spec hpre
 
-def generate_integers'rn := fun a ↦ fun b ↦
+def generate_integers'rn := fun (a : Int) ↦ fun (b : Int) ↦
   Id.run
     (do
       let mut a := a

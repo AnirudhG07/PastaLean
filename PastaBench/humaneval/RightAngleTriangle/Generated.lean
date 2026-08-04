@@ -42,7 +42,7 @@ def right_angle_triangle(a, b, c):
 
 namespace PastaBench.humaneval.RightAngleTriangle
 
-def right_angle_triangle := fun a ↦ fun b ↦ fun c ↦
+def right_angle_triangle := fun (a : Int) ↦ fun (b : Int) ↦ fun (c : Int) ↦
   if PastaLean.pyTruthy (a ^ₚ (2 : Int) +ₚ b ^ₚ (2 : Int) == c ^ₚ (2 : Int)) then
     a ^ₚ (2 : Int) +ₚ b ^ₚ (2 : Int) == c ^ₚ (2 : Int)
   else
@@ -54,9 +54,9 @@ attribute [simp] right_angle_triangle
 
 @[taste_ingr]
 theorem right_angle_triangle_correct :
-    ∀ a,
-      ∀ b,
-        ∀ c,
+    ∀ (a : Int),
+      ∀ (b : Int),
+        ∀ (c : Int),
           a > (0 : Int) →
             b > (0 : Int) →
               c > (0 : Int) →
@@ -64,7 +64,7 @@ theorem right_angle_triangle_correct :
                   ((a *ₚ a +ₚ b *ₚ b = c *ₚ c ∨ a *ₚ a +ₚ c *ₚ c = b *ₚ b) ∨ b *ₚ b +ₚ c *ₚ c = a *ₚ a) :=
   by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals
 
-def right_angle_triangle'rn := fun a ↦ fun b ↦ fun c ↦
+def right_angle_triangle'rn := fun (a : Int) ↦ fun (b : Int) ↦ fun (c : Int) ↦
   if PastaLean.pyTruthy (a ^ₚ (2 : Int) +ₚ b ^ₚ (2 : Int) == c ^ₚ (2 : Int)) then
     a ^ₚ (2 : Int) +ₚ b ^ₚ (2 : Int) == c ^ₚ (2 : Int)
   else

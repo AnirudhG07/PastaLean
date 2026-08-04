@@ -53,7 +53,7 @@ def is_simple_power(x, n):
 
 namespace PastaBench.humaneval.IsSimplePower
 
-def is_simple_power := fun x ↦ fun n ↦
+def is_simple_power := fun (x : Int) ↦ fun (n : Int) ↦
   (do
     if h_1 : x = (1 : Int) then 
       return Bool.true
@@ -75,7 +75,7 @@ def is_simple_power := fun x ↦ fun n ↦
     else
       let _ := ()
     let _ := Libraries.passta.pyPassAssert (decide (PastaLean.pyAbs n ≥ (2 : Int)))
-    let mut p := n
+    let mut p : Int := n
     while (PastaLean.pyAbs p ≤ PastaLean.pyAbs x) do
       let _ := Libraries.passta.pyPassInvariant (p %ₚ n == (0 : Int))
       let _ := Libraries.passta.pyPassInvariant (decide (PastaLean.pyAbs n ≥ (2 : Int)))
@@ -107,15 +107,15 @@ theorem is_simple_power_spec :
   all_goals sorry
 
 theorem is_simple_power_correct :
-    ∀ x,
-      ∀ n,
+    ∀ (x : Int),
+      ∀ (n : Int),
         let result := (is_simple_power x n).run;
         ((¬PastaLean.pyTruthy result = true ∨ x = (1 : Int)) ∨ n = (0 : Int)) ∨ x %ₚ n = (0 : Int) :=
   by
   intro x n
   exact is_simple_power_spec True.intro
 
-def is_simple_power'rn := fun x ↦ fun n ↦
+def is_simple_power'rn := fun (x : Int) ↦ fun (n : Int) ↦
   Id.run
     (do
       /-
@@ -151,7 +151,7 @@ def is_simple_power'rn := fun x ↦ fun n ↦
       else
         let _ := ()
       let _ := Libraries.passta.pyPassAssert (decide (PastaLean.pyAbs n ≥ (2 : Int)))
-      let mut p := n
+      let mut p : Int := n
       while (PastaLean.pyAbs p ≤ PastaLean.pyAbs x) do
         let _ := Libraries.passta.pyPassInvariant (p %ₚ n == (0 : Int))
         let _ := Libraries.passta.pyPassInvariant (decide (PastaLean.pyAbs n ≥ (2 : Int)))

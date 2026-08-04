@@ -54,10 +54,9 @@ theorem compare_correct :
     ∀ (game : PyAny),
       ∀ (guess : PyAny),
         PastaLean.pyLen game = PastaLean.pyLen guess →
-          PastaLean.pyLen (_root_.compare game guess) = PastaLean.pyLen game ∧
+          PastaLean.pyLen (compare game guess) = PastaLean.pyLen game ∧
             PastaLean.pyTruthy
-                (PastaLean.pyAll
-                  ((PastaLean.pyIter (_root_.compare game guess)).map fun x => decide (x ≥ (0 : Int)))) =
+                (PastaLean.pyAll ((PastaLean.pyIter (compare game guess)).map fun x => decide (x ≥ (0 : Int)))) =
               true :=
   by intros; sorry
 

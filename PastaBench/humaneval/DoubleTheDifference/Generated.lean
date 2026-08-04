@@ -51,9 +51,9 @@ def double_the_difference(lst):
 
 namespace PastaBench.humaneval.DoubleTheDifference
 
-def double_the_difference := fun (lst : PyAny) ↦
+def double_the_difference := fun (lst : List Int) ↦
   (do
-    let mut ans : PyAny := (0 : Int)
+    let mut ans : Int := (0 : Int)
     for num in (PastaLean.pyIter lst)do
       let _ := Libraries.passta.pyPassInvariant (decide (ans ≥ (0 : Int)))
       if h_1 :
@@ -78,7 +78,7 @@ theorem double_the_difference_spec :
   all_goals sorry
 
 theorem double_the_difference_correct :
-    ∀ (lst : PyAny),
+    ∀ (lst : List Int),
       PastaLean.pyAll ((PastaLean.pyIter lst).map fun x => isinstance x int) →
         let ans := (double_the_difference lst).run;
         ans ≥ (0 : Int) :=
@@ -86,7 +86,7 @@ theorem double_the_difference_correct :
   intro lst hpre
   exact double_the_difference_spec hpre
 
-def double_the_difference'rn := fun (lst : PyAny) ↦
+def double_the_difference'rn := fun (lst : List Int) ↦
   Id.run
     (do
       /-
@@ -108,7 +108,7 @@ def double_the_difference'rn := fun (lst : PyAny) ↦
       -- to contain only integers. This allows the verifier to reason about
       -- the arithmetic properties of the elements.
       let _ := Libraries.passta.pyPassRequires (PastaLean.pyAll ((PastaLean.pyIter lst).map fun x => isinstance x int))
-      let mut ans : PyAny := (0 : Int)
+      let mut ans : Int := (0 : Int)
       for num in (PastaLean.pyIter lst)do
         let _ := Libraries.passta.pyPassInvariant (decide (ans ≥ (0 : Int)))
         if h_1 :

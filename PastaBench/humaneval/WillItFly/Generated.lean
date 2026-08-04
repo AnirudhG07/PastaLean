@@ -46,7 +46,7 @@ def will_it_fly(q,w):
 
 namespace PastaBench.humaneval.WillItFly
 
-def will_it_fly := fun (q : PyAny) ↦ fun w ↦
+def will_it_fly := fun (q : List Int) ↦ fun (w : Int) ↦
   if PastaLean.pyTruthy (q == PastaLean.pySlice q none none (some (-(1 : Int)))) then decide (PastaLean.pySum q ≤ w)
   else q == PastaLean.pySlice q none none (some (-(1 : Int)))
 
@@ -54,14 +54,14 @@ attribute [simp] will_it_fly
 
 @[taste_ingr]
 theorem will_it_fly_correct :
-    ∀ (q : PyAny),
-      ∀ w,
+    ∀ (q : List Int),
+      ∀ (w : Int),
         PastaLean.pyAll ((PastaLean.pyIter q).map fun x => decide (x ≥ (0 : Int))) →
           w ≥ (0 : Int) →
             will_it_fly q w = (q = PastaLean.pySlice q none none (some (-(1 : Int))) ∧ PastaLean.pySum q ≤ w) :=
   by sorry
 
-def will_it_fly'rn := fun (q : PyAny) ↦ fun w ↦
+def will_it_fly'rn := fun (q : List Int) ↦ fun (w : Int) ↦
   if PastaLean.pyTruthy (q == PastaLean.pySlice q none none (some (-(1 : Int)))) then decide (PastaLean.pySum q ≤ w)
   else q == PastaLean.pySlice q none none (some (-(1 : Int)))
 

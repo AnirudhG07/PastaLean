@@ -68,7 +68,7 @@ def maximum(arr, k):
 
 namespace PastaBench.humaneval.Maximum
 
-def maximum := fun (arr : PyAny) ↦ fun k ↦
+def maximum := fun (arr : PyAny) ↦ fun (k : Int) ↦
   PastaLean.pySort
     (PastaLean.pySlice (PastaLean.pySlice (PastaLean.pySort arr) none none (some (-(1 : Int)))) none (some k)
       none)
@@ -78,7 +78,7 @@ attribute [simp] maximum
 @[taste_ingr]
 theorem maximum_correct :
     ∀ (arr : PyAny),
-      ∀ k,
+      ∀ (k : Int),
         (0 : Int) ≤ k →
           k ≤ PastaLean.pyLen arr →
             ((PastaLean.pyLen (maximum arr k) = k ∧
@@ -98,9 +98,9 @@ theorem maximum_correct :
                       ((PastaLean.pyIter (maximum arr k)).map fun x =>
                         decide (x ≥ (PastaLean.pySort arr)⦋PastaLean.pyLen arr -ₚ k⦌))) =
                   true) :=
-  by intros; sorry
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
 
-def maximum'rn := fun (arr : PyAny) ↦ fun k ↦
+def maximum'rn := fun (arr : PyAny) ↦ fun (k : Int) ↦
   PastaLean.pySort
     (PastaLean.pySlice (PastaLean.pySlice (PastaLean.pySort arr) none none (some (-(1 : Int)))) none (some k)
       none)

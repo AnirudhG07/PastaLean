@@ -45,7 +45,7 @@ def sort_array(array):
 
 namespace PastaBench.humaneval.SortArray88
 
-def sort_array := fun (array : PyAny) ↦
+def sort_array := fun (array : List Int) ↦
   (do
     if h_1 : array = [] then 
       let __py_ret_1 := []
@@ -60,18 +60,18 @@ def sort_array := fun (array : PyAny) ↦
 theorem sort_array_spec : ⦃⌜True⌝⦄ sort_array array ⦃⇓result => ⌜PastaLean.pyLen result = PastaLean.pyLen array⌝⦄ :=
   by
   mvcgen [sort_array, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  sorry
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
 theorem sort_array_correct :
-    ∀ (array : PyAny),
+    ∀ (array : List Int),
       let result := (sort_array array).run;
       PastaLean.pyLen result = PastaLean.pyLen array :=
   by
   intro array
   exact sort_array_spec True.intro
 
-def sort_array'rn := fun (array : PyAny) ↦
+def sort_array'rn := fun (array : List Int) ↦
   /-
   
       Given an array of non-negative integers, return a copy of the given array after sorting,

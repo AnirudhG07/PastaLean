@@ -28,7 +28,9 @@ def max_element(l: list):
     123
     """
     Requires(len(l) > 0)
+    # The result is a member of the list and is greater-or-equal to every element.
     Ensures(Result() in l)
+    Ensures(all(x <= Result() for x in l))
 
     return max(l)
 -/
@@ -40,7 +42,13 @@ def max_element := fun l ↦ PastaLean.pyMax l
 attribute [simp] max_element
 
 @[taste_ingr]
-theorem max_element_correct : ∀ l, PastaLean.pyLen l > (0 : Int) → PastaLean.pyContains l (max_element l) := by intros; sorry
+theorem max_element_correct :
+    ∀ l,
+      PastaLean.pyLen l > (0 : Int) →
+        PastaLean.pyContains l (max_element l) ∧
+          PastaLean.pyTruthy (PastaLean.pyAll ((PastaLean.pyIter l).map fun x => decide (x ≤ max_element l))) =
+            true :=
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
 
 def max_element'rn := fun l ↦ PastaLean.pyMax l
 

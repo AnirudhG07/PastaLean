@@ -55,7 +55,7 @@ def words_in_sentence(sentence: str):
 
 namespace PastaBench.humaneval.WordsInSentence
 
-private def _words_in_sentence'is_prime := fun (a : Int) ↦
+private noncomputable def _words_in_sentence'is_prime := fun (a : Int) ↦
   !if PastaLean.pyTruthy (decide (a < (2 : Int))) then decide (a < (2 : Int))
     else
       PastaLean.pyStdAny
@@ -72,7 +72,7 @@ theorem _words_in_sentence'is_prime_spec :
           (a > (1 : Int) ∧
             PastaLean.pyTruthy (PastaLean.pyAll ((PastaLean.pyRange a (2 : Int)).map fun d => a %ₚ d != (0 : Int))) =
               true) :=
-  by intros; sorry
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; intros; sorry
 
 def words_in_sentence := fun (sentence : String) ↦
   Id.run
