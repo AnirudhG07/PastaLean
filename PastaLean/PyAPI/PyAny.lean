@@ -108,6 +108,10 @@ instance : PyToValue Bool    where toValue := .bool
 instance : PyToValue String  where toValue := .str
 instance : PyToValue Char    where toValue c := .str (String.singleton c)
 instance : PyToValue Rat     where toValue := .float
+-- `Float` is the run-twin's `float`; box it via its exact rational value so a dynamic (`PyAny`) slot
+-- can hold a `Float` (`PyAny.float` carries a `Rat`). This is the one tower type that could not
+-- previously enter `PyAny`, so `x + f` / a boxed return of `pyFloat …` (approx-mode division) failed.
+instance : PyToValue Float   where toValue f := .float f.toRat0
 instance : PyToValue Unit    where toValue _ := .none
 instance {α : Type} [PyToValue α] : PyToValue (List α)   where toValue xs := .list (xs.map toValue)
 instance {α : Type} [PyToValue α] : PyToValue (Option α) where
@@ -119,6 +123,7 @@ a generic `CoeTail α PyAny` has no synthesization order (the source `α` is unc
 instance : CoeTail Int PyAny    where coe := .int
 instance : CoeTail Nat PyAny    where coe n := .int n
 instance : CoeTail Bool PyAny   where coe := .bool
+instance : CoeTail Float PyAny  where coe f := .float f.toRat0
 instance : CoeTail String PyAny where coe := .str
 instance : CoeTail Char PyAny   where coe c := .str (String.singleton c)
 instance : CoeTail Rat PyAny    where coe := .float

@@ -697,7 +697,11 @@ def buildMonadicSpec (thmName correctName fnName : TSyntax `ident) (emitReadable
           all_goals sorry)
     -- A helper (`_`-prefixed) keeps only its supporting Hoare `_spec`; the readable `_correct`
     -- corollary is reserved for the one top-level function.
-    if !emitReadable then
+    -- The readable `.run` corollary below relies on `⦃P⦄ x ⦃⇓r => Q r⦄` being DEFEQ to `P → Q x.run`,
+    -- which holds for the `Id` monad only. A `try`/`except` body runs in `ExceptT PyException Id`,
+    -- where `x.run : Except _ r` (not `r`), so `let result := (fn …).run; result ≥ 0` is ill-typed
+    -- (`Except _ ℝ ≥ ℚ`). Keep just the Hoare `_spec` there — it already binds the OK value via `⇓`.
+    if !emitReadable || bodyNeedsExceptionMonad info.cleanBody then
       return ⟨mkNullNode #[specCmd.raw]⟩
     -- Human-readable corollary: the same fact with the `Id` monad + Hoare braces stripped —
     -- `∀ params, Requires → (let result := (fn params).run; Ensures)` — proved straight from the

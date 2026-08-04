@@ -876,10 +876,19 @@ def annotate_real_flow(module_json):
             node_type = node.get("node_type")
             if node_type in ("Assign", "AnnAssign", "AugAssign"):
                 base_name, target_node = _assign_base_name(node)
+                value = node.get("value")
                 # Stamp EVERY assignment whose root var is real (even a `x = 0.0` whose own RHS
                 # isn't real but `x` is real elsewhere), so the RHS is lowered in real-context
                 # (literals → `ℝ`, list literals → `List ℝ`); the mutable then infers `ℝ`.
-                if base_name in reals or _self_field_name(node.get("target")) in real_fields:
+                # ALSO stamp when the RHS itself is real even if the target is not a single Name — a
+                # TUPLE-unpack of a real-returning call (`dist, nn = find_nearest_neighbor(...)`): the
+                # real-context makes each `float`-typed element `ℝ` (an `int` element is unaffected),
+                # so an `ℝ` tuple slot is no longer mis-ascribed `ℚ` (there is no `Coe ℝ ℚ`).
+                if (
+                    base_name in reals
+                    or _self_field_name(node.get("target")) in real_fields
+                    or (value is not None and expr_is_real(value, name))
+                ):
                     node["_real"] = True
                     if target_node is not None:
                         target_node["_real"] = True

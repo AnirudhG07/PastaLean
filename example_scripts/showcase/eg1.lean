@@ -122,7 +122,7 @@ noncomputable def run_example :=
       -- Valid Case
       let __unpack_value_1 ← find_nearest_neighbor target_point dataset
       let __unpack_pair_1 := __unpack_value_1
-      let mut dist : Rat := ↑(Prod.fst __unpack_pair_1)
+      let mut dist : Real := ↑(Prod.fst __unpack_pair_1)
       let mut nearest : List Int := Prod.snd __unpack_pair_1
       let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg "Nearest Neighbor to Target:"]
       let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg "Point:", pyPrintArg nearest]
@@ -131,7 +131,7 @@ noncomputable def run_example :=
       let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg "\nTesting Invalid Point:"]
       let __unpack_value_2 ← find_nearest_neighbor invalid_point dataset
       let __unpack_pair_2 := __unpack_value_2
-      let mut dist_inv : Rat := ↑(Prod.fst __unpack_pair_2)
+      let mut dist_inv : Real := ↑(Prod.fst __unpack_pair_2)
       let mut nearest_inv : List Int := Prod.snd __unpack_pair_2
       let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg "Fallback Distance:", pyPrintArg dist_inv]) :
     PastaLean.ProofMode.PyProofM _)

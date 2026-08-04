@@ -214,6 +214,16 @@ instance (priority := high) : PyModulo Int Rat Rat where hMod a b := pyRatMod (a
 instance (priority := high) : PyModulo Rat Nat Rat where hMod a b := pyRatMod a (b : Rat)
 instance (priority := high) : PyModulo Nat Rat Rat where hMod a b := pyRatMod (a : Rat) b
 
+-- `%` with a `bool` operand (bool coerces to int: `x % 2` where `x` is a predicate) and the mixed
+-- `Rat`/`Float` cases (`PyNumJoin` does not cover `%`), following Python's floor/divisor-sign result.
+instance (priority := high) : PyModulo Bool Int Int where hMod a b := pyMod (pyBoolToInt a) b
+instance (priority := high) : PyModulo Int Bool Int where hMod a b := pyMod a (pyBoolToInt b)
+instance : PyModulo Bool Bool Int where hMod a b := pyMod (pyBoolToInt a) (pyBoolToInt b)
+instance (priority := high) : PyModulo Nat Bool Int where hMod a b := pyMod (a : Int) (pyBoolToInt b)
+instance (priority := high) : PyModulo Bool Nat Int where hMod a b := pyMod (pyBoolToInt a) (b : Int)
+instance (priority := high) : PyModulo Rat Float Float where hMod a b := pyFloatMod (Rat.toFloat a) b
+instance (priority := high) : PyModulo Float Rat Float where hMod a b := pyFloatMod a (Rat.toFloat b)
+
 @[default_instance]
 instance {α β γ} [HPow α β γ] : PyHPow α β γ where
   hPow := HPow.hPow
@@ -254,6 +264,16 @@ instance (priority := high) : PyHPow Float Float Float where
 instance (priority := high) : PyHPow Float Int Float where hPow a b := Float.pow a (Float.ofInt b)
 instance (priority := high) : PyHPow Float Nat Float where hPow a b := Float.pow a (Float.ofNat b)
 instance (priority := high) : PyHPow Nat Int Nat where hPow a b := a ^ b.toNat
+
+-- `**` mixes missing from the tower. A rational/`Nat` base with a rational exponent is generally
+-- irrational → noncomputable `ℝ` (via `rpow`), matching `Int ** Rat` above; a `Float` operand keeps
+-- the result `Float`. (`Rat ** Nat` / `Rat ** Int` are already covered by the generic `Pow`/explicit
+-- instances above.)
+noncomputable instance (priority := high) : PyHPow Rat Rat Real where hPow a b := Real.rpow (a : ℝ) (b : ℝ)
+noncomputable instance (priority := high) : PyHPow Nat Rat Real where hPow a b := Real.rpow (a : ℝ) (b : ℝ)
+instance (priority := high) : PyHPow Nat Float Float where hPow a b := Float.pow (Float.ofNat a) b
+instance (priority := high) : PyHPow Rat Float Float where hPow a b := Float.pow (Rat.toFloat a) b
+instance (priority := high) : PyHPow Float Rat Float where hPow a b := Float.pow a (Rat.toFloat b)
 
 @[default_instance]
 instance (priority := high) : Neg Rat where
@@ -480,6 +500,11 @@ instance : PyBitAnd Int Int Int where bitAnd := pyTwosComp Nat.land
 instance : PyBitOr Int Int Int where bitOr := pyTwosComp Nat.lor
 instance : PyBitXor Int Int Int where bitXor := pyTwosComp Nat.xor
 
+-- Bitwise on `Nat` operands (a length/`range` index): non-negative, so the plain `Nat` bit ops apply.
+instance : PyBitAnd Nat Nat Nat where bitAnd := Nat.land
+instance : PyBitOr Nat Nat Nat where bitOr := Nat.lor
+instance : PyBitXor Nat Nat Nat where bitXor := Nat.xor
+
 /-- On two `bool`s Python's `&`/`|`/`^` are the boolean connectives (returning `bool`), e.g.
 `flag |= cond`, `parity ^= bit`. Mixed `bool`/`int` goes through the `Int` instances (bool coerces). -/
 instance : PyBitAnd Bool Bool Bool where bitAnd a b := a && b
@@ -505,6 +530,14 @@ def pyShiftRight {α β γ : Type} [PyShiftRight α β γ] (a : α) (b : β) : �
 
 instance : PyShiftLeft Int Int Int where shiftLeft a b := a * (2 ^ b.toNat)
 instance : PyShiftRight Int Int Int where shiftRight a b := Int.fdiv a (2 ^ b.toNat)
+
+-- Shifts with a `Nat` or `bool` operand (bool coerces to int: `flag << 1`, `1 << n` with `n : Nat`).
+instance : PyShiftLeft Nat Nat Nat where shiftLeft a b := a * (2 ^ b)
+instance : PyShiftRight Nat Nat Nat where shiftRight a b := a / (2 ^ b)
+instance : PyShiftLeft Int Nat Int where shiftLeft a b := a * (2 ^ b)
+instance : PyShiftRight Int Nat Int where shiftRight a b := Int.fdiv a (2 ^ b)
+instance : PyShiftLeft Bool Int Int where shiftLeft a b := (pyBoolToInt a) * (2 ^ b.toNat)
+instance : PyShiftRight Bool Int Int where shiftRight a b := Int.fdiv (pyBoolToInt a) (2 ^ b.toNat)
 
 /-!
 ## Reduction lemmas — `simp` rewrites the Python operators to the standard ones

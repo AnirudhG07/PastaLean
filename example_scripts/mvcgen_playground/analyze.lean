@@ -58,16 +58,6 @@ theorem analyze_spec : ⦃⌜PastaLean.pyLen xs > (0 : Int)⌝⦄ analyze xs thr
   simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
-theorem analyze_correct :
-    ∀ (xs : List Int),
-      ∀ (threshold : Int),
-        PastaLean.pyLen xs > (0 : Int) →
-          let result := (analyze xs threshold).run;
-          result ≥ (0.0 : Rat) :=
-  by
-  intro xs threshold hpre
-  exact analyze_spec hpre
-
 def analyze'rn : List Int → Int → PastaLean.PyExcept Float := fun (xs : List Int) ↦ fun (threshold : Int) ↦ do
   let _ := Libraries.passta.pyPassRequires (decide (PastaLean.pyLen xs > (0 : Int)))
   -- Loop 1: running total + count of entries above the threshold.
