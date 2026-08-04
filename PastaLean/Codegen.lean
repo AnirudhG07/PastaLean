@@ -25,6 +25,14 @@ initialize numericModeRef : IO.Ref NumericMode ← IO.mkRef .exact
 /-- Read the current numeric lowering mode (set per backend request). -/
 def getNumericMode : IO NumericMode := numericModeRef.get
 
+/-- Opt-in reference semantics (`--heap`): when `true`, generators emit heap-monad ops (`alloc`/
+`readRef`/`modifyRef`) so class instances and mutable containers alias like real Python objects,
+instead of the default value-semantics rebuild-and-reassign. Set per backend request. -/
+initialize heapModeRef : IO.Ref Bool ← IO.mkRef false
+
+/-- Read whether opt-in heap/reference semantics is active (set per backend request). -/
+def getHeapMode : IO Bool := heapModeRef.get
+
 /-- True when `float` should lower to `ℚ` (the default exact mode). -/
 def numericModeIsExact : IO Bool := return (← getNumericMode) == .exact
 
@@ -160,6 +168,26 @@ structure State where
   /-- The mutator-method names of the class currently being lowered (a `self.m(..)` call to one of
   these reassigns `self`). Empty outside a class body. -/
   currentClassMutators : List String := []
+  /-- Under `--heap`, true while lowering a method body where `self` is a `Ref C` (so `self.x` reads
+  become `(← readRef self).x` and `self.x = v` becomes a `writeRef`). False in `__init__` bodies,
+  where `self` is still a plain value being built before `alloc`. -/
+  heapSelfRef : Bool := false
+  /-- Under `--heap`, the class of each local/parameter that holds a heap object (`p = Point(..)` →
+  `p ↦ "Point"`, a param `q : Point`). Lets a non-`self` attribute read `p.x` dereference the ref:
+  `(← readRef p).x`. Function-scoped (reset by `withFreshVariables`). -/
+  heapVarClasses : List (Name × String) := []
+  /-- Under `--heap`, the local/parameter names that hold a mutable container by reference (`xs = []`,
+  or `ys = xs`) — i.e. are a `Ref (List …)`/`Ref (HashMap …)`. Lets container reads (`xs[i]`, `len xs`,
+  `for x in xs`) dereference and mutations (`xs.append`) `modifyRef`. Function-scoped. -/
+  heapVarContainers : List Name := []
+  /-- Under `--heap`, local/parameter names promoted to a shared **variable cell** because a nested
+  closure captures and mutates them. A cell presents as `(← readRefM id)` in ordinary value positions
+  and as the raw ref in a `_heap_cell_arg` call arg. Holds both scalar cells (`Ref τ`) and
+  container/object cells (`Ref (Ref T)`). Function-scoped. -/
+  heapCellVars : List Name := []
+  /-- The container/object subset of `heapCellVars` (`Ref (Ref T)`) — these also drive
+  `heapContainerRef?` so `.append`/`len`/`[]` dereference to the inner object. Function-scoped. -/
+  heapCellContainers : List Name := []
   deriving Inhabited, Repr
 
 end PyGen
@@ -310,6 +338,51 @@ def hasVar (usedName : Name) : PygenM Bool := do
 def addVar (usedName : Name) : PygenM Unit := do
   modify fun st => { st with varNames := st.varNames.insert usedName }
 
+/-- Whether `self` is currently a `Ref C` (a `--heap` method body) rather than a plain value. -/
+def getHeapSelfRef : PygenM Bool := do
+  return (← get).heapSelfRef
+
+/-- Record that local/parameter `n` holds a heap object of class `cls` (so `n.x` dereferences). -/
+def registerHeapVarClass (n : Name) (cls : String) : PygenM Unit := do
+  modify fun st => { st with heapVarClasses := (n, cls) :: st.heapVarClasses }
+
+/-- The class of a heap-object local/parameter `n`, if known. -/
+def heapVarClassOf? (n : Name) : PygenM (Option String) := do
+  return ((← get).heapVarClasses.find? (·.1 == n)).map (·.2)
+
+/-- Record that local/parameter `n` holds a mutable container by reference. -/
+def registerHeapVarContainer (n : Name) : PygenM Unit := do
+  modify fun st => { st with heapVarContainers := n :: st.heapVarContainers }
+
+/-- Whether `n` is a container-ref local/parameter. -/
+def isHeapVarContainer (n : Name) : PygenM Bool := do
+  return (← get).heapVarContainers.contains n
+
+/-- Record that local/parameter `n` is a scalar variable cell (`Ref τ`) — captured and mutated by a
+nested closure. -/
+def registerHeapScalarCell (n : Name) : PygenM Unit := do
+  modify fun st => { st with heapCellVars := n :: st.heapCellVars }
+
+/-- Record that local/parameter `n` is a container/object variable cell (`Ref (Ref T)`). -/
+def registerHeapContainerCell (n : Name) : PygenM Unit := do
+  modify fun st => { st with heapCellVars := n :: st.heapCellVars,
+                             heapCellContainers := n :: st.heapCellContainers }
+
+/-- Whether `n` is a variable cell (scalar or container). -/
+def isHeapCellVar (n : Name) : PygenM Bool := do
+  return (← get).heapCellVars.contains n
+
+/-- Whether `n` is a container/object variable cell (`Ref (Ref T)`). -/
+def isHeapCellContainer (n : Name) : PygenM Bool := do
+  return (← get).heapCellContainers.contains n
+
+/-- Run `x` with `self` treated as a `Ref C` (heap method body). Restored on exit. -/
+def withHeapSelfRef {α : Type} (x : PygenM α) : PygenM α := do
+  let saved := (← get).heapSelfRef
+  modify fun st => { st with heapSelfRef := true }
+  let r ← x
+  modify fun st => { st with heapSelfRef := saved }
+  pure r
 /-- Whether `name` was bound with `let mut` (so it can be reassigned rather than shadowed). -/
 def isMutVar (name : Name) : PygenM Bool := do
   return (← get).mutVars.contains name
@@ -432,6 +505,26 @@ initialize classRegistry : IO.Ref (Std.HashMap String ClassInfo) ←
 
 def registerClass (name : String) (info : ClassInfo) : PygenM Unit := do
   classRegistry.modify (·.insert name info)
+
+/-- Process-global registry (like `classRegistry`) of which class fields hold a mutable container
+(and are therefore a `Ref (List …)`/`Ref (HashMap …)`), keyed `className → [fieldName]`. Populated by
+the `HeapPrelude` generator (which sees every class's field types); read by codegen to decide when a
+`self.f`/`obj.f` container access must dereference. -/
+initialize heapContainerFieldsRegistry : IO.Ref (Std.HashMap String (List String)) ←
+  IO.mkRef (Std.HashMap.emptyWithCapacity 16)
+
+/-- Record that `className.field` holds a heap-allocated container (a `Ref` to a List/dict/set). -/
+def registerContainerField (className field : String) : PygenM Unit := do
+  heapContainerFieldsRegistry.modify fun m =>
+    m.insert className (field :: (m.getD className []))
+
+/-- Whether `className.field` is a container-ref field (registered by `HeapPrelude`). -/
+def isContainerField (className field : String) : PygenM Bool := do
+  return ((← heapContainerFieldsRegistry.get).getD className []).contains field
+
+/-- The class whose body is currently being lowered (`self`'s class), if any. -/
+def getCurrentClass : PygenM (Option String) := do
+  return (← get).currentClass
 
 def isRegisteredClass (name : String) : PygenM Bool := do
   return (← classRegistry.get).contains name

@@ -30,6 +30,15 @@ def buildPrintArgsList (argsArray : Array Json) (resolvedArgs : Array (TSyntax `
     match argsArray[i]? with
     | some argJson => argJson.getObjValAs? String "node_type" == .ok "Starred"
     | none => false
+  -- Under `--heap`, a printed container is held by reference; dereference it (recursively through
+  -- tuple/list literals) so `print(xs)`/`print((xs, ys))` show contents, not `Ref` addresses. A
+  -- `*iterable` spread keeps its resolved term. `none` in value mode → `resolvedArgs` unchanged.
+  let mut resolvedArgs := resolvedArgs
+  for i in [0:resolvedArgs.size] do
+    unless isStarred i do
+      if let some argJson := argsArray[i]? then
+        if let some deref ← heapValueDeref? argJson then
+          resolvedArgs := resolvedArgs.set! i deref
   -- Common case: no spread → one clean `[pyArg a, pyArg b, …]` literal.
   if (List.range resolvedArgs.size).all (fun i => !isStarred i) then
     match resolvedArgs.toList with
@@ -157,7 +166,12 @@ partial def inlineIOTerm (json : Json) : PygenM (TSyntax `term) := do
                       inlineArgs := inlineArgs.push ((mkIdent mappedName : TSyntax `term))
               | _, _ =>
                   inlineArgs := inlineArgs.push (← getCode argJson `term)
+          let heap ← getHeapMode
           let mut funcTerm : TSyntax `term ← `("")
+          -- Under `--heap`, a ctor/method/heap-fn call must keep its heap dispatch (`C.new` /
+          -- `C.m recv` / awaited) even though an argument carries IO — otherwise the generic lowering
+          -- below would emit the raw class/function name (`Box (…)` instead of `(← Box.new …)`).
+          let mut heapAwait := false
           if funcJson.getObjValAs? String "node_type" == .ok "Attribute" then
             let .ok valueJson := funcJson.getObjValAs? Json "value" | throwError
               s!"Attribute node missing 'value' field: {funcJson}"
@@ -168,26 +182,42 @@ partial def inlineIOTerm (json : Json) : PygenM (TSyntax `term) := do
                 inlineIOTerm valueJson
               else
                 getCode valueJson `term
-            match pythonMethodMap attr with
-            | some funcName =>
-                -- Apply the mapped runtime function to the receiver as its *first* argument,
-                -- flat with the call arguments, rather than pre-building `(f receiver)`. The
-                -- latter is a complete sub-application, so a runtime method with a default
-                -- argument (e.g. `pyStringSplit`'s `sep`) would fill the default and then the
-                -- explicit argument (`s.split(" ")`) would be applied to the *result*.
-                funcTerm := (mkIdent funcName : TSyntax `term)
+            match (if heap then (json.getObjValAs? String "_receiver_class").toOption else none) with
+            | some cls =>
+                -- Heap method call `recv.m(args)` → `(← C.m recv args)`.
+                funcTerm := mkIdent (Name.mkStr (← suffixIfUserName cls).toName attr)
                 inlineArgs := #[receiverTerm] ++ inlineArgs
+                heapAwait := true
             | none =>
-                let attrId := mkIdent attr.toName
-                funcTerm ← `($receiverTerm.$attrId)
+              match pythonMethodMap attr with
+              | some funcName =>
+                  -- Apply the mapped runtime function to the receiver as its *first* argument,
+                  -- flat with the call arguments, rather than pre-building `(f receiver)`. The
+                  -- latter is a complete sub-application, so a runtime method with a default
+                  -- argument (e.g. `pyStringSplit`'s `sep`) would fill the default and then the
+                  -- explicit argument (`s.split(" ")`) would be applied to the *result*.
+                  funcTerm := (mkIdent funcName : TSyntax `term)
+                  inlineArgs := #[receiverTerm] ++ inlineArgs
+              | none =>
+                  let attrId := mkIdent attr.toName
+                  funcTerm ← `($receiverTerm.$attrId)
           else
             match funcJson.getObjValAs? String "node_type", funcJson.getObjValAs? String "id" with
             | .ok "Name", .ok funcName =>
-                match ← builtinMappedName? funcName with
-                | some mappedName => funcTerm := (mkIdent mappedName : TSyntax `term)
+                match (if heap then (json.getObjValAs? String "_class_ctor").toOption else none) with
+                | some cls =>
+                    -- Heap constructor `C(args)` → `(← C.new args)`.
+                    funcTerm := mkIdent (Name.mkStr (← suffixIfUserName cls).toName "new")
+                    heapAwait := true
                 | none =>
-                    let mappedName ← leanName funcName.toName
-                    funcTerm := (mkIdent mappedName : TSyntax `term)
+                    match ← builtinMappedName? funcName with
+                    | some mappedName => funcTerm := (mkIdent mappedName : TSyntax `term)
+                    | none =>
+                        let mappedName ← leanName funcName.toName
+                        funcTerm := (mkIdent mappedName : TSyntax `term)
+                    -- A heap-effectful user free function returns a `HeapM` action; await it inline.
+                    if heap && json.getObjValAs? Bool "_heap_call" == .ok true then
+                      heapAwait := true
             | _, _ =>
                 funcTerm ← getCode funcJson `term
           let mut t ← `($funcTerm $inlineArgs*)
@@ -199,7 +229,7 @@ partial def inlineIOTerm (json : Json) : PygenM (TSyntax `term) := do
                 getCode kwValueJson `term
             let kwId := mkIdent kwName.toName
             t ← `($t ($kwId:ident := $kwValueCode))
-          return t
+          if heapAwait then return ← `((← $t)) else return t
   | "FormattedValue" => do
       let .ok valueJson := json.getObjValAs? Json "value" | throwError
         s!"FormattedValue node does not have a 'value' field or it is not a JSON value: {json}"

@@ -79,6 +79,40 @@ def sibling_closures(a: int, b: int):
     return apply3
 
 
+def aliased_list_closure():
+    # A closure over a MUTABLE list that is also ALIASED: `push` captures `xs`, and `alias` is a
+    # second name bound to the SAME list object. Under reference semantics (--heap) the appends made
+    # through the closure are visible through `alias` too → ([1, 2, 3, 4], [1, 2, 3, 4]). Under value
+    # semantics `alias = xs` copies and the captured list threads by value, so `alias` can't see the
+    # closure's appends — the two results diverge. This is the value-vs-reference contrast for lists.
+    xs = [1, 2]
+    alias = xs
+
+    def push(v: int) -> int:
+        xs.append(v)
+        return len(xs)
+
+    push(3)
+    push(4)
+    return (xs, alias)
+
+
+def counter_closure():
+    # A closure over a MUTABLE SCALAR: `bump` captures and mutates `count` via `nonlocal`. Under
+    # reference semantics (--heap) `count` becomes a shared scalar cell (`Ref Int`), so both `bump`
+    # calls accumulate into the one binding → 5 + 3 == 8. The scalar counterpart to the list case.
+    count = 0
+
+    def bump(k: int) -> int:
+        nonlocal count
+        count += k
+        return count
+
+    bump(5)
+    bump(3)
+    return count
+
+
 def closure_theorems():
     # Properties of the closures above, PROVED automatically on conversion (`--prove-asserts`): each
     # `assert` becomes a Lean theorem `:= by taste?` and the proof search splices the winning tactic.

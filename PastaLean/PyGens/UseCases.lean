@@ -4,6 +4,7 @@ import PastaLean.PyGens.UseCases.Comments
 import PastaLean.PyGens.UseCases.ControlFlow
 import PastaLean.PyGens.UseCases.Exceptions
 import PastaLean.PyGens.UseCases.FuncDef
+import PastaLean.PyGens.UseCases.HeapPrelude
 import PastaLean.PyGens.UseCases.Imports
 import PastaLean.PyGens.UseCases.LambdaExpr
 import PastaLean.PyGens.UseCases.ListComp

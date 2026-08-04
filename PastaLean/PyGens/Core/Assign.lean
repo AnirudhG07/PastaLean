@@ -6,6 +6,47 @@ open Lean Meta Elab Term Qq Std
 
 namespace PastaLean
 
+-- Render a `PyType` to its HEAP Lean type (`--heap`): user objects and mutable containers become
+-- `Ref`s (recursively), primitives stay inline, tuples stay inline products (immutable, never heap
+-- cells), and un-pinnable container elements box to `PyAny`. This is what makes
+-- `Node.next : Option (Ref Node)`, `items : Ref (List Int)`, and a generic `Ref (List PyAny)`.
+-- (Lives here, upstream of both FuncDef and ClassDef, so closure cell params can reuse it.)
+mutual
+/-- The heap Lean type of a Python type. Object/container slots become `Ref`s; a scalar slot that
+inference can't pin defaults to `Int` (kept concrete so arithmetic/ordering instances still resolve —
+boxing a scalar to `PyAny` here would leave `+ₚ`/`≤` stuck). Container ELEMENTS go through
+`heapElemTypeSyntax`, which boxes an un-pinnable element to `PyAny`. -/
+partial def heapTypeSyntax (t : TypeInfer.PyType) : PygenM (TSyntax `term) := do
+  match t with
+  -- In a run-twin, an object type names the `'rn` class (`Counter'rn`), matching the twin's
+  -- constructor/fields and its `Storable Val (Ref Counter'rn)`; exact mode leaves the name as-is.
+  | .cls n => `(PastaLean.Ref $(mkIdent (← suffixIfUserName n).toName))
+  | .list e => `(PastaLean.Ref (List $(← heapElemTypeSyntax e)))
+  | .set e  => `(PastaLean.Ref (List $(← heapElemTypeSyntax e)))
+  | .dict k v => `(PastaLean.Ref (Std.HashMap $(← heapTypeSyntax k) $(← heapElemTypeSyntax v)))
+  | .opt inner => `(Option $(← heapTypeSyntax inner))
+  | .tuple es =>
+      match es with
+      | []        => `(Unit)
+      | e :: rest => do
+          let mut acc ← heapTypeSyntax e
+          for r in rest do
+            acc ← `($acc × $(← heapTypeSyntax r))
+          pure acc
+  | _ => pure ((← pyTypeSyntax? t).getD (mkIdent ``Int))
+
+/-- The Lean type of a container element/value position. An element that holds conflicting types
+(`.any`, ⊤ — e.g. an explicit `list[object]`, or a list mixing `int` and `str`) boxes to `PyAny`, the
+gradual-typing fallback: element ops (`append`/`[]`/`len`/`for`/print) all have `PyAny` instances and
+pushed values auto-box, so a heap container "of any type" is `Ref (List PyAny)`. A merely un-pinned
+element (`.unknown`, ⊥ — e.g. a bare `= []` whose items are all one type) keeps the concrete default,
+so an all-`int` list stays `Ref (List Int)` and its element arithmetic still resolves. -/
+partial def heapElemTypeSyntax (t : TypeInfer.PyType) : PygenM (TSyntax `term) := do
+  match t with
+  | .any => pure (mkIdent ``PastaLean.PyAny)
+  | _ => heapTypeSyntax t
+end
+
 /-- Read all Name idents from a tuple assignment target (any arity ≥ 2). -/
 def tupleAssignTargetNames? (target : Json) : PygenM (Option (Array (TSyntax `ident))) := do
   unless jsonNodeType? target == some "Tuple" do
@@ -154,8 +195,47 @@ class method body (`self` is the method's `let mut` shadow). -/
 def selfRecordUpdateDoElem (attr : String) (rhs : TSyntax `term) : PygenM (TSyntax `doElem) := do
   let selfId := mkIdent `self
   let attrId := mkIdent attr.toName
+  -- Under `--heap` in a method body, `self` is a `Ref C`: write the field through it with the
+  -- `self ~> attr <~ rhs` pointer notation (`rhs` may itself read fields — those `←`s lift). The
+  -- `<~` doElem can't be produced by a quotation with an antiquote LHS, so build the node directly;
+  -- the pretty-printed text re-parses and macro-expands to a `writeRef` when the file is compiled.
+  if ← getHeapSelfRef then
+    let lhs ← `($selfId ~> $attrId:ident)
+    return ⟨mkNode ``PastaLean.ptrWrite #[lhs.raw, mkAtom "<~", rhs.raw]⟩
   let fields := #[← `(Lean.Parser.Term.structInstField| $attrId:ident := $rhs)]
   `(doElem| $selfId:ident := { $selfId:term with $fields:structInstField,* })
+
+/-- `<recv>.attr = rhs` (or the base of `<recv>.attr op= rhs`) when `recv` is a heap OBJECT reference —
+`self` as a `Ref C` param (`heapSelfRef`) or a variable/param registered to hold a heap object of a
+known class (`heapVarClassOf?`). Emits the `recv ~> attr <~ rhs` pointer-write (built directly like
+`selfRecordUpdateDoElem`, since the `<~` LHS can't be an antiquote). Returns `none` when not a heap
+object ref, so callers fall back to the value-semantics record update. -/
+def heapAttrWriteTargetDoElem? (target : Json) (rhs : TSyntax `term) :
+    PygenM (Option (TSyntax `doElem)) := do
+  unless ← getHeapMode do return none
+  unless jsonNodeType? target == some "Attribute" do return none
+  let .ok recv := target.getObjVal? "value" | return none
+  let .ok attr := target.getObjValAs? String "attr" | return none
+  unless jsonNodeType? recv == some "Name" do return none
+  let .ok recvId := recv.getObjValAs? String "id" | return none
+  let isHeapObj ←
+    if recvId == "self" && (← getHeapSelfRef) then pure true
+    else pure (← heapVarClassOf? recvId.toName).isSome
+  unless isHeapObj do return none
+  let lhs ← `($(mkIdent recvId.toName) ~> $(mkIdent attr.toName):ident)
+  return some ⟨mkNode ``PastaLean.ptrWrite #[lhs.raw, mkAtom "<~", rhs.raw]⟩
+
+/-- The class name of a value expression that produces a heap object, if statically known: a
+constructor call (`_class_ctor` stamp) or a variable already known to hold one (`q = p`). -/
+def heapClassOfValue? (value : Json) : PygenM (Option String) := do
+  match (value.getObjValAs? String "_class_ctor").toOption with
+  | some c => return some c
+  | none =>
+    if jsonNodeType? value == some "Name" then
+      match value.getObjValAs? String "id" with
+      | .ok vid => heapVarClassOf? vid.toName
+      | _ => return none
+    else return none
 
 /-- `<recv>.attr = rhs` under value semantics, for ANY receiver (`node.children[i]=v` on a local,
 `obj.field=v`): rebuild the receiver record `{recv with attr := rhs}` and store it back — a `Name`
@@ -233,6 +313,18 @@ partial def buildSubscriptSetRhs (base : TSyntax `term) (idxs : List (TSyntax `t
 
 partial def nestedSubscriptSetDoElem? (target : Json) (value : TSyntax `term) :
     PygenM (Option (TSyntax `doElem)) := do
+  -- Under `--heap`, `a[i] = v` on a container held by reference mutates it in place through the ref.
+  -- (Heap mode handles only the single-level subscript case; the multi-level chain below is the
+  -- default value-semantics path.)
+  if (← getHeapMode) && jsonNodeType? target == some "Subscript" then
+    if let some containerJson := (target.getObjVal? "value").toOption then
+      if let some sliceJson := (target.getObjVal? "slice").toOption then
+        if jsonNodeType? sliceJson != some "Slice" then
+          if let some refCode ← heapContainerRef? containerJson then
+            let indexTerm ← getCode sliceJson `term
+            let lVar := mkIdent `__hc_l
+            return some (← `(doElem| PastaLean.modifyRefM $refCode
+              (fun $lVar => $(mkIdent ``PastaLean.pySetItem) $lVar $indexTerm $value)))
   let some (root, slices) := subscriptChain? target | return none
   -- `d[i, j] = v` on a dict is a single tuple-KEY write; otherwise each level is a plain index.
   let idxTerms ← slices.mapM fun s => do return (← dictTupleKeyTerm? s).getD (← getCode s `term)
@@ -478,6 +570,12 @@ def assignSyntax : (kind : SyntaxNodeKind) → Json →
               if target.getObjValAs? Bool "_list_unpack" == .ok true then false
               else if target.getObjValAs? Bool "_tuple_unpack" == .ok true then true
               else jsonNodeType? value == some "Tuple" || jsonNodeType? value == some "Call"
+            -- Under `--heap`, a tuple-unpack of a function returning a tuple-of-containers binds each
+            -- container element to its object-ref (`Ref (List …)`); TypeInfer marks which slots are
+            -- containers, so register those `Name` targets — later `len`/subscript/iterate deref them,
+            -- exactly as a directly-bound container does (§ single-target path below).
+            let containerMask? : Option (Array Bool) :=
+              (target.getObjValAs? (Array Bool) "_unpack_container_mask").toOption
             let mut binds : Array (TSyntax `doElem) := #[bindValueTmp, bindUnpackTmp]
             -- A threaded combined-assign `(userTarget, ...threadedNames) = helper(...)` (ClosureConvert)
             -- puts the user target at index 0 and the threaded-state restores after it. When the user
@@ -490,6 +588,9 @@ def assignSyntax : (kind : SyntaxNodeKind) → Json →
               then (List.range n).drop 1 ++ [0] else List.range n
             for i in order do
               let acc ← unpackAccessTerm isTuple unpackTmpIdent i n
+              if ← getHeapMode then
+                if (containerMask?.bind (·[i]?)).getD false && jsonNodeType? elts[i]! == some "Name" then
+                  registerHeapVarContainer (← getCode elts[i]! `ident).getId
               binds := binds.push (← tupleElementAssignDoElem nestedIsTuple elts[i]! acc)
             -- Return the bindings as siblings (a flattened null-node), NOT wrapped in a
             -- nested `do` — wrapping would scope the unpacked names away from following
@@ -540,11 +641,16 @@ def assignSyntax : (kind : SyntaxNodeKind) → Json →
             -- `self` via record update. The `hasVar self` guard keeps top-level `obj.x = v`
             -- (no mutable `self` in scope) on its normal path.
             if let some attr := selfAttrTarget? target then
-              if ← hasVar `self then
+              -- Value mode: `self` is the `let mut` shadow (`hasVar`). Heap mode: `self` is a `Ref C`
+              -- parameter (not a var), so also fire when `heapSelfRef` is set → `writeRef` update.
+              if (← hasVar `self) || (← getHeapSelfRef) then
                 return ← selfRecordUpdateDoElem attr rhs
             -- `obj.field = v` for a non-`self` receiver (a local record/node): record-update + reassign,
             -- rather than the invalid `let mut obj.field := v`.
             if jsonNodeType? target == some "Attribute" then
+              -- A heap object-ref receiver (`c.n = v` where `c : Ref C`) writes through the pointer;
+              -- a plain local record does the value-semantics rebuild-and-reassign.
+              if let some w ← heapAttrWriteTargetDoElem? target rhs then return w
               let .ok recv := target.getObjVal? "value" | throwError s!"Attribute missing 'value': {target}"
               let .ok attr := target.getObjValAs? String "attr" | throwError s!"Attribute missing 'attr': {target}"
               return ← attrRecordUpdateDoElem recv attr rhs
@@ -567,6 +673,53 @@ def assignSyntax : (kind : SyntaxNodeKind) → Json →
                 pure setStx
             | none =>
                 let nameIdent ← getCode target `ident
+                -- Closure-promoted variable CELLS (`--heap`): a `_heap_cell_def` assignment allocates
+                -- the cell (one extra `allocM` over the ordinary heap RHS — `Ref τ` scalar,
+                -- `Ref (Ref T)` container/object); a plain assignment to an already-promoted cell
+                -- rebinds it in place with `writeRefM`.
+                if ← getHeapMode then
+                  if (json.getObjValAs? Bool "_heap_cell_def").toOption.getD false then
+                    let cls? ← heapClassOfValue? value
+                    let isContainerRhs :=
+                      (match jsonNodeType? value with
+                        | some "List" | some "Dict" | some "Set" => true | _ => false)
+                      || (← heapContainerRef? value).isSome || cls?.isSome
+                    if isContainerRhs then registerHeapContainerCell nameIdent.getId
+                    else registerHeapScalarCell nameIdent.getId
+                    if let some cls := cls? then registerHeapVarClass nameIdent.getId cls
+                    return ← bindOrAssignLocal nameIdent (← `((← PastaLean.allocM $rhs))) none
+                  if ← isHeapCellVar nameIdent.getId then
+                    return ← `(doElem| PastaLean.writeRefM $nameIdent $rhs)
+                -- Under `--heap`, remember that this local now holds a heap object of a known class
+                -- (`p = Point(..)`, or `q = p`), so later `p.x` reads dereference it.
+                if ← getHeapMode then
+                  let cls? ← heapClassOfValue? value
+                  match cls? with
+                  | some cls => registerHeapVarClass nameIdent.getId cls
+                  | none => pure ()
+                  -- A constructor result or a container literal is a `Ref`; suppress the
+                  -- value-semantics `_ty` ascription and let Lean infer the ref type from the RHS.
+                  let isContainerLit := match jsonNodeType? value with
+                    | some "List" | some "Dict" | some "Set" => true | _ => false
+                  -- The RHS is a container ref if it's a literal, aliases another container
+                  -- (`ys = xs`, `xs = self.items`), or is a call returning a container (`ys = f()`,
+                  -- handing back the object-ref); track it so reads/mutations of the target deref.
+                  let isContainerRhs ←
+                    if isContainerLit
+                        || (value.getObjValAs? Bool "_returns_container").toOption.getD false then
+                      pure true
+                    else pure (← heapContainerRef? value).isSome
+                  if isContainerRhs then registerHeapVarContainer nameIdent.getId
+                  if cls?.isSome || isContainerRhs then
+                    -- A heap container of closures is the one case the RHS can't self-infer: an empty
+                    -- `allocM []` leaves the element's function-domain universe stuck, and a later
+                    -- `fun () ↦ …` append does not pin it. Re-apply the stamped heap type there.
+                    let fnAsc? ← match jsonFieldOption target "_ty" with
+                      | some ann =>
+                          let t := TypeInfer.ofAnnotation ann
+                          if t.containsFn then pure (some (← heapTypeSyntax t)) else pure none
+                      | none => pure none
+                    return ← bindOrAssignLocal nameIdent rhs fnAsc?
                 -- A cross-type rebind (`_ty` = `PyAny`) of an immutable `let` (a loop var, `for ch in
                 -- s: ch = ord(ch)`) is shadowed with a fresh `let mut`. But a `let mut` slot — incl. a
                 -- `let mut x : PyAny` from a first binding — is just reassigned (a `let mut` cannot be
@@ -587,7 +740,14 @@ def assignSyntax : (kind : SyntaxNodeKind) → Json →
                   setDictVar fresh (← jsonIsDictExpr value)
                   return ← `(doElem| let mut $(mkIdent fresh):ident := $rhs)
                 let shadow := conflicting && (← hasVar nameIdent.getId) && !(← isMutVar nameIdent.getId)
-                let ty? ← if shadow then pure none else stampedTypeSyntax? target
+                -- Under `--heap`, `t = (xs, ys)` where the elements are container object-refs builds a
+                -- `Ref × Ref`; the value-semantics `_ty` stamp (`List × List`) would mismatch, so drop it
+                -- and let Lean infer the ref product from the RHS.
+                let mut heapTupleOfRefs := false
+                if (← getHeapMode) && jsonNodeType? value == some "Tuple" then
+                  for e in (value.getObjValAs? (Array Json) "elts").toOption.getD #[] do
+                    if (← heapContainerRef? e).isSome then heapTupleOfRefs := true
+                let ty? ← if shadow || heapTupleOfRefs then pure none else stampedTypeSyntax? target
                 let bound ← bindOrAssignLocal nameIdent rhs ty? shadow
                 -- Track whether this name now holds a set, so later `==`/`<=` on it use set semantics
                 -- (order-independent) rather than the list-backed ones.

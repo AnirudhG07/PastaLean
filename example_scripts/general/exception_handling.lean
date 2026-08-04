@@ -35,7 +35,7 @@ def fail'rn := fun x ↦
 
 def call_fail := fun x ↦
   ((do
-      let mut y := (← fail x)
+      let mut y : String := (← fail x)
       return y) :
     PastaLean.ProofMode.PyProofM _)
 
@@ -43,7 +43,7 @@ attribute [simp] call_fail
 
 def call_fail'rn := fun x ↦
   ((do
-      let mut y := (← fail'rn x)
+      let mut y : String := (← fail'rn x)
       return y) :
     PastaLean.PyExcept _)
 
@@ -81,39 +81,35 @@ private def _simple_catch'helper := fun (x : Int) ↦ x +ₚ (1 : Int)
 
 attribute [simp, taste_ingr] _simple_catch'helper
 
-def simple_catch :=
-  ((do
-      let mut x : Int := (1 : Int)
-      x := _simple_catch'helper x
-      try
-        throw (PastaLean.PyException.Raise "Exception" (ToString.toString "boom"))
-      catch caught =>
-        if Bool.true then 
-          let e := caught
-          let __py_ret_1 := s! "Caught exception: {e}"
-          return __py_ret_1
-        else
-          throw caught) :
-    PastaLean.ProofMode.PyProofM _)
+def simple_catch : PastaLean.ProofMode.PyProofM String := do
+  let mut x : Int := (1 : Int)
+  x := _simple_catch'helper x
+  try
+    throw (PastaLean.PyException.Raise "Exception" (ToString.toString "boom"))
+  catch caught =>
+    if Bool.true then 
+      let e := caught
+      let __py_ret_1 := s! "Caught exception: {e}"
+      return __py_ret_1
+    else
+      throw caught
 
 attribute [simp] simple_catch
 
 private def _simple_catch'helper'rn := fun (x : Int) ↦ x +ₚ (1 : Int)
 
-def simple_catch'rn :=
-  ((do
-      let mut x : Int := (1 : Int)
-      x := _simple_catch'helper'rn x
-      try
-        throw (PastaLean.PyException.Raise "Exception" (ToString.toString "boom"))
-      catch caught =>
-        if Bool.true then 
-          let e := caught
-          let __py_ret_1 := s! "Caught exception: {e}"
-          return __py_ret_1
-        else
-          throw caught) :
-    PastaLean.PyExcept _)
+def simple_catch'rn : PastaLean.PyExcept String := do
+  let mut x : Int := (1 : Int)
+  x := _simple_catch'helper'rn x
+  try
+    throw (PastaLean.PyException.Raise "Exception" (ToString.toString "boom"))
+  catch caught =>
+    if Bool.true then 
+      let e := caught
+      let __py_ret_1 := s! "Caught exception: {e}"
+      return __py_ret_1
+    else
+      throw caught
 
 def fixed_catch : PastaLean.ProofMode.PyProofM String := do
   try

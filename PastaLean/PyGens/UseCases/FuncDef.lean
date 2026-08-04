@@ -121,8 +121,12 @@ partial def functionArgTypeSyntax? (annotationJson : Json) : PygenM (Option (TSy
   -- `X | None` (`Optional`) and forward-ref strings: `TypeInfer` handles them (run-suffixed).
   | _ => seqAwareTypeSyntax? annotationJson
 
-/-- Read Python function parameters as Lean idents plus any simple type annotations we can preserve. -/
-def functionArgInfos (json : Json) : PygenM (Array (TSyntax `ident × Option (TSyntax `term))) := do
+/-- Read Python function parameters as Lean idents plus any simple type annotations we can preserve.
+`heapRefTypes` (free-function paths under `--heap`): a container/object parameter is typed its HEAP
+type (`Ref (List Int)` / `Ref C`) since callers pass it by reference; class-method/lambda callers
+leave it `false` (they build their own arg types). -/
+def functionArgInfos (json : Json) (heapRefTypes : Bool := false) :
+    PygenM (Array (TSyntax `ident × Option (TSyntax `term))) := do
   let .ok args := json.getObjVal? "args" | throwError
     s!"FuncDef node does not have an 'args' field or it is not a JSON value: {json}"
   let .ok argsArray := args.getObjValAs? (Array Json) "args" | throwError
@@ -131,6 +135,36 @@ def functionArgInfos (json : Json) : PygenM (Array (TSyntax `ident × Option (TS
   for arg in argsArray do
     let .ok argName := arg.getObjValAs? String "arg" | throwError
       s!"FuncDef argument does not have an 'arg' field or it is not a string: {arg}"
+    -- A closure-promoted variable CELL param (`--heap`): its Lean type is `Ref (heapTypeSyntax ann)`
+    -- — `Ref Int` for a scalar cell, `Ref (Ref (List Int))` for a container/object cell (one extra
+    -- `Ref` over the ordinary heap type). The annotation rides on the arg (`annotation` or `_ty`).
+    if (← getHeapMode) && arg.getObjValAs? Bool "_heap_cell_param" == .ok true then
+      let annJson? : Option Json :=
+        match jsonFieldOption arg "annotation" with
+        | some a => if a.isNull then jsonFieldOption arg "_ty" else some a
+        | none => jsonFieldOption arg "_ty"
+      let pty := match annJson? with
+        | some ann => TypeInfer.ofAnnotation ann
+        | none => .int
+      let cellTy ← `(PastaLean.Ref $(← heapTypeSyntax pty))
+      argInfos := argInfos.push (mkIdent argName.toName, some cellTy)
+      continue
+    -- A container/object parameter (`--heap`, free-function path): passed by reference, so its type is
+    -- its HEAP type (`Ref (List Int)` / `Ref C`). `.unknown` (object/Any) stays untyped (Lean infers);
+    -- scalars fall through to the value logic below.
+    if heapRefTypes && (← getHeapMode) then
+      let annJson? : Option Json :=
+        match jsonFieldOption arg "annotation" with
+        | some a => if a.isNull then jsonFieldOption arg "_ty" else some a
+        | none => jsonFieldOption arg "_ty"
+      match annJson?.map TypeInfer.ofAnnotation with
+      | some pty =>
+          match pty with
+          | .list _ | .set _ | .dict _ _ | .cls _ =>
+              argInfos := argInfos.push (mkIdent argName.toName, some (← heapTypeSyntax pty))
+              continue
+          | _ => pure ()
+      | none => pure ()
     -- A parameter the per-variable real-flow pass stamped `_real` receives an `ℝ` value at some
     -- call site → ascribe `ℝ` (exact mode), overriding the annotation. Everything else stays `ℚ`.
     let isRealParam := (← getNumericMode) == .exact && arg.getObjValAs? Bool "_real" == .ok true
@@ -154,6 +188,49 @@ def functionBodyElems (json : Json) : PygenM (Array Json) := do
   let .ok bodyElems := json.getObjValAs? (Array Json) "body" | throwError
     s!"FuncDef node does not have a 'body' field or it is not a JSON value: {json}"
   return bodyElems
+
+/-- The closure-promoted cell parameters of a function (`--heap`): each `_heap_cell_param` arg with
+whether it is a container/object cell (`Ref (Ref T)`, registered so `heapContainerRef?` fires) vs a
+scalar cell (`Ref τ`). Empty for ordinary functions, so callers pass it unconditionally. -/
+def functionHeapCellParams (json : Json) : PygenM (Array (Name × Bool)) := do
+  unless ← getHeapMode do return #[]
+  let .ok args := json.getObjVal? "args" | return #[]
+  let .ok argsArray := args.getObjValAs? (Array Json) "args" | return #[]
+  let mut cells := #[]
+  for arg in argsArray do
+    if arg.getObjValAs? Bool "_heap_cell_param" == .ok true then
+      if let .ok argName := arg.getObjValAs? String "arg" then
+        let annJson? : Option Json :=
+          match jsonFieldOption arg "annotation" with
+          | some a => if a.isNull then jsonFieldOption arg "_ty" else some a
+          | none => jsonFieldOption arg "_ty"
+        let isContainer := match annJson?.map TypeInfer.ofAnnotation with
+          | some (.list _) | some (.set _) | some (.dict _ _) | some (.cls _) => true
+          | _ => false
+        cells := cells.push (argName.toName, isContainer)
+  return cells
+
+/-- The container/object REFERENCE parameters of a function (`--heap`): each ordinary (non-cell) param
+whose type is a mutable container (→ `none`, registered as a container-ref so `heapContainerRef?`
+fires) or a user object of class `c` (→ `some c`, registered so `p.x` reads dereference). Empty for
+ordinary functions and in value mode, so callers pass it unconditionally. -/
+def functionHeapRefParams (json : Json) : PygenM (Array (Name × Option String)) := do
+  unless ← getHeapMode do return #[]
+  let .ok args := json.getObjVal? "args" | return #[]
+  let .ok argsArray := args.getObjValAs? (Array Json) "args" | return #[]
+  let mut refs := #[]
+  for arg in argsArray do
+    if arg.getObjValAs? Bool "_heap_cell_param" == .ok true then continue
+    if let .ok argName := arg.getObjValAs? String "arg" then
+      let annJson? : Option Json :=
+        match jsonFieldOption arg "annotation" with
+        | some a => if a.isNull then jsonFieldOption arg "_ty" else some a
+        | none => jsonFieldOption arg "_ty"
+      match annJson?.map TypeInfer.ofAnnotation with
+      | some (.list _) | some (.set _) | some (.dict _ _) => refs := refs.push (argName.toName, none)
+      | some (.cls c) => refs := refs.push (argName.toName, some c)
+      | _ => pure ()
+  return refs
 
 /-- Whether the JSON references a library member that lowers to a `noncomputable` `ℝ`
 transcendental (`math.exp`, `math.sqrt`, …). Used to mark a generated `def` as `noncomputable`
@@ -386,8 +463,21 @@ inside a nested function do not leak into the enclosing scope's `let`/`let mut` 
 leak would otherwise cause a later same-named outer assignment to be emitted as a reassignment
 of a variable that was never declared `let mut`. -/
 def functionValueSyntax (argInfos : Array (TSyntax `ident × Option (TSyntax `term))) (bodyElems : Array Json)
-    (boxReturn : Bool := false) (retFloat : Bool := false) (optMutParams : Array (String × String) := #[]) :
+    (boxReturn : Bool := false) (retFloat : Bool := false) (optMutParams : Array (String × String) := #[])
+    (heapCellParams : Array (Name × Bool) := #[])
+    (heapRefParams : Array (Name × Option String) := #[]) :
     PygenM (TSyntax `term) := withFreshVariables do
+  -- Closure-promoted cell params (`--heap`): register so body reads/mutations deref them (one
+  -- `readRefM`) and container cells feed `heapContainerRef?`. Function-scoped via `withFreshVariables`.
+  for (nm, isContainer) in heapCellParams do
+    if isContainer then registerHeapContainerCell nm else registerHeapScalarCell nm
+  -- Container/object reference params (`--heap`): a container is a `Ref (List …)` (register so
+  -- `.append`/`len`/`[]`/iteration dereference), an object is a `Ref C` (register its class so `p.x`
+  -- reads dereference). Function-scoped via `withFreshVariables`.
+  for (nm, cls?) in heapRefParams do
+    match cls? with
+    | some cls => registerHeapVarClass nm cls
+    | none => registerHeapVarContainer nm
   let usesExceptions := bodyNeedsExceptionMonad bodyElems
   let usesRealIO := bodyNeedsIOMonad bodyElems
   let useProofMonad ← shouldUseProofMonad
@@ -406,12 +496,34 @@ def functionValueSyntax (argInfos : Array (TSyntax `ident × Option (TSyntax `te
   -- A Lean function parameter is an immutable binder, but Python lets a body reassign or
   -- augment its parameters (`i -= 1`, `a[k] = v`). Each mutated parameter gets a `let mut p := p`
   -- shadow at the top of the (monadic) body, then reassignments resolve against the mutable shadow.
-  -- Pure bodies never mutate, so this prelude is empty for them.
-  let paramPrelude ← mutatedParamPrelude argInfos bodyElems optMutParams
+  -- Pure bodies never mutate, so this prelude is empty for them. A `--heap` cell/ref param is already
+  -- a `Ref` (mutated through `writeRefM`/`modifyRefM`), so exclude it — a value shadow would rebind
+  -- the name to a plain value.
+  let valueArgInfos := argInfos.filter fun (argIdent, _) =>
+    !(heapCellParams.any (·.1 == argIdent.getId)) && !(heapRefParams.any (·.1 == argIdent.getId))
+  let paramPrelude ← mutatedParamPrelude valueArgInfos bodyElems optMutParams
   -- The monad codomain: `PyAny` when the returns disagree (`_box_return`), else a hole for Lean to
   -- infer. Without this an effectful boxed function would keep `_`, and Lean would fix the monad's
   -- type from the first `return` — forcing e.g. `Float`, so a later `return 0` (`ℤ`) fails to match.
   let effCodomain : TSyntax `term ← if boxReturn then `(PastaLean.PyAny) else `(_)
+  -- Heap tier (`--heap`): a body that touches the heap runs in `HeapM Val` (or, with IO, the
+  -- `PyHeapIO`/`PyHeapProofM` stack). Takes precedence — `HeapM`'s error dimension is `PyException`,
+  -- so it already subsumes exceptions. Codomain is ascribed to the body so a `_` return can infer.
+  -- A body that only mutates a captured cell ref or a container/object ref param carries no heap
+  -- marker, so `needsHeapMonad` alone misses it — force the heap tier when this function takes cell
+  -- or reference params.
+  if (← needsHeapMonad bodyElems) ||
+      ((← getHeapMode) && (heapCellParams.size > 0 || heapRefParams.size > 0)) then
+    let bodyStxArray ← monadicFunctionBodySyntax bodyElems
+    let heapVal := mkIdent `Val
+    let monad ← if usesRealIO then
+        if useProofMonad then `($(mkIdent ``PastaLean.PyHeapProofM) $heapVal)
+        else `($(mkIdent ``PastaLean.PyHeapIO) $heapVal)
+      else `($(mkIdent ``PastaLean.HeapM) $heapVal)
+    let heapBody ← `(((do
+          $[$paramPrelude:doElem]*
+          $[$bodyStxArray:doElem]*) : $monad $effCodomain))
+    if argInfos.isEmpty then return heapBody else return ← mkLambda heapBody
   if usesProofExceptions || usesProofIO then
     -- Proof mode: use PyProofM (state monad with Python exceptions)
     let bodyStxArray ← monadicFunctionBodySyntax bodyElems
@@ -540,6 +652,11 @@ def functionCommandWithEffectSignature? (nameIdent : TSyntax `ident)
     (noncomp : Bool := false) :
     PygenM (Option (TSyntax `command)) := do
   let bodyElems ← functionBodyElems json
+  -- Heap functions run in `HeapM Val` with the codomain ascribed to the body (a `_` return type in
+  -- an explicit `def` header can't be inferred); let `functionValueSyntax`'s heap tier build them.
+  -- A function heap-tier ONLY via a container/object ref param carries no body heap marker, so also
+  -- defer when it takes reference params.
+  if (← needsHeapMonad bodyElems) || (← functionHeapRefParams json).size > 0 then return none
   let returnTy? ← functionReturnTypeSyntax? json
   -- Params with Python defaults go on the signature as `optParam` binders; otherwise the whole
   -- effect type is an arrow (`A → B → M R`) and the body is lambda-wrapped as before.
@@ -763,12 +880,19 @@ def mutualMemberDef (json : Json) : PygenM (TSyntax `command) := do
   let .ok name := json.getObjValAs? String "name" | throwError
     s!"FuncDef node does not have a 'name' field: {json}"
   let nameIdent := mkIdent (← withRunSuffix name).toName
-  let argInfos ← functionArgInfos json
+  let heapRefParams ← functionHeapRefParams json
+  let argInfos ← functionArgInfos json (heapRefTypes := true)
   let bodyElems ← functionBodyElems json
   let valueStx ← functionValueSyntax argInfos bodyElems
+    (heapCellParams := ← functionHeapCellParams json) (heapRefParams := heapRefParams)
+  -- A heap-tier member (touches the heap or takes a ref param) runs in `HeapM Val`; wrap the arrow's
+  -- codomain so the explicit `mutual` signature matches the body's monad.
+  let isHeap := !heapRefParams.isEmpty || (← needsHeapMonad bodyElems)
+  let wrapCod (retTy : TSyntax `term) : PygenM (TSyntax `term) :=
+    if isHeap then `(PastaLean.HeapM $(mkIdent `Val) $retTy) else pure retTy
   match ← functionReturnTypeSyntax? json with
   | some retTy =>
-      match ← functionArrowTypeSyntax? argInfos retTy with
+      match ← functionArrowTypeSyntax? argInfos (← wrapCod retTy) with
       | some fullTy => `(command| partial def $nameIdent : $fullTy := $valueStx)
       | none => `(command| partial def $nameIdent := $valueStx)
   | none => `(command| partial def $nameIdent := $valueStx)
@@ -1069,7 +1193,8 @@ def funcDefSyntax : (kind : SyntaxNodeKind) → Json →
           | none => false
         let retFloat := ((json.getObjValAs? Bool "_ret_float" == .ok true) || annFloat) &&
           ((← getNumericMode) != .exact || json.getObjValAs? Bool "_real_fn" != .ok true)
-        let argInfos ← functionArgInfos json
+        let heapRefParams ← functionHeapRefParams json
+        let argInfos ← functionArgInfos json (heapRefTypes := true)
         let effectCmd? ← withBoxReturnContext boxReturn <| withRetFloatContext retFloat
           (functionCommandWithEffectSignature? nameIdent argInfos json isReal)
         -- Drop any `Ensures(Result() …)`/`Assert(Result() …)` markers: they are verification-only
@@ -1093,6 +1218,7 @@ def funcDefSyntax : (kind : SyntaxNodeKind) → Json →
               match ← functionParamBinders? json argInfos with
               | some binders =>
                   let body ← functionValueSyntax #[] bodyElems boxReturn retFloat
+                    (heapRefParams := heapRefParams)
                   let rt? ← if isRecursive then recursiveReturnTypeSyntax? json else pure none
                   match isRecursive, nc, rt? with
                   | true, true, some rt => `(noncomputable partial def $nameIdent $binders* : $rt := $body)
@@ -1104,10 +1230,16 @@ def funcDefSyntax : (kind : SyntaxNodeKind) → Json →
               | none =>
               let valueStx ← functionValueSyntax argInfos bodyElems boxReturn retFloat
                 (optMutParams := optMutParamsOf json)
+                (heapCellParams := ← functionHeapCellParams json) (heapRefParams := heapRefParams)
               -- take care of recursion function Type
               if isRecursive then
+                -- A recursive heap-tier function (touches the heap or takes a ref param) runs in
+                -- `HeapM Val`; wrap the arrow's codomain so the explicit signature matches the body.
+                let isHeap := !heapRefParams.isEmpty || (← needsHeapMonad bodyElems)
                 let fullTy? ← match ← recursiveReturnTypeSyntax? json with
-                  | some retTy => functionArrowTypeSyntax? argInfos retTy
+                  | some retTy =>
+                      let cod ← if isHeap then `(PastaLean.HeapM $(mkIdent `Val) $retTy) else pure retTy
+                      functionArrowTypeSyntax? argInfos cod
                   | none => pure none
                 match fullTy?, nc with
                 | some fullTy, true => `(noncomputable partial def $nameIdent : $fullTy := $valueStx)
@@ -1146,16 +1278,20 @@ def funcDefSyntax : (kind : SyntaxNodeKind) → Json →
         else
           return finalCmd
     | `term, json => do
-        let argInfos ← functionArgInfos json
+        let argInfos ← functionArgInfos json (heapRefTypes := true)
         let bodyElems ← functionBodyElems json
         functionValueSyntax argInfos bodyElems
+          (heapCellParams := ← functionHeapCellParams json)
+          (heapRefParams := ← functionHeapRefParams json)
     | `doElem, json => do
         let .ok name := json.getObjValAs? String "name" | throwError
           s!"FuncDef node does not have a 'name' field or it is not a string: {json}"
         let nameIdent := mkIdent name.toName
-        let argInfos ← functionArgInfos json
+        let argInfos ← functionArgInfos json (heapRefTypes := true)
         let bodyElems ← functionBodyElems json
         let valueStx ← functionValueSyntax argInfos bodyElems
+          (heapCellParams := ← functionHeapCellParams json)
+          (heapRefParams := ← functionHeapRefParams json)
         `(doElem| let $nameIdent := $valueStx)
     | kind, _ => throwError s!"Unsupported syntax category `{kind}` for FuncDef node"
 
@@ -1270,11 +1406,12 @@ def functionDefHeadSyntax : (kind : SyntaxNodeKind) → Json →
         let .ok name := json.getObjValAs? String "name" | throwError
           s!"FuncDef node does not have a 'name' field or it is not a string: {json}"
         let nameIdent := mkIdent name.toName
-        let argInfos ← functionArgInfos json
+        let argInfos ← functionArgInfos json (heapRefTypes := true)
         let bodyElems ← functionBodyElems json
         let .ok rest := json.getObjValAs? (List Json) "rest" | throwError
           s!"FuncDef node does not have a 'rest' field or it is not a JSON value: {json}"
         let valueStx ← functionValueSyntax argInfos bodyElems
+          (heapRefParams := ← functionHeapRefParams json)
         let splitRest ← splitList rest
         let tailCode ← withoutCheck do
           getCode splitRest `term

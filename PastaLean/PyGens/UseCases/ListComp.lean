@@ -110,7 +110,12 @@ def comprehensionFilterOver (compJson : Json) (baseIter : TSyntax `term) : Pygen
 def comprehensionIterSyntax (compJson : Json) : PygenM (TSyntax `term) := do
   let .ok iterJson := compJson.getObjValAs? Json "iter" | throwError
     s!"comprehension node does not have an 'iter' field: {compJson}"
-  comprehensionFilterOver compJson (← getCode iterJson `term)
+  -- A heap container ref iterable derefs the same way the `for`-loop path does
+  -- (`for g in fs` → `pyIter (← readRefM fs)`); value mode leaves it untouched.
+  let baseIter ← match ← heapContainerDeref? iterJson with
+    | some deref => pure deref
+    | none => getCode iterJson `term
+  comprehensionFilterOver compJson baseIter
 
 /-- Recursively lower a Python list/generator comprehension through all generators.
 
@@ -136,8 +141,11 @@ def lowerComprehensionClauses (eltJson : Json) (generators : List Json) :
         -- (the codebase's convention for IO values), which binds in the enclosing `do`, so the
         -- map/filter run over the awaited `List` rather than a raw `IO (List _)`.
         let baseIter ←
-          if jsonUsesIOEffect iterJson then inlineIOTerm iterJson
-          else getCode iterJson `term
+          match ← heapContainerDeref? iterJson with
+          | some deref => pure deref
+          | none =>
+            if jsonUsesIOEffect iterJson then inlineIOTerm iterJson
+            else getCode iterJson `term
         let filtered ← comprehensionFilterOver compJson baseIter
         -- Emit dot-form `iterable.map (fun x => …)` so the iterable (whose element type is known,
         -- e.g. `List ℤ`) elaborates first and *binds* the lambda's parameter type. With the

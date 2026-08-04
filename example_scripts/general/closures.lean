@@ -13,7 +13,7 @@ set_option maxHeartbeats 800000
 
 def functions_append_closure :=
   ((do
-      let mut f := []
+      let mut f : List (Unit → String) := []
       for i in (PastaLean.pyRange (3 : Int))do
         f := PastaLean.pyAppend f fun () ↦ s! "Function {i}"
       for i in (PastaLean.pyRange (3 : Int))do
@@ -29,7 +29,7 @@ attribute [simp] functions_append_closure
 
 def functions_append_closure'rn :=
   ((do
-      let mut f := []
+      let mut f : List (Unit → String) := []
       for i in (PastaLean.pyRange (3 : Int))do
         f := PastaLean.pyAppend f fun () ↦ s! "Function {i}"
       for i in (PastaLean.pyRange (3 : Int))do
@@ -92,7 +92,7 @@ def value_capture_loop :=
     (do
       -- The CORRECT loop-closure idiom: `n=n` captures BY VALUE, so each closure keeps its own `n` —
       -- which maps naturally to Lean. (Bare `lambda: n` late-binds to the final `n`, a Python footgun.)
-      let mut fs := []
+      let mut fs : List (Unit → Int) := []
       for n in (PastaLean.pyRange (3 : Int))do
         fs :=
           PastaLean.pyAppend fs fun () ↦
@@ -108,7 +108,7 @@ def value_capture_loop'rn :=
     (do
       -- The CORRECT loop-closure idiom: `n=n` captures BY VALUE, so each closure keeps its own `n` —
       -- which maps naturally to Lean. (Bare `lambda: n` late-binds to the final `n`, a Python footgun.)
-      let mut fs := []
+      let mut fs : List (Unit → Int) := []
       for n in (PastaLean.pyRange (3 : Int))do
         fs :=
           PastaLean.pyAppend fs fun () ↦
@@ -216,6 +216,96 @@ def sibling_closures'rn := fun (a : Int) ↦ fun (b : Int) ↦
   -- `apply3` (a 0-arg closure) CALLS the sibling closure `lin`, and is RETURNED. Calling the returned
   -- 0-arg closure applies it to `Unit`: `sibling_closures(2, 1)() == lin(3) == 2*3 + 1 == 7`.
   fun () ↦ _sibling_closures'apply3'rn a b
+
+private def _aliased_list_closure'push := fun (v : Int) ↦ fun (xs : List Int) ↦
+  Id.run
+    (do
+      let mut xs := xs
+      xs := PastaLean.pyAppend xs v
+      let __py_ret_1 := (PastaLean.pyLen xs, xs)
+      return __py_ret_1)
+
+attribute [simp, taste_ingr] _aliased_list_closure'push
+
+def aliased_list_closure :=
+  -- A closure over a MUTABLE list that is also ALIASED: `push` captures `xs`, and `alias` is a
+  -- second name bound to the SAME list object. Under reference semantics (--heap) the appends made
+  -- through the closure are visible through `alias` too → ([1, 2, 3, 4], [1, 2, 3, 4]). Under value
+  -- semantics `alias = xs` copies and the captured list threads by value, so `alias` can't see the
+  -- closure's appends — the two results diverge. This is the value-vs-reference contrast for lists.
+  let xs := ([(1 : Int), (2 : Int)] : List Int)
+  let «alias» := (xs : List Int)
+  let __unpack_pair_2 := _aliased_list_closure'push (3 : Int) xs
+  let __thread_t1 := Prod.fst __unpack_pair_2
+  let xs := Prod.snd __unpack_pair_2
+  let __unpack_pair_1 := _aliased_list_closure'push (4 : Int) xs
+  let __thread_t2 := Prod.fst __unpack_pair_1
+  let xs := Prod.snd __unpack_pair_1
+  (xs, «alias»)
+
+attribute [simp, taste_ingr] aliased_list_closure
+
+private def _aliased_list_closure'push'rn := fun (v : Int) ↦ fun (xs : List Int) ↦
+  Id.run
+    (do
+      let mut xs := xs
+      xs := PastaLean.pyAppend xs v
+      let __py_ret_1 := (PastaLean.pyLen xs, xs)
+      return __py_ret_1)
+
+def aliased_list_closure'rn :=
+  -- A closure over a MUTABLE list that is also ALIASED: `push` captures `xs`, and `alias` is a
+  -- second name bound to the SAME list object. Under reference semantics (--heap) the appends made
+  -- through the closure are visible through `alias` too → ([1, 2, 3, 4], [1, 2, 3, 4]). Under value
+  -- semantics `alias = xs` copies and the captured list threads by value, so `alias` can't see the
+  -- closure's appends — the two results diverge. This is the value-vs-reference contrast for lists.
+  let xs := ([(1 : Int), (2 : Int)] : List Int)
+  let «alias» := (xs : List Int)
+  let __unpack_pair_2 := _aliased_list_closure'push'rn (3 : Int) xs
+  let __thread_t1 := Prod.fst __unpack_pair_2
+  let xs := Prod.snd __unpack_pair_2
+  let __unpack_pair_1 := _aliased_list_closure'push'rn (4 : Int) xs
+  let __thread_t2 := Prod.fst __unpack_pair_1
+  let xs := Prod.snd __unpack_pair_1
+  (xs, «alias»)
+
+private def _counter_closure'bump := fun (k : Int) ↦ fun (count : Int) ↦
+  let count := (count +ₚ k : Int)
+  (count, count)
+
+attribute [simp, taste_ingr] _counter_closure'bump
+
+def counter_closure :=
+  -- A closure over a MUTABLE SCALAR: `bump` captures and mutates `count` via `nonlocal`. Under
+  -- reference semantics (--heap) `count` becomes a shared scalar cell (`Ref Int`), so both `bump`
+  -- calls accumulate into the one binding → 5 + 3 == 8. The scalar counterpart to the list case.
+  let count := (0 : Int)
+  let __unpack_pair_2 := _counter_closure'bump (5 : Int) count
+  let __thread_t1 := Prod.fst __unpack_pair_2
+  let count := Prod.snd __unpack_pair_2
+  let __unpack_pair_1 := _counter_closure'bump (3 : Int) count
+  let __thread_t2 := Prod.fst __unpack_pair_1
+  let count := Prod.snd __unpack_pair_1
+  count
+
+attribute [simp, taste_ingr] counter_closure
+
+private def _counter_closure'bump'rn := fun (k : Int) ↦ fun (count : Int) ↦
+  let count := (count +ₚ k : Int)
+  (count, count)
+
+def counter_closure'rn :=
+  -- A closure over a MUTABLE SCALAR: `bump` captures and mutates `count` via `nonlocal`. Under
+  -- reference semantics (--heap) `count` becomes a shared scalar cell (`Ref Int`), so both `bump`
+  -- calls accumulate into the one binding → 5 + 3 == 8. The scalar counterpart to the list case.
+  let count := (0 : Int)
+  let __unpack_pair_2 := _counter_closure'bump'rn (5 : Int) count
+  let __thread_t1 := Prod.fst __unpack_pair_2
+  let count := Prod.snd __unpack_pair_2
+  let __unpack_pair_1 := _counter_closure'bump'rn (3 : Int) count
+  let __thread_t2 := Prod.fst __unpack_pair_1
+  let count := Prod.snd __unpack_pair_1
+  count
 
 def closure_theorems :=
   -- Properties of the closures above, PROVED automatically on conversion (`--prove-asserts`): each

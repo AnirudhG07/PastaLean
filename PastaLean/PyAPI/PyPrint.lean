@@ -145,6 +145,12 @@ instance [PyPrintable α] [PyPrintable β] [BEq α] [Hashable α] :
 instance {α : Type u} {β : Type v} : PyPrintable (α → β) where
   pyStringify _ := "<function>"
 
+/-- Functions have no `Repr`, so a generated `Val` universe carrying a function-typed cell (a heap
+`list` of closures) cannot `deriving Repr`. Give function types the same placeholder `Repr` so the
+derive succeeds; nothing inspects the stored closure's text. -/
+instance (priority := low) {α : Type u} {β : Type v} : Repr (α → β) where
+  reprPrec _ _ := "<function>"
+
 /--
 Fallback printer for any value that already has a `Repr`.
 
