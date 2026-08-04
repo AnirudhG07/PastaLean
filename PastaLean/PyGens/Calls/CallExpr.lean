@@ -238,6 +238,8 @@ def lowerMinMaxCall (which : String) (argsArray : Array Json) (argsCodes : Array
   let defaultCode ← match keyWordsMap.get? "default" with
     | some d => some <$> getCode d `term
     | none => pure none
+  -- A single container-ref iterable (`min(xs)`) is consumed by value, so deref it under `--heap`.
+  let argsCodes ← derefBuiltinArgCodes argsArray argsCodes
   buildIOPureApplicationFromArgs argsArray argsCodes fun resolvedArgs => do
     let iterable ← if resolvedArgs.size == 1 then pure resolvedArgs[0]!
       else `([$resolvedArgs,*])
@@ -291,6 +293,12 @@ partial def assignBackToReceiver (recvJson : Json) (newVal : TSyntax `term) :
 it back, so `g[i].append(v)` becomes `g := pySetItem g i (pyAppend g[i] v)` rather than a no-op. -/
 def mutatingMethodDoElem (recvJson : Json)
     (mkNewValue : TSyntax `term → PygenM (TSyntax `term)) : PygenM (TSyntax `doElem) := do
+  -- Under `--heap`, a mutable container held by reference is mutated in place through the ref:
+  -- `xs.append(v)` → `modifyRef <xs-ref> (fun l => pyAppend l v)` (no rebuild-and-reassign).
+  if let some refCode ← heapContainerRef? recvJson then
+    let lVar := mkIdent `__hc_l
+    let newVal ← mkNewValue lVar
+    return ← `(doElem| PastaLean.modifyRefM $refCode (fun $lVar => $newVal))
   let recvTerm ← getCode recvJson `term
   assignBackToReceiver recvJson (← mkNewValue recvTerm)
 
@@ -357,7 +365,7 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
       | _ => throwError s!"Call node 'args' field is not an array: {argsJson}"
     if let some nonFinite ← nonFiniteFloatTerm? funcJson argsArray then
       return nonFinite
-    let argsCodes ← argsArray.mapM (fun argJson => getCode argJson `term)
+    let mut argsCodes ← argsArray.mapM (fun argJson => getCode argJson `term)
 
     let .ok keyWordsJson := json.getObjVal? "keywords" | throwError
       s!"Call node does not have a 'keywords' field or it is not json pairs: {json}"
@@ -400,7 +408,8 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
         -- to `C.attr recv args` and takes precedence over the builtin-method special-cases below,
         -- so a user method may shadow a builtin name (`get`, `pop`, …).
         if let some cls := (json.getObjValAs? String "_receiver_class").toOption then
-          if (json.getObjValAs? Bool "_is_mutator").toOption.getD false then
+          let heap ← getHeapMode
+          if (json.getObjValAs? Bool "_is_mutator").toOption.getD false && !heap then
             throwError s!"Mutating method '{attr}' cannot be used as an expression under value \
               semantics; call it as a statement on its own line."
           let valCode ← getCode valueJson `term
@@ -413,6 +422,18 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
               let kwValueCode ← getCode kwValueJson `term
               t ← `($t ($(mkIdent kwName.toName):ident := $kwValueCode))
             pure t
+          -- Under `--heap`, `C.m recv args : HeapM Val ret` — await it inline (the `←` lifts into the
+          -- enclosing method/function `do`-block).
+          if heap then
+            -- Inline any IO await in the receiver/args (`recv.m(int(input()))`) so it lifts into the
+            -- enclosing do-block rather than being spliced as a raw `IO _` action into a value position.
+            let recvCode ← inlineIOTerm valueJson
+            let inlineArgs ← argsArray.mapM inlineIOTerm
+            let mut t ← `($methodIdent $recvCode $inlineArgs*)
+            for (kwName, kwValueJson) in keyWordsMap.toList do
+              let kwValueCode ← inlineIOTerm kwValueJson
+              t ← `($t ($(mkIdent kwName.toName):ident := $kwValueCode))
+            return ← `((← $t))
           if allJsons.toList.any basicJsonUsesIOEffect then
             return ← buildIOPureApplicationFromArgs allJsons allCodes build
           else
@@ -545,8 +566,9 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
               throwError "str() keyword arguments are not supported yet."
             return ← match argsArray.size with
             | 0 => `("")
-            | 1 =>
+            | 1 => do
                 let pyStrIdent := mkIdent ``pyStr
+                let argsCodes ← derefBuiltinArgCodes argsArray argsCodes
                 buildIOPureApplicationFromArgs argsArray argsCodes fun resolvedArgs => do
                   let arg0 := resolvedArgs[0]!
                   `($pyStrIdent $arg0)
@@ -558,6 +580,7 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
             unless argsArray.size == 1 do
               throwError "list() currently expects exactly one positional argument."
             let pyListIdent := mkIdent ``pyList
+            argsCodes ← derefBuiltinArgCodes argsArray argsCodes
             return ← buildIOPureApplicationFromArgs argsArray argsCodes fun resolvedArgs => do
               let arg0 := resolvedArgs[0]!
               `($pyListIdent $arg0)
@@ -568,7 +591,8 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
               throwError "map() currently expects exactly two positional arguments."
             let pyMapIdent := mkIdent ``pyMap
             let funcCode ← mappedCallableValueCode argsArray[0]!
-            let adjustedCodes := #[funcCode, argsCodes[1]!]
+            let iterCode := (← heapValueDeref? argsArray[1]!).getD argsCodes[1]!
+            let adjustedCodes := #[funcCode, iterCode]
             return ← buildIOPureApplicationFromArgs argsArray adjustedCodes fun resolvedArgs => do
               let f := resolvedArgs[0]!
               let xs := resolvedArgs[1]!
@@ -580,7 +604,8 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
               throwError "filter() currently expects exactly two positional arguments."
             let pyFilterIdent := mkIdent ``pyFilter
             let funcCode ← mappedCallableValueCode argsArray[0]!
-            let adjustedCodes := #[funcCode, argsCodes[1]!]
+            let iterCode := (← heapValueDeref? argsArray[1]!).getD argsCodes[1]!
+            let adjustedCodes := #[funcCode, iterCode]
             return ← buildIOPureApplicationFromArgs argsArray adjustedCodes fun resolvedArgs => do
               let f := resolvedArgs[0]!
               let xs := resolvedArgs[1]!
@@ -593,6 +618,8 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
                 throwError s!"sorted() keyword argument '{kwName}' is not supported yet."
             unless argsArray.size == 1 do
               throwError "sorted() expects exactly one positional argument (the iterable)."
+            -- The iterable is consumed by value; deref a container-ref under `--heap`.
+            argsCodes ← derefBuiltinArgCodes argsArray argsCodes
             match keyWordsMap.get? "key", keyWordsMap.get? "reverse" with
             | none, none =>
                 let pySortIdent := mkIdent ``pySort
@@ -626,17 +653,34 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
             -- `next(it)` / `next(it, default)`. Our comprehensions/`iter(...)` are eager `List`s, so
             -- this is the first element (or the default when empty).
             unless keyWordsMap.isEmpty do throwError "next() keyword arguments are not supported."
+            argsCodes ← derefBuiltinArgCodes argsArray argsCodes
             return ← buildIOPureApplicationFromArgs argsArray argsCodes fun r => do
               let iter ← `($(mkIdent ``PastaLean.pyIter) $(r[0]!))
               match r[1]? with
               | some d => `(($iter).headD $d)
               | none   => `(($iter).headD default)
         | .ok "Name", .ok funcName =>
+            -- Under `--heap`, `len(x)` on a container held by reference dereferences it first.
+            if funcName == "len" && argsArray.size == 1 then
+              if let some deref ← heapContainerDeref? argsArray[0]! then
+                return ← `($(mkIdent ``pyLen) $deref)
             -- Class instantiation `C(args)` (or `cls(args)` in a classmethod) -> `C.mk args`.
             -- Prefer the py2lean dispatch stamp (`_class_ctor`); fall back to the local registry.
             match ← (do match (json.getObjValAs? String "_class_ctor").toOption with
                         | some c => pure (some c) | none => constructorClassOfName? funcName) with
-            | some cls => funcIdent := (mkIdent (Name.mkStr (← suffixIfUserName cls).toName "new") : TSyntax `term)
+            | some cls =>
+              let ctorId : TSyntax `term := mkIdent (Name.mkStr (← suffixIfUserName cls).toName "new")
+              -- Under `--heap`, `C.new args : HeapM Val (Ref C)` — await it inline.
+              if ← getHeapMode then
+                -- Inline any IO await in an argument (`C(int(input()))`) so it lifts into the enclosing
+                -- do-block rather than being spliced as a raw `IO _` action into a value position.
+                let inlineArgs ← argsArray.mapM inlineIOTerm
+                let mut t ← `($ctorId $inlineArgs*)
+                for (kwName, kwValueJson) in keyWordsMap.toList do
+                  let kwValueCode ← inlineIOTerm kwValueJson
+                  t ← `($t ($(mkIdent kwName.toName):ident := $kwValueCode))
+                return ← `((← $t))
+              funcIdent := ctorId
             | none =>
             -- Variadic builtins that fold a binary runtime function over their args (e.g. `zip`)
             -- are handled generically from the `variadicFoldBuiltin?` registry — one handler for
@@ -649,15 +693,22 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
                   && jsonNodeType? argsArray[0]! == some "Starred" then
                 let .ok inner := argsArray[0]!.getObjVal? "value" | throwError
                   s!"Starred argument is missing a 'value': {argsArray[0]!}"
-                let innerCode ← getCode inner `term
+                let innerCode := (← heapValueDeref? inner).getD (← getCode inner `term)
                 return ← `($(mkIdent ``PastaLean.pyZipStar) $innerCode)
               unless argsArray.size ≥ 2 do
                 throwError s!"{funcName}() expects at least two arguments."
               let foldIdent := mkIdent foldFn
+              argsCodes ← derefBuiltinArgCodes argsArray argsCodes
               return ← buildIOPureApplicationFromArgs argsArray argsCodes fun resolvedArgs => do
                 foldBinaryOverArgs foldIdent dir resolvedArgs
             else match ← builtinMappedName? funcName with
-            | some mappedName => funcIdent := (mkIdent mappedName : TSyntax `term)
+            | some mappedName =>
+                -- A mapped builtin (`sum`, `reversed`, `enumerate`, …) consumes its iterable by value;
+                -- deref container-ref args so it sees contents, not the `Ref` (a user call keeps the
+                -- ref — its `--heap` calling convention). No-op off `--heap` / for non-container args,
+                -- so the shared application tail below is otherwise unchanged.
+                argsCodes ← derefBuiltinArgCodes argsArray argsCodes
+                funcIdent := (mkIdent mappedName : TSyntax `term)
             | none =>
                 funcIdent ← userCallIdent funcName
         | _, _ =>
@@ -693,10 +744,12 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
         t ← `($t ($kwId:ident := $kwValueCode))
       return t
 
-    if allArgJsons.toList.any basicJsonUsesIOEffect then
-      return ← buildIOPureApplicationFromArgs allArgJsons allArgs buildApplied
-    else
-      return ← buildApplied allArgs
+    let applied ← if allArgJsons.toList.any basicJsonUsesIOEffect then
+        buildIOPureApplicationFromArgs allArgJsons allArgs buildApplied
+      else buildApplied allArgs
+    -- A call to a heap-effectful user function returns a `HeapM` action; await it inline.
+    if json.getObjValAs? Bool "_heap_call" == .ok true then return ← `((← $applied))
+    return applied
   | `doElem, json => do
     let .ok funcJson := json.getObjValAs? Json "func" | throwError
       s!"Call node does not have a 'func' field or it is not a JSON value: {json}"
@@ -710,7 +763,7 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
     let .ok keyWordsMap := keyWordsJson.getObj? | throwError
       s!"Call node 'keywords' field is not a JSON object: {keyWordsJson}"
 
-    let argsCodes ← argsArray.mapM (fun argJson => getCode argJson `term)
+    let mut argsCodes ← argsArray.mapM (fun argJson => getCode argJson `term)
 
     let mut allArgs : Array (TSyntax `term) := #[]
     let mut allArgJsons : Array Json := #[]
@@ -754,6 +807,19 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
         -- variable reassigns it (`obj := C.m obj args`); a getter is run/bound like any call.
         if let some cls := (json.getObjValAs? String "_receiver_class").toOption then
           let methodIdent : TSyntax `term := mkIdent (Name.mkStr (← suffixIfUserName cls).toName attr)
+          -- Under `--heap` the receiver is a `Ref C` and the method (mutator or getter) is a `HeapM`
+          -- action: run it, discarding the result — mutation happens through the ref, so there is no
+          -- receiver reassignment (and the receiver may be any ref expression, not just a variable).
+          if ← getHeapMode then
+            -- Inline any IO await in the receiver/args (`recv.m(int(input()))`) so it lifts into the
+            -- enclosing do-block rather than being spliced as a raw `IO _` action into a value position.
+            let valCode ← inlineIOTerm valueJson
+            let inlineArgs ← argsArray.mapM inlineIOTerm
+            let mut t ← `($methodIdent $valCode $inlineArgs*)
+            for (kwName, kwValueJson) in keyWordsMap.toList do
+              let kwValueCode ← inlineIOTerm kwValueJson
+              t ← `($t ($(mkIdent kwName.toName):ident := $kwValueCode))
+            return ← `(doElem| let _ ← $t:term)
           if (json.getObjValAs? Bool "_is_mutator").toOption.getD false then
             if jsonNodeType? valueJson == some "Name" then
               let targetIdent ← getCode valueJson `ident
@@ -965,7 +1031,8 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
               throwError "map() currently expects exactly two positional arguments."
             let pyMapIdent := mkIdent ``pyMap
             let funcCode ← mappedCallableValueCode argsArray[0]!
-            let adjustedCodes := #[funcCode, argsCodes[1]!]
+            let iterCode := (← heapValueDeref? argsArray[1]!).getD argsCodes[1]!
+            let adjustedCodes := #[funcCode, iterCode]
             let t ← buildIOPureApplicationFromArgs argsArray adjustedCodes fun resolvedArgs => do
               let f := resolvedArgs[0]!
               let xs := resolvedArgs[1]!
@@ -981,7 +1048,8 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
               throwError "filter() currently expects exactly two positional arguments."
             let pyFilterIdent := mkIdent ``pyFilter
             let funcCode ← mappedCallableValueCode argsArray[0]!
-            let adjustedCodes := #[funcCode, argsCodes[1]!]
+            let iterCode := (← heapValueDeref? argsArray[1]!).getD argsCodes[1]!
+            let adjustedCodes := #[funcCode, iterCode]
             let t ← buildIOPureApplicationFromArgs argsArray adjustedCodes fun resolvedArgs => do
               let f := resolvedArgs[0]!
               let xs := resolvedArgs[1]!
@@ -993,10 +1061,26 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
         | .ok "Name", .ok funcName =>
             match ← (do match (json.getObjValAs? String "_class_ctor").toOption with
                         | some c => pure (some c) | none => constructorClassOfName? funcName) with
-            | some cls => funcIdent := (mkIdent (Name.mkStr (← suffixIfUserName cls).toName "new") : TSyntax `term)
+            | some cls =>
+              let ctorId : TSyntax `term := mkIdent (Name.mkStr (← suffixIfUserName cls).toName "new")
+              -- Under `--heap`, a bare `C(args)` statement runs the `HeapM` alloc, discarding the ref.
+              if ← getHeapMode then
+                -- Inline any IO await in an argument (`C(int(input()))`) so it lifts into the enclosing
+                -- do-block rather than being spliced as a raw `IO _` action into a value position.
+                let inlineArgs ← argsArray.mapM inlineIOTerm
+                let mut t ← `($ctorId $inlineArgs*)
+                for (kwName, kwValueJson) in keyWordsMap.toList do
+                  let kwValueCode ← inlineIOTerm kwValueJson
+                  t ← `($t ($(mkIdent kwName.toName):ident := $kwValueCode))
+                return ← `(doElem| let _ ← $t:term)
+              funcIdent := ctorId
             | none =>
             match ← builtinMappedName? funcName with
-            | some mappedName => funcIdent := (mkIdent mappedName : TSyntax `term)
+            | some mappedName =>
+                -- Deref container-ref args for a mapped builtin (consumed by value); see the term
+                -- handler above. No-op off `--heap` / for non-container args.
+                argsCodes ← derefBuiltinArgCodes argsArray argsCodes
+                funcIdent := (mkIdent mappedName : TSyntax `term)
             | none =>
                 funcIdent ← userCallIdent funcName
         | _, _ =>
@@ -1037,7 +1121,8 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
       `(doElem| let _ ← $t:term)
     else
       let t ← buildApplied allArgs
-      if basicJsonUsesMonadicEffect json then
+      -- A heap-effectful user function returns a `HeapM` action, so run it (`let _ ← …`).
+      if basicJsonUsesMonadicEffect json || json.getObjValAs? Bool "_heap_call" == .ok true then
         `(doElem| let _ ← $t:term)
       else
         `(doElem| let _ := $t)
@@ -1055,8 +1140,18 @@ def attributeSyntax : (kind : SyntaxNodeKind) → Json →
           s!"Attribute node does not have a 'value' field or it is not a JSON value: {json}"
         let .ok attr := json.getObjValAs? String "attr" | throwError
           s!"Attribute node does not have an 'attr' field or it is not a string: {json}"
-        let valueCode ← getCode valueJson `term
         let attrId := mkIdent attr.toName
+        -- Under `--heap`, dereference a heap-object receiver before projecting the field: `self` in a
+        -- method body (`self : Ref C`), or any local/param known to hold a heap object (`p.x`).
+        if ← getHeapMode then
+          if valueJson.getObjValAs? String "node_type" == .ok "Name" then
+            let vid := (valueJson.getObjValAs? String "id").toOption.getD ""
+            let selfRef ← getHeapSelfRef
+            let cls? ← heapVarClassOf? vid.toName
+            let isHeapRecv := if vid == "self" then selfRef else cls?.isSome
+            if isHeapRecv then
+              return ← `((← $(mkIdent vid.toName) ~> $attrId))
+        let valueCode ← getCode valueJson `term
         -- `_unwrap_opt` (TypeInfer): the receiver is `Option _`, so unwrap before projecting the field
         if json.getObjValAs? Bool "_unwrap_opt" == .ok true then
           `((($valueCode).getD default).$attrId)

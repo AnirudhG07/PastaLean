@@ -199,6 +199,12 @@ private def argNode (name : String) (annotation : Option Json) : Json :=
   Json.mkObj [("node_type", Json.str "arg"), ("arg", Json.str name),
               ("annotation", annotation.getD Json.null)]
 
+/-- A `Name` call-arg node for a capture, stamped `_heap_cell_arg` when `name` is a `--heap` cell
+capture (passed by raw `Ref` into its own sibling, so codegen must NOT deref it). -/
+private def capArgNode (cellSet : Array String) (name : String) : Json :=
+  let n := nameNode name
+  if cellSet.contains name then n.setObjVal! "_heap_cell_arg" (Json.bool true) else n
+
 /-- The `PyAny` type annotation node — the total fallback for a param we cannot otherwise type. -/
 private def pyAnyAnnotation : Json := Json.mkObj [("node_type", Json.str "Name"), ("id", Json.str "PyAny")]
 
@@ -222,10 +228,10 @@ private def stampUnannotatedParamsPyAny (fn : Json) : Json :=
 `fun params ↦ new(params…, caps…)`, partially applying the captured args (which come after the
 helper's own params). -/
 private def captureWrapperLambda (new : String) (origParams : Array (String × Option Json))
-    (captures : Array String) : Json :=
+    (captures : Array String) (cellSet : Array String) : Json :=
   -- An un-inferred wrapper param falls back to `PyAny` (the sibling is stamped `PyAny` to match).
   let paramArgs := origParams.map (fun (n, ann?) => argNode n (ann?.orElse (fun _ => some pyAnyAnnotation)))
-  let callArgs := (origParams.map (·.1) ++ captures).map nameNode
+  let callArgs := (origParams.map (·.1)).map nameNode ++ captures.map (capArgNode cellSet)
   let call := Json.mkObj [("node_type", Json.str "Call"), ("func", nameNode new),
                           ("args", Json.arr callArgs), ("keywords", Json.mkObj [])]
   Json.mkObj [("node_type", Json.str "Lambda"),
@@ -236,22 +242,25 @@ private def captureWrapperLambda (new : String) (origParams : Array (String × O
 call position (`sort(key=old)`) becomes a partial-application `fun p ↦ new p captures` when it
 captures; a capture-free helper is just `new`. `origParams` are `old`'s own parameter names. -/
 partial def rewriteHelperCalls (old new : String) (origParams : Array (String × Option Json))
-    (captures : Array String) (json : Json) :
+    (captures : Array String) (cellSet : Array String) (heapCall : Bool) (json : Json) :
     PygenM Json := do
   match json with
-  | .arr elems => return Json.arr (← elems.mapM (rewriteHelperCalls old new origParams captures))
+  | .arr elems =>
+      return Json.arr (← elems.mapM (rewriteHelperCalls old new origParams captures cellSet heapCall))
   | .obj fields =>
       if jsonNodeType? json == some "Call" then
         if let .ok func := json.getObjVal? "func" then
           if jsonNodeType? func == some "Name" && func.getObjValAs? String "id" == .ok old then
             let args := (json.getObjValAs? (Array Json) "args").toOption.getD #[]
-            let args ← args.mapM (rewriteHelperCalls old new origParams captures)
-            let args := args ++ captures.map nameNode
+            let args ← args.mapM (rewriteHelperCalls old new origParams captures cellSet heapCall)
+            let args := args ++ captures.map (capArgNode cellSet)
             let keywords ← match json.getObjVal? "keywords" with
-              | .ok kw => rewriteHelperCalls old new origParams captures kw
+              | .ok kw => rewriteHelperCalls old new origParams captures cellSet heapCall kw
               | _ => pure (Json.mkObj [])
-            return (json.setObjVal! "func" (nameNode new)).setObjVal! "args" (Json.arr args)
+            let call := (json.setObjVal! "func" (nameNode new)).setObjVal! "args" (Json.arr args)
               |>.setObjVal! "keywords" keywords
+            -- A cell-capturing sibling is forced into `HeapM`, so its call site must await.
+            return if heapCall then call.setObjVal! "_heap_call" (Json.bool true) else call
       -- `old` as a VALUE (`sort(key=old)`, `return old`): capture-free → the lifted name; a capturing
       -- one becomes `fun p ↦ new p caps` (`captureWrapperLambda`). This needs each wrapper param typed:
       -- a RETURNED closure's un-inferred params were stamped `PyAny` in `liftHelper` (so `origParams`
@@ -260,11 +269,11 @@ partial def rewriteHelperCalls (old new : String) (origParams : Array (String ×
       if jsonNodeType? json == some "Name" && json.getObjValAs? String "id" == .ok old then
         if captures.isEmpty then return nameNode new
         else if origParams.all (·.2.isSome) then
-          return captureWrapperLambda new origParams captures
+          return captureWrapperLambda new origParams captures cellSet
         else throwError s!"nested function '{old}' captures variables and is used as a value, and \
           its parameters have no inferred types to give the wrapper; only direct calls are supported."
       let rewritten ← fields.toList.mapM fun (k, v) => do
-        return (k, ← rewriteHelperCalls old new origParams captures v)
+        return (k, ← rewriteHelperCalls old new origParams captures cellSet heapCall v)
       return Json.mkObj rewritten
   | _ => return json
 
@@ -318,6 +327,29 @@ partial def mapStatementLists (f : Array Json → Array Json) (json : Json) : Js
 /-- Drop `nonlocal` declarations; the names they refer to become threaded parameters. -/
 def stripNonlocal (json : Json) : Json :=
   mapStatementLists (fun stmts => stmts.filter (jsonNodeType? · != some "Nonlocal")) json
+
+/-- Stamp `_heap_cell_def` on the FIRST assignment (pre-order) to each `--heap` cell name, so codegen
+allocates the shared `Ref` cell there; later assignments to the same name rebind it (`writeRefM`).
+Does not descend into nested `FunctionDef`s (a sibling's own `Ref` param, not a fresh cell). -/
+private partial def stampCellDefsAux (cellNames : Array String) (json : Json) :
+    StateM (Array String) Json := do
+  match json with
+  | .arr elems => return Json.arr (← elems.mapM (stampCellDefsAux cellNames))
+  | .obj fields =>
+      if jsonNodeType? json == some "FunctionDef" then return json
+      if jsonNodeType? json == some "Assign" then
+        if let some tgt := (json.getObjVal? "target").toOption then
+          if jsonNodeType? tgt == some "Name" then
+            if let .ok id := tgt.getObjValAs? String "id" then
+              if cellNames.contains id && !(← get).contains id then
+                modify (·.push id)
+                return json.setObjVal! "_heap_cell_def" (Json.bool true)
+      return Json.mkObj (← fields.toList.mapM fun (k, v) => do
+        return (k, ← stampCellDefsAux cellNames v))
+  | _ => return json
+
+def stampCellDefs (cellNames : Array String) (json : Json) : Json :=
+  if cellNames.isEmpty then json else (stampCellDefsAux cellNames json).run' #[]
 
 /-- Is `json` a call to `name`? -/
 private def isCallTo (name : String) (json : Json) : Bool :=
@@ -706,9 +738,15 @@ private def liftHelper (outerName : String) (outerJson innerJson : Json) :
     name != innerName &&
       ((innerUsed.contains name && !innerBound.contains name) || declaredNonlocal.contains name)
 
-  let threaded := captures.filter fun c => declaredNonlocal.contains c || jsonMutatesCapture inner c
-  let readOnly := captures.filter fun c => !threaded.contains c
-  let ordered := readOnly ++ threaded
+  let mutatedCaptures := captures.filter fun c => declaredNonlocal.contains c || jsonMutatesCapture inner c
+  let readOnly := captures.filter fun c => !mutatedCaptures.contains c
+  -- Under `--heap`, a mutated capture becomes a shared `Ref` CELL passed by reference into the sibling
+  -- (faithful aliasing, can escape) instead of being value-threaded through a return tuple. So the
+  -- value-threading machinery is bypassed (`threaded` empty) and cells ride the read-only path.
+  let heap ← getHeapMode
+  let cellCaptures := if heap then mutatedCaptures else #[]
+  let threaded := if heap then #[] else mutatedCaptures
+  let ordered := readOnly ++ cellCaptures ++ threaded
 
   -- A helper used as a value (`sort(key=f)`): capture-free → a plain reference; read-only captures →
   -- a `fun p ↦ new p caps` wrapper (in `rewriteHelperCalls`). Only a THREADED (mutated) capture used
@@ -743,7 +781,9 @@ private def liftHelper (outerName : String) (outerJson innerJson : Json) :
   let .ok innerArgs := inner.getObjVal? "args" | throwError
     s!"nested FunctionDef is missing 'args': {inner}"
   let innerArgsArray := (innerArgs.getObjValAs? (Array Json) "args").toOption.getD #[]
-  let extraArgs := ordered.map fun c => argNode c (annotations[c]?)
+  let extraArgs := ordered.map fun c =>
+    let a := argNode c (annotations[c]?)
+    if cellCaptures.contains c then a.setObjVal! "_heap_cell_param" (Json.bool true) else a
   let innerArgs := innerArgs.setObjVal! "args" (Json.arr (innerArgsArray ++ extraArgs))
 
   let remaining := outerBody.filter fun stmt =>
@@ -752,10 +792,11 @@ private def liftHelper (outerName : String) (outerJson innerJson : Json) :
 
   let origParams := functionParamTypedNames inner
   let counter ← IO.mkRef 0
+  let heapCall := heap && !cellCaptures.isEmpty
   let (helperBody, rewrittenOuter) ←
     if threaded.isEmpty then do
-      let body ← rewriteHelperCalls innerName helperName origParams ordered (Json.arr innerBody)
-      let outer ← rewriteHelperCalls innerName helperName origParams ordered (Json.arr remaining)
+      let body ← rewriteHelperCalls innerName helperName origParams ordered cellCaptures heapCall (Json.arr innerBody)
+      let outer ← rewriteHelperCalls innerName helperName origParams ordered cellCaptures heapCall (Json.arr remaining)
       pure (body, outer)
     else do
       let body ← rewriteThreadedStmts innerName helperName ordered threaded hasValue counter innerBody
@@ -773,6 +814,8 @@ private def liftHelper (outerName : String) (outerJson innerJson : Json) :
     |>.setObjVal! "body" helperBody
   -- Threading changes the result into a tuple, so the declared return annotation no longer holds.
   let helper := if threaded.isEmpty then helper else helper.setObjVal! "returns" Json.null
+  -- Mark where each `--heap` cell is first defined in the outer scope, so codegen `allocM`s it there.
+  let rewrittenOuter := stampCellDefs cellCaptures rewrittenOuter
   return (helper, outerJson.setObjVal! "body" rewrittenOuter)
 
 /-- Group nested defs that reference one another into one cluster each (weakly-connected components
@@ -856,7 +899,7 @@ private def liftMutualGroup (outerName : String) (outerJson : Json) (members : A
     let mut body := (m.getObjVal? "body").toOption.getD (Json.arr #[])
     for sibName in memberNames do
       let sibParams := (members.find? (·.getObjValAs? String "name" == .ok sibName)).elim #[] functionParamTypedNames
-      body ← rewriteHelperCalls sibName (helperNameOf sibName) sibParams shared body
+      body ← rewriteHelperCalls sibName (helperNameOf sibName) sibParams shared #[] false body
     let helper := ((m.setObjVal! "name" (Json.str (helperNameOf mName))).setObjVal! "args" mArgs)
       |>.setObjVal! "body" body
     helpers := helpers.push helper
@@ -867,7 +910,7 @@ private def liftMutualGroup (outerName : String) (outerJson : Json) (members : A
   let mut outerBodyJson := Json.arr remaining
   for sibName in memberNames do
     let sibParams := (members.find? (·.getObjValAs? String "name" == .ok sibName)).elim #[] functionParamTypedNames
-    outerBodyJson ← rewriteHelperCalls sibName (helperNameOf sibName) sibParams shared outerBodyJson
+    outerBodyJson ← rewriteHelperCalls sibName (helperNameOf sibName) sibParams shared #[] false outerBodyJson
   return (helpers, outerJson.setObjVal! "body" outerBodyJson)
 
 /-- Lift every nested `def` out of `fnJson`, outermost-first. Returns helper **groups** (each a lone

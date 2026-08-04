@@ -63,6 +63,12 @@ def _add_translation_flags(parser: argparse.ArgumentParser) -> None:
         help="Search for a proof of each assert and splice the winning tactic over ':= by taste?'. "
              "Default: on.",
     )
+    parser.add_argument(
+        "--heap",
+        action="store_true",
+        help="Opt-in reference semantics (heap monad): class instances and list/dict/set become "
+             "heap-allocated refs with real Python aliasing. Default off (value semantics).",
+    )
 
 
 def _session_from(args, **overrides) -> Session:
@@ -71,6 +77,7 @@ def _session_from(args, **overrides) -> Session:
         mode=getattr(args, "mode", "both"),
         best_effort=not getattr(args, "strict", False),
         prove_asserts=getattr(args, "prove_asserts", True),
+        heap=getattr(args, "heap", False),
         **overrides,
     )
 
@@ -232,7 +239,7 @@ def cmd_serve(args) -> int:
     # --host beats both.
     host = args.host or ("127.0.0.1" if args.no_ip else "0.0.0.0")  # noqa: S104
     serve(host=host, port=args.port, mode=args.mode, target=args.target,
-          best_effort=not args.strict, prove_asserts=args.prove_asserts)
+          best_effort=not args.strict, prove_asserts=args.prove_asserts, heap=args.heap)
     return 0
 
 

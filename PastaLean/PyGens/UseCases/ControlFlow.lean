@@ -136,13 +136,25 @@ def augAssignSyntax : (kind : SyntaxNodeKind) → Json →
           -- `self` with the updated field (value semantics). Guarded on a mutable `self` in scope.
           if (selfAttrTarget? targetJson).isSome && (← hasVar `self) then
             selfRecordUpdateDoElem (selfAttrTarget? targetJson).get! updated
+          -- `c.n += k` where `c : Ref C` (heap object ref: `self` under `--heap`, or an object
+          -- ref param/var): `curTerm` already read the field via `~>`, so write the sum back through
+          -- the pointer. Value-mode / non-heap-object targets fall through to the paths below.
+          else if let some w ← heapAttrWriteTargetDoElem? targetJson updated then
+            pure w
           else match ← nestedSubscriptSetDoElem? targetJson updated with
             | some setStx =>
                 -- `s[i] += v` (and nested `g[i][j] += v`) rebuild the container with the new element.
                 pure setStx
             | none =>
                 let targetIdent ← getCode targetJson `ident
-                `(doElem| $targetIdent:ident := $updated)
+                -- A closure-promoted SCALAR cell (`--heap`): `n += k` rebinds the shared cell in
+                -- place (`curTerm` already read it via `(← readRefM n)`). Container cells mutate
+                -- their object, not the binding, so they stay on the ordinary reassignment path.
+                if (← getHeapMode) && (← isHeapCellVar targetIdent.getId)
+                    && !(← isHeapCellContainer targetIdent.getId) then
+                  `(doElem| PastaLean.writeRefM $targetIdent $updated)
+                else
+                  `(doElem| $targetIdent:ident := $updated)
         match mutating? with
         | some (_, update) => pure ⟨mkNullNode #[baseStx.raw, update.raw]⟩
         | none => pure baseStx
@@ -582,7 +594,10 @@ def forSyntax : (kind : SyntaxNodeKind) → Json →
                 $[$bodyStxArray:doElem]*)
             pure #[bindIt, forLoop]
           else
-            let iterCode ← rangeIterSyntax iterJson
+            -- Under `--heap`, a container held by reference is dereferenced before iterating.
+            let iterCode ← match ← heapContainerDeref? iterJson with
+              | some deref => `($(mkIdent ``pyIter) $deref)
+              | none => rangeIterSyntax iterJson
             let forLoop ← `(doElem| for $targetIdent:ident in ($iterCode) do
                 $[$bodyStxArray:doElem]*)
             pure #[forLoop]
@@ -690,7 +705,42 @@ def ifSyntax : (kind : SyntaxNodeKind) → Json →
         -- Determine monad type based on mode
         let usesProofMode := useProofMonad && (usesExceptions || usesIO)
         let usesPureExceptions := !useProofMonad && (← getNumericMode) == .exact && usesExceptions && !usesIO
-        if usesProofMode then
+        if ← needsHeapMonad bodyElems then
+          -- Heap `main`: run the body from the empty heap, then surface output + any exception. Run
+          -- mode uses `PyHeapIO` (real IO); prove mode uses `PyHeapProofM` (IO modeled as state).
+          let valId := mkIdent `Val
+          let outputLinesName := mkIdent `outputLines
+          let lineName := mkIdent `line
+          let mainBody ← if useProofMonad then
+            `(do
+              let inputText ← IO.getStdin >>= fun h => h.readToEnd
+              let inputLines := String.splitOn inputText "\n"
+              let inputStream : PastaLean.ProofMode.IOStream :=
+                ⟨0, fun i => PastaLean.ProofMode.IOResult.success (List.getD inputLines i "")⟩
+              let initState : PastaLean.HeapIOState $valId := ⟨PastaLean.emptyHeap, ⟨inputStream, []⟩⟩
+              let (result, finalState) := PastaLean.PyHeapProofM.runProgram (V := $valId) (do
+                  $[$bodyStxArray:doElem]*
+                  pure ()) initState
+              -- Splice `mkIdent` identifiers (as the non-heap proof path does): a literal identifier
+              -- written inline in the quasiquote glues to the following `do` keyword when formatted
+              -- (`outputLinesdo`); an antiquoted identifier renders with correct spacing.
+              let $outputLinesName := finalState.io.output
+              for $lineName in $outputLinesName do
+                IO.print $lineName
+              match result with
+              | .ok _ => pure ()
+              | .error err => throw (IO.userError (toString err)))
+          else
+            `(do
+              let (result, _heap) ← PastaLean.PyHeapIO.runProgram (V := $valId) (do
+                  $[$bodyStxArray:doElem]*
+                  pure ())
+              match result with
+              | .ok _ => pure ()
+              | .error err => throw (IO.userError (toString err)))
+          if isReal then `(command| noncomputable def $mainIdent : IO Unit := $mainBody)
+          else `(command| def $mainIdent : IO Unit := $mainBody)
+        else if usesProofMode then
           -- Proof mode: Run PyProofM with input from stdin, then print output to stdout
           -- PyProofM α = ExceptT PyException (StateM IOState) α
           -- Running it: IOState → (Except PyException α × IOState)

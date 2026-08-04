@@ -196,6 +196,13 @@ def nameSyntax : (kind : SyntaxNodeKind) → Json →
     | none =>
         let .ok id := json.getObjValAs? String "id" | throwError
           s!"Name node does not have an 'id' field or it is not a string: {json}"
+        -- A closure-promoted variable CELL (`--heap`): raw ref when passed to its capturing sibling
+        -- (`_heap_cell_arg`), else its value/object-ref via one deref in every ordinary position.
+        if (← getHeapMode) && (← isHeapCellVar id.toName) then
+          if (json.getObjValAs? Bool "_heap_cell_arg").toOption.getD false then
+            return mkIdent id.toName
+          else
+            return (← `((← PastaLean.readRefM $(mkIdent id.toName))))
         -- In a run-twin, a reference to a user function/class is suffixed (`bar` → `bar'rn`,
         -- `CNN` → `CNN'rn`); locals and library names are left as-is.
         let suffixed ← suffixIfUserName id
@@ -220,6 +227,11 @@ def nameSyntax : (kind : SyntaxNodeKind) → Json →
         return mkIdent (← suffixIfUserName id).toName
   | _, _ => throwError s!"Unsupported syntax category for Name node"
 
+/-- Under `--heap` a fresh container literal is a heap cell: wrap it in `(← alloc …)` so it yields a
+`Ref …`. In value mode the literal is returned unchanged. -/
+def allocIfHeap (t : TSyntax `term) : PygenM (TSyntax `term) := do
+  if ← getHeapMode then `((← PastaLean.allocM $t)) else pure t
+
 @[pygen "List"]
 def listSyntax : (kind : SyntaxNodeKind) → Json →
     PygenM (TSyntax kind)
@@ -229,7 +241,8 @@ def listSyntax : (kind : SyntaxNodeKind) → Json →
     let eltCodes ← match eltsJson with
       | .arr arr => arr.mapM (fun eltJson => getCode eltJson `term)
       | _ => throwError s!"List node 'elts' field is not an array: {eltsJson}"
-    `([$eltCodes,*])
+    let listTerm ← `([$eltCodes,*])
+    allocIfHeap listTerm
   | _, _ => throwError s!"Unsupported syntax category for List node"
 
 /-- `{a, b, c}` set literals lower to a deduplicated list via `pySetFromList`; sets are
@@ -244,7 +257,8 @@ def setSyntax : (kind : SyntaxNodeKind) → Json →
       | .arr arr => arr.mapM (fun eltJson => getCode eltJson `term)
       | _ => throwError s!"Set node 'elts' field is not an array: {eltsJson}"
     let fromListIdent := mkIdent ``PastaLean.pySetFromList
-    `($fromListIdent [$eltCodes,*])
+    let setTerm ← `($fromListIdent [$eltCodes,*])
+    allocIfHeap setTerm
   | _, _ => throwError s!"Unsupported syntax category for Set node"
 
 @[pygen "Tuple"]
@@ -301,7 +315,8 @@ def dictSyntax : (kind : SyntaxNodeKind) → Json →
       let mut joined := chunks[0]!
       for chunk in chunks.toList.drop 1 do
         joined ← `($joined ++ $chunk)
-      `($ofListIdent $joined)
+      let dictTerm ← `($ofListIdent $joined)
+      allocIfHeap dictTerm
     else
       let entryCodes ← entries.mapM fun entryJson => do
         let .ok keyJson := entryJson.getObjValAs? Json "key" | throwError
@@ -309,7 +324,8 @@ def dictSyntax : (kind : SyntaxNodeKind) → Json →
         let .ok valueJson := entryJson.getObjValAs? Json "value" | throwError
           s!"Dict entry is missing a 'value' field: {entryJson}"
         `(($(← getCode keyJson `term), $(← getCode valueJson `term)))
-      `($ofListIdent [$entryCodes,*])
+      let dictTerm ← `($ofListIdent [$entryCodes,*])
+      allocIfHeap dictTerm
   | _, _ => throwError s!"Unsupported syntax category for Dict node"
 
 
@@ -545,6 +561,14 @@ def unaryOpSyntax : (kind : SyntaxNodeKind) → Json →
     else unaryOpApplyTerm op operandCode
   | _, _ => throwError s!"Unsupported syntax category for UnaryOp node"
 
+/-- Does `stx` contain a `(← e)` await anywhere? A value-position `and`/`or` whose operands carry
+one (heap derefs, IO) cannot lower to a pure `if`-term — its branches would host `←`, which is only
+legal inside a `do`. -/
+partial def syntaxHasLift : Syntax → Bool
+  | .node _ ``Lean.Parser.Term.liftMethod _ => true
+  | .node _ _ args => args.any syntaxHasLift
+  | _ => false
+
 /-- Python `and`/`or` as a VALUE (not a truthiness test): they return the deciding *operand*, not a
 `Bool` — `x or '0'` yields the string. `a or b … = <first truthy, else last>`, `a and b … = <first
 falsy, else last>`, lowered to nested `if pyTruthy … then … else …`. Only valid when the operands
@@ -556,10 +580,21 @@ def boolOpValueTerm (json : Json) : PygenM (TSyntax `term) := do
     s!"BoolOp is missing 'values': {json}"
   let codes ← valuesJson.mapM (getCode · `term)
   let some last := codes.back? | throwError s!"BoolOp has no operands: {json}"
+  let t := mkIdent ``PastaLean.pyTruthy
+  -- When an operand carries a `←` (heap deref, IO) we are necessarily inside a `do`, and the
+  -- `if pyTruthy … then … else …` must be a `do`-if so each await lifts into its own branch; a pure
+  -- `if`-term forbids `←` in its branches. Binding the guard once (hygienic `bopGuard`) keeps
+  -- Python's short-circuit: evaluate the guard, then only the chosen operand. Pure operands keep the
+  -- plain `if`-term, which is also valid in non-`do` positions (top-level `def`s).
+  let monadic := codes.any (fun c => syntaxHasLift c.raw)
   -- Fold the operands before the last from right to left.
   (codes.pop.reverse).foldlM (init := last) fun acc c =>
-    let t := mkIdent ``PastaLean.pyTruthy
-    if op == "and" then `(if $t $c then $acc else $c) else `(if $t $c then $c else $acc)
+    if monadic then
+      if op == "and" then
+        `((← do let bopGuard := $c; if $t bopGuard then pure $acc else pure bopGuard))
+      else
+        `((← do let bopGuard := $c; if $t bopGuard then pure bopGuard else pure $acc))
+    else if op == "and" then `(if $t $c then $acc else $c) else `(if $t $c then $c else $acc)
 
 @[pygen "BoolOp"]
 def boolOpSyntax : (kind : SyntaxNodeKind) → Json →

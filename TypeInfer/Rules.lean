@@ -154,6 +154,34 @@ partial def typeOfExpr (sigs : Sigs) (env : Env) (e : Json) : PyType :=
                 ((field e "value").elim .unknown (typeOfExpr sigs env'))
       | some "SetComp" => .set ((field e "elt").elim .unknown (typeOfExpr sigs env'))
       | _ => .list ((field e "elt").elim .unknown (typeOfExpr sigs env'))
+  -- A lambda is a function value. Its arity must match how `lambdaStx` lowers it: a lambda whose
+  -- parameters are *all* defaulted (`lambda i=i: …`) — or has none — becomes a nullary `fun () ↦ …`
+  -- thunk, so it types as `fn [] ret`; otherwise every parameter is an arrow binder. The body is
+  -- typed in an env extended with the parameters (defaulted ones from their default's type), so a
+  -- heap `list` of closures (`f.append(lambda: …)`) can learn a concrete element type.
+  | some "Lambda" => Id.run do
+      let argsNode := field e "args"
+      let params := (argsNode.bind (·.getObjValAs? (Array Json) "args" |>.toOption)).getD #[]
+      let defaults := (argsNode.bind (·.getObjValAs? (Array Json) "defaults" |>.toOption)).getD #[]
+      let firstDefault := params.size - defaults.size
+      let mut env' := env
+      let mut argTys : Array PyType := #[]
+      for i in [0:params.size] do
+        let p := params[i]!
+        let annTy? : Option PyType := (field p "annotation").bind fun a =>
+          if a.isNull then none else some (ofAnnotation a)
+        let pty : PyType := match annTy? with
+          | some t => t
+          | none => if i ≥ firstDefault then typeOfExpr sigs env defaults[i - firstDefault]! else .unknown
+        match (p.getObjValAs? String "arg").toOption with
+        | some nm => env' := env'.insert nm pty
+        | none => pure ()
+        argTys := argTys.push pty
+      let allDefaulted := !params.isEmpty && defaults.size == params.size
+      let retTy := (field e "body").elim .unknown (typeOfExpr sigs env')
+      return .fn (if allDefaulted then [] else argTys.toList) retTy
+  -- An f-string (`f"…"`) is always a `str`, regardless of the interpolated values' types.
+  | some "JoinedStr" => .str
   | _ => .unknown
 
 /-- The type a call returns. -/
