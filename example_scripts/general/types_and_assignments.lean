@@ -317,29 +317,31 @@ def heterogeneous_pyany'rn :=
     total)
 
 def untyped_param_arithmetic := fun (nums : PyAny) ↦
-  Id.run
-    (do
-      -- `nums` is un-inferred → boxed `PyAny`; the two-pass seed propagates `PyAny` to the accumulator so
-      -- `total` is `PyAny` (not `Int`), matching the boxed element arithmetic.
-      let mut total : PyAny := (0 : Int)
-      for x in (PastaLean.pyIter nums)do
-        total := total +ₚ x *ₚ (2 : Int)
-      return total)
+  (show PastaLean.PyAny from
+    Id.run
+      (do
+        -- `nums` is un-inferred → boxed `PyAny`; the two-pass seed propagates `PyAny` to the accumulator so
+        -- `total` is `PyAny` (not `Int`), matching the boxed element arithmetic.
+        let mut total : PyAny := (0 : Int)
+        for x in (PastaLean.pyIter nums)do
+          total := total +ₚ x *ₚ (2 : Int)
+        return (total : PastaLean.PyAny)))
 
-attribute [simp, taste_ingr] untyped_param_arithmetic
+attribute [simp] untyped_param_arithmetic
 
 def untyped_param_arithmetic'rn := fun (nums : PyAny) ↦
-  Id.run
-    (do
-      -- `nums` is un-inferred → boxed `PyAny`; the two-pass seed propagates `PyAny` to the accumulator so
-      -- `total` is `PyAny` (not `Int`), matching the boxed element arithmetic.
-      let mut total : PyAny := (0 : Int)
-      for x in (PastaLean.pyIter nums)do
-        total := total +ₚ x *ₚ (2 : Int)
-      return total)
+  (show PastaLean.PyAny from
+    Id.run
+      (do
+        -- `nums` is un-inferred → boxed `PyAny`; the two-pass seed propagates `PyAny` to the accumulator so
+        -- `total` is `PyAny` (not `Int`), matching the boxed element arithmetic.
+        let mut total : PyAny := (0 : Int)
+        for x in (PastaLean.pyIter nums)do
+          total := total +ₚ x *ₚ (2 : Int)
+        return (total : PastaLean.PyAny)))
 
 def untyped_param_compare_and_div := fun (nums : PyAny) ↦
-  (show Rat from
+  (show PastaLean.PyAny from
     Id.run
       (do
         -- Comparison, `%` and `/` on boxed (`PyAny`) values; `best` is a `let mut PyAny` slot reassigned
@@ -350,13 +352,13 @@ def untyped_param_compare_and_div := fun (nums : PyAny) ↦
             let mut best'rb0 := x +ₚ x %ₚ (3 : Int)
           else
             let _ := ()
-        let __py_ret_1 := best /ₚ (2 : Int)
+        let __py_ret_1 := (best /ₚ (2 : Int) : PastaLean.PyAny)
         return __py_ret_1))
 
-attribute [simp, taste_ingr] untyped_param_compare_and_div
+attribute [simp] untyped_param_compare_and_div
 
 def untyped_param_compare_and_div'rn := fun (nums : PyAny) ↦
-  (show Float from
+  (show PastaLean.PyAny from
     Id.run
       (do
         -- Comparison, `%` and `/` on boxed (`PyAny`) values; `best` is a `let mut PyAny` slot reassigned
@@ -367,30 +369,32 @@ def untyped_param_compare_and_div'rn := fun (nums : PyAny) ↦
             let mut best'rb0 := x +ₚ x %ₚ (3 : Int)
           else
             let _ := ()
-        let __py_ret_1 := PastaLean.pyFloat best /ₚ (2 : Int)
+        let __py_ret_1 := (PastaLean.pyFloat best /ₚ (2 : Int) : PastaLean.PyAny)
         return __py_ret_1))
 
 def untyped_param_bitwise := fun (nums : PyAny) ↦
-  Id.run
-    (do
-      -- Bitwise (`| & `), floor-div (`//`) and shift on boxed (`PyAny`) values.
-      let mut r : PyAny := (0 : Int)
-      for x in (PastaLean.pyIter nums)do
-        let mut r'rb0 := PastaLean.pyBitOr r (PastaLean.pyBitAnd x (1 : Int)) +ₚ PastaLean.pyFloorDiv x (2 : Int)
-      let __py_ret_1 := PastaLean.pyShiftLeft r (1 : Int)
-      return __py_ret_1)
+  (show PastaLean.PyAny from
+    Id.run
+      (do
+        -- Bitwise (`| & `), floor-div (`//`) and shift on boxed (`PyAny`) values.
+        let mut r : PyAny := (0 : Int)
+        for x in (PastaLean.pyIter nums)do
+          let mut r'rb0 := PastaLean.pyBitOr r (PastaLean.pyBitAnd x (1 : Int)) +ₚ PastaLean.pyFloorDiv x (2 : Int)
+        let __py_ret_1 := (PastaLean.pyShiftLeft r (1 : Int) : PastaLean.PyAny)
+        return __py_ret_1))
 
-attribute [simp, taste_ingr] untyped_param_bitwise
+attribute [simp] untyped_param_bitwise
 
 def untyped_param_bitwise'rn := fun (nums : PyAny) ↦
-  Id.run
-    (do
-      -- Bitwise (`| & `), floor-div (`//`) and shift on boxed (`PyAny`) values.
-      let mut r : PyAny := (0 : Int)
-      for x in (PastaLean.pyIter nums)do
-        let mut r'rb0 := PastaLean.pyBitOr r (PastaLean.pyBitAnd x (1 : Int)) +ₚ PastaLean.pyFloorDiv x (2 : Int)
-      let __py_ret_1 := PastaLean.pyShiftLeft r (1 : Int)
-      return __py_ret_1)
+  (show PastaLean.PyAny from
+    Id.run
+      (do
+        -- Bitwise (`| & `), floor-div (`//`) and shift on boxed (`PyAny`) values.
+        let mut r : PyAny := (0 : Int)
+        for x in (PastaLean.pyIter nums)do
+          let mut r'rb0 := PastaLean.pyBitOr r (PastaLean.pyBitAnd x (1 : Int)) +ₚ PastaLean.pyFloorDiv x (2 : Int)
+        let __py_ret_1 := (PastaLean.pyShiftLeft r (1 : Int) : PastaLean.PyAny)
+        return __py_ret_1))
 
 def grid_float_dp := fun (m : Int) ↦ fun (n : Int) ↦
   (show Rat from

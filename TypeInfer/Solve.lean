@@ -179,7 +179,9 @@ def applyStmt (sigs : Sigs) (env : Env) (s : Json) : Env :=
           -- Python's `/=` is TRUE division, so `x /= n` widens `x` to `float` even for integer
           -- operands (`pre = 1; pre /= 10`); every other augmented op keeps the numeric `arith` result.
           let augCombine (a b : PyType) : PyType :=
-            if (s.getObjValAs? String "op").toOption == some "div" then .float else arith a b
+            if (s.getObjValAs? String "op").toOption == some "div" then
+              (match a, b with | .any, _ | _, .any => .any | _, _ => .float)
+            else arith a b
           match nameId? target with
           | some name => learn env name (augCombine (env.get? name |>.getD .unknown) (typeOfExpr sigs env value))
           -- `counts[k] += 1` teaches both sides of `counts` (a `Counter()` starts fully unknown).
@@ -650,6 +652,42 @@ def learnFromReads (sigs : Sigs) (env : Env) (json : Json) : Env :=
     | .dict k v => e.insert cname (.dict (k.join kt) v)
     | _ => e) env
 
+/-- Collect `(dictName, keyType, valType)` from every dict-method call `d.pop(k, default)` /
+`d.get(k, default)` / `d.setdefault(k, v)` — the key is arg 0, the value the (optional) arg 1. `.pop`
+is also a LIST method (`xs.pop(i)`), so the caller must guard on `d` already being dict-typed. -/
+partial def collectDictKV (sigs : Sigs) (env : Env) (json : Json) : Array (String × PyType × PyType) :=
+  let here : Array (String × PyType × PyType) :=
+    if nodeTypeOf json == some "Call" then
+      match getField json "func" with
+      | some func =>
+          if nodeTypeOf func == some "Attribute"
+              && ["pop", "get", "setdefault"].contains ((func.getObjValAs? String "attr").toOption.getD "") then
+            match (getField func "value").bind nameId? with
+            | some dname =>
+                let args := (json.getObjValAs? (Array Json) "args").toOption.getD #[]
+                let kt := if args.size ≥ 1 then typeOfExpr sigs env args[0]! else .unknown
+                let vt := if args.size ≥ 2 then typeOfExpr sigs env args[1]! else .unknown
+                #[(dname, kt, vt)]
+            | none => #[]
+          else #[]
+      | none => #[]
+    else #[]
+  let rest := match json with
+    | .arr xs => xs.foldl (fun acc e => acc ++ collectDictKV sigs env e) #[]
+    | .obj fs => fs.toList.foldl (fun acc (_, v) => acc ++ collectDictKV sigs env v) #[]
+    | _ => #[]
+  here ++ rest
+
+/-- Refine a dict's key/value from `d.pop`/`.get`/`.setdefault` calls (see `collectDictKV`). Only
+touches names ALREADY dict-typed — a bare `dict` param seeds as `dict[⊥,⊥]`, so a `counts.pop(k, -1)`
+fills its key/value in and it materialises as a concrete `Std.HashMap`, not a stuck metavariable. -/
+def learnFromDictMethods (sigs : Sigs) (env : Env) (json : Json) : Env :=
+  (collectDictKV sigs env json).foldl (fun e (cname, kt, vt) =>
+    match e.get? cname |>.getD .unknown with
+    | .dict k v => e.insert cname (.dict (if kt == .unknown then k else k.join kt)
+                                         (if vt == .unknown then v else v.join vt))
+    | _ => e) env
+
 /-- Infer a type for every local in `fn`, reflowing to a fixpoint. `outer` seeds the environment
 with the enclosing scope so a nested def's captures start typed; `hints` seeds unannotated
 parameters with types learned from call sites; `sigs` resolves calls to user functions. Precedence:
@@ -675,6 +713,7 @@ partial def inferFunction (sigs : Sigs) (outer hints : Env) (fn : Json) : Env :=
     let paramEnv := nestedDefParamEnv sigs env body #[bodyJson]
     let stepped := applyCaptureMutations sigs [] paramEnv false (stmts.foldl (applyStmt sigs) env) bodyJson
     let stepped := learnFromReads sigs stepped bodyJson
+    let stepped := learnFromDictMethods sigs stepped bodyJson
     let next := compBindings sigs stepped bodyJson
     if next.size == env.size && next.fold (fun ok k v => ok && (env.get? k |>.getD .unknown) == v) true then
       env := next
@@ -797,19 +836,36 @@ private def stampParams (env : Env) (fn : Json) : Json :=
                   -- nullable. Mark `_mut_opt` so codegen seeds its mut shadow as `Option c` (`some p`),
                   -- letting `while node`, `node.field` (Option-unwrap), and `node = node.next` line up
                   -- WITHOUT changing the param's type (callers still pass a plain `c`).
-                  match env.get? name, getField arg "annotation" with
-                  | some (.opt (.cls c)), some ann =>
-                      if ofAnnotation ann == .cls c then
-                        -- Reassigned (`node = node.next`): keep the param type `c`, shadow it as
-                        -- `Option c` via `_mut_opt` (callers pass a plain `c`). Only read + recursed
-                        -- on (`dfs(root.left)`): widen the PARAM TYPE to `Optional c` so an Option arg
-                        -- lines up, via a `_ty` override of the bare annotation.
-                        if nameReassigned name (Json.arr body) then arg.setObjVal! "_mut_opt" (Json.str c)
-                        else match toAnnotation? (PyType.opt (.cls c)) with
-                          | some optAnn => arg.setObjVal! "_ty" optAnn
-                          | none => arg.setObjVal! "_mut_opt" (Json.str c)
-                      else arg
-                  | _, _ => arg
+                  -- An IMPRECISE bare container annotation (`dict`/`list`/`set` whose element(s) are
+                  -- still `.unknown`) is refined by USAGE: prefer the env-inferred type when it fills
+                  -- the unknown in, via a `_ty` override — `counts: dict` used as `counts.pop(k, -1)`
+                  -- becomes `Std.HashMap Int Int`, not a stuck bare `dict` → `HashMap ?m ?m`.
+                  let refined? : Option PyType :=
+                    match (getField arg "annotation").map ofAnnotation, env.get? name with
+                    | some (.dict ak av), some (.dict ek ev) =>
+                        let k := if ak == .unknown then ek else ak
+                        let v := if av == .unknown then ev else av
+                        if (ak == .unknown && k != .unknown) || (av == .unknown && v != .unknown)
+                        then some (.dict k v) else none
+                    | some (.list .unknown), some (.list e) => if e == .unknown then none else some (.list e)
+                    | some (.set .unknown), some (.set e) => if e == .unknown then none else some (.set e)
+                    | _, _ => none
+                  match refined?.bind toAnnotation? with
+                  | some refAnn => arg.setObjVal! "_ty" refAnn
+                  | none =>
+                    match env.get? name, getField arg "annotation" with
+                    | some (.opt (.cls c)), some ann =>
+                        if ofAnnotation ann == .cls c then
+                          -- Reassigned (`node = node.next`): keep the param type `c`, shadow it as
+                          -- `Option c` via `_mut_opt` (callers pass a plain `c`). Only read + recursed
+                          -- on (`dfs(root.left)`): widen the PARAM TYPE to `Optional c` so an Option
+                          -- arg lines up, via a `_ty` override of the bare annotation.
+                          if nameReassigned name (Json.arr body) then arg.setObjVal! "_mut_opt" (Json.str c)
+                          else match toAnnotation? (PyType.opt (.cls c)) with
+                            | some optAnn => arg.setObjVal! "_ty" optAnn
+                            | none => arg.setObjVal! "_mut_opt" (Json.str c)
+                        else arg
+                    | _, _ => arg
                 else
                   -- A residual-unknown param is boxed as `PyAny` only when it is used in a
                   -- container-dispatch position (else it would compile-error); otherwise it is left
@@ -1273,8 +1329,12 @@ partial def stampFunction (sigs : Sigs) (outer hints : Env) (fn : Json) : Json :
         -- `!_real_fn`) so both coerce. A pure-`float` body needs no ascription (Lean infers it).
         -- `sawOther` covers `int`/`bool` and `unknown` (a `return t` whose `t` TypeInfer left unknown
         -- but Lean will infer `ℤ`) — anything that could pin the codomain to `ℤ` ahead of the float.
-        let (sawOther, sawFloat) : Bool × Bool := Id.run do
-          let mut so := false; let mut sf := false
+        -- `sawAny`: a return branch that types `.any` under the PyAny-SEEDED `env` (e.g. `return best/2`
+        -- where `best` was boxed to `PyAny`). `retType` comes from the globals-free `sigs` where the
+        -- same param was still `unknown`, so it can wrongly claim a concrete `float`; the env-based
+        -- `sawAny` is authoritative for whether the body actually yields a boxed value.
+        let (sawOther, sawFloat, sawAny) : Bool × Bool × Bool := Id.run do
+          let mut so := false; let mut sf := false; let mut sa := false
           for st in flatStmts ((fn.getObjValAs? (Array Json) "body").toOption.getD #[]).toList do
             if nodeTypeOf st == some "Return" then
               match getField st "value" with
@@ -1284,11 +1344,15 @@ partial def stampFunction (sigs : Sigs) (outer hints : Env) (fn : Json) : Json :
                       match t with
                       | .float => sf := true
                       | .int | .bool | .unknown => so := true
+                      | .any => sa := true
                       | _ => pure ()
               | none => pure ()
-          return (so, sf)
-        let fn := if sawOther && sawFloat then fn.setObjVal! "_ret_float" (Json.bool true) else fn
-        if retType == (.any : PyType) then fn.setObjVal! "_box_return" (Json.bool true)
+          return (so, sf, sa)
+        -- Box the return (and suppress the contradictory `_ret_float`/`_ret_ty` ascriptions) when the
+        -- body actually yields `PyAny` — either `sigs` said so, or the env-seeded return is boxed.
+        let boxRet := retType == (.any : PyType) || sawAny
+        let fn := if !boxRet && sawOther && sawFloat then fn.setObjVal! "_ret_float" (Json.bool true) else fn
+        if boxRet then fn.setObjVal! "_box_return" (Json.bool true)
         else if !annotated && retType.isKnown then
           match toAnnotation? retType with
           | some ann => fn.setObjVal! "_ret_ty" ann

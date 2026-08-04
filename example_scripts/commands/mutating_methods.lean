@@ -22,7 +22,7 @@ The subtle one is `pop`: arity alone decides the container. `xs.pop(i)` indexes 
 lower to different runtime pairs. `setdefault` is the same value+mutate shape.
 -/
 -- 2-arg pop is a DICT pop (key, default) — not a list pop with an index.
-def take := fun counts ↦ fun (key : Int) ↦
+def take := fun (counts : Std.HashMap Int Int) ↦ fun (key : Int) ↦
   Id.run
     (do
       let mut counts := counts
@@ -35,7 +35,7 @@ def take := fun counts ↦ fun (key : Int) ↦
 
 attribute [simp, taste_ingr] take
 
-def take'rn := fun counts ↦ fun (key : Int) ↦
+def take'rn := fun (counts : Std.HashMap Int Int) ↦ fun (key : Int) ↦
   Id.run
     (do
       let mut counts := counts

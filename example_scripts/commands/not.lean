@@ -13,10 +13,12 @@ set_option maxHeartbeats 200000
 
 namespace PastaLean.User.Root
 
-def f := fun (a : PyAny) ↦ if PastaLean.pyTruthy !PastaLean.pyTruthy a then a else !PastaLean.pyTruthy a
+def f := fun (a : PyAny) ↦
+  (show PastaLean.PyAny from if PastaLean.pyTruthy !PastaLean.pyTruthy a then a else !PastaLean.pyTruthy a)
 
-attribute [simp, taste_ingr] f
+attribute [simp] f
 
-def f'rn := fun (a : PyAny) ↦ if PastaLean.pyTruthy !PastaLean.pyTruthy a then a else !PastaLean.pyTruthy a
+def f'rn := fun (a : PyAny) ↦
+  (show PastaLean.PyAny from if PastaLean.pyTruthy !PastaLean.pyTruthy a then a else !PastaLean.pyTruthy a)
 
 end PastaLean.User.Root

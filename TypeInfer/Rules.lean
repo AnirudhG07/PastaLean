@@ -100,8 +100,10 @@ partial def typeOfExpr (sigs : Sigs) (env : Env) (e : Json) : PyType :=
               | .list _, _ => lt
               | _, .list _ => rt
               | _, _ => arith lt rt
-          -- Python's `/` is always true division, so `int / int` is a `float`.
-          | some "div" => .float
+          -- Python's `/` is always true division, so `int / int` is a `float` — but a boxed operand
+          -- keeps the result boxed (`PyAny / 2` dispatches on the tag → `PyAny`), else a `_ret_float`
+          -- stamp would ascribe `ℚ` onto a body that is actually `PyAny`.
+          | some "div" => match lt, rt with | .any, _ | _, .any => .any | _, _ => .float
           | _ => arith lt rt
       | _, _ => .unknown
   | some "UnaryOp" =>

@@ -24,26 +24,28 @@ value, code after sees the new.
 -/
 -- Single loop target rebound from str to int.
 def letter_sum := fun (s : String) ↦
-  Id.run
-    (do
-      let mut total : PyAny := (0 : Int)
-      for __py_loop_1 in (PastaLean.pyIter s)do
-        let ch := __py_loop_1
-        let mut ch := PastaLean.pyOrd ch -ₚ PastaLean.pyOrd "a"
-        total := total +ₚ ch
-      return total)
+  (show PastaLean.PyAny from
+    Id.run
+      (do
+        let mut total : PyAny := (0 : Int)
+        for __py_loop_1 in (PastaLean.pyIter s)do
+          let ch := __py_loop_1
+          let mut ch := PastaLean.pyOrd ch -ₚ PastaLean.pyOrd "a"
+          total := total +ₚ ch
+        return (total : PastaLean.PyAny)))
 
-attribute [simp, taste_ingr] letter_sum
+attribute [simp] letter_sum
 
 def letter_sum'rn := fun (s : String) ↦
-  Id.run
-    (do
-      let mut total : PyAny := (0 : Int)
-      for __py_loop_1 in (PastaLean.pyIter s)do
-        let ch := __py_loop_1
-        let mut ch := PastaLean.pyOrd ch -ₚ PastaLean.pyOrd "a"
-        total := total +ₚ ch
-      return total)
+  (show PastaLean.PyAny from
+    Id.run
+      (do
+        let mut total : PyAny := (0 : Int)
+        for __py_loop_1 in (PastaLean.pyIter s)do
+          let ch := __py_loop_1
+          let mut ch := PastaLean.pyOrd ch -ₚ PastaLean.pyOrd "a"
+          total := total +ₚ ch
+        return (total : PastaLean.PyAny)))
 
 -- TUPLE loop target where only the second element is rebound (a different codegen path).
 def appeal := fun (s : String) ↦
@@ -80,28 +82,30 @@ def appeal'rn := fun (s : String) ↦
 
 -- The rebound name is itself reassigned afterwards, so its new binding must stay mutable.
 def shifted := fun (words : List String) ↦
-  Id.run
-    (do
-      let mut total : PyAny := (0 : Int)
-      for __py_loop_1 in (PastaLean.pyIter words)do
-        let w := __py_loop_1
-        let mut w := PastaLean.pyLen w
-        w := w +ₚ (1 : Int)
-        total := total +ₚ w
-      return total)
+  (show PastaLean.PyAny from
+    Id.run
+      (do
+        let mut total : PyAny := (0 : Int)
+        for __py_loop_1 in (PastaLean.pyIter words)do
+          let w := __py_loop_1
+          let mut w := PastaLean.pyLen w
+          w := w +ₚ (1 : Int)
+          total := total +ₚ w
+        return (total : PastaLean.PyAny)))
 
-attribute [simp, taste_ingr] shifted
+attribute [simp] shifted
 
 def shifted'rn := fun (words : List String) ↦
-  Id.run
-    (do
-      let mut total : PyAny := (0 : Int)
-      for __py_loop_1 in (PastaLean.pyIter words)do
-        let w := __py_loop_1
-        let mut w := PastaLean.pyLen w
-        w := w +ₚ (1 : Int)
-        total := total +ₚ w
-      return total)
+  (show PastaLean.PyAny from
+    Id.run
+      (do
+        let mut total : PyAny := (0 : Int)
+        for __py_loop_1 in (PastaLean.pyIter words)do
+          let w := __py_loop_1
+          let mut w := PastaLean.pyLen w
+          w := w +ₚ (1 : Int)
+          total := total +ₚ w
+        return (total : PastaLean.PyAny)))
 
 def main' :=
   ((do

@@ -418,6 +418,30 @@ def pyFloorDiv {α β γ : Type} [PyFloorDiv α β γ] (a : α) (b : β) : γ :=
 instance : PyFloorDiv Int Int Int where
   floorDiv a b := if b == 0 then panic! "ZeroDivisionError: integer division or modulo by zero" else Int.fdiv a b
 
+/-! Python `//` is floor division for EVERY numeric type, not just `int`: `7.0 // 2 = 3.0` (float),
+`len(a) // len(b)` (the operands are `Nat`), and the exact-mode rational/mixed cases. `PyNumJoin`
+only auto-derives `+ - * /`, so each `//` pair is spelled out. Result type follows Python: a float
+operand keeps the result float, otherwise it stays in the integer/rational domain. -/
+instance : PyFloorDiv Float Float Float where floorDiv a b := (a / b).floor
+instance : PyFloorDiv Rat Rat Rat where floorDiv a b := if b == 0 then a else ((⌊a / b⌋ : Int) : Rat)
+instance : PyFloorDiv Nat Nat Nat where floorDiv a b := a / b
+-- Float with an integer operand → Float (Python promotes).
+instance : PyFloorDiv Float Int Float where floorDiv a b := (a / Float.ofInt b).floor
+instance : PyFloorDiv Int Float Float where floorDiv a b := (Float.ofInt a / b).floor
+instance : PyFloorDiv Float Nat Float where floorDiv a b := (a / Float.ofNat b).floor
+instance : PyFloorDiv Nat Float Float where floorDiv a b := (Float.ofNat a / b).floor
+-- Rat with an integer operand → Rat (exact mode).
+instance : PyFloorDiv Rat Int Rat where floorDiv a b := if b == 0 then a else ((⌊a / (b : Rat)⌋ : Int) : Rat)
+instance : PyFloorDiv Int Rat Rat where floorDiv a b := if b == 0 then (a : Rat) else ((⌊(a : Rat) / b⌋ : Int) : Rat)
+instance : PyFloorDiv Rat Nat Rat where floorDiv a b := if b == 0 then a else ((⌊a / (b : Rat)⌋ : Int) : Rat)
+instance : PyFloorDiv Nat Rat Rat where floorDiv a b := if b == 0 then (a : Rat) else ((⌊(a : Rat) / b⌋ : Int) : Rat)
+-- Nat/Int mixes → Int (floored).
+instance : PyFloorDiv Nat Int Int where floorDiv a b := if b == 0 then (a : Int) else Int.fdiv (a : Int) b
+instance : PyFloorDiv Int Nat Int where floorDiv a b := if b == 0 then a else Int.fdiv a (b : Int)
+-- Bool coerces to int (`True // 2 = 0`).
+instance : PyFloorDiv Bool Int Int where floorDiv a b := if b == 0 then pyBoolToInt a else Int.fdiv (pyBoolToInt a) b
+instance : PyFloorDiv Int Bool Int where floorDiv a b := if pyBoolToInt b == 0 then a else Int.fdiv a (pyBoolToInt b)
+
 /-!
 Python-style integer bitwise operators, modelling Python's infinite two's-complement (`-1 & 15 = 15`,
 `x & 1` for a negative `x`) at a fixed 64-bit width — ample for competitive-programming values (which
@@ -461,6 +485,16 @@ instance : PyBitXor Int Int Int where bitXor := pyTwosComp Nat.xor
 instance : PyBitAnd Bool Bool Bool where bitAnd a b := a && b
 instance : PyBitOr Bool Bool Bool where bitOr a b := a || b
 instance : PyBitXor Bool Bool Bool where bitXor a b := xor a b
+
+/-- Mixed `bool`/`int` bitwise: the `bool` coerces to `int` (Python `True & 6 = 0`, `flag |= cond`,
+`parity ^= bit`). The comment above promised these "go through the Int instances", but there was no
+`Bool→Int` coercion for these classes — these instances supply it. -/
+instance : PyBitAnd Bool Int Int where bitAnd a b := pyTwosComp Nat.land (pyBoolToInt a) b
+instance : PyBitAnd Int Bool Int where bitAnd a b := pyTwosComp Nat.land a (pyBoolToInt b)
+instance : PyBitOr Bool Int Int where bitOr a b := pyTwosComp Nat.lor (pyBoolToInt a) b
+instance : PyBitOr Int Bool Int where bitOr a b := pyTwosComp Nat.lor a (pyBoolToInt b)
+instance : PyBitXor Bool Int Int where bitXor a b := pyTwosComp Nat.xor (pyBoolToInt a) b
+instance : PyBitXor Int Bool Int where bitXor a b := pyTwosComp Nat.xor a (pyBoolToInt b)
 
 class PyShiftLeft (α β : Type) (γ : outParam Type) where shiftLeft : α → β → γ
 class PyShiftRight (α β : Type) (γ : outParam Type) where shiftRight : α → β → γ

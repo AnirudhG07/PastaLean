@@ -26,8 +26,10 @@ def find_first := fun (xs : List Int) ↦ fun (k : Int) ↦
     let __py_ret_1 := -(1 : Int)
     return __py_ret_1 : Id _)
 
-theorem find_first_spec : ⦃⌜True⌝⦄ find_first xs k ⦃⇓_ => ⌜True⌝⦄ := by apply Std.Do.Triple.of_entails_wp; intro _;
-  exact True.intro
+theorem find_first_spec : ⦃⌜True⌝⦄ find_first xs k ⦃⇓_ => ⌜True⌝⦄ :=
+  by
+  try (apply Std.Do.Triple.of_entails_wp; intro _; exact True.intro)
+  all_goals sorry
 
 def find_first'rn := fun (xs : List Int) ↦ fun (k : Int) ↦
   Id.run

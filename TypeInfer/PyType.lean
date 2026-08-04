@@ -156,9 +156,13 @@ partial def join : PyType → PyType → PyType
   | .float, .int | .int, .float | .float, .bool | .bool, .float => .float
   | .none, .none => .none
   -- `opt` before `none`, or `None ⊔ Optional[int]` would nest to `Optional[Optional[int]]`.
-  | .opt a, .opt b => .opt (join a b)
+  -- ABSORPTION: `Optional[Any]` collapses to `Any` (a nullable dynamic value is just a dynamic value).
+  -- Without it `join` is non-associative — `join(join(None,int),str) = opt any` but
+  -- `join(None, join(int,str)) = any` (the `_, .any => any` rung above fires first) — which makes the
+  -- fixpoint non-confluent (`Option PyAny` on one order, `PyAny` on another) for None+conflict slots.
+  | .opt a, .opt b => match join a b with | .any => .any | j => .opt j
   | .opt a, .none | .none, .opt a => .opt a
-  | .opt a, b | b, .opt a => .opt (join a b)
+  | .opt a, b | b, .opt a => match join a b with | .any => .any | j => .opt j
   | .none, t | t, .none => .opt t
   | .list a, .list b => .list (join a b)
   | .set a, .set b => .set (join a b)

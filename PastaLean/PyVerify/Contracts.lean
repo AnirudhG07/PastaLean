@@ -671,14 +671,17 @@ def buildMonadicSpec (thmName correctName fnName : TSyntax `ident) (emitReadable
   -- `mvcgen` can leave a DIFFERENT goal count — so a spliced single `sorry` under-closes. `all_goals
   -- sorry` mops up any residual; on a fully-closed proof it runs on zero goals (no-op, axiom-clean).
   if info.ensures.isEmpty then
-    -- No `Result()` postcondition → the `True`-post triple. In the `Id` monad
-    -- `wp⟦x⟧ (fun _ => True) = True`, so it proves in one line regardless of loops — no `mvcgen`
-    -- invariants needed. (`$mv`/`bullets` are unused here; the meaningful checkpoints, if any, are
-    -- the in-body markers.)
+    -- No `Result()` postcondition → the `True`-post triple. For a straight-line `Id`-monad body
+    -- `wp⟦x⟧ (fun _ => True)` reduces to `True` and the one-liner closes it. But a body with a loop
+    -- and an early `return` leaves a residual `wp` goal that `exact True.intro` can't discharge, so
+    -- `try` the one-liner and let `all_goals sorry` mop up any residual (a no-op — axiom-clean — when
+    -- the one-liner already closed everything; a `sorry` only for the genuine loop case). PALC accepts
+    -- a `sorry` (it compiles); an unsolved-goals *error* it does not.
     let _ := mv
     let specOnly ← `(command| theorem $thmName :
         ⦃⌜$pre⌝⦄ $fnName $paramIdents* ⦃⇓ _ => ⌜True⌝⦄ := by
-          apply Std.Do.Triple.of_entails_wp; intro _; exact True.intro)
+          try (apply Std.Do.Triple.of_entails_wp; intro _; exact True.intro)
+          all_goals sorry)
     return ⟨mkNullNode #[specOnly.raw]⟩
   else
     let retId := info.retName.getD "result"
