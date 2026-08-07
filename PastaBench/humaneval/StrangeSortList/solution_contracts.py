@@ -11,8 +11,15 @@ def strange_sort_list(lst):
     strange_sort_list([5, 5, 5, 5]) == [5, 5, 5, 5]
     strange_sort_list([]) == []
     '''
+    # 1-2. The result is a permutation of the input (same length, same multiset).
     Ensures(len(Result()) == len(lst))
     Ensures(sorted(Result()) == sorted(lst))
+    # 3-4. The interleaving itself: even slots take the k-th smallest, odd slots the k-th largest.
+    #      Together with (1-2) this pins the result down to exactly one list.
+    Ensures(all(Result()[2 * k] == sorted(lst)[k] for k in range(len(lst) // 2)))
+    Ensures(all(Result()[2 * k + 1] == sorted(lst)[len(lst) - 1 - k] for k in range(len(lst) // 2)))
+    # 5. An odd-length input leaves its median in the final slot.
+    Ensures(len(lst) % 2 == 0 or Result()[len(lst) - 1] == sorted(lst)[len(lst) // 2])
 
     sorted_list = sorted(lst)
     Assert(sorted(lst) == sorted_list)
@@ -33,6 +40,10 @@ def strange_sort_list(lst):
         # 5. The core permutation property: elements already in `ans` plus the
         #    unprocessed elements between `i` and `j` constitute the original sorted list.
         Invariant(sorted(ans + sorted_list[i : j + 1]) == sorted_list)
+        # 6. The index-style invariant that turns into Ensures 3-4 at loop exit: the first `i`
+        #    pairs already placed are the i smallest / i largest, in alternating slots.
+        Invariant(all(ans[2 * k] == sorted_list[k] for k in range(i)))
+        Invariant(all(ans[2 * k + 1] == sorted_list[len(sorted_list) - 1 - k] for k in range(i)))
         # Termination: the gap between `i` and `j` shrinks.
         Decreases(j - i)
 

@@ -64,11 +64,15 @@ def by_length(arr):
       else:
         return "Nine"
         
-    # This postcondition is a full functional specification. It states that the result is
-    # equivalent to filtering the input array for numbers in the range [1, 9], sorting that
-    # subset in descending order, and then mapping each number to its word form. This captures
-    # the entire intent of the function.
-    Ensures(Result() == [to_word(x) for x in sorted([y for y in arr if 1 <= y <= 9], reverse=True)])
+    # Full functional specification, stated without reference to the nested `to_word`:
+    # the result has exactly one entry per in-range element of `arr`, and entry i is the
+    # name of the i-th largest such element (descending order).
+    Ensures(len(Result()) == len([y for y in arr if 1 <= y <= 9]))
+    Ensures(all(
+        Result()[i] == ["One", "Two", "Three", "Four", "Five",
+                        "Six", "Seven", "Eight", "Nine"][
+            sorted([y for y in arr if 1 <= y <= 9], reverse=True)[i] - 1]
+        for i in range(len([y for y in arr if 1 <= y <= 9]))))
 
     sorted_list, ans = sorted(arr)[::-1], []
     for x in sorted_list:
@@ -127,26 +131,46 @@ def by_length := fun (arr : List Int) ↦
 @[spec]
 theorem by_length_spec :
     ⦃⌜True⌝⦄ by_length arr ⦃⇓ans =>
-      ⌜ans =
-          (PastaLean.pyIter
-                (PastaLean.pySortBy (fun x => x) Bool.true
-                  ((List.filter (fun y => (1 : Int) ≤ y ∧ y ≤ (9 : Int)) (PastaLean.pyIter arr)).map fun y => y))).map
-            fun x => _by_length'to_word x⌝⦄ :=
+      ⌜PastaLean.pyLen ans =
+            PastaLean.pyLen
+              ((List.filter (fun y => (1 : Int) ≤ y ∧ y ≤ (9 : Int)) (PastaLean.pyIter arr)).map fun y => y) ∧
+          ∀
+            i ∈
+              PastaLean.pyIter
+                (PastaLean.pyRange
+                  (PastaLean.pyLen
+                    ((List.filter (fun y => (1 : Int) ≤ y ∧ y ≤ (9 : Int)) (PastaLean.pyIter arr)).map fun y => y))),
+            ans⦋i⦌ =
+              ["One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight",
+                  "Nine"]⦋(PastaLean.pySortBy (fun x => x) Bool.true
+                      ((List.filter (fun y => (1 : Int) ≤ y ∧ y ≤ (9 : Int)) (PastaLean.pyIter arr)).map fun y =>
+                        y))⦋i⦌ -ₚ
+                  (1 : Int)⦌⌝⦄ :=
   by
   try
     mvcgen [by_length, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓cur => ⌜True⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem by_length_correct :
     ∀ (arr : List Int),
       let ans := (by_length arr).run;
-      ans =
-        (PastaLean.pyIter
-              (PastaLean.pySortBy (fun x => x) Bool.true
-                ((List.filter (fun y => (1 : Int) ≤ y ∧ y ≤ (9 : Int)) (PastaLean.pyIter arr)).map fun y => y))).map
-          fun x => _by_length'to_word x :=
+      PastaLean.pyLen ans =
+          PastaLean.pyLen
+            ((List.filter (fun y => (1 : Int) ≤ y ∧ y ≤ (9 : Int)) (PastaLean.pyIter arr)).map fun y => y) ∧
+        ∀
+          i ∈
+            PastaLean.pyIter
+              (PastaLean.pyRange
+                (PastaLean.pyLen
+                  ((List.filter (fun y => (1 : Int) ≤ y ∧ y ≤ (9 : Int)) (PastaLean.pyIter arr)).map fun y => y))),
+          ans⦋i⦌ =
+            ["One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight",
+                "Nine"]⦋(PastaLean.pySortBy (fun x => x) Bool.true
+                    ((List.filter (fun y => (1 : Int) ≤ y ∧ y ≤ (9 : Int)) (PastaLean.pyIter arr)).map fun y =>
+                      y))⦋i⦌ -ₚ
+                (1 : Int)⦌ :=
   by
   intro arr
   exact by_length_spec True.intro
@@ -207,10 +231,9 @@ def by_length'rn := fun (arr : List Int) ↦
             return = ['One']
           
       -/
-      -- This postcondition is a full functional specification. It states that the result is
-      -- equivalent to filtering the input array for numbers in the range [1, 9], sorting that
-      -- subset in descending order, and then mapping each number to its word form. This captures
-      -- the entire intent of the function.
+      -- Full functional specification, stated without reference to the nested `to_word`:
+      -- the result has exactly one entry per in-range element of `arr`, and entry i is the
+      -- name of the i-th largest such element (descending order).
       let __unpack_value_1 := (PastaLean.pySlice (PastaLean.pySort arr) none none (some (-(1 : Int))), [])
       let __unpack_pair_1 := __unpack_value_1
       let mut sorted_list : List Int := Prod.fst __unpack_pair_1

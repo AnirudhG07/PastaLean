@@ -77,7 +77,7 @@ theorem count_upper_spec :
       ⌜let i := (cur.prefix.length : Int);
         ((((0 : Int) ≤ i ∧ i ≤ PastaLean.pyLen s) ∧ i %ₚ (2 : Int) = (0 : Int)) ∧ cnt ≥ (0 : Int)) ∧
           cnt ≤ PastaLean.pyFloorDiv i (2 : Int)⌝
-  intros; all_goals sorry
+  taste?
   all_goals sorry
 
 theorem count_upper_correct :

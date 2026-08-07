@@ -38,8 +38,15 @@ def make_palindrome(string: str) -> str:
     >>> make_palindrome('cata')
     'catac'
     """
-    Ensures(is_palindrome(Result()))
+    # THE POINT: the result is a palindrome that begins with `string`, and it is the
+    # SHORTEST one. A palindrome of length len(string)+k starting with `string` must be
+    # exactly `string + reverse(string[:k])`, so minimality is: no smaller k gives one.
+    Ensures(len(Result()) >= len(string))
     Ensures(Result().startswith(string))
+    Ensures(Result() == Result()[::-1])
+    Ensures(Result() == string + string[:len(Result()) - len(string)][::-1])
+    Ensures(all((string + string[:k][::-1]) != (string + string[:k][::-1])[::-1]
+                for k in range(len(Result()) - len(string))))
 
     if is_palindrome(string):
         Assert(is_palindrome(string))
@@ -76,7 +83,7 @@ attribute [simp] is_palindrome
 @[taste_ingr]
 theorem is_palindrome_correct :
     ∀ (string : String), is_palindrome string = (string = PastaLean.pySlice string none none (some (-(1 : Int)))) :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]
+  by taste?
 
 def is_palindrome'rn := fun (string : String) ↦ string == PastaLean.pySlice string none none (some (-(1 : Int)))
 
@@ -114,18 +121,45 @@ def make_palindrome := fun (string : String) ↦
 
 @[spec]
 theorem make_palindrome_spec :
-    ⦃⌜True⌝⦄ make_palindrome string ⦃⇓result => ⌜is_palindrome result ∧ PastaLean.pyStringStartswith result string⌝⦄ :=
+    ⦃⌜True⌝⦄ make_palindrome string ⦃⇓result =>
+      ⌜(((PastaLean.pyLen result ≥ PastaLean.pyLen string ∧ PastaLean.pyStringStartswith result string) ∧
+              result = PastaLean.pySlice result none none (some (-(1 : Int)))) ∧
+            result =
+              string +ₚ
+                PastaLean.pySlice
+                  (PastaLean.pySlice string none (some (PastaLean.pyLen result -ₚ PastaLean.pyLen string)) none)
+                  none none (some (-(1 : Int)))) ∧
+          ∀ k ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen result -ₚ PastaLean.pyLen string)),
+            string +ₚ
+                PastaLean.pySlice (PastaLean.pySlice string none (some k) none) none none (some (-(1 : Int))) ≠
+              PastaLean.pySlice
+                (string +ₚ
+                  PastaLean.pySlice (PastaLean.pySlice string none (some k) none) none none (some (-(1 : Int))))
+                none none (some (-(1 : Int)))⌝⦄ :=
   by
   try
     mvcgen [make_palindrome, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · Invariant.withEarlyReturn (onReturn := fun _ _ => ⌜True⌝) (onContinue := fun _ _ => ⌜True⌝)
-  sorry
+  taste?
   all_goals sorry
 
 theorem make_palindrome_correct :
     ∀ (string : String),
       let result := (make_palindrome string).run;
-      is_palindrome result ∧ PastaLean.pyStringStartswith result string :=
+      (((PastaLean.pyLen result ≥ PastaLean.pyLen string ∧ PastaLean.pyStringStartswith result string) ∧
+            result = PastaLean.pySlice result none none (some (-(1 : Int)))) ∧
+          result =
+            string +ₚ
+              PastaLean.pySlice
+                (PastaLean.pySlice string none (some (PastaLean.pyLen result -ₚ PastaLean.pyLen string)) none) none
+                none (some (-(1 : Int)))) ∧
+        ∀ k ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen result -ₚ PastaLean.pyLen string)),
+          string +ₚ
+              PastaLean.pySlice (PastaLean.pySlice string none (some k) none) none none (some (-(1 : Int))) ≠
+            PastaLean.pySlice
+              (string +ₚ
+                PastaLean.pySlice (PastaLean.pySlice string none (some k) none) none none (some (-(1 : Int))))
+              none none (some (-(1 : Int))) :=
   by
   intro string
   exact make_palindrome_spec True.intro
@@ -146,6 +180,9 @@ def make_palindrome'rn := fun (string : String) ↦
           'catac'
           
       -/
+      -- THE POINT: the result is a palindrome that begins with `string`, and it is the
+      -- SHORTEST one. A palindrome of length len(string)+k starting with `string` must be
+      -- exactly `string + reverse(string[:k])`, so minimality is: no smaller k gives one.
       if h_1 : PastaLean.pyTruthy (is_palindrome'rn string) then 
         let _ := Libraries.passta.pyPassAssert (is_palindrome'rn string)
         return string

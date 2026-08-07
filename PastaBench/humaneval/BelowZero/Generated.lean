@@ -30,16 +30,23 @@ def below_zero(operations: List[int]) -> bool:
     >>> below_zero([1, 2, -4, 5])
     True
     """
+    # The point: the answer is exactly "some prefix sum is negative".
     Ensures(
         Result() == any(sum(operations[: k + 1]) < 0 for k in range(len(operations)))
+    )
+    # Contrapositive form, so the False case carries content too: on a False answer every
+    # prefix balance stayed non-negative.
+    Ensures(
+        Result() or all(sum(operations[: k + 1]) >= 0 for k in range(len(operations)))
     )
 
     account = 0
     for operation in operations:
-        # The invariant is that the account balance, which represents the sum
-        # of the operations processed so far, must be non-negative for the
-        # loop to continue.
+        # Reaching the top of the body means no prefix has gone negative yet — the balance
+        # here IS the running prefix sum, so this is the loop's half of the postcondition.
         Invariant(account >= 0)
+        # A prefix sum can never exceed the total of the deposits.
+        Invariant(account <= sum(x for x in operations if x > 0))
         account += operation
         if account < 0:
             return True
@@ -52,10 +59,15 @@ def below_zero := fun (operations : List Int) ↦
   (do
     let mut account : Int := (0 : Int)
     for operation in (PastaLean.pyIter operations)do
-      -- The invariant is that the account balance, which represents the sum
-      -- of the operations processed so far, must be non-negative for the
-      -- loop to continue.
+      -- Reaching the top of the body means no prefix has gone negative yet — the balance
+      -- here IS the running prefix sum, so this is the loop's half of the postcondition.
       let _ := Libraries.passta.pyPassInvariant (decide (account ≥ (0 : Int)))
+      -- A prefix sum can never exceed the total of the deposits.
+      let _ :=
+        Libraries.passta.pyPassInvariant
+          (decide
+            (account ≤
+              PastaLean.pySum ((List.filter (fun x => x > (0 : Int)) (PastaLean.pyIter operations)).map fun x => x)))
       account := account +ₚ operation
       if h_1 : account < (0 : Int) then 
         return Bool.true
@@ -66,26 +78,28 @@ def below_zero := fun (operations : List Int) ↦
 @[spec]
 theorem below_zero_spec :
     ⦃⌜True⌝⦄ below_zero operations ⦃⇓result =>
-      ⌜result =
-          PastaLean.pyStdAny
-            ((PastaLean.pyRange (PastaLean.pyLen operations)).map fun k =>
-              decide
-                (PastaLean.pySum (PastaLean.pySlice operations none (some (k +ₚ (1 : Int))) none) < (0 : Int)))⌝⦄ :=
+      ⌜(result =
+            ∃ k ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen operations)),
+              PastaLean.pySum (PastaLean.pySlice operations none (some (k +ₚ (1 : Int))) none) < (0 : Int)) ∧
+          (PastaLean.pyTruthy result = true ∨
+            ∀ k ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen operations)),
+              PastaLean.pySum (PastaLean.pySlice operations none (some (k +ₚ (1 : Int))) none) ≥ (0 : Int))⌝⦄ :=
   by
   try
     mvcgen [below_zero, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · Invariant.withEarlyReturn (onReturn := fun _ _ => ⌜True⌝) (onContinue := fun _ _ => ⌜True⌝)
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  taste?
   all_goals sorry
 
 theorem below_zero_correct :
     ∀ (operations : List Int),
       let result := (below_zero operations).run;
-      result =
-        PastaLean.pyStdAny
-          ((PastaLean.pyRange (PastaLean.pyLen operations)).map fun k =>
-            decide
-              (PastaLean.pySum (PastaLean.pySlice operations none (some (k +ₚ (1 : Int))) none) < (0 : Int))) :=
+      (result =
+          ∃ k ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen operations)),
+            PastaLean.pySum (PastaLean.pySlice operations none (some (k +ₚ (1 : Int))) none) < (0 : Int)) ∧
+        (PastaLean.pyTruthy result = true ∨
+          ∀ k ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen operations)),
+            PastaLean.pySum (PastaLean.pySlice operations none (some (k +ₚ (1 : Int))) none) ≥ (0 : Int)) :=
   by
   intro operations
   exact below_zero_spec True.intro
@@ -103,12 +117,20 @@ def below_zero'rn := fun (operations : List Int) ↦
           True
           
       -/
+      -- The point: the answer is exactly "some prefix sum is negative".
+      -- Contrapositive form, so the False case carries content too: on a False answer every
+      -- prefix balance stayed non-negative.
       let mut account : Int := (0 : Int)
       for operation in (PastaLean.pyIter operations)do
-        -- The invariant is that the account balance, which represents the sum
-        -- of the operations processed so far, must be non-negative for the
-        -- loop to continue.
+        -- Reaching the top of the body means no prefix has gone negative yet — the balance
+        -- here IS the running prefix sum, so this is the loop's half of the postcondition.
         let _ := Libraries.passta.pyPassInvariant (decide (account ≥ (0 : Int)))
+        -- A prefix sum can never exceed the total of the deposits.
+        let _ :=
+          Libraries.passta.pyPassInvariant
+            (decide
+              (account ≤
+                PastaLean.pySum ((List.filter (fun x => x > (0 : Int)) (PastaLean.pyIter operations)).map fun x => x)))
         account := account +ₚ operation
         if h_1 : account < (0 : Int) then 
           return Bool.true

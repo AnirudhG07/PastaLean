@@ -20,6 +20,19 @@ set_option maxHeartbeats 800000
 from contracts import *
 
 
+# Hoisted to module scope: it captures nothing from `order_by_points`, and a nested `def`
+# would make the contracts below reference a name that is not yet bound.
+def weight(x):
+    x_list = list(str(x))
+    if x_list[0] == "-":
+        x_list = x_list[1:]
+        x_list = list(map(int, x_list))
+        x_list[0] = -x_list[0]
+    else:
+        x_list = list(map(int, x_list))
+    return sum(x_list)
+
+
 def order_by_points(nums):
     """
     Write a function which sorts the given list of integers
@@ -31,38 +44,28 @@ def order_by_points(nums):
     >>> order_by_points([1, 11, -1, -11, -12]) == [-1, -11, 1, -12, 11]
     >>> order_by_points([]) == []
     """
-
-    # A key property of any sorting function is that the output is a
-    # permutation of the input. A full formal statement of this is complex,
-    # but at a minimum, the length must be preserved.
     Ensures(len(Result()) == len(nums))
-
-    # The main purpose of this function is to sort the list according to
-    # the custom `weight` function. This postcondition captures that intent.
-    # Note: this contract does not formally specify the stability property
-    # mentioned in the docstring (tie-breaking by original index), as that
-    # is complex to express. Python's `sorted` is stable by default, so
-    # the implementation is correct.
-    Ensures(len(Result()) < 2 or all(
-        weight(Result()[i]) <= weight(Result()[i+1])
-        for i in range(len(Result()) - 1)
+    # The output is a permutation of the input: every value keeps its multiplicity.
+    Ensures(all(Result().count(v) == nums.count(v) for v in nums))
+    # The output is non-decreasing in digit weight (`weight` negates the leading digit of a
+    # negative number, which is this problem's own convention).
+    Ensures(all(weight(Result()[i]) <= weight(Result()[i + 1]) for i in range(len(Result()) - 1)))
+    # Stability, stated exactly: within any one weight class the output preserves the input
+    # order. Together with the two facts above this pins the result down completely.
+    Ensures(all(
+        [y for y in Result() if weight(y) == weight(x)]
+        == [y for y in nums if weight(y) == weight(x)]
+        for x in nums
     ))
 
-    def weight(x):
-        x_list = list(str(x))
-        if x_list[0] == "-":
-            x_list = x_list[1:]
-            x_list = list(map(int, x_list))
-            x_list[0] = -x_list[0]
-        else:
-            x_list = list(map(int, x_list))
-        return sum(x_list)
     return sorted(nums, key=weight)
 -/
 
 namespace PastaBench.humaneval.OrderByPoints
 
-private def _order_by_points'weight := fun (x : PyAny) ↦
+-- Hoisted to module scope: it captures nothing from `order_by_points`, and a nested `def`
+-- would make the contracts below reference a name that is not yet bound.
+def weight := fun x ↦
   Id.run
     (do
       let mut x_list : List String := PastaLean.pyList (PastaLean.pyStr x)
@@ -75,27 +78,9 @@ private def _order_by_points'weight := fun (x : PyAny) ↦
       let __py_ret_1 := PastaLean.pySum x_list
       return __py_ret_1)
 
-attribute [simp, taste_ingr] _order_by_points'weight
+attribute [simp, taste_ingr] weight
 
-def order_by_points := fun (nums : PyAny) ↦ PastaLean.pySortBy _order_by_points'weight false nums
-
-attribute [simp] order_by_points
-
-@[taste_ingr]
-theorem order_by_points_correct :
-    ∀ (nums : PyAny),
-      PastaLean.pyLen (order_by_points nums) = PastaLean.pyLen nums ∧
-        (PastaLean.pyLen (order_by_points nums) < (2 : Int) ∨
-          PastaLean.pyTruthy
-              (PastaLean.pyAll
-                ((PastaLean.pyRange (PastaLean.pyLen (order_by_points nums) -ₚ (1 : Int))).map fun i =>
-                  decide
-                    (_order_by_points'weight (order_by_points nums)⦋i⦌ ≤
-                      _order_by_points'weight (order_by_points nums)⦋i +ₚ (1 : Int)⦌))) =
-            true) :=
-  by intros; sorry
-
-private def _order_by_points'weight'rn := fun (x : PyAny) ↦
+def weight'rn := fun x ↦
   Id.run
     (do
       let mut x_list : List String := PastaLean.pyList (PastaLean.pyStr x)
@@ -108,6 +93,22 @@ private def _order_by_points'weight'rn := fun (x : PyAny) ↦
       let __py_ret_1 := PastaLean.pySum x_list
       return __py_ret_1)
 
-def order_by_points'rn := fun (nums : PyAny) ↦ PastaLean.pySortBy _order_by_points'weight false nums
+def order_by_points := fun (nums : PyAny) ↦ PastaLean.pySortBy weight false nums
+
+attribute [simp] order_by_points
+
+@[taste_ingr]
+theorem order_by_points_correct :
+    ∀ (nums : PyAny),
+      ((PastaLean.pyLen (order_by_points nums) = PastaLean.pyLen nums ∧
+            ∀ v ∈ PastaLean.pyIter nums, PastaLean.pyCount (order_by_points nums) v = PastaLean.pyCount nums v) ∧
+          ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen (order_by_points nums) -ₚ (1 : Int))),
+            weight (order_by_points nums)⦋i⦌ ≤ weight (order_by_points nums)⦋i +ₚ (1 : Int)⦌) ∧
+        ∀ x ∈ PastaLean.pyIter nums,
+          ((List.filter (fun y => weight y = weight x) (PastaLean.pyIter (order_by_points nums))).map fun y => y) =
+            (List.filter (fun y => weight y = weight x) (PastaLean.pyIter nums)).map fun y => y :=
+  by taste?
+
+def order_by_points'rn := fun (nums : PyAny) ↦ PastaLean.pySortBy weight false nums
 
 end PastaBench.humaneval.OrderByPoints

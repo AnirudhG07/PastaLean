@@ -35,14 +35,28 @@ def do_algebra(operator, operand):
     # Safety precondition: ensure no division by zero will occur in the `eval` call.
     Requires(all(operator[i] != '//' or operand[i+1] != 0 for i in range(len(operator))))
 
+    # `eval` is opaque, so the result cannot be pinned down in general. What CAN be defended
+    # are the closed forms of the two homogeneous expressions, both of which need the string
+    # built below to be the correct interleaving before they mean anything.
+    Ensures(not all(op == '+' for op in operator) or Result() == sum(operand))
+    Ensures(not all(op == '-' for op in operator) or Result() == operand[0] - sum(operand[1:]))
+    # Subtraction is the only operation here that can leave the non-negative integers, so
+    # without it the whole expression stays non-negative whatever the precedence turns out
+    # to be. This is a statement about every operator in the list at once.
+    Ensures(any(op == '-' for op in operator) or Result() >= 0)
+
     exp = ""
     for i in range(len(operator)):
         # Bounded-index invariant to prove memory safety of accesses inside the loop.
-        Invariant(0 <= i <= len(operator))
+        Invariant(0 <= i)
+        Invariant(i <= len(operator))
+        # The point of the loop: `exp` is exactly the interleaving of the first `i` operands
+        # with the first `i` operators, in order.
+        Invariant(exp == "".join([str(operand[j]) + operator[j] for j in range(i)]))
         exp += str(operand[i]) + operator[i]
     exp += str(operand[-1])
 
-    # An `Ensures` contract on the result is not possible because `eval` is opaque
-    # to the verifier. The preconditions are the most meaningful contracts here,
-    # as they guarantee the safe execution of the function.
+    # The full infix expression, one step from the postconditions above.
+    Assert(exp == "".join([str(operand[j]) + operator[j] for j in range(len(operator))])
+                  + str(operand[len(operand) - 1]))
     return eval(exp)

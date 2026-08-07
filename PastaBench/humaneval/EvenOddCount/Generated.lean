@@ -97,7 +97,7 @@ theorem even_odd_count_spec :
             else PastaLean.pyLen (PastaLean.pyStr num)⌝⦄ :=
   by
   mvcgen [even_odd_count, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  taste?
   all_goals sorry
 
 theorem even_odd_count_correct :

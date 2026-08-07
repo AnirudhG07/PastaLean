@@ -70,7 +70,7 @@ theorem even_odd_palindrome_spec :
     · ⇓⟨cur, odd_cnt, even_cnt⟩ =>
       ⌜let i := (cur.prefix.length : Int);
         odd_cnt +ₚ even_cnt ≤ i -ₚ (1 : Int)⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals; pyany_cases <;> grind +locals; pyany_cases <;> grind +locals; sorry; pyany_cases <;> grind +locals
+  taste?
   all_goals sorry
 
 theorem even_odd_palindrome_correct :

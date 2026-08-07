@@ -83,12 +83,12 @@ def clearDigits := fun (s : String) ↦
 @[spec]
 theorem clearDigits_spec :
     ⦃⌜True⌝⦄ clearDigits s ⦃⇓result =>
-      ⌜PastaLean.pyAll ((PastaLean.pyIter result).map fun c => !PastaLean.pyTruthy (PastaLean.pyIsDecimal c))⌝⦄ :=
+      ⌜∀ c ∈ PastaLean.pyIter result, ¬PastaLean.pyTruthy (PastaLean.pyIsDecimal c) = true⌝⦄ :=
   by
   try
     mvcgen [clearDigits, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓cur =>
-      ⌜PastaLean.pyAll ((PastaLean.pyIter stk).map fun ch => !PastaLean.pyTruthy (PastaLean.pyIsDecimal ch)) ∧
+      ⌜(∀ ch ∈ PastaLean.pyIter stk, ¬PastaLean.pyTruthy (PastaLean.pyIsDecimal ch) = true) ∧
           PastaLean.pyLen stk ≥ (0 : Int)⌝
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
@@ -96,7 +96,7 @@ theorem clearDigits_spec :
 theorem clearDigits_correct :
     ∀ (s : String),
       let result := (clearDigits s).run;
-      PastaLean.pyAll ((PastaLean.pyIter result).map fun c => !PastaLean.pyTruthy (PastaLean.pyIsDecimal c)) :=
+      ∀ c ∈ PastaLean.pyIter result, ¬PastaLean.pyTruthy (PastaLean.pyIsDecimal c) = true :=
   by
   intro s
   exact clearDigits_spec True.intro

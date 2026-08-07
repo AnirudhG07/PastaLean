@@ -54,6 +54,15 @@ structure Behaviour where
   shim variant that takes the callback (`bisect_left(a, x, key=f)` → `pyBisectLeftKey`). The code
   generator swaps the callee for this and passes `key` by name. [codegen] -/
   keyedVariant : Option Lean.Name := none
+  /-- This member wraps a 3-way comparator into a sort key (`functools.cmp_to_key`). A `key=` argument
+  that calls such a member is unwrapped to its comparator and the sort routes to `pySortByCmp`
+  instead of `pySortBy`. [codegen] -/
+  cmpKeyWrapper : Bool := false
+  /-- This member CONSTRUCTS an object whose methods the library owns (`hashlib.md5()` → an object
+  with `.update`/`.hexdigest`). Codegen records the assigned variable's owning module so its method
+  calls dispatch through `libraryMethod?` rather than the builtin method map — which matters when a
+  name collides (`update` is also dict/set). [codegen] -/
+  constructsObject : Bool := false
 
 namespace Behaviour
 

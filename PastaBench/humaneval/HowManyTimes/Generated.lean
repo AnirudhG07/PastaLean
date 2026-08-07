@@ -97,7 +97,7 @@ theorem how_many_times_spec :
     · ⇓⟨cur, occurences⟩ =>
       ⌜let i := (cur.prefix.length : Int);
         (((0 : Int) ≤ i ∧ i ≤ PastaLean.pyLen string) ∧ (0 : Int) ≤ occurences) ∧ occurences ≤ i⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals; pyany_cases <;> grind +locals; simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals
+  taste?
   all_goals sorry
 
 theorem how_many_times_correct :

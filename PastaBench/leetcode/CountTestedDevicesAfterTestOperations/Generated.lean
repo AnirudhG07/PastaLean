@@ -60,12 +60,12 @@ theorem countTestedDevices_spec :
       ⌜PastaLean.pySum
               ((List.filter (fun x => x ≥ ans) (PastaLean.pyIter batteryPercentages)).map fun x => (1 : Int)) ≥
             ans ∧
-          PastaLean.pyAll
-            ((PastaLean.pyRange (PastaLean.pyLen batteryPercentages +ₚ (1 : Int)) (ans +ₚ (1 : Int))).map fun k =>
-              decide
-                (PastaLean.pySum
-                    ((List.filter (fun x => x ≥ k) (PastaLean.pyIter batteryPercentages)).map fun x => (1 : Int)) <
-                  k))⌝⦄ :=
+          ∀
+            k ∈
+              PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen batteryPercentages +ₚ (1 : Int)) (ans +ₚ (1 : Int))),
+            PastaLean.pySum
+                ((List.filter (fun x => x ≥ k) (PastaLean.pyIter batteryPercentages)).map fun x => (1 : Int)) <
+              k⌝⦄ :=
   by
   try
     mvcgen [countTestedDevices, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
@@ -78,12 +78,10 @@ theorem countTestedDevices_correct :
       let ans := (countTestedDevices batteryPercentages).run;
       PastaLean.pySum ((List.filter (fun x => x ≥ ans) (PastaLean.pyIter batteryPercentages)).map fun x => (1 : Int)) ≥
           ans ∧
-        PastaLean.pyAll
-          ((PastaLean.pyRange (PastaLean.pyLen batteryPercentages +ₚ (1 : Int)) (ans +ₚ (1 : Int))).map fun k =>
-            decide
-              (PastaLean.pySum
-                  ((List.filter (fun x => x ≥ k) (PastaLean.pyIter batteryPercentages)).map fun x => (1 : Int)) <
-                k)) :=
+        ∀ k ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen batteryPercentages +ₚ (1 : Int)) (ans +ₚ (1 : Int))),
+          PastaLean.pySum
+              ((List.filter (fun x => x ≥ k) (PastaLean.pyIter batteryPercentages)).map fun x => (1 : Int)) <
+            k :=
   by
   intro batteryPercentages
   exact countTestedDevices_spec True.intro

@@ -342,6 +342,18 @@ def sortedVarMethod? (attr : String) (recvJson : Json) : PygenM (Option Lean.Nam
   | .ok id => if ← isSortedVar id.toName then return Libraries.sortedListMethod? attr else return none
   | _ => return none
 
+/-- A method on a library-owned object (`m.hexdigest()` where `m = hashlib.md5()`), resolved through
+the owning library. Gated on the receiver being a variable tagged with that module, so a colliding
+name (`update`, also dict/set) still resolves normally for every other receiver. Same shape as
+`sortedVarMethod?`: the map lives in Libraries, codegen supplies only the receiver gate. -/
+def libObjVarMethod? (attr : String) (recvJson : Json) : PygenM (Option Lean.Name) := do
+  match recvJson.getObjValAs? String "id" with
+  | .ok id =>
+      match ← libObjVarModule? id.toName with
+      | some m => return Libraries.libraryMethod? m attr
+      | none => return none
+  | _ => return none
+
 /-- `bisect_left/right(range(a, b, c), x, key=f)` searches the range LAZILY (O(log n) `key` calls)
 instead of materializing it and mapping `key` over every element (O(n), and impossible for a range up
 to `10**9`). Returns the range-variant runtime name and the args with the range replaced by its
@@ -390,6 +402,66 @@ def userCallIdent (funcName : String) : PygenM (TSyntax `term) := do
   -- User defs live in `namespace PastaLean.User.<path>`, so a bare call resolves to the user's own
   -- function by namespace precedence — no `_root_` needed (it misfired for globals under a namespace).
   return (mkIdent mapped : TSyntax `term)
+
+/-- If a `key=` argument calls a member a library declares as a comparator-to-key wrapper, the
+comparator it wraps. The wrapper has no runtime object here, so the sort routes to `pySortByCmp`.
+Which members qualify is declared by the library (`Behaviour.cmpKeyWrapper`), not listed here. -/
+def cmpKeyComparator? (keyJson : Json) : Option Json := do
+  guard (jsonNodeType? keyJson == some "Call")
+  let func ← (keyJson.getObjVal? "func").toOption
+  let memberName ←
+    (func.getObjValAs? String "library_member").toOption
+      <|> (func.getObjValAs? String "id").toOption
+      <|> (func.getObjValAs? String "attr").toOption
+  guard (Libraries.isCmpKeyWrapper memberName)
+  let args ← (keyJson.getObjValAs? (Array Json) "args").toOption
+  args[0]?
+
+/-- The sort term for a `key=`/`reverse=` pair, over an already-lowered receiver. Shared by
+`sorted(...)` and `list.sort(...)` so both support `cmp_to_key` identically. -/
+def sortWithKeyTerm (keyOpt revOpt : Option Json) (recv : TSyntax `term) : PygenM (TSyntax `term) := do
+  let revCode ← match revOpt with
+    | some rJson => getCode rJson `term
+    | none => `(false)
+  match keyOpt.bind cmpKeyComparator? with
+  | some cmpJson =>
+      let cmpCode ← mappedCallableValueCode cmpJson
+      `($(mkIdent ``pySortByCmp) $cmpCode $revCode $recv)
+  | none =>
+      let keyCode ← match keyOpt with
+        | some kJson => mappedCallableValueCode kJson
+        | none => `(fun x => x)
+      `($(mkIdent ``pySortBy) $keyCode $revCode $recv)
+
+/-- In a Prop context (a contract), lower `all(p for t in it)` to `∀ t ∈ pyIter it, p` and `any` to
+`∃`, instead of the `Bool` `pyAll (… decide p)` — whose `decide`/fold hide the quantifier from the
+tactics, making such a contract true but unprovable. Comprehension `ifs` become guards for `all`
+(`c → p`) and conjuncts for `any`. `none` (→ `Bool` lowering) for any other shape. -/
+def quantifiedAllAnyProp? (funcName : String) (callJson : Json) :
+    PygenM (Option (TSyntax `term)) := do
+  unless ← getPropCondition do return none
+  unless isQuantifiedAllAnyJson callJson do return none
+  let .ok (args : Array Json) := callJson.getObjValAs? (Array Json) "args" | return none
+  let argJson := args[0]!
+  let .ok (generators : Array Json) := argJson.getObjValAs? (Array Json) "generators" | return none
+  let gen := generators[0]!
+  let .ok target := gen.getObjVal? "target" | return none
+  let .ok iter := gen.getObjVal? "iter" | return none
+  let .ok elt := argJson.getObjVal? "elt" | return none
+  let ifs := (gen.getObjValAs? (Array Json) "ifs").toOption.getD #[]
+  let iterCode ← getCode iter `term
+  withFixedVariables do
+    let targetIdent ← getCode target `ident
+    addVar targetIdent.getId
+    let mut body ← withPropCondition true (getCode elt `term)
+    for ifJson in ifs.reverse do
+      let guard ← withPropCondition true (getCode ifJson `term)
+      body ← if funcName == "all" then `($guard → $body) else `($guard ∧ $body)
+    let iterList ← `($(mkIdent ``PastaLean.pyIter) $iterCode)
+    if funcName == "all" then
+      return some (← `(∀ $targetIdent:ident ∈ $iterList, $body))
+    else
+      return some (← `(∃ $targetIdent:ident ∈ $iterList, $body))
 
 @[pygen "Call"]
 def callSyntax : (kind : SyntaxNodeKind) → Json →
@@ -521,7 +593,8 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
         allArgs := allArgs.push valCode
         allArgJsons := allArgJsons.push valueJson
 
-        match (← sortedVarMethod? attr valueJson) <|> pythonMethodMap attr with
+        match (← sortedVarMethod? attr valueJson) <|> (← libObjVarMethod? attr valueJson)
+              <|> pythonMethodMap attr with
         | some funcName =>
             funcIdent := mkIdent funcName
         | none =>
@@ -673,15 +746,8 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
                 return ← buildIOPureApplicationFromArgs argsArray argsCodes fun resolvedArgs => do
                   `($pySortIdent $(resolvedArgs[0]!))
             | keyOpt, revOpt =>
-                let keyCode ← match keyOpt with
-                  | some kJson => mappedCallableValueCode kJson
-                  | none => `(fun x => x)
-                let revCode ← match revOpt with
-                  | some rJson => getCode rJson `term
-                  | none => `(false)
-                let pySortByIdent := mkIdent ``pySortBy
                 return ← buildIOPureApplicationFromArgs argsArray argsCodes fun resolvedArgs => do
-                  `($pySortByIdent $keyCode $revCode $(resolvedArgs[0]!))
+                  sortWithKeyTerm keyOpt revOpt (resolvedArgs[0]!)
         | .ok "Name", .ok "round" => do
             -- `round(x)` returns an `int` (banker's rounding); `round(x, n)` returns a `float`.
             unless keyWordsMap.isEmpty do
@@ -711,6 +777,9 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
             -- truthiness context — a `BoolOp` element (`x and y` on mixed-type operands) then stays a
             -- `Bool` (`pyTruthy x && y`) instead of the value form whose branches don't unify.
             if (funcName == "any" || funcName == "all") && argsArray.size == 1 && keyWordsMap.isEmpty then
+              -- In a contract this becomes a real `∀`/`∃`; outside one, keep the `Bool` fold.
+              if let some quantified ← quantifiedAllAnyProp? funcName json then
+                return quantified
               if let some mapped ← builtinMappedName? funcName then
                 let argCode ← withTruthinessContext true (getCode argsArray[0]! `term)
                 return ← `($(mkIdent mapped) $argCode)
@@ -949,6 +1018,10 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
             let rebuildFn ←
               if let some fn ← sortedVarMethod? attr valueJson then
                 pure fn
+              -- A library-owned object receiver (`m.update(chunk)` where `m = hashlib.md5()`) owns
+              -- the name too — `update` otherwise rebuilds through the dict/set `pyUpdate`.
+              else if let some fn ← libObjVarMethod? attr valueJson then
+                pure fn
               -- `d.pop(key)` on a dict removes the key (shares the name with 1-arg `list.pop(i)`);
               -- route it to the polymorphic dict rebuild when the receiver is known to be a dict.
               else if attr == "pop" && argsArray.size == 1 && (← jsonIsDictExpr valueJson) then
@@ -1001,14 +1074,7 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
               let pySortIdent := mkIdent ``pySort
               return ← mutatingMethodDoElem valueJson (fun recv => `($pySortIdent $recv))
           | keyOpt, revOpt =>
-              let keyCode ← match keyOpt with
-                | some kJson => mappedCallableValueCode kJson
-                | none => `(fun x => x)
-              let revCode ← match revOpt with
-                | some rJson => getCode rJson `term
-                | none => `(false)
-              let pySortByIdent := mkIdent ``pySortBy
-              return ← mutatingMethodDoElem valueJson (fun recv => `($pySortByIdent $keyCode $revCode $recv))
+              return ← mutatingMethodDoElem valueJson (fun recv => sortWithKeyTerm keyOpt revOpt recv)
 
         let valCode ← getCode valueJson `term
         allArgs := allArgs.push valCode

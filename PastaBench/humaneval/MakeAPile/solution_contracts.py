@@ -16,19 +16,20 @@ def make_a_pile(n: int) -> list[int]:
     [3, 5, 7]
     """
     Requires(n >= 0)
+    # THE POINT: n levels holding the arithmetic progression n, n+2, …, n+2(n-1). Length pins the
+    # level count; the total pins the progression's closed form, n*n + n*(n-1) = 2n^2 - n.
     Ensures(len(Result()) == n)
-    # The list elements form an arithmetic progression starting at n with a step of 2.
-    Ensures(n == 0 or Result()[0] == n)
-    Ensures(n == 0 or Result()[n - 1] == n + 2 * (n - 1))
+    Ensures(sum(Result()) == 2 * n * n - n)
 
     ans, num = [], n
     for i in range(n):
-        Invariant(0 <= i <= n)
+        Invariant(0 <= i)
+        Invariant(i <= n)
         Invariant(len(ans) == i)
         Invariant(num == n + 2 * i)
-        # At the start of iteration i, the list `ans` contains the results of the
-        # previous i iterations, so its last element corresponds to step i-1.
-        Invariant(i == 0 or ans[i - 1] == n + 2 * (i - 1))
+        # Index-style: after i levels the running total is i*n + i*(i-1), which at i == n IS the
+        # postcondition 2n^2 - n.
+        Invariant(sum(ans) == i * n + i * (i - 1))
 
         ans.append(num)
         num += 2

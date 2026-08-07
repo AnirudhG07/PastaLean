@@ -78,7 +78,7 @@ theorem check_if_last_char_is_a_letter_spec :
             (PastaLean.pyLen txt = (1 : Int) ∨ txt⦋(-2 : Int)⦌ = " "))⌝⦄ :=
   by
   mvcgen [check_if_last_char_is_a_letter, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  grind; sorry; sorry
+  taste?
   all_goals sorry
 
 theorem check_if_last_char_is_a_letter_correct :

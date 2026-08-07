@@ -92,7 +92,7 @@ theorem exchange_correct :
                       ((List.filter (fun x => x %ₚ (2 : Int) = (0 : Int)) (PastaLean.pyIter lst2)).map fun x => x)) ∧
                 (0 : Int) ≤ cnt_even) ∧
               cnt_even ≤ PastaLean.pyLen lst2 :=
-  by sorry
+  by taste?
 
 def exchange'rn := fun (lst1 : PyAny) ↦ fun (lst2 : PyAny) ↦
   let cnt_odd :=

@@ -96,17 +96,14 @@ theorem cycpattern_check_spec :
     ⦃⌜True⌝⦄ cycpattern_check a b ⦃⇓result =>
       ⌜result =
           (b = "" ∨
-            PastaLean.pyTruthy
-                (PastaLean.pyStdAny
-                  ((PastaLean.pyRange (PastaLean.pyLen b)).map fun k =>
-                    PastaLean.pyContains a
-                      (PastaLean.pySlice b (some k) none none +ₚ PastaLean.pySlice b none (some k) none))) =
-              true)⌝⦄ :=
+            ∃ k ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen b)),
+              PastaLean.pyContains a
+                (PastaLean.pySlice b (some k) none none +ₚ PastaLean.pySlice b none (some k) none))⌝⦄ :=
   by
   try
     mvcgen [cycpattern_check, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · Invariant.withEarlyReturn (onReturn := fun _ _ => ⌜True⌝) (onContinue := fun _ _ => ⌜True⌝)
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry; pyany_cases <;> grind +locals; pyany_cases <;> grind +locals; pyany_cases <;> grind +locals; pyany_cases <;> grind +locals; sorry; sorry
+  taste?
   all_goals sorry
 
 theorem cycpattern_check_correct :
@@ -115,12 +112,9 @@ theorem cycpattern_check_correct :
         let result := (cycpattern_check a b).run;
         result =
           (b = "" ∨
-            PastaLean.pyTruthy
-                (PastaLean.pyStdAny
-                  ((PastaLean.pyRange (PastaLean.pyLen b)).map fun k =>
-                    PastaLean.pyContains a
-                      (PastaLean.pySlice b (some k) none none +ₚ PastaLean.pySlice b none (some k) none))) =
-              true) :=
+            ∃ k ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen b)),
+              PastaLean.pyContains a
+                (PastaLean.pySlice b (some k) none none +ₚ PastaLean.pySlice b none (some k) none)) :=
   by
   intro a b
   exact cycpattern_check_spec True.intro

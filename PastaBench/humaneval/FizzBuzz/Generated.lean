@@ -72,7 +72,7 @@ theorem fizz_buzz_spec : ⦃⌜n ≥ (0 : Int)⌝⦄ fizz_buzz n ⦃⇓cnt => �
     · ⇓⟨cur, cnt⟩ =>
       ⌜let i := (cur.prefix.length : Int);
         ((0 : Int) ≤ i ∧ i ≤ n) ∧ cnt ≥ (0 : Int)⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals; pyany_cases <;> grind +locals; pyany_cases <;> grind +locals
+  taste?
   all_goals sorry
 
 theorem fizz_buzz_correct :

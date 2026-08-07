@@ -61,7 +61,7 @@ theorem is_bored_correct :
         is_bored S ≤
           PastaLean.pyLen
             (PastaLean.pyStringSplit (PastaLean.pyStringReplace (PastaLean.pyStringReplace S "?" ".") "!" ".") ".") :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  by taste?
 
 def is_bored'rn := fun (S : String) ↦
   let sentences :=

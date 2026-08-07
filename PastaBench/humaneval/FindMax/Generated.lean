@@ -98,7 +98,7 @@ theorem find_max_spec :
     · ⇓cur =>
       ⌜(mx_ch_cnt ≥ (0 : Int) ∧ mx_ch_cnt = PastaLean.pyLen (PastaLean.pySet ans)) ∧
           (ans = "" ∨ PastaLean.pyContains words ans)⌝
-  sorry
+  taste?
   all_goals sorry
 
 theorem find_max_correct :
@@ -110,48 +110,49 @@ theorem find_max_correct :
   exact find_max_spec True.intro
 
 def find_max'rn := fun (words : PyAny) ↦
-  Id.run
-    (do
-      /-
-      Write a function that accepts a list of strings.
-          The list contains different words. Return the word with maximum number
-          of unique characters. If multiple strings have maximum number of unique
-          characters, return the one which comes first in lexicographical order.
-      
-          find_max(["name", "of", "string"]) == "string"
-          find_max(["name", "enam", "game"]) == "enam"
-          find_max(["aaaaaaa", "bb" ,"cc"]) == ""aaaaaaa"
-          
-      -/
-      -- Ensures that the function returns one of the original words, or the empty
-      -- string if the input list was empty. This is a key property about the
-      -- function's output domain.
-      let __unpack_value_1 := ((0 : Int), "")
-      let __unpack_pair_1 := __unpack_value_1
-      let mut mx_ch_cnt : Int := Prod.fst __unpack_pair_1
-      let mut ans : PyAny := Prod.snd __unpack_pair_1
-      for word in (PastaLean.pyIter words)do
-        -- Invariant: The running count of unique characters is non-negative.
-        let _ := Libraries.passta.pyPassInvariant (decide (mx_ch_cnt ≥ (0 : Int)))
-        -- Invariant: The running count is always consistent with the number of unique
-        -- characters in the current best-candidate answer. This is the central
-        -- property that ties the two loop-carried state variables together.
-        let _ := Libraries.passta.pyPassInvariant (mx_ch_cnt == PastaLean.pyLen (PastaLean.pySet ans))
-        -- Invariant: The candidate answer is always either the initial empty string
-        -- or a word that has been seen in the input list. This is crucial for
-        -- proving the postcondition.
-        let _ := Libraries.passta.pyPassInvariant (ans == "" || PastaLean.pyContains words ans)
-        let mut ch_cnt : Int := PastaLean.pyLen (PastaLean.pySet word)
-        if h_1 : decide (ch_cnt > mx_ch_cnt) || ch_cnt == mx_ch_cnt && decide (word < ans) then 
-          let __unpack_value_2 := (ch_cnt, word)
-          let __unpack_pair_2 := __unpack_value_2
-          mx_ch_cnt := Prod.fst __unpack_pair_2
-          ans := Prod.snd __unpack_pair_2
-        else
-          let _ := ()
-      -- After the loop, the invariant about the answer's origin still holds,
-      -- which directly implies the postcondition.
-      let _ := Libraries.passta.pyPassAssert (ans == "" || PastaLean.pyContains words ans)
-      return ans)
+  (show PastaLean.PyAny from
+    Id.run
+      (do
+        /-
+        Write a function that accepts a list of strings.
+            The list contains different words. Return the word with maximum number
+            of unique characters. If multiple strings have maximum number of unique
+            characters, return the one which comes first in lexicographical order.
+        
+            find_max(["name", "of", "string"]) == "string"
+            find_max(["name", "enam", "game"]) == "enam"
+            find_max(["aaaaaaa", "bb" ,"cc"]) == ""aaaaaaa"
+            
+        -/
+        -- Ensures that the function returns one of the original words, or the empty
+        -- string if the input list was empty. This is a key property about the
+        -- function's output domain.
+        let __unpack_value_1 := ((0 : Int), "")
+        let __unpack_pair_1 := __unpack_value_1
+        let mut mx_ch_cnt : Int := Prod.fst __unpack_pair_1
+        let mut ans : PyAny := Prod.snd __unpack_pair_1
+        for word in (PastaLean.pyIter words)do
+          -- Invariant: The running count of unique characters is non-negative.
+          let _ := Libraries.passta.pyPassInvariant (decide (mx_ch_cnt ≥ (0 : Int)))
+          -- Invariant: The running count is always consistent with the number of unique
+          -- characters in the current best-candidate answer. This is the central
+          -- property that ties the two loop-carried state variables together.
+          let _ := Libraries.passta.pyPassInvariant (mx_ch_cnt == PastaLean.pyLen (PastaLean.pySet ans))
+          -- Invariant: The candidate answer is always either the initial empty string
+          -- or a word that has been seen in the input list. This is crucial for
+          -- proving the postcondition.
+          let _ := Libraries.passta.pyPassInvariant (ans == "" || PastaLean.pyContains words ans)
+          let mut ch_cnt : Int := PastaLean.pyLen (PastaLean.pySet word)
+          if h_1 : decide (ch_cnt > mx_ch_cnt) || ch_cnt == mx_ch_cnt && decide (word < ans) then 
+            let __unpack_value_2 := (ch_cnt, word)
+            let __unpack_pair_2 := __unpack_value_2
+            mx_ch_cnt := Prod.fst __unpack_pair_2
+            ans := Prod.snd __unpack_pair_2
+          else
+            let _ := ()
+        -- After the loop, the invariant about the answer's origin still holds,
+        -- which directly implies the postcondition.
+        let _ := Libraries.passta.pyPassAssert (ans == "" || PastaLean.pyContains words ans)
+        return (ans : PastaLean.PyAny)))
 
 end PastaBench.humaneval.FindMax

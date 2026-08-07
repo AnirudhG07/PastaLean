@@ -50,7 +50,7 @@ def monotonic(l: list):
 
 namespace PastaBench.humaneval.Monotonic
 
-def monotonic := fun l ↦
+def monotonic := fun (l : List PyAny) ↦
   (do
     let __unpack_value_1 := (Bool.true, Bool.true)
     let __unpack_pair_1 := __unpack_value_1
@@ -80,46 +80,30 @@ def monotonic := fun l ↦
 theorem monotonic_spec :
     ⦃⌜True⌝⦄ monotonic l ⦃⇓result =>
       ⌜result =
-          (PastaLean.pyTruthy
-                (PastaLean.pyAll
-                  ((PastaLean.pyRange (PastaLean.pyLen l -ₚ (1 : Int))).map fun j =>
-                    decide (l⦋j⦌ ≤ l⦋j +ₚ (1 : Int)⦌))) =
-              true ∨
-            PastaLean.pyTruthy
-                (PastaLean.pyAll
-                  ((PastaLean.pyRange (PastaLean.pyLen l -ₚ (1 : Int))).map fun j =>
-                    decide (l⦋j⦌ ≥ l⦋j +ₚ (1 : Int)⦌))) =
-              true)⌝⦄ :=
+          ((∀ j ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen l -ₚ (1 : Int))), l⦋j⦌ ≤ l⦋j +ₚ (1 : Int)⦌) ∨
+            ∀ j ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen l -ₚ (1 : Int))), l⦋j⦌ ≥ l⦋j +ₚ (1 : Int)⦌)⌝⦄ :=
   by
   try
     mvcgen [monotonic, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓⟨cur, inc, dec⟩ =>
       ⌜let i := (cur.prefix.length : Int);
         (((0 : Int) ≤ i ∧ i ≤ PastaLean.pyLen l -ₚ (1 : Int)) ∧
-            inc = PastaLean.pyAll ((PastaLean.pyRange i).map fun j => decide (l⦋j⦌ ≤ l⦋j +ₚ (1 : Int)⦌))) ∧
-          dec = PastaLean.pyAll ((PastaLean.pyRange i).map fun j => decide (l⦋j⦌ ≥ l⦋j +ₚ (1 : Int)⦌))⌝
-  sorry
+            inc = ∀ j ∈ PastaLean.pyIter (PastaLean.pyRange i), l⦋j⦌ ≤ l⦋j +ₚ (1 : Int)⦌) ∧
+          dec = ∀ j ∈ PastaLean.pyIter (PastaLean.pyRange i), l⦋j⦌ ≥ l⦋j +ₚ (1 : Int)⦌⌝
+  taste?
   all_goals sorry
 
 theorem monotonic_correct :
-    ∀ l,
+    ∀ (l : List PyAny),
       let result := (monotonic l).run;
       result =
-        (PastaLean.pyTruthy
-              (PastaLean.pyAll
-                ((PastaLean.pyRange (PastaLean.pyLen l -ₚ (1 : Int))).map fun j =>
-                  decide (l⦋j⦌ ≤ l⦋j +ₚ (1 : Int)⦌))) =
-            true ∨
-          PastaLean.pyTruthy
-              (PastaLean.pyAll
-                ((PastaLean.pyRange (PastaLean.pyLen l -ₚ (1 : Int))).map fun j =>
-                  decide (l⦋j⦌ ≥ l⦋j +ₚ (1 : Int)⦌))) =
-            true) :=
+        ((∀ j ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen l -ₚ (1 : Int))), l⦋j⦌ ≤ l⦋j +ₚ (1 : Int)⦌) ∨
+          ∀ j ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen l -ₚ (1 : Int))), l⦋j⦌ ≥ l⦋j +ₚ (1 : Int)⦌) :=
   by
   intro l
   exact monotonic_spec True.intro
 
-def monotonic'rn := fun l ↦
+def monotonic'rn := fun (l : List PyAny) ↦
   Id.run
     (do
       /-

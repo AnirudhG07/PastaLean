@@ -135,6 +135,11 @@ def handleTaskJson (jsonTask : Json) (ctx : Core.Context) (env : Environment) : 
   | "translate" => runTranslateTask jsonTask ctx env
   | "inferTypes" => runInferTypesTask jsonTask
   | "proveFile" => runProveFileTask jsonTask env
+  -- Library facts the Python driver needs but that must not be duplicated there.
+  | "libraryInfo" =>
+      pure <| Json.mkObj [
+        ("result", Json.bool true),
+        ("ioEffectfulLibraries", Json.arr (Libraries.ioEffectfulLibraries.toArray.map Json.str))]
   | _ => pure <| errorResponse s!"Unknown task: {task}"
 
 def handleTaskString (payload : String) (ctx : Core.Context) (env : Environment) : IO Json := do

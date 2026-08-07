@@ -87,14 +87,13 @@ def has_close_elements := fun (numbers : List Rat) ↦ fun (threshold : Rat) ↦
 theorem has_close_elements_spec :
     ⦃⌜threshold > (0.0 : Rat)⌝⦄ has_close_elements numbers threshold ⦃⇓result =>
       ⌜result =
-          PastaLean.pyStdAny
-            ((PastaLean.pyRange (PastaLean.pyLen numbers -ₚ (1 : Int))).map fun i =>
-              decide ((PastaLean.pySort numbers)⦋i +ₚ (1 : Int)⦌ -ₚ (PastaLean.pySort numbers)⦋i⦌ < threshold))⌝⦄ :=
+          ∃ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen numbers -ₚ (1 : Int))),
+            (PastaLean.pySort numbers)⦋i +ₚ (1 : Int)⦌ -ₚ (PastaLean.pySort numbers)⦋i⦌ < threshold⌝⦄ :=
   by
   try
     mvcgen [has_close_elements, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · Invariant.withEarlyReturn (onReturn := fun _ _ => ⌜True⌝) (onContinue := fun _ _ => ⌜True⌝)
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  taste?
   all_goals sorry
 
 theorem has_close_elements_correct :
@@ -103,9 +102,8 @@ theorem has_close_elements_correct :
         threshold > (0.0 : Rat) →
           let result := (has_close_elements numbers threshold).run;
           result =
-            PastaLean.pyStdAny
-              ((PastaLean.pyRange (PastaLean.pyLen numbers -ₚ (1 : Int))).map fun i =>
-                decide ((PastaLean.pySort numbers)⦋i +ₚ (1 : Int)⦌ -ₚ (PastaLean.pySort numbers)⦋i⦌ < threshold)) :=
+            ∃ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen numbers -ₚ (1 : Int))),
+              (PastaLean.pySort numbers)⦋i +ₚ (1 : Int)⦌ -ₚ (PastaLean.pySort numbers)⦋i⦌ < threshold :=
   by
   intro numbers threshold hpre
   exact has_close_elements_spec hpre

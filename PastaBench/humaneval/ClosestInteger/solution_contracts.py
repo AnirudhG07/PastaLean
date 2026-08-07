@@ -19,42 +19,31 @@ def closest_integer(value):
     farthest from zero. For example closest_integer("14.5") should
     return 15 and closest_integer("-14.5") should return -15.
     '''
-    # The result must be an integer within 0.5 of the float value of the input.
+    # THE POINT (1): the answer is an integer no further than half a unit from the number — that
+    # is what "closest integer" means, and it is the only thing that makes the answer unique off
+    # the ties.
     Ensures(abs(float(value) - Result()) <= 0.5)
-    # Tie-breaking rule: for half-integers, round away from zero, meaning
-    # the result's magnitude is strictly greater than the input's.
+    # THE POINT (2): the tie-breaking rule, stated exactly. At an exact .5 the answer is the
+    # integer *away from zero*, so its magnitude is precisely half a unit larger than the input's
+    # — not merely "larger". This pins down which of the two candidates is returned.
     Ensures(
-        not (abs(float(value) - int(float(value))) == 0.5 and float(value) != 0.0)
-        or abs(Result()) > abs(float(value))
+        abs(float(value) - int(float(value))) != 0.5
+        or abs(Result()) == abs(float(value)) + 0.5
     )
 
     def rounding(val):
-        # This helper's contract mirrors the parent's, generalized to any float.
-        # This allows the verifier to prove the properties of the helper, then
-        # apply them to the specific call in the parent function.
-        Ensures(abs(val - Result()) <= 0.5)
-        Ensures(
-            not (abs(val - int(val)) == 0.5 and val != 0.0)
-            or abs(Result()) > abs(val)
-        )
-
         if abs(val - int(val)) != 0.5:
-            Assert(abs(val - int(val)) != 0.5)
-            # Not a half-integer, so standard rounding gives the unique closest integer.
+            # Off a tie, `round` is the unique nearest integer.
             return round(val)
 
-        # This point is only reached if the number is a half-integer.
-        Assert(abs(val - int(val)) == 0.5)
-
+        # Only exact half-integers reach here, so `val` is never 0.
         if val > 0:
-            Assert(val > 0)
-            # Positive half-integer: round up, away from zero.
+            Assert(abs(int(val) + 1) == abs(val) + 0.5)
             return int(val) + 1
         else:
-            Assert(val <= 0)
-            # Since `abs(val - int(val)) == 0.5`, `val` cannot be 0.
             Assert(val < 0.0)
-            # Negative half-integer: round down, away from zero.
+            # `int` truncates toward zero, so `int(val) - 1` steps away from zero.
+            Assert(abs(int(val) - 1) == abs(val) + 0.5)
             return int(val) - 1
 
     return rounding(float(value))

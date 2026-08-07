@@ -13,7 +13,11 @@ def is_simple_power(x, n):
     is_simple_power(3, 1) => false
     is_simple_power(5, 3) => false
     """
-    Ensures(not Result() or x == 1 or n == 0 or (x % n == 0))
+    # For |n| >= 2 the powers grow at least as fast as 2**k, so bounding |x| bounds the
+    # exponent that has to be searched: k <= 62 whenever n ** k == x.
+    Requires(-(2 ** 62) <= x <= 2 ** 62)
+    # THE POINT: the answer is exactly "x is n raised to some non-negative integer power".
+    Ensures(Result() == any(n ** k == x for k in range(0, 63)))
 
     if x == 1: return True
     if n == 0: return x == 0
@@ -24,7 +28,9 @@ def is_simple_power(x, n):
 
     p = n
     while abs(p) <= abs(x):
-        Invariant(p % n == 0)
+        # THE loop invariant: p is always an exact power of n, so the `p == x` test below
+        # can only ever answer True for an x that genuinely is a power of n.
+        Invariant(any(p == n ** k for k in range(0, 63)))
         Invariant(abs(n) >= 2)
         Decreases(abs(x) + 1 - abs(p))
         if p == x: return True

@@ -45,7 +45,7 @@ def car_race_collision := fun (n : Int) ↦ n ^ₚ (2 : Int)
 attribute [simp] car_race_collision
 
 @[taste_ingr]
-theorem car_race_collision_correct : ∀ (n : Int), n ≥ (0 : Int) → car_race_collision n = n *ₚ n := by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals
+theorem car_race_collision_correct : ∀ (n : Int), n ≥ (0 : Int) → car_race_collision n = n *ₚ n := by taste?
 
 def car_race_collision'rn := fun (n : Int) ↦ n ^ₚ (2 : Int)
 

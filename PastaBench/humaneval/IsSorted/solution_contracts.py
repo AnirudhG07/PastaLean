@@ -18,7 +18,17 @@ def is_sorted(lst: List[int]):
     is_sorted([1, 2, 2, 2, 3, 4]) ➞ False
     '''
     Requires(all(x >= 0 for x in lst))
-    Ensures(Result() == (all(lst.count(x) <= 2 for x in set(lst)) and lst == sorted(lst)))
+    # THE POINT: an exact iff with the pairwise ordering AND the "at most two copies of any value"
+    # side condition. Stated against adjacent pairs, not against `sorted(lst)`, so it is a claim
+    # about the ordering itself rather than a restatement of a library call.
+    Ensures(Result() == (
+        all(lst.count(x) <= 2 for x in lst)
+        and all(lst[i] <= lst[i + 1] for i in range(len(lst) - 1))
+    ))
+    # Answering True forces both halves separately: no value occurs three times ...
+    Ensures(Result() == False or all(lst.count(x) <= 2 for x in lst))
+    # ... and the list is non-decreasing at every adjacent position.
+    Ensures(Result() == False or all(lst[i] <= lst[i + 1] for i in range(len(lst) - 1)))
 
     count = dict()
     for x in lst:
@@ -28,5 +38,7 @@ def is_sorted(lst: List[int]):
         count[x] += 1
         if count[x] > 2: return False
     
-    Assert(all(lst.count(x) <= 2 for x in set(lst)))
+    # Surviving the loop means the duplicate half of the postcondition is already discharged,
+    # so the returned comparison decides the ordering half alone.
+    Assert(all(lst.count(x) <= 2 for x in lst))
     return lst == sorted(lst)

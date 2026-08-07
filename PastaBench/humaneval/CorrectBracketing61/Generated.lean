@@ -87,19 +87,18 @@ def correct_bracketing := fun (brackets : String) ↦
 
 @[spec]
 theorem correct_bracketing_spec :
-    ⦃⌜PastaLean.pyAll ((PastaLean.pyIter brackets).map fun c => c == "(" || c == ")")⌝⦄
-      correct_bracketing brackets ⦃⇓result =>
+    ⦃⌜∀ c ∈ PastaLean.pyIter brackets, c = "(" ∨ c = ")"⌝⦄ correct_bracketing brackets ⦃⇓result =>
       ⌜¬PastaLean.pyTruthy result = true ∨ PastaLean.pyCount brackets "(" = PastaLean.pyCount brackets ")"⌝⦄ :=
   by
   try
     mvcgen [correct_bracketing, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · Invariant.withEarlyReturn (onReturn := fun _ _ => ⌜True⌝) (onContinue := fun _ _ => ⌜True⌝)
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  taste?
   all_goals sorry
 
 theorem correct_bracketing_correct :
     ∀ (brackets : String),
-      PastaLean.pyAll ((PastaLean.pyIter brackets).map fun c => c == "(" || c == ")") →
+      (∀ c ∈ PastaLean.pyIter brackets, c = "(" ∨ c = ")") →
         let result := (correct_bracketing brackets).run;
         ¬PastaLean.pyTruthy result = true ∨ PastaLean.pyCount brackets "(" = PastaLean.pyCount brackets ")" :=
   by

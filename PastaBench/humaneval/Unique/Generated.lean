@@ -33,21 +33,18 @@ def unique(l: list):
 
 namespace PastaBench.humaneval.Unique
 
-def unique := fun l ↦ PastaLean.pySort (PastaLean.pySet l)
+def unique := fun (l : List PyAny) ↦ PastaLean.pySort (PastaLean.pySet l)
 
 attribute [simp] unique
 
 @[taste_ingr]
 theorem unique_correct :
-    ∀ l,
+    ∀ (l : List PyAny),
       PastaLean.pySetEq (PastaLean.pySet (unique l)) (PastaLean.pySet l) = true ∧
-        PastaLean.pyTruthy
-            (PastaLean.pyAll
-              ((PastaLean.pyRange (PastaLean.pyLen (unique l) -ₚ (1 : Int))).map fun i =>
-                decide ((unique l)⦋i⦌ < (unique l)⦋i +ₚ (1 : Int)⦌))) =
-          true :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+        ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen (unique l) -ₚ (1 : Int))),
+          (unique l)⦋i⦌ < (unique l)⦋i +ₚ (1 : Int)⦌ :=
+  by taste?
 
-def unique'rn := fun l ↦ PastaLean.pySort (PastaLean.pySet l)
+def unique'rn := fun (l : List PyAny) ↦ PastaLean.pySort (PastaLean.pySet l)
 
 end PastaBench.humaneval.Unique

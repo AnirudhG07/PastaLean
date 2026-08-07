@@ -55,6 +55,14 @@ def pySortBy {α β γ : Type} [PyIterable α β] [Ord γ]
     if reverse then c != Ordering.lt else c != Ordering.gt
   (pyIter xs).mergeSort le
 
+/-- `sorted(xs, key=functools.cmp_to_key(f))` — sort by a Python 3-way comparator, where `f a b`
+is negative when `a` sorts first. Stable like `pySortBy`: `≤` keeps the original order on ties, and
+`reverse` flips the strict comparison only. -/
+def pySortByCmp {α β : Type} [PyIterable α β]
+    (cmp : β → β → Int) (reverse : Bool := false) (xs : α) : List β :=
+  let le := fun a b => if reverse then decide (0 ≤ cmp a b) else decide (cmp a b ≤ 0)
+  (pyIter xs).mergeSort le
+
 /-- Sorting a list returns its elements in ascending order. -/
 instance [Ord α] : PySort (List α) α where
   pySort xs := xs.mergeSort pyOrdLe

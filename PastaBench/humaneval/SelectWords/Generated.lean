@@ -78,23 +78,21 @@ def select_words := fun (s : String) ↦ fun (n : Int) ↦
 @[spec]
 theorem select_words_spec :
     ⦃⌜n ≥ (0 : Int)⌝⦄ select_words s n ⦃⇓ans =>
-      ⌜PastaLean.pyAll
-          ((PastaLean.pyIter ans).map fun w =>
-            PastaLean.pyLen
-                ((List.filter (fun ch => !(PastaLean.pyContains "aeiouAEIOU" ch)) (PastaLean.pyIter w)).map fun ch =>
-                  ch) ==
-              n)⌝⦄ :=
+      ⌜∀ w ∈ PastaLean.pyIter ans,
+          PastaLean.pyLen
+              ((List.filter (fun ch => !(PastaLean.pyContains "aeiouAEIOU" ch)) (PastaLean.pyIter w)).map fun ch =>
+                ch) =
+            n⌝⦄ :=
   by
   try
     mvcgen [select_words, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓cur =>
-      ⌜PastaLean.pyAll
-          ((PastaLean.pyIter ans).map fun w =>
-            PastaLean.pyLen
-                ((List.filter (fun ch => !(PastaLean.pyContains "aeiouAEIOU" ch)) (PastaLean.pyIter w)).map fun ch =>
-                  ch) ==
-              n)⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+      ⌜∀ w ∈ PastaLean.pyIter ans,
+          PastaLean.pyLen
+              ((List.filter (fun ch => !(PastaLean.pyContains "aeiouAEIOU" ch)) (PastaLean.pyIter w)).map fun ch =>
+                ch) =
+            n⌝
+  taste?
   all_goals sorry
 
 theorem select_words_correct :
@@ -102,12 +100,11 @@ theorem select_words_correct :
       ∀ (n : Int),
         n ≥ (0 : Int) →
           let ans := (select_words s n).run;
-          PastaLean.pyAll
-            ((PastaLean.pyIter ans).map fun w =>
-              PastaLean.pyLen
-                  ((List.filter (fun ch => !(PastaLean.pyContains "aeiouAEIOU" ch)) (PastaLean.pyIter w)).map fun ch =>
-                    ch) ==
-                n) :=
+          ∀ w ∈ PastaLean.pyIter ans,
+            PastaLean.pyLen
+                ((List.filter (fun ch => !(PastaLean.pyContains "aeiouAEIOU" ch)) (PastaLean.pyIter w)).map fun ch =>
+                  ch) =
+              n :=
   by
   intro s n hpre
   exact select_words_spec hpre

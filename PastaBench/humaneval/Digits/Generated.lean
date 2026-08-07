@@ -63,7 +63,7 @@ theorem digits_spec : ⦃⌜n ≥ (0 : Int)⌝⦄ digits n ⦃⇓result => ⌜re
   try
     mvcgen [digits, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓⟨cur, has_odd, prod⟩ => ⌜True⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem digits_correct :

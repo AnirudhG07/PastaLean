@@ -135,14 +135,11 @@ theorem tri_spec :
       ⌜((PastaLean.pyLen ans = n +ₚ (1 : Int) ∧ ans⦋(0 : Int)⦌ = (1 : Int)) ∧
             (n < (1 : Int) ∨ ans⦋(1 : Int)⦌ = (3 : Int))) ∧
           (n < (2 : Int) ∨
-            PastaLean.pyTruthy
-                (PastaLean.pyAll
-                  ((PastaLean.pyRange (n +ₚ (1 : Int)) (2 : Int)).map fun k =>
-                    k %ₚ (2 : Int) == (0 : Int) && ans⦋k⦌ == (1 : Int) +ₚ k /ₚ (2 : Int) ||
-                      k %ₚ (2 : Int) != (0 : Int) &&
-                        ans⦋k⦌ ==
-                          ans⦋k -ₚ (1 : Int)⦌ +ₚ ans⦋k -ₚ (2 : Int)⦌ +ₚ (1 : Int) +ₚ (k +ₚ (1 : Int)) /ₚ (2 : Int))) =
-              true)⌝⦄ :=
+            ∀ k ∈ PastaLean.pyIter (PastaLean.pyRange (n +ₚ (1 : Int)) (2 : Int)),
+              k %ₚ (2 : Int) = (0 : Int) ∧ ans⦋k⦌ = (1 : Int) +ₚ k /ₚ (2 : Int) ∨
+                k %ₚ (2 : Int) ≠ (0 : Int) ∧
+                  ans⦋k⦌ =
+                    ans⦋k -ₚ (1 : Int)⦌ +ₚ ans⦋k -ₚ (2 : Int)⦌ +ₚ (1 : Int) +ₚ (k +ₚ (1 : Int)) /ₚ (2 : Int))⌝⦄ :=
   by
   try
     mvcgen [tri, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
@@ -150,12 +147,11 @@ theorem tri_spec :
       ⌜let i := (cur.prefix.length : Int);
         (((((2 : Int) ≤ i ∧ i ≤ n +ₚ (1 : Int)) ∧ PastaLean.pyLen ans = i) ∧ ans⦋(0 : Int)⦌ = (1 : Int)) ∧
             ans⦋(1 : Int)⦌ = (3 : Int)) ∧
-          PastaLean.pyAll
-            ((PastaLean.pyRange i (2 : Int)).map fun k =>
-              k %ₚ (2 : Int) == (0 : Int) && ans⦋k⦌ == (1 : Int) +ₚ k /ₚ (2 : Int) ||
-                k %ₚ (2 : Int) != (0 : Int) &&
-                  ans⦋k⦌ == ans⦋k -ₚ (1 : Int)⦌ +ₚ ans⦋k -ₚ (2 : Int)⦌ +ₚ (1 : Int) +ₚ (k +ₚ (1 : Int)) /ₚ (2 : Int))⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+          ∀ k ∈ PastaLean.pyIter (PastaLean.pyRange i (2 : Int)),
+            k %ₚ (2 : Int) = (0 : Int) ∧ ans⦋k⦌ = (1 : Int) +ₚ k /ₚ (2 : Int) ∨
+              k %ₚ (2 : Int) ≠ (0 : Int) ∧
+                ans⦋k⦌ = ans⦋k -ₚ (1 : Int)⦌ +ₚ ans⦋k -ₚ (2 : Int)⦌ +ₚ (1 : Int) +ₚ (k +ₚ (1 : Int)) /ₚ (2 : Int)⌝
+  taste?
   all_goals sorry
 
 theorem tri_correct :
@@ -165,89 +161,84 @@ theorem tri_correct :
         ((PastaLean.pyLen ans = n +ₚ (1 : Int) ∧ ans⦋(0 : Int)⦌ = (1 : Int)) ∧
             (n < (1 : Int) ∨ ans⦋(1 : Int)⦌ = (3 : Int))) ∧
           (n < (2 : Int) ∨
-            PastaLean.pyTruthy
-                (PastaLean.pyAll
-                  ((PastaLean.pyRange (n +ₚ (1 : Int)) (2 : Int)).map fun k =>
-                    k %ₚ (2 : Int) == (0 : Int) && ans⦋k⦌ == (1 : Int) +ₚ k /ₚ (2 : Int) ||
-                      k %ₚ (2 : Int) != (0 : Int) &&
-                        ans⦋k⦌ ==
-                          ans⦋k -ₚ (1 : Int)⦌ +ₚ ans⦋k -ₚ (2 : Int)⦌ +ₚ (1 : Int) +ₚ (k +ₚ (1 : Int)) /ₚ (2 : Int))) =
-              true) :=
+            ∀ k ∈ PastaLean.pyIter (PastaLean.pyRange (n +ₚ (1 : Int)) (2 : Int)),
+              k %ₚ (2 : Int) = (0 : Int) ∧ ans⦋k⦌ = (1 : Int) +ₚ k /ₚ (2 : Int) ∨
+                k %ₚ (2 : Int) ≠ (0 : Int) ∧
+                  ans⦋k⦌ = ans⦋k -ₚ (1 : Int)⦌ +ₚ ans⦋k -ₚ (2 : Int)⦌ +ₚ (1 : Int) +ₚ (k +ₚ (1 : Int)) /ₚ (2 : Int)) :=
   by
   intro n hpre
   exact tri_spec hpre
 
 def tri'rn := fun (n : Int) ↦
-  (Id.run
-      (do
-        /-
-        Everyone knows Fibonacci sequence, it was studied deeply by mathematicians in 
-            the last couple centuries. However, what people don't know is Tribonacci sequence.
-            Tribonacci sequence is defined by the recurrence:
-            tri(1) = 3
-            tri(n) = 1 + n / 2, if n is even.
-            tri(n) =  tri(n - 1) + tri(n - 2) + tri(n + 1), if n is odd.
-            For example:
-            tri(2) = 1 + (2 / 2) = 2
-            tri(4) = 3
-            tri(3) = tri(2) + tri(1) + tri(4)
-                   = 2 + 3 + 3 = 8 
-            You are given a non-negative integer number n, you have to a return a list of the 
-            first n + 1 numbers of the Tribonacci sequence.
-            Examples:
-            tri(3) = [1, 3, 2, 8]
-            
-        -/
-        let _ := Libraries.passta.pyPassRequires (decide (n ≥ (0 : Int)))
-        -- The implementation implies tri(0) = 1, which we capture here.
-        -- The main property: all elements from index 2 onwards obey the recurrence.
-        if h_1 : n == (0 : Int) then 
-          let __py_ret_1 := [(1 : Int)]
-          return __py_ret_1
-        else
-          let _ := ()
-        if h_2 : n == (1 : Int) then 
-          let __py_ret_1 := [(1 : Int), (3 : Int)]
-          return __py_ret_1
-        else
-          let _ := ()
-        let _ := Libraries.passta.pyPassAssert (decide (n ≥ (2 : Int)))
-        let mut ans := ([(1 : Float), (3 : Float)] : List Float)
-        for i in (PastaLean.pyRange (n +ₚ (1 : Int)) (2 : Int))do
-          let _ := Libraries.passta.pyPassInvariant (decide ((2 : Int) ≤ i) && decide (i ≤ n +ₚ (1 : Int)))
-          let _ := Libraries.passta.pyPassInvariant (PastaLean.pyLen ans == i)
-          -- The computed prefix of the sequence must satisfy the definition.
-          let _ := Libraries.passta.pyPassInvariant (ans⦋(0 : Int)⦌ == (1 : Int))
-          let _ := Libraries.passta.pyPassInvariant (ans⦋(1 : Int)⦌ == (3 : Int))
-          let _ :=
-            Libraries.passta.pyPassInvariant
-              (PastaLean.pyAll
-                ((PastaLean.pyRange i (2 : Int)).map fun k =>
-                  k %ₚ (2 : Int) == (0 : Int) && ans⦋k⦌ == (1 : Int) +ₚ PastaLean.pyFloat k /ₚ (2 : Int) ||
-                    k %ₚ (2 : Int) != (0 : Int) &&
-                      ans⦋k⦌ ==
-                        ans⦋k -ₚ (1 : Int)⦌ +ₚ ans⦋k -ₚ (2 : Int)⦌ +ₚ (1 : Int) +ₚ
-                          PastaLean.pyFloat (k +ₚ (1 : Int)) /ₚ (2 : Int)))
-          let _ := Libraries.passta.pyPassDecreases (n +ₚ (1 : Int) -ₚ i)
-          if h_3 : i %ₚ (2 : Int) == (0 : Int) then 
-            ans := PastaLean.pyAppend ans ((1 : Int) +ₚ PastaLean.pyFloat i /ₚ (2 : Int))
-          else
-            ans :=
-              PastaLean.pyAppend ans
-                (ans⦋(-1 : Int)⦌ +ₚ ans⦋(-2 : Int)⦌ +ₚ (1 : Int) +ₚ PastaLean.pyFloat (i +ₚ (1 : Int)) /ₚ (2 : Int))
-        -- After the loop, the invariant holds for i = n + 1, which implies the postconditions.
-        let _ := Libraries.passta.pyPassAssert (PastaLean.pyLen ans == n +ₚ (1 : Int))
-        let _ := Libraries.passta.pyPassAssert (ans⦋(0 : Int)⦌ == (1 : Int) && ans⦋(1 : Int)⦌ == (3 : Int))
+  Id.run
+    (do
+      /-
+      Everyone knows Fibonacci sequence, it was studied deeply by mathematicians in 
+          the last couple centuries. However, what people don't know is Tribonacci sequence.
+          Tribonacci sequence is defined by the recurrence:
+          tri(1) = 3
+          tri(n) = 1 + n / 2, if n is even.
+          tri(n) =  tri(n - 1) + tri(n - 2) + tri(n + 1), if n is odd.
+          For example:
+          tri(2) = 1 + (2 / 2) = 2
+          tri(4) = 3
+          tri(3) = tri(2) + tri(1) + tri(4)
+                 = 2 + 3 + 3 = 8 
+          You are given a non-negative integer number n, you have to a return a list of the 
+          first n + 1 numbers of the Tribonacci sequence.
+          Examples:
+          tri(3) = [1, 3, 2, 8]
+          
+      -/
+      let _ := Libraries.passta.pyPassRequires (decide (n ≥ (0 : Int)))
+      -- The implementation implies tri(0) = 1, which we capture here.
+      -- The main property: all elements from index 2 onwards obey the recurrence.
+      if h_1 : n == (0 : Int) then 
+        let __py_ret_1 := [(1 : Int)]
+        return __py_ret_1
+      else
+        let _ := ()
+      if h_2 : n == (1 : Int) then 
+        let __py_ret_1 := [(1 : Int), (3 : Int)]
+        return __py_ret_1
+      else
+        let _ := ()
+      let _ := Libraries.passta.pyPassAssert (decide (n ≥ (2 : Int)))
+      let mut ans := ([(1 : Float), (3 : Float)] : List Float)
+      for i in (PastaLean.pyRange (n +ₚ (1 : Int)) (2 : Int))do
+        let _ := Libraries.passta.pyPassInvariant (decide ((2 : Int) ≤ i) && decide (i ≤ n +ₚ (1 : Int)))
+        let _ := Libraries.passta.pyPassInvariant (PastaLean.pyLen ans == i)
+        -- The computed prefix of the sequence must satisfy the definition.
+        let _ := Libraries.passta.pyPassInvariant (ans⦋(0 : Int)⦌ == (1 : Int))
+        let _ := Libraries.passta.pyPassInvariant (ans⦋(1 : Int)⦌ == (3 : Int))
         let _ :=
-          Libraries.passta.pyPassAssert
+          Libraries.passta.pyPassInvariant
             (PastaLean.pyAll
-              ((PastaLean.pyRange (n +ₚ (1 : Int)) (2 : Int)).map fun k =>
+              ((PastaLean.pyRange i (2 : Int)).map fun k =>
                 k %ₚ (2 : Int) == (0 : Int) && ans⦋k⦌ == (1 : Int) +ₚ PastaLean.pyFloat k /ₚ (2 : Int) ||
                   k %ₚ (2 : Int) != (0 : Int) &&
                     ans⦋k⦌ ==
                       ans⦋k -ₚ (1 : Int)⦌ +ₚ ans⦋k -ₚ (2 : Int)⦌ +ₚ (1 : Int) +ₚ
                         PastaLean.pyFloat (k +ₚ (1 : Int)) /ₚ (2 : Int)))
-        return ans) :
-    Float)
+        let _ := Libraries.passta.pyPassDecreases (n +ₚ (1 : Int) -ₚ i)
+        if h_3 : i %ₚ (2 : Int) == (0 : Int) then 
+          ans := PastaLean.pyAppend ans ((1 : Int) +ₚ PastaLean.pyFloat i /ₚ (2 : Int))
+        else
+          ans :=
+            PastaLean.pyAppend ans
+              (ans⦋(-1 : Int)⦌ +ₚ ans⦋(-2 : Int)⦌ +ₚ (1 : Int) +ₚ PastaLean.pyFloat (i +ₚ (1 : Int)) /ₚ (2 : Int))
+      -- After the loop, the invariant holds for i = n + 1, which implies the postconditions.
+      let _ := Libraries.passta.pyPassAssert (PastaLean.pyLen ans == n +ₚ (1 : Int))
+      let _ := Libraries.passta.pyPassAssert (ans⦋(0 : Int)⦌ == (1 : Int) && ans⦋(1 : Int)⦌ == (3 : Int))
+      let _ :=
+        Libraries.passta.pyPassAssert
+          (PastaLean.pyAll
+            ((PastaLean.pyRange (n +ₚ (1 : Int)) (2 : Int)).map fun k =>
+              k %ₚ (2 : Int) == (0 : Int) && ans⦋k⦌ == (1 : Int) +ₚ PastaLean.pyFloat k /ₚ (2 : Int) ||
+                k %ₚ (2 : Int) != (0 : Int) &&
+                  ans⦋k⦌ ==
+                    ans⦋k -ₚ (1 : Int)⦌ +ₚ ans⦋k -ₚ (2 : Int)⦌ +ₚ (1 : Int) +ₚ
+                      PastaLean.pyFloat (k +ₚ (1 : Int)) /ₚ (2 : Int)))
+      return ans)
 
 end PastaBench.humaneval.Tri

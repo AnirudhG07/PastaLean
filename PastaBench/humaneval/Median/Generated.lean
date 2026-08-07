@@ -29,11 +29,13 @@ def median(l: list):
     """
 
     Requires(len(l) > 0)
-    Ensures(
-        Result() == sorted(l)[len(l) // 2]
-        if len(l) % 2 == 1
-        else 2 * Result() == sorted(l)[len(l) // 2 - 1] + sorted(l)[len(l) // 2]
-    )
+    # THE POINT: the result is the middle of the SORTED list — stated against sorted(l), which the
+    # code never inspects positionally. Odd length: exactly the middle element.
+    Ensures(len(l) % 2 == 0 or Result() == sorted(l)[len(l) // 2])
+    # Even length: the mean of the two middle elements, written division-free.
+    Ensures(len(l) % 2 == 1 or 2 * Result() == sorted(l)[len(l) // 2 - 1] + sorted(l)[len(l) // 2])
+    # The median always sits between the extremes: at least one element is <= it and one is >= it.
+    Ensures(any(x <= Result() for x in l) and any(x >= Result() for x in l))
 
     sorted_l = sorted(l)
     Assert(len(sorted_l) == len(l))
@@ -51,67 +53,64 @@ def median(l: list):
 
 namespace PastaBench.humaneval.Median
 
-def median := fun l ↦
-  (Id.run
-      (do
-        let mut sorted_l := PastaLean.pySort l
-        if h_1 : PastaLean.pyLen l %ₚ (2 : Int) = (1 : Int) then 
-          let _ := Libraries.passta.pyPassAssert (PastaLean.pyLen l %ₚ (2 : Int) == (1 : Int))
-          -- The precondition `len(l) > 0` ensures `len(l) // 2` is a valid index.
-          let __py_ret_1 := sorted_l⦋PastaLean.pyFloorDiv (PastaLean.pyLen l) (2 : Int)⦌
-          return __py_ret_1
-          -- The precondition `len(l) > 0` and this branch condition `len(l) % 2 == 0`
-          -- together imply `len(l) >= 2`, which ensures both indices are valid.
-        else
-          let _ := Libraries.passta.pyPassAssert (PastaLean.pyLen l %ₚ (2 : Int) == (0 : Int))
-          -- The precondition `len(l) > 0` and this branch condition `len(l) % 2 == 0`
-          -- together imply `len(l) >= 2`, which ensures both indices are valid.
-          let __py_ret_1 :=
-            (sorted_l⦋PastaLean.pyFloorDiv (PastaLean.pyLen l) (2 : Int) -ₚ (1 : Int)⦌ +ₚ
-                sorted_l⦋PastaLean.pyFloorDiv (PastaLean.pyLen l) (2 : Int)⦌) /ₚ
-              (2 : Int)
-          return __py_ret_1) :
-    Rat)
+def median := fun (l : List PyAny) ↦
+  Id.run
+    (do
+      let mut sorted_l : List PyAny := PastaLean.pySort l
+      if h_1 : PastaLean.pyLen l %ₚ (2 : Int) = (1 : Int) then 
+        let _ := Libraries.passta.pyPassAssert (PastaLean.pyLen l %ₚ (2 : Int) == (1 : Int))
+        -- The precondition `len(l) > 0` ensures `len(l) // 2` is a valid index.
+        let __py_ret_1 := sorted_l⦋PastaLean.pyFloorDiv (PastaLean.pyLen l) (2 : Int)⦌
+        return __py_ret_1
+        -- The precondition `len(l) > 0` and this branch condition `len(l) % 2 == 0`
+        -- together imply `len(l) >= 2`, which ensures both indices are valid.
+      else
+        let _ := Libraries.passta.pyPassAssert (PastaLean.pyLen l %ₚ (2 : Int) == (0 : Int))
+        -- The precondition `len(l) > 0` and this branch condition `len(l) % 2 == 0`
+        -- together imply `len(l) >= 2`, which ensures both indices are valid.
+        let __py_ret_1 :=
+          (sorted_l⦋PastaLean.pyFloorDiv (PastaLean.pyLen l) (2 : Int) -ₚ (1 : Int)⦌ +ₚ
+              sorted_l⦋PastaLean.pyFloorDiv (PastaLean.pyLen l) (2 : Int)⦌) /ₚ
+            (2 : Int)
+        return __py_ret_1)
 
 attribute [simp] median
 
 @[taste_ingr]
 theorem median_correct :
-    ∀ l,
+    ∀ (l : List PyAny),
       let sorted_l := PastaLean.pySort l
       PastaLean.pyLen l > (0 : Int) →
-        PastaLean.pyTruthy
-              (if PastaLean.pyLen l %ₚ (2 : Int) = (1 : Int) then
-                median l = (PastaLean.pySort l)⦋PastaLean.pyFloorDiv (PastaLean.pyLen l) (2 : Int)⦌
-              else
+        (((PastaLean.pyLen l %ₚ (2 : Int) = (0 : Int) ∨
+                median l = (PastaLean.pySort l)⦋PastaLean.pyFloorDiv (PastaLean.pyLen l) (2 : Int)⦌) ∧
+              (PastaLean.pyLen l %ₚ (2 : Int) = (1 : Int) ∨
                 (2 : Int) *ₚ median l =
                   (PastaLean.pySort l)⦋PastaLean.pyFloorDiv (PastaLean.pyLen l) (2 : Int) -ₚ (1 : Int)⦌ +ₚ
-                    (PastaLean.pySort l)⦋PastaLean.pyFloorDiv (PastaLean.pyLen l) (2 : Int)⦌) =
-            true ∧
+                    (PastaLean.pySort l)⦋PastaLean.pyFloorDiv (PastaLean.pyLen l) (2 : Int)⦌)) ∧
+            (∃ x ∈ PastaLean.pyIter l, x ≤ median l) ∧ ∃ x ∈ PastaLean.pyIter l, x ≥ median l) ∧
           PastaLean.pyLen sorted_l = PastaLean.pyLen l :=
-  by intros; sorry
+  by taste?
 
-def median'rn := fun l ↦
-  (Id.run
-      (do
-        let mut sorted_l := PastaLean.pySort l
-        if h_1 : PastaLean.pyLen l %ₚ (2 : Int) == (1 : Int) then 
-          let _ := Libraries.passta.pyPassAssert (PastaLean.pyLen l %ₚ (2 : Int) == (1 : Int))
-          -- The precondition `len(l) > 0` ensures `len(l) // 2` is a valid index.
-          let __py_ret_1 := sorted_l⦋PastaLean.pyFloorDiv (PastaLean.pyLen l) (2 : Int)⦌
-          return __py_ret_1
-          -- The precondition `len(l) > 0` and this branch condition `len(l) % 2 == 0`
-          -- together imply `len(l) >= 2`, which ensures both indices are valid.
-        else
-          let _ := Libraries.passta.pyPassAssert (PastaLean.pyLen l %ₚ (2 : Int) == (0 : Int))
-          -- The precondition `len(l) > 0` and this branch condition `len(l) % 2 == 0`
-          -- together imply `len(l) >= 2`, which ensures both indices are valid.
-          let __py_ret_1 :=
-            PastaLean.pyFloat
-                (sorted_l⦋PastaLean.pyFloorDiv (PastaLean.pyLen l) (2 : Int) -ₚ (1 : Int)⦌ +ₚ
-                  sorted_l⦋PastaLean.pyFloorDiv (PastaLean.pyLen l) (2 : Int)⦌) /ₚ
-              (2 : Int)
-          return __py_ret_1) :
-    Float)
+def median'rn := fun (l : List PyAny) ↦
+  Id.run
+    (do
+      let mut sorted_l : List PyAny := PastaLean.pySort l
+      if h_1 : PastaLean.pyLen l %ₚ (2 : Int) == (1 : Int) then 
+        let _ := Libraries.passta.pyPassAssert (PastaLean.pyLen l %ₚ (2 : Int) == (1 : Int))
+        -- The precondition `len(l) > 0` ensures `len(l) // 2` is a valid index.
+        let __py_ret_1 := sorted_l⦋PastaLean.pyFloorDiv (PastaLean.pyLen l) (2 : Int)⦌
+        return __py_ret_1
+        -- The precondition `len(l) > 0` and this branch condition `len(l) % 2 == 0`
+        -- together imply `len(l) >= 2`, which ensures both indices are valid.
+      else
+        let _ := Libraries.passta.pyPassAssert (PastaLean.pyLen l %ₚ (2 : Int) == (0 : Int))
+        -- The precondition `len(l) > 0` and this branch condition `len(l) % 2 == 0`
+        -- together imply `len(l) >= 2`, which ensures both indices are valid.
+        let __py_ret_1 :=
+          PastaLean.pyFloat
+              (sorted_l⦋PastaLean.pyFloorDiv (PastaLean.pyLen l) (2 : Int) -ₚ (1 : Int)⦌ +ₚ
+                sorted_l⦋PastaLean.pyFloorDiv (PastaLean.pyLen l) (2 : Int)⦌) /ₚ
+            (2 : Int)
+        return __py_ret_1)
 
 end PastaBench.humaneval.Median

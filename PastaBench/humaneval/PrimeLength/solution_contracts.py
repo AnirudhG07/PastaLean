@@ -10,15 +10,14 @@ def prime_length(string):
     prime_length('kittens') == True
     prime_length('orange') == False
     """
+    # The point: True exactly when len(string) is prime. Primality is spelled out as trial
+    # division over EVERY candidate divisor in range(2, n) — the full definition — rather than
+    # by appealing to the sqrt-bounded helper, so the contract is not a restatement of the body:
+    # closing it requires the sqrt bound to be justified.
+    Ensures(Result() == (len(string) > 1
+                         and all(len(string) % d != 0 for d in range(2, len(string)))))
 
     def is_prime(a):
-        Requires(a >= 0)
-        # A prime number must be greater than 1.
-        Ensures(not Result() or a > 1)
-        # If a number is prime, it must be 2 or be odd.
-        Ensures(not Result() or a == 2 or a % 2 != 0)
-        # The function should correctly identify some small composite numbers.
-        Ensures(not (a == 4 or a == 6 or a == 8 or a == 9) or not Result())
         return not (a < 2 or any(a % x == 0 for x in range(2, int(a ** 0.5) + 1)))
 
     return is_prime(len(string))

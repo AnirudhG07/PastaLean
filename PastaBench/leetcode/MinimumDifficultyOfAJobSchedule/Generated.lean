@@ -101,7 +101,7 @@ def minDifficulty := fun (jobDifficulty : List Int) ↦ fun (d : Int) ↦
 @[spec]
 theorem minDifficulty_spec :
     ⦃⌜(d ≥ (1 : Int) ∧ PastaLean.pyLen jobDifficulty ≥ (1 : Int)) ∧
-          PastaLean.pyAll ((PastaLean.pyIter jobDifficulty).map fun jd => decide (jd ≥ (0 : Int)))⌝⦄
+          ∀ jd ∈ PastaLean.pyIter jobDifficulty, jd ≥ (0 : Int)⌝⦄
       minDifficulty jobDifficulty d ⦃⇓result =>
       ⌜PastaLean.pyLen jobDifficulty < d ∧ result = -(1 : Int) ∨
           PastaLean.pyLen jobDifficulty ≥ d ∧ result ≥ (0 : Int)⌝⦄ :=
@@ -117,8 +117,8 @@ theorem minDifficulty_spec :
 theorem minDifficulty_correct :
     ∀ (jobDifficulty : List Int),
       ∀ (d : Int),
-        (d ≥ (1 : Int) ∧ PastaLean.pyLen jobDifficulty ≥ (1 : Int)) ∧
-            PastaLean.pyAll ((PastaLean.pyIter jobDifficulty).map fun jd => decide (jd ≥ (0 : Int))) →
+        ((d ≥ (1 : Int) ∧ PastaLean.pyLen jobDifficulty ≥ (1 : Int)) ∧
+            ∀ jd ∈ PastaLean.pyIter jobDifficulty, jd ≥ (0 : Int)) →
           let result := (minDifficulty jobDifficulty d).run;
           PastaLean.pyLen jobDifficulty < d ∧ result = -(1 : Int) ∨
             PastaLean.pyLen jobDifficulty ≥ d ∧ result ≥ (0 : Int) :=

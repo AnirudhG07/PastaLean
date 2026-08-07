@@ -34,37 +34,43 @@ def factorize(n: int) -> List[int]:
     [2, 5, 7]
     """
     Requires(n >= 1)
-    # The main intent: the product of the returned factors equals the original input number.
-    # We assume `n` in a postcondition refers to its value upon function entry, a common
-    # convention in verification systems for parameters that are modified.
+    # The point, in three parts: the factors multiply back to the input, they come out in
+    # non-decreasing order, and each one is prime.
     Ensures(math.prod(Result()) == n)
-    # Secondary properties: factors are sorted and are all >= 2 (for n > 1).
-    Ensures(all(f >= 2 for f in Result()))
     Ensures(all(Result()[j] <= Result()[j + 1] for j in range(len(Result()) - 1)))
+    Ensures(all(
+        all(f % d != 0 for d in range(2, int(math.sqrt(f)) + 2) if d < f)
+        for f in Result()
+    ))
+    Ensures(all(f >= 2 for f in Result()))
 
     fact = []
+    # The remainder is peeled into `m`; the parameter `n` stays intact so the postcondition
+    # above refers to the input rather than to whatever is left at the end.
+    m = n
     i = 2
-    # The crucial invariant to prove the main Ensures is `n_initial == math.prod(fact) * n`.
-    # Without a way to reference the initial value of the modified parameter `n` (e.g., `Old(n)`),
-    # this invariant cannot be expressed. We state other invariants that help prove
-    # the secondary properties of the result.
-    while i <= int(math.sqrt(n) + 1):
+    while i <= int(math.sqrt(m) + 1):
         Invariant(i >= 2)
-        Invariant(n >= 1)
-        # All factors found so far are greater than or equal to 2.
+        Invariant(m >= 1)
+        # The invariant that carries the product postcondition: what has been peeled off times
+        # what is left is always the input.
+        Invariant(math.prod(fact) * m == n)
         Invariant(all(f >= 2 for f in fact))
-        # The list of factors is kept sorted because we test divisors `i` in increasing order.
-        Invariant(all(fact[j] <= fact[j + 1] for j in range(len(fact) - 1)))
-        # A stronger invariant that implies sortedness: the largest factor so far is at most i.
+        # Divisors are tried in increasing order, so nothing already recorded exceeds `i`;
+        # that is what keeps `fact` sorted.
         Invariant(len(fact) == 0 or fact[-1] <= i)
-        if n % i == 0:
+        Invariant(all(fact[j] <= fact[j + 1] for j in range(len(fact) - 1)))
+        if m % i == 0:
             fact.append(i)
-            n //= i
+            m //= i
         else:
             i += 1
 
-    if n > 1:
-        fact.append(n)
+    # Whatever survives trial division past its own square root is itself prime.
+    if m > 1:
+        fact.append(m)
+
+    Assert(math.prod(fact) == n)
     return fact
 -/
 
@@ -72,57 +78,70 @@ namespace PastaBench.humaneval.Factorize
 
 noncomputable def factorize := fun (n : Int) ↦
   (do
-    let mut n := n
     let mut fact : List Int := []
+    let mut m : Int := n
     let mut i : Int := (2 : Int)
-    while (i ≤ PastaLean.pyInt (Libraries.math.pyMathSqrtR n +ₚ (1 : Int))) do
+    while (i ≤ PastaLean.pyInt (Libraries.math.pyMathSqrtR m +ₚ (1 : Int))) do
       let _ := Libraries.passta.pyPassInvariant (decide (i ≥ (2 : Int)))
-      let _ := Libraries.passta.pyPassInvariant (decide (n ≥ (1 : Int)))
-      -- All factors found so far are greater than or equal to 2.
+      let _ := Libraries.passta.pyPassInvariant (decide (m ≥ (1 : Int)))
+      -- The invariant that carries the product postcondition: what has been peeled off times
+      -- what is left is always the input.
+      let _ := Libraries.passta.pyPassInvariant (Libraries.math.pyMathProd fact *ₚ m == n)
       let _ :=
         Libraries.passta.pyPassInvariant
           (PastaLean.pyAll ((PastaLean.pyIter fact).map fun f => decide (f ≥ (2 : Int))))
-      -- The list of factors is kept sorted because we test divisors `i` in increasing order.
+      -- Divisors are tried in increasing order, so nothing already recorded exceeds `i`;
+      -- that is what keeps `fact` sorted.
+      let _ := Libraries.passta.pyPassInvariant (PastaLean.pyLen fact == (0 : Int) || decide (fact⦋(-1 : Int)⦌ ≤ i))
       let _ :=
         Libraries.passta.pyPassInvariant
           (PastaLean.pyAll
             ((PastaLean.pyRange (PastaLean.pyLen fact -ₚ (1 : Int))).map fun j =>
               decide (fact⦋j⦌ ≤ fact⦋j +ₚ (1 : Int)⦌)))
-      -- A stronger invariant that implies sortedness: the largest factor so far is at most i.
-      let _ := Libraries.passta.pyPassInvariant (PastaLean.pyLen fact == (0 : Int) || decide (fact⦋(-1 : Int)⦌ ≤ i))
-      if h_1 : n %ₚ i = (0 : Int) then 
+      if h_1 : m %ₚ i = (0 : Int) then 
         fact := PastaLean.pyAppend fact i
-        n := PastaLean.pyFloorDiv n i
+        m := PastaLean.pyFloorDiv m i
       else
         i := i +ₚ (1 : Int)
-    if h_1 : n > (1 : Int) then 
-      fact := PastaLean.pyAppend fact n
+    if h_1 : m > (1 : Int) then 
+      fact := PastaLean.pyAppend fact m
     else
       let _ := ()
+    let _ := Libraries.passta.pyPassAssert (Libraries.math.pyMathProd fact == n)
     return fact : Id _)
 
 @[spec]
 theorem factorize_spec :
     ⦃⌜n ≥ (1 : Int)⌝⦄ factorize n ⦃⇓fact =>
-      ⌜(Libraries.math.pyMathProd fact = n ∧
-            PastaLean.pyAll ((PastaLean.pyIter fact).map fun f => decide (f ≥ (2 : Int)))) ∧
-          PastaLean.pyAll
-            ((PastaLean.pyRange (PastaLean.pyLen fact -ₚ (1 : Int))).map fun j =>
-              decide (fact⦋j⦌ ≤ fact⦋j +ₚ (1 : Int)⦌))⌝⦄ :=
+      ⌜((Libraries.math.pyMathProd fact = n ∧
+              ∀ j ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen fact -ₚ (1 : Int))),
+                fact⦋j⦌ ≤ fact⦋j +ₚ (1 : Int)⦌) ∧
+            ∀ f ∈ PastaLean.pyIter fact,
+              ∀
+                d ∈
+                  PastaLean.pyIter
+                    (PastaLean.pyRange (PastaLean.pyInt (Libraries.math.pyMathSqrtR f) +ₚ (2 : Int)) (2 : Int)),
+                d < f → f %ₚ d ≠ (0 : Int)) ∧
+          ∀ f ∈ PastaLean.pyIter fact, f ≥ (2 : Int)⌝⦄ :=
   by
   mvcgen [factorize, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  taste?
   all_goals sorry
 
 theorem factorize_correct :
     ∀ (n : Int),
       n ≥ (1 : Int) →
         let fact := (factorize n).run;
-        (Libraries.math.pyMathProd fact = n ∧
-            PastaLean.pyAll ((PastaLean.pyIter fact).map fun f => decide (f ≥ (2 : Int)))) ∧
-          PastaLean.pyAll
-            ((PastaLean.pyRange (PastaLean.pyLen fact -ₚ (1 : Int))).map fun j =>
-              decide (fact⦋j⦌ ≤ fact⦋j +ₚ (1 : Int)⦌)) :=
+        ((Libraries.math.pyMathProd fact = n ∧
+              ∀ j ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen fact -ₚ (1 : Int))),
+                fact⦋j⦌ ≤ fact⦋j +ₚ (1 : Int)⦌) ∧
+            ∀ f ∈ PastaLean.pyIter fact,
+              ∀
+                d ∈
+                  PastaLean.pyIter
+                    (PastaLean.pyRange (PastaLean.pyInt (Libraries.math.pyMathSqrtR f) +ₚ (2 : Int)) (2 : Int)),
+                d < f → f %ₚ d ≠ (0 : Int)) ∧
+          ∀ f ∈ PastaLean.pyIter fact, f ≥ (2 : Int) :=
   by
   intro n hpre
   exact factorize_spec hpre
@@ -130,7 +149,6 @@ theorem factorize_correct :
 def factorize'rn := fun (n : Int) ↦
   Id.run
     (do
-      let mut n := n
       /-
        Return list of prime factors of given integer in the order from smallest to largest.
           Each of the factors should be listed number of times corresponding to how many times it appeares in factorization.
@@ -144,40 +162,41 @@ def factorize'rn := fun (n : Int) ↦
           
       -/
       let _ := Libraries.passta.pyPassRequires (decide (n ≥ (1 : Int)))
-      -- The main intent: the product of the returned factors equals the original input number.
-      -- We assume `n` in a postcondition refers to its value upon function entry, a common
-      -- convention in verification systems for parameters that are modified.
-      -- Secondary properties: factors are sorted and are all >= 2 (for n > 1).
+      -- The point, in three parts: the factors multiply back to the input, they come out in
+      -- non-decreasing order, and each one is prime.
       let mut fact : List Int := []
+      -- The remainder is peeled into `m`; the parameter `n` stays intact so the postcondition
+      -- above refers to the input rather than to whatever is left at the end.
+      let mut m : Int := n
       let mut i : Int := (2 : Int)
-      -- The crucial invariant to prove the main Ensures is `n_initial == math.prod(fact) * n`.
-      -- Without a way to reference the initial value of the modified parameter `n` (e.g., `Old(n)`),
-      -- this invariant cannot be expressed. We state other invariants that help prove
-      -- the secondary properties of the result.
-      while (i ≤ PastaLean.pyInt (Libraries.math.pyMathSqrt n +ₚ (1 : Int))) do
+      while (i ≤ PastaLean.pyInt (Libraries.math.pyMathSqrt m +ₚ (1 : Int))) do
         let _ := Libraries.passta.pyPassInvariant (decide (i ≥ (2 : Int)))
-        let _ := Libraries.passta.pyPassInvariant (decide (n ≥ (1 : Int)))
-        -- All factors found so far are greater than or equal to 2.
+        let _ := Libraries.passta.pyPassInvariant (decide (m ≥ (1 : Int)))
+        -- The invariant that carries the product postcondition: what has been peeled off times
+        -- what is left is always the input.
+        let _ := Libraries.passta.pyPassInvariant (Libraries.math.pyMathProd fact *ₚ m == n)
         let _ :=
           Libraries.passta.pyPassInvariant
             (PastaLean.pyAll ((PastaLean.pyIter fact).map fun f => decide (f ≥ (2 : Int))))
-        -- The list of factors is kept sorted because we test divisors `i` in increasing order.
+        -- Divisors are tried in increasing order, so nothing already recorded exceeds `i`;
+        -- that is what keeps `fact` sorted.
+        let _ := Libraries.passta.pyPassInvariant (PastaLean.pyLen fact == (0 : Int) || decide (fact⦋(-1 : Int)⦌ ≤ i))
         let _ :=
           Libraries.passta.pyPassInvariant
             (PastaLean.pyAll
               ((PastaLean.pyRange (PastaLean.pyLen fact -ₚ (1 : Int))).map fun j =>
                 decide (fact⦋j⦌ ≤ fact⦋j +ₚ (1 : Int)⦌)))
-        -- A stronger invariant that implies sortedness: the largest factor so far is at most i.
-        let _ := Libraries.passta.pyPassInvariant (PastaLean.pyLen fact == (0 : Int) || decide (fact⦋(-1 : Int)⦌ ≤ i))
-        if h_1 : n %ₚ i == (0 : Int) then 
+        if h_1 : m %ₚ i == (0 : Int) then 
           fact := PastaLean.pyAppend fact i
-          n := PastaLean.pyFloorDiv n i
+          m := PastaLean.pyFloorDiv m i
         else
           i := i +ₚ (1 : Int)
-      if h_1 : n > (1 : Int) then 
-        fact := PastaLean.pyAppend fact n
+      -- Whatever survives trial division past its own square root is itself prime.
+      if h_1 : m > (1 : Int) then 
+        fact := PastaLean.pyAppend fact m
       else
         let _ := ()
+      let _ := Libraries.passta.pyPassAssert (Libraries.math.pyMathProd fact == n)
       return fact)
 
 end PastaBench.humaneval.Factorize

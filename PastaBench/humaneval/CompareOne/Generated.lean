@@ -84,7 +84,7 @@ theorem compare_one_spec :
             result = b⌝⦄ :=
   by
   mvcgen [compare_one, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  sorry
+  taste?
   all_goals sorry
 
 theorem compare_one_correct :

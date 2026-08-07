@@ -142,6 +142,10 @@ structure State where
   `add`/`remove`/`discard` maintain sort order instead of set semantics; the value is a plain sorted
   `List`, so subscript/`len`/`in`/iteration use the ordinary list protocols. -/
   sortedVars : HashSet Name := HashSet.emptyWithCapacity 8
+  /-- Variables holding a library-owned object, mapped to the owning module (`m = hashlib.md5()`
+  ↦ `m ↦ "hashlib"`), so `m.update(...)` dispatches through `Libraries.libraryMethod?` rather than
+  the builtin method map. Generalises `sortedVars` to any library that declares `constructsObject`. -/
+  libObjVars : Std.HashMap Name String := ∅
   /-- Variables known to hold a dict (assigned from `{…}`, a dict comprehension, or `dict(…)`/
   `defaultdict(…)`/`Counter(…)`). `d.pop(k)` on a dict is the DICT pop (remove key, return value),
   which shares the method name with a 1-arg `list.pop(i)`; the receiver's dict-ness disambiguates. -/
@@ -314,6 +318,7 @@ def withFixedVariables {α : Type} (x : PygenM α) : PygenM α := do
   withPygenStateField (·.varNames) (fun st varNames => { st with varNames := varNames }) (← get).varNames <|
     withPygenStateField (·.setVars) (fun st setVars => { st with setVars := setVars }) (← get).setVars <|
      withPygenStateField (·.sortedVars) (fun st sortedVars => { st with sortedVars := sortedVars }) (← get).sortedVars <|
+      withPygenStateField (·.libObjVars) (fun st libObjVars => { st with libObjVars := libObjVars }) (← get).libObjVars <|
       withPygenStateField (·.dictVars) (fun st dictVars => { st with dictVars := dictVars }) (← get).dictVars <|
        withPygenStateField (·.renames) (fun st renames => { st with renames := renames }) (← get).renames <|
         withPygenStateField (·.mutVars) (fun st mutVars => { st with mutVars := mutVars }) (← get).mutVars x
@@ -426,6 +431,15 @@ def isSortedVar (name : Name) : PygenM Bool := do
 `add`/`remove`/`discard` dispatch to the order-maintaining runtime rather than the set versions. -/
 def setSortedVar (name : Name) (isSorted : Bool) : PygenM Unit := do
   modify fun st => { st with sortedVars := if isSorted then st.sortedVars.insert name else st.sortedVars.erase name }
+
+/-- The library module whose object `name` holds, if any. -/
+def libObjVarModule? (name : Name) : PygenM (Option String) := do
+  return (← get).libObjVars[name]?
+
+/-- Record (or clear) that `name` holds an object owned by `module?`. -/
+def setLibObjVar (name : Name) (module? : Option String) : PygenM Unit := do
+  modify fun st => { st with libObjVars :=
+    match module? with | some m => st.libObjVars.insert name m | none => st.libObjVars.erase name }
 
 /-- Whether `json` is a `SortedList(...)` construction (a call whose callee is the `sortedcontainers`
 member `SortedList`), OR a `Name` already known to hold one. Marks the target so its `add`/`remove`/
@@ -758,7 +772,12 @@ def getCode (json: Json) (kind: SyntaxNodeKind) : PygenM <| TSyntax kind := do
       code ← transformFn code
     pure (some code)
   catch e =>
-    throwError s!"Error in code generation function {f} for key '{key}' and syntax category '{kind}': {← e.toMessageData.toString}")
+    let inner ← e.toMessageData.toString
+    -- Only the INNERMOST failure is wrapped. `getCode` nests (a `Return` lowers a `Call` lowers a
+    -- `Call` …), and re-wrapping at every level prepends ~100 chars of boilerplate each time, which
+    -- pushes the actual cause out of the degraded-placeholder message entirely.
+    if inner.startsWith "Error in code generation function" then throw e
+    else throwError s!"Error in code generation function {f} for key '{key}' and syntax category '{kind}': {inner}")
   match code? with
   | some code => return code
   | none => throwError s!"pygen: no function found for key '{key}' and syntax category '{kind}'"

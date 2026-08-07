@@ -36,22 +36,22 @@ def common(l1: list, l2: list):
 
 namespace PastaBench.humaneval.Common
 
-def common := fun l1 ↦ fun l2 ↦
+def common := fun (l1 : List PyAny) ↦ fun (l2 : List PyAny) ↦
   PastaLean.pySort (PastaLean.pyList (PastaLean.pySetIntersection (PastaLean.pySet l1) (PastaLean.pySet l2)))
 
 attribute [simp] common
 
 @[taste_ingr]
 theorem common_correct :
-    ∀ l1,
-      ∀ l2,
+    ∀ (l1 : List PyAny),
+      ∀ (l2 : List PyAny),
         PastaLean.pySetEq (PastaLean.pySet (common l1 l2))
               (PastaLean.pySetIntersection (PastaLean.pySet l1) (PastaLean.pySet l2)) =
             true ∧
           common l1 l2 = PastaLean.pySort (common l1 l2) :=
-  by intros; sorry
+  by taste?
 
-def common'rn := fun l1 ↦ fun l2 ↦
+def common'rn := fun (l1 : List PyAny) ↦ fun (l2 : List PyAny) ↦
   PastaLean.pySort (PastaLean.pyList (PastaLean.pySetIntersection (PastaLean.pySet l1) (PastaLean.pySet l2)))
 
 end PastaBench.humaneval.Common

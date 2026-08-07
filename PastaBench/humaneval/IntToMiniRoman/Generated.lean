@@ -87,7 +87,7 @@ theorem int_to_mini_roman_correct :
             (0 : Int) ≤ PastaLean.pyFloorDiv (number %ₚ (100 : Int)) (10 : Int) ∧
               PastaLean.pyFloorDiv (number %ₚ (100 : Int)) (10 : Int) < PastaLean.pyLen x) ∧
           (0 : Int) ≤ number %ₚ (10 : Int) ∧ number %ₚ (10 : Int) < PastaLean.pyLen i :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  by taste?
 
 def int_to_mini_roman'rn := fun (number : Int) ↦
   let m := (#["", "m"] : Array String)

@@ -106,7 +106,7 @@ instance : PastaLean.PyTruthy BinaryIndexedTree where truthy _ := true
 instance : Coe BinaryIndexedTree (Option BinaryIndexedTree) :=
   ⟨some⟩
 
-def BinaryIndexedTree.new := fun n ↦
+def BinaryIndexedTree.new : Int → BinaryIndexedTree := fun (n : Int) ↦
   Id.run
     (do
       let mut self : BinaryIndexedTree := default
@@ -115,7 +115,7 @@ def BinaryIndexedTree.new := fun n ↦
       self := { self with c := PastaLean.pyListRepeat [(0 : Int)] (n +ₚ (1 : Int)) }
       return self)
 
-def BinaryIndexedTree.update := fun (self : BinaryIndexedTree) ↦ fun x ↦ fun (v : Int) ↦
+def BinaryIndexedTree.update := fun (self : BinaryIndexedTree) ↦ fun (x : Int) ↦ fun (v : Int) ↦
   Id.run
     (do
       let mut self := self
@@ -130,7 +130,7 @@ def BinaryIndexedTree.update := fun (self : BinaryIndexedTree) ↦ fun x ↦ fun
 
 attribute [simp, taste_ingr] BinaryIndexedTree.update
 
-def BinaryIndexedTree.query := fun (self : BinaryIndexedTree) ↦ fun x ↦
+def BinaryIndexedTree.query := fun (self : BinaryIndexedTree) ↦ fun (x : Int) ↦
   Id.run
     (do
       let mut x := x
@@ -155,7 +155,7 @@ instance : PastaLean.PyTruthy BinaryIndexedTree'rn where truthy _ := true
 instance : Coe BinaryIndexedTree'rn (Option BinaryIndexedTree'rn) :=
   ⟨some⟩
 
-def BinaryIndexedTree'rn.new := fun n ↦
+def BinaryIndexedTree'rn.new : Int → BinaryIndexedTree'rn := fun (n : Int) ↦
   Id.run
     (do
       let mut self : BinaryIndexedTree'rn := default
@@ -164,7 +164,7 @@ def BinaryIndexedTree'rn.new := fun n ↦
       self := { self with c := PastaLean.pyListRepeat [(0 : Int)] (n +ₚ (1 : Int)) }
       return self)
 
-def BinaryIndexedTree'rn.update := fun (self : BinaryIndexedTree'rn) ↦ fun x ↦ fun (v : Int) ↦
+def BinaryIndexedTree'rn.update := fun (self : BinaryIndexedTree'rn) ↦ fun (x : Int) ↦ fun (v : Int) ↦
   Id.run
     (do
       let mut self := self
@@ -177,7 +177,7 @@ def BinaryIndexedTree'rn.update := fun (self : BinaryIndexedTree'rn) ↦ fun x �
         x := x +ₚ PastaLean.pyBitAnd x (-x)
       return self)
 
-def BinaryIndexedTree'rn.query := fun (self : BinaryIndexedTree'rn) ↦ fun x ↦
+def BinaryIndexedTree'rn.query := fun (self : BinaryIndexedTree'rn) ↦ fun (x : Int) ↦
   Id.run
     (do
       let mut x := x

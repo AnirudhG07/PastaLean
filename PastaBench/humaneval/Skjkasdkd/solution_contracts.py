@@ -13,21 +13,31 @@ def skjkasdkd(lst):
     For lst = [0,81,12,3,1,21] the output should be 3
     For lst = [0,8,1,2,1,7] the output should be 7
     """
-    Requires(all(isinstance(x, int) for x in lst))
-    Ensures(Result() is None or Result() > 0)
+    # Without a prime in the list the loop falls through and the function returns nothing,
+    # so there is no answer to specify.
+    Requires(any(y >= 2 and all(y % d != 0 for d in range(2, y)) for y in lst))
+    # THE POINT: the result is the decimal digit sum of a prime member of the list that
+    # dominates every prime member of the list — i.e. of the largest prime in the list.
+    # Primality is trial division: z >= 2 with no divisor in [2, z).
+    Ensures(any(
+        y >= 2
+        and sum([int(ch) for ch in str(y)]) == Result()
+        and all(y % d != 0 for d in range(2, y))
+        and all(z <= y or z < 2 or any(z % d == 0 for d in range(2, z)) for z in lst)
+        for y in lst))
 
     def is_prime(a):
-        Requires(isinstance(a, int))
-        Ensures(not Result() or a >= 2)
+        # No contract here: it is an inner helper whose specification is the primality
+        # predicate spelled out at the call site below.
         return not (a < 2 or any(a % x == 0 for x in range(2, int(a ** 0.5) + 1)))
     sorted_list = sorted(lst)[::-1]
     for x in sorted_list:
         if is_prime(x):
-            # THE POINT: `x` is prime, and it's the largest one in the input list `lst`.
-            # This is true because we iterate a descending-sorted list and this is the first prime we found.
-            Assert(is_prime(x) and all(not is_prime(y) or y <= x for y in lst))
+            # x really is prime (the sqrt-bounded test above agrees with full trial division) ...
+            Assert(x >= 2 and all(x % d != 0 for d in range(2, x)))
+            # ... and it is the largest prime in lst: scanning descending order, everything
+            # strictly above x was rejected, so no z > x in lst is prime.
+            Assert(all(z <= x or z < 2 or any(z % d == 0 for d in range(2, z)) for z in lst))
             return sum(map(lambda ch: int(ch), str(x)))
-    
-    # If the loop completes, no prime was found in the list.
-    Assert(all(not is_prime(y) for y in lst))
-    # Implicit `return None` follows.
+
+    # Unreachable under the precondition.

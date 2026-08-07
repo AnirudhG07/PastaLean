@@ -461,6 +461,21 @@ def shouldParenthesizeReturnValue (value : Json) : Bool :=
     | some "Attribute" => false
     | _ => true
 
+/-- The library module owning the object this expression constructs (`hashlib.md5()` → `"hashlib"`),
+or the module already recorded for a `Name` being copied. Lets `m = hashlib.md5()` then
+`n = m` both tag their target, so the method dispatch follows the value. -/
+def jsonLibObjectModule? (value : Json) : PygenM (Option String) := do
+  match jsonNodeType? value with
+  | some "Call" =>
+      let some func := (value.getObjVal? "func").toOption | return none
+      let .ok m := func.getObjValAs? String "library_module" | return none
+      let .ok member := func.getObjValAs? String "library_member" | return none
+      return if Libraries.libraryObjectConstructor? m member then some m else none
+  | some "Name" =>
+      let .ok id := value.getObjValAs? String "id" | return none
+      libObjVarModule? id.toName
+  | _ => return none
+
 @[pygen "Assign"]
 def assignSyntax : (kind : SyntaxNodeKind) → Json →
     PygenM (TSyntax kind)
@@ -742,6 +757,7 @@ def assignSyntax : (kind : SyntaxNodeKind) → Json →
                   setSetVar fresh (← jsonIsSetExpr value)
                   setSortedVar fresh (← jsonIsSortedListExpr value)
                   setDictVar fresh (← jsonIsDictExpr value)
+                  setLibObjVar fresh (← jsonLibObjectModule? value)
                   return ← `(doElem| let mut $(mkIdent fresh):ident := $rhs)
                 let shadow := conflicting && (← hasVar nameIdent.getId) && !(← isMutVar nameIdent.getId)
                 -- Under `--heap`, `t = (xs, ys)` where the elements are container object-refs builds a
@@ -758,6 +774,7 @@ def assignSyntax : (kind : SyntaxNodeKind) → Json →
                 setSetVar nameIdent.getId (← jsonIsSetExpr value)
                 setSortedVar nameIdent.getId (← jsonIsSortedListExpr value)
                 setDictVar nameIdent.getId (← jsonIsDictExpr value)
+                setLibObjVar nameIdent.getId (← jsonLibObjectModule? value)
                 pure bound
     | _, _ => throwError s!"Unsupported syntax category for Assign node"
 

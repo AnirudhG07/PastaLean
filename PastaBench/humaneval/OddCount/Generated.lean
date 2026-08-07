@@ -122,28 +122,26 @@ theorem odd_count_spec :
           ((PastaLean.pyIter lst).flatMap fun s => (PastaLean.pyIter s).map fun c => PastaLean.pyIsDecimal c)⌝⦄
       odd_count lst ⦃⇓ans =>
       ⌜PastaLean.pyLen ans = PastaLean.pyLen lst ∧
-          PastaLean.pyAll
-            ((PastaLean.pyRange (PastaLean.pyLen lst)).map fun k =>
-              ans⦋k⦌ ==
-                PastaLean.pyStringReplace "the number of odd elements in the string i of the input." "i"
-                  (PastaLean.pyStr
-                    (PastaLean.pyLen
-                      (PastaLean.pyList
-                        (PastaLean.pyFilter (fun ch ↦ PastaLean.pyInt ch %ₚ (2 : Int) == (1 : Int)) lst⦋k⦌)))))⌝⦄ :=
+          ∀ k ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen lst)),
+            ans⦋k⦌ =
+              PastaLean.pyStringReplace "the number of odd elements in the string i of the input." "i"
+                (PastaLean.pyStr
+                  (PastaLean.pyLen
+                    (PastaLean.pyList
+                      (PastaLean.pyFilter (fun ch ↦ PastaLean.pyInt ch %ₚ (2 : Int) = (1 : Int)) lst⦋k⦌))))⌝⦄ :=
   by
   try
     mvcgen [odd_count, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓cur =>
       ⌜(PastaLean.pyLen ans < PastaLean.pyLen lst ∧ s = lst⦋PastaLean.pyLen ans⦌) ∧
-          PastaLean.pyAll
-            ((PastaLean.pyRange (PastaLean.pyLen ans)).map fun k =>
-              ans⦋k⦌ ==
-                PastaLean.pyStringReplace "the number of odd elements in the string i of the input." "i"
-                  (PastaLean.pyStr
-                    (PastaLean.pyLen
-                      (PastaLean.pyList
-                        (PastaLean.pyFilter (fun ch ↦ PastaLean.pyInt ch %ₚ (2 : Int) == (1 : Int)) lst⦋k⦌)))))⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+          ∀ k ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen ans)),
+            ans⦋k⦌ =
+              PastaLean.pyStringReplace "the number of odd elements in the string i of the input." "i"
+                (PastaLean.pyStr
+                  (PastaLean.pyLen
+                    (PastaLean.pyList
+                      (PastaLean.pyFilter (fun ch ↦ PastaLean.pyInt ch %ₚ (2 : Int) = (1 : Int)) lst⦋k⦌))))⌝
+  taste?
   all_goals sorry
 
 theorem odd_count_correct :
@@ -152,14 +150,13 @@ theorem odd_count_correct :
           ((PastaLean.pyIter lst).flatMap fun s => (PastaLean.pyIter s).map fun c => PastaLean.pyIsDecimal c) →
         let ans := (odd_count lst).run;
         PastaLean.pyLen ans = PastaLean.pyLen lst ∧
-          PastaLean.pyAll
-            ((PastaLean.pyRange (PastaLean.pyLen lst)).map fun k =>
-              ans⦋k⦌ ==
-                PastaLean.pyStringReplace "the number of odd elements in the string i of the input." "i"
-                  (PastaLean.pyStr
-                    (PastaLean.pyLen
-                      (PastaLean.pyList
-                        (PastaLean.pyFilter (fun ch ↦ PastaLean.pyInt ch %ₚ (2 : Int) == (1 : Int)) lst⦋k⦌))))) :=
+          ∀ k ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen lst)),
+            ans⦋k⦌ =
+              PastaLean.pyStringReplace "the number of odd elements in the string i of the input." "i"
+                (PastaLean.pyStr
+                  (PastaLean.pyLen
+                    (PastaLean.pyList
+                      (PastaLean.pyFilter (fun ch ↦ PastaLean.pyInt ch %ₚ (2 : Int) = (1 : Int)) lst⦋k⦌)))) :=
   by
   intro lst hpre
   exact odd_count_spec hpre

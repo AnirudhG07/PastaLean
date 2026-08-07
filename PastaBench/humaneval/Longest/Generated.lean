@@ -36,6 +36,11 @@ def longest(strings: List[str]) -> Optional[str]:
     # A non-None result is one of the input strings, and it is of maximal length.
     Ensures(Result() is None or Result() in strings)
     Ensures(Result() is None or all(len(s) <= len(Result()) for s in strings))
+    # The tie-break, and the real content: everything before the returned string is STRICTLY
+    # shorter, so it is the FIRST string of maximal length, not merely one of them.
+    Ensures(len(strings) == 0 or all(
+        len(strings[j]) < len(Result()) for j in range(strings.index(Result()))
+    ))
 
     if not strings:
         return None
@@ -65,30 +70,28 @@ def longest := fun (strings : List String) ↦
 @[spec]
 theorem longest_spec :
     ⦃⌜True⌝⦄ longest strings ⦃⇓result =>
-      ⌜(PastaLean.pyIsNone result = (PastaLean.pyLen strings = (0 : Int)) ∧
-            (PastaLean.pyIsNone result ∨ PastaLean.pyContains strings result)) ∧
-          (PastaLean.pyIsNone result ∨
-            PastaLean.pyTruthy
-                (PastaLean.pyAll
-                  ((PastaLean.pyIter strings).map fun s => decide (PastaLean.pyLen s ≤ PastaLean.pyLen result))) =
-              true)⌝⦄ :=
+      ⌜((PastaLean.pyIsNone result = (PastaLean.pyLen strings = (0 : Int)) ∧
+              (PastaLean.pyIsNone result ∨ PastaLean.pyContains strings result)) ∧
+            (PastaLean.pyIsNone result ∨ ∀ s ∈ PastaLean.pyIter strings, PastaLean.pyLen s ≤ PastaLean.pyLen result)) ∧
+          (PastaLean.pyLen strings = (0 : Int) ∨
+            ∀ j ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyIndex strings result)),
+              PastaLean.pyLen strings⦋j⦌ < PastaLean.pyLen result)⌝⦄ :=
   by
   try
     mvcgen [longest, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · Invariant.withEarlyReturn (onReturn := fun _ _ => ⌜True⌝) (onContinue := fun _ _ => ⌜True⌝)
-  sorry
+  taste?
   all_goals sorry
 
 theorem longest_correct :
     ∀ (strings : List String),
       let result := (longest strings).run;
-      (PastaLean.pyIsNone result = (PastaLean.pyLen strings = (0 : Int)) ∧
-          (PastaLean.pyIsNone result ∨ PastaLean.pyContains strings result)) ∧
-        (PastaLean.pyIsNone result ∨
-          PastaLean.pyTruthy
-              (PastaLean.pyAll
-                ((PastaLean.pyIter strings).map fun s => decide (PastaLean.pyLen s ≤ PastaLean.pyLen result))) =
-            true) :=
+      ((PastaLean.pyIsNone result = (PastaLean.pyLen strings = (0 : Int)) ∧
+            (PastaLean.pyIsNone result ∨ PastaLean.pyContains strings result)) ∧
+          (PastaLean.pyIsNone result ∨ ∀ s ∈ PastaLean.pyIter strings, PastaLean.pyLen s ≤ PastaLean.pyLen result)) ∧
+        (PastaLean.pyLen strings = (0 : Int) ∨
+          ∀ j ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyIndex strings result)),
+            PastaLean.pyLen strings⦋j⦌ < PastaLean.pyLen result) :=
   by
   intro strings
   exact longest_spec True.intro
@@ -109,6 +112,8 @@ def longest'rn := fun (strings : List String) ↦
       -/
       -- The result is None exactly when the input list is empty.
       -- A non-None result is one of the input strings, and it is of maximal length.
+      -- The tie-break, and the real content: everything before the returned string is STRICTLY
+      -- shorter, so it is the FIRST string of maximal length, not merely one of them.
       if h_1 : !PastaLean.pyTruthy strings then 
         return Option.none
       else

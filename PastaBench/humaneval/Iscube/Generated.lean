@@ -23,7 +23,7 @@ from contracts import *
 
 def iscube(a: int):
     '''
-    Write a function that takes an integer a and returns True 
+    Write a function that takes an integer a and returns True
     if this ingeger is a cube of some integer number.
     Note: you may assume the input is always valid.
     Examples:
@@ -34,19 +34,23 @@ def iscube(a: int):
     iscube(0) ==> True
     iscube(180) ==> False
     '''
-    # The intent of this function is to check if `a` is a perfect cube.
-    # Formally: `Result() <==> (exists k: int, Old(a) == k*k*k)`.
-    # The implementation uses floating-point arithmetic to find a candidate root,
-    # which is difficult to verify formally without axioms about float precision.
-    # The contract below expresses that the function correctly implements its chosen
-    # method, relating the output to the input `a` before it's modified.
-    # For a function this simple, the "intent" and the "mechanics" are very close,
-    # as the mechanic (checking the cube of the rounded cube root) is a direct
-    # computational proxy for the mathematical definition of a perfect cube.
-    Ensures(Result() == (int(round(abs(Old(a)) ** (1. / 3))) ** 3 == abs(Old(a))))
+    # THE POINT (1): the answer is exactly "the integer root the code computes cubes back to |a|".
+    # `abs` is idempotent, so `abs(a)` denotes the same value before and after `a = abs(a)` — this
+    # postcondition therefore reads the same against the entry value and the mutated one, which is
+    # what lets it be stated without an `Old`-style operator (there is none in the vocabulary).
+    Ensures(Result() == (int(round(abs(a) ** (1. / 3))) ** 3 == abs(a)))
+    # THE POINT (2): soundness. A `True` answer is not merely "the float root happened to work" —
+    # it witnesses a genuine integer k with k**3 == |a|, i.e. |a| really is a perfect cube. (And
+    # testing |a| loses nothing: k**3 == -m exactly when (-k)**3 == m.)
+    Ensures(not Result() or any(k * k * k == abs(a) for k in range(abs(a) + 1)))
 
     a = abs(a)
-    return int(round(a ** (1. / 3))) ** 3 == a
+    Assert(a >= 0)
+    r = int(round(a ** (1. / 3)))
+    # The rounded cube root of a non-negative number is itself non-negative, and when it is the
+    # witness above it is bounded by `a`, which is what puts it inside `range(a + 1)`.
+    Assert(r >= 0)
+    return r ** 3 == a
 -/
 
 namespace PastaBench.humaneval.Iscube
@@ -55,59 +59,73 @@ def iscube := fun (a : Int) ↦
   (do
     let mut a := a
     a := PastaLean.pyAbs a
-    let __py_ret_1 := PastaLean.pyInt (PastaLean.pyRound (a ^ₚ ((1.0 : Rat) /ₚ (3 : Int)))) ^ₚ (3 : Int) == a
+    let _ := Libraries.passta.pyPassAssert (decide (a ≥ (0 : Int)))
+    let mut r : Int := PastaLean.pyInt (PastaLean.pyRound (a ^ₚ ((1.0 : Rat) /ₚ (3 : Int))))
+    let _ := Libraries.passta.pyPassAssert (decide (r ≥ (0 : Int)))
+    let __py_ret_1 := r ^ₚ (3 : Int) == a
     return __py_ret_1 : Id _)
 
 @[spec]
 theorem iscube_spec :
     ⦃⌜True⌝⦄ iscube a ⦃⇓result =>
       ⌜result =
-          (PastaLean.pyInt
-                (PastaLean.pyRound (PastaLean.pyAbs (Old (PastaLean.pyAbs a)) ^ₚ ((1.0 : Rat) /ₚ (3 : Int)))) ^ₚ
-              (3 : Int) =
-            PastaLean.pyAbs (Old (PastaLean.pyAbs a)))⌝⦄ :=
+            (PastaLean.pyInt (PastaLean.pyRound (PastaLean.pyAbs (PastaLean.pyAbs a) ^ₚ ((1.0 : Rat) /ₚ (3 : Int)))) ^ₚ
+                (3 : Int) =
+              PastaLean.pyAbs (PastaLean.pyAbs a)) ∧
+          (¬PastaLean.pyTruthy result = true ∨
+            ∃ k ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyAbs (PastaLean.pyAbs a) +ₚ (1 : Int))),
+              k *ₚ k *ₚ k = PastaLean.pyAbs (PastaLean.pyAbs a))⌝⦄ :=
   by
   mvcgen [iscube, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  sorry
+  taste?
   all_goals sorry
 
 theorem iscube_correct :
     ∀ (a : Int),
       let result := (iscube a).run;
       result =
-        (PastaLean.pyInt
-              (PastaLean.pyRound (PastaLean.pyAbs (Old (PastaLean.pyAbs a)) ^ₚ ((1.0 : Rat) /ₚ (3 : Int)))) ^ₚ
-            (3 : Int) =
-          PastaLean.pyAbs (Old (PastaLean.pyAbs a))) :=
+          (PastaLean.pyInt (PastaLean.pyRound (PastaLean.pyAbs (PastaLean.pyAbs a) ^ₚ ((1.0 : Rat) /ₚ (3 : Int)))) ^ₚ
+              (3 : Int) =
+            PastaLean.pyAbs (PastaLean.pyAbs a)) ∧
+        (¬PastaLean.pyTruthy result = true ∨
+          ∃ k ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyAbs (PastaLean.pyAbs a) +ₚ (1 : Int))),
+            k *ₚ k *ₚ k = PastaLean.pyAbs (PastaLean.pyAbs a)) :=
   by
   intro a
   exact iscube_spec True.intro
 
 def iscube'rn := fun (a : Int) ↦
-  /-
-  
-      Write a function that takes an integer a and returns True 
-      if this ingeger is a cube of some integer number.
-      Note: you may assume the input is always valid.
-      Examples:
-      iscube(1) ==> True
-      iscube(2) ==> False
-      iscube(-1) ==> True
-      iscube(64) ==> True
-      iscube(0) ==> True
-      iscube(180) ==> False
+  Id.run
+    (do
+      let mut a := a
+      /-
       
-  -/
-  -- The intent of this function is to check if `a` is a perfect cube.
-  -- Formally: `Result() <==> (exists k: int, Old(a) == k*k*k)`.
-  -- The implementation uses floating-point arithmetic to find a candidate root,
-  -- which is difficult to verify formally without axioms about float precision.
-  -- The contract below expresses that the function correctly implements its chosen
-  -- method, relating the output to the input `a` before it's modified.
-  -- For a function this simple, the "intent" and the "mechanics" are very close,
-  -- as the mechanic (checking the cube of the rounded cube root) is a direct
-  -- computational proxy for the mathematical definition of a perfect cube.
-  let a := (PastaLean.pyAbs a : Int)
-  PastaLean.pyInt (PastaLean.pyRound (a ^ₚ (PastaLean.pyFloat (1.0 : Float) /ₚ (3 : Int)))) ^ₚ (3 : Int) == a
+          Write a function that takes an integer a and returns True
+          if this ingeger is a cube of some integer number.
+          Note: you may assume the input is always valid.
+          Examples:
+          iscube(1) ==> True
+          iscube(2) ==> False
+          iscube(-1) ==> True
+          iscube(64) ==> True
+          iscube(0) ==> True
+          iscube(180) ==> False
+          
+      -/
+      -- THE POINT (1): the answer is exactly "the integer root the code computes cubes back to |a|".
+      -- `abs` is idempotent, so `abs(a)` denotes the same value before and after `a = abs(a)` — this
+      -- postcondition therefore reads the same against the entry value and the mutated one, which is
+      -- what lets it be stated without an `Old`-style operator (there is none in the vocabulary).
+      -- THE POINT (2): soundness. A `True` answer is not merely "the float root happened to work" —
+      -- it witnesses a genuine integer k with k**3 == |a|, i.e. |a| really is a perfect cube. (And
+      -- testing |a| loses nothing: k**3 == -m exactly when (-k)**3 == m.)
+      a := PastaLean.pyAbs a
+      let _ := Libraries.passta.pyPassAssert (decide (a ≥ (0 : Int)))
+      let mut r : Int := PastaLean.pyInt (PastaLean.pyRound (a ^ₚ (PastaLean.pyFloat (1.0 : Float) /ₚ (3 : Int))))
+      -- The rounded cube root of a non-negative number is itself non-negative, and when it is the
+      -- witness above it is bounded by `a`, which is what puts it inside `range(a + 1)`.
+      let _ := Libraries.passta.pyPassAssert (decide (r ≥ (0 : Int)))
+      let __py_ret_1 := r ^ₚ (3 : Int) == a
+      return __py_ret_1)
 
 end PastaBench.humaneval.Iscube

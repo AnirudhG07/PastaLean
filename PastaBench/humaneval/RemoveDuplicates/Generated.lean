@@ -75,25 +75,21 @@ def remove_duplicates := fun (numbers : List Int) ↦
 theorem remove_duplicates_spec :
     ⦃⌜True⌝⦄ remove_duplicates numbers ⦃⇓result =>
       ⌜(PastaLean.pyLen (PastaLean.pySet result) = PastaLean.pyLen result ∧
-            PastaLean.pyAll ((PastaLean.pyIter result).map fun x => PastaLean.pyCount numbers x == (1 : Int))) ∧
-          PastaLean.pyAll
-            ((List.filter (fun x => PastaLean.pyCount numbers x = (1 : Int)) (PastaLean.pyIter numbers)).map fun x =>
-              PastaLean.pyContains result x)⌝⦄ :=
+            ∀ x ∈ PastaLean.pyIter result, PastaLean.pyCount numbers x = (1 : Int)) ∧
+          ∀ x ∈ PastaLean.pyIter numbers, PastaLean.pyCount numbers x = (1 : Int) → PastaLean.pyContains result x⌝⦄ :=
   by
   try
     mvcgen [remove_duplicates, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓cur => ⌜True⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem remove_duplicates_correct :
     ∀ (numbers : List Int),
       let result := (remove_duplicates numbers).run;
       (PastaLean.pyLen (PastaLean.pySet result) = PastaLean.pyLen result ∧
-          PastaLean.pyAll ((PastaLean.pyIter result).map fun x => PastaLean.pyCount numbers x == (1 : Int))) ∧
-        PastaLean.pyAll
-          ((List.filter (fun x => PastaLean.pyCount numbers x = (1 : Int)) (PastaLean.pyIter numbers)).map fun x =>
-            PastaLean.pyContains result x) :=
+          ∀ x ∈ PastaLean.pyIter result, PastaLean.pyCount numbers x = (1 : Int)) ∧
+        ∀ x ∈ PastaLean.pyIter numbers, PastaLean.pyCount numbers x = (1 : Int) → PastaLean.pyContains result x :=
   by
   intro numbers
   exact remove_duplicates_spec True.intro

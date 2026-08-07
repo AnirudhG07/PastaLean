@@ -33,6 +33,9 @@ def file_name_check(file_name):
     file_name_check("example.txt") # => 'Yes'
     file_name_check("1example.dll") # => 'No' (the name should start with a latin alphapet letter)
     """
+    # The two clauses together pin Result() exactly: it is one of the two verdicts, and it
+    # is 'Yes' precisely when the four validity conditions of the problem statement hold.
+    Ensures(Result() == 'Yes' or Result() == 'No')
     Ensures((Result() == 'Yes') == (
         sum(1 for c in file_name if c.isdigit()) <= 3 and
         file_name.count('.') == 1 and
@@ -84,7 +87,28 @@ def file_name_check := fun (file_name : String) ↦
 @[spec]
 theorem file_name_check_spec :
     ⦃⌜True⌝⦄ file_name_check file_name ⦃⇓result =>
-      ⌜(result = "Yes") =
+      ⌜(result = "Yes" ∨ result = "No") ∧
+          (result = "Yes") =
+            ((((PastaLean.pySum
+                        ((List.filter (fun c => PastaLean.pyTruthy (PastaLean.pyIsDecimal c))
+                              (PastaLean.pyIter file_name)).map
+                          fun c => (1 : Int)) ≤
+                      (3 : Int) ∧
+                    PastaLean.pyCount file_name "." = (1 : Int)) ∧
+                  PastaLean.pyLen (PastaLean.pyStringSplit file_name ".")⦋(0 : Int)⦌ > (0 : Int)) ∧
+                PastaLean.pyTruthy (PastaLean.pyIsAlpha (PastaLean.pyStringSplit file_name ".")⦋(0 : Int)⦌⦋(0 : Int)⦌) =
+                  true) ∧
+              PastaLean.pyContains ["txt", "exe", "dll"] (PastaLean.pyStringSplit file_name ".")⦋(1 : Int)⦌)⌝⦄ :=
+  by
+  mvcgen [file_name_check, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
+  taste?
+  all_goals sorry
+
+theorem file_name_check_correct :
+    ∀ (file_name : String),
+      let result := (file_name_check file_name).run;
+      (result = "Yes" ∨ result = "No") ∧
+        (result = "Yes") =
           ((((PastaLean.pySum
                       ((List.filter (fun c => PastaLean.pyTruthy (PastaLean.pyIsDecimal c))
                             (PastaLean.pyIter file_name)).map
@@ -94,26 +118,7 @@ theorem file_name_check_spec :
                 PastaLean.pyLen (PastaLean.pyStringSplit file_name ".")⦋(0 : Int)⦌ > (0 : Int)) ∧
               PastaLean.pyTruthy (PastaLean.pyIsAlpha (PastaLean.pyStringSplit file_name ".")⦋(0 : Int)⦌⦋(0 : Int)⦌) =
                 true) ∧
-            PastaLean.pyContains ["txt", "exe", "dll"] (PastaLean.pyStringSplit file_name ".")⦋(1 : Int)⦌)⌝⦄ :=
-  by
-  mvcgen [file_name_check, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  sorry
-  all_goals sorry
-
-theorem file_name_check_correct :
-    ∀ (file_name : String),
-      let result := (file_name_check file_name).run;
-      (result = "Yes") =
-        ((((PastaLean.pySum
-                    ((List.filter (fun c => PastaLean.pyTruthy (PastaLean.pyIsDecimal c))
-                          (PastaLean.pyIter file_name)).map
-                      fun c => (1 : Int)) ≤
-                  (3 : Int) ∧
-                PastaLean.pyCount file_name "." = (1 : Int)) ∧
-              PastaLean.pyLen (PastaLean.pyStringSplit file_name ".")⦋(0 : Int)⦌ > (0 : Int)) ∧
-            PastaLean.pyTruthy (PastaLean.pyIsAlpha (PastaLean.pyStringSplit file_name ".")⦋(0 : Int)⦌⦋(0 : Int)⦌) =
-              true) ∧
-          PastaLean.pyContains ["txt", "exe", "dll"] (PastaLean.pyStringSplit file_name ".")⦋(1 : Int)⦌) :=
+            PastaLean.pyContains ["txt", "exe", "dll"] (PastaLean.pyStringSplit file_name ".")⦋(1 : Int)⦌) :=
   by
   intro file_name
   exact file_name_check_spec True.intro
@@ -134,6 +139,8 @@ def file_name_check'rn := fun (file_name : String) ↦
       file_name_check("1example.dll") # => 'No' (the name should start with a latin alphapet letter)
       
   -/
+  -- The two clauses together pin Result() exactly: it is one of the two verdicts, and it
+  -- is 'Yes' precisely when the four validity conditions of the problem statement hold.
   if
       PastaLean.pyLen (PastaLean.pyList (PastaLean.pyFilter (fun ch ↦ PastaLean.pyIsDecimal ch) file_name)) >
         (3 : Int) then

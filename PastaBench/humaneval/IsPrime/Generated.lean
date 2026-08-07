@@ -109,10 +109,7 @@ def is_prime := fun (n : Int) ↦
 @[spec]
 theorem is_prime_spec :
     ⦃⌜True⌝⦄ is_prime n ⦃⇓result =>
-      ⌜result =
-          (n > (1 : Int) ∧
-            PastaLean.pyTruthy (PastaLean.pyAll ((PastaLean.pyRange n (2 : Int)).map fun d => n %ₚ d != (0 : Int))) =
-              true)⌝⦄ :=
+      ⌜result = (n > (1 : Int) ∧ ∀ d ∈ PastaLean.pyIter (PastaLean.pyRange n (2 : Int)), n %ₚ d ≠ (0 : Int))⌝⦄ :=
   by
   try
     mvcgen [is_prime, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
@@ -126,16 +123,13 @@ theorem is_prime_spec :
             n_sqrt ≥ (1 : Int) ∧ (n_sqrt -ₚ (1 : Int)) ^ₚ (2 : Int) < n)
           (fun _ => True) s⌝
     · Invariant.withEarlyReturn (onReturn := fun _ _ => ⌜True⌝) (onContinue := fun _ _ => ⌜True⌝)
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals; pyany_cases <;> grind +locals; pyany_cases <;> grind +locals; pyany_cases <;> grind +locals; pyany_cases <;> grind +locals; sorry; sorry
+  taste?
   all_goals sorry
 
 theorem is_prime_correct :
     ∀ (n : Int),
       let result := (is_prime n).run;
-      result =
-        (n > (1 : Int) ∧
-          PastaLean.pyTruthy (PastaLean.pyAll ((PastaLean.pyRange n (2 : Int)).map fun d => n %ₚ d != (0 : Int))) =
-            true) :=
+      result = (n > (1 : Int) ∧ ∀ d ∈ PastaLean.pyIter (PastaLean.pyRange n (2 : Int)), n %ₚ d ≠ (0 : Int)) :=
   by
   intro n
   exact is_prime_spec True.intro

@@ -17,13 +17,20 @@ def get_max_triples(n: int):
         The only valid triple is (1, 7, 13).
     """
     Requires(n > 0)
-    # Closed form: with c0 = #{i : a[i] % 3 == 0} = (n-2)//3 + 1 (for n > 2) and c1 = n - c0,
-    # the answer is C(c1,3) + C(c0,3). The exact value equalities (and `Implies`/mid-`Assert`
-    # bridges, not yet lowerable) are proved in Proofs.lean; here we keep the sign invariant.
+    # a[i] = i*i - i + 1 is ≡ 0 mod 3 exactly when i ≡ 2 mod 3, and ≡ 1 mod 3 otherwise — no
+    # residue-2 class exists. So a valid triple takes all three from the 0-class or all three
+    # from the 1-class, giving C(c0,3) + C(c1,3) with c0 = (n+1)//3 and c1 = n - c0.
+    # Each product of three consecutive integers is divisible by 6, so the equality is exact.
+    # (It also covers the n <= 2 early return, where both binomials vanish and Result() is False.)
+    Ensures(
+        6 * Result()
+        == (n - (n + 1) // 3) * (n - (n + 1) // 3 - 1) * (n - (n + 1) // 3 - 2)
+        + ((n + 1) // 3) * ((n + 1) // 3 - 1) * ((n + 1) // 3 - 2)
+    )
     Ensures(Result() >= 0)
 
     if n <= 2:
-        return 0
+        return False
     one_cnt = 1 + (n - 2) // 3 * 2 + (n - 2) % 3
     zero_cnt = n - one_cnt
     return one_cnt * (one_cnt - 1) * (one_cnt - 2) // 6 + zero_cnt * (zero_cnt - 1) * (zero_cnt - 2) // 6

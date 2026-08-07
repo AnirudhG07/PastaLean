@@ -35,9 +35,15 @@ def sort_array(array):
     * sort_array([2, 4, 3, 0, 1, 5]) => [0, 1, 2, 3, 4, 5]
     * sort_array([2, 4, 3, 0, 1, 5, 6]) => [6, 5, 4, 3, 2, 1, 0]
     """
-    # The result is a permutation of the input, so it always has the same length;
-    # in particular the empty input yields the empty list.
+    # 1-2. The result is a permutation of the input (same length, same multiset).
     Ensures(len(Result()) == len(array))
+    Ensures(sorted(Result()) == sorted(array))
+    # 3. Odd endpoint-sum (or empty input) => ascending.
+    Ensures(len(array) == 0 or (array[0] + array[-1]) % 2 == 0
+            or all(Result()[j] <= Result()[j + 1] for j in range(len(Result()) - 1)))
+    # 4. Even endpoint-sum => descending.
+    Ensures(len(array) == 0 or (array[0] + array[-1]) % 2 == 1
+            or all(Result()[j] >= Result()[j + 1] for j in range(len(Result()) - 1)))
 
     if array == []: return []
     return sorted(array, reverse=(array[0]+array[-1]) % 2 == 0)
@@ -57,16 +63,30 @@ def sort_array := fun (array : List Int) ↦
     return __py_ret_1 : Id _)
 
 @[spec]
-theorem sort_array_spec : ⦃⌜True⌝⦄ sort_array array ⦃⇓result => ⌜PastaLean.pyLen result = PastaLean.pyLen array⌝⦄ :=
+theorem sort_array_spec :
+    ⦃⌜True⌝⦄ sort_array array ⦃⇓result =>
+      ⌜((PastaLean.pyLen result = PastaLean.pyLen array ∧ PastaLean.pySort result = PastaLean.pySort array) ∧
+            ((PastaLean.pyLen array = (0 : Int) ∨ (array⦋(0 : Int)⦌ +ₚ array⦋(-1 : Int)⦌) %ₚ (2 : Int) = (0 : Int)) ∨
+              ∀ j ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen result -ₚ (1 : Int))),
+                result⦋j⦌ ≤ result⦋j +ₚ (1 : Int)⦌)) ∧
+          ((PastaLean.pyLen array = (0 : Int) ∨ (array⦋(0 : Int)⦌ +ₚ array⦋(-1 : Int)⦌) %ₚ (2 : Int) = (1 : Int)) ∨
+            ∀ j ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen result -ₚ (1 : Int))),
+              result⦋j⦌ ≥ result⦋j +ₚ (1 : Int)⦌)⌝⦄ :=
   by
   mvcgen [sort_array, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem sort_array_correct :
     ∀ (array : List Int),
       let result := (sort_array array).run;
-      PastaLean.pyLen result = PastaLean.pyLen array :=
+      ((PastaLean.pyLen result = PastaLean.pyLen array ∧ PastaLean.pySort result = PastaLean.pySort array) ∧
+          ((PastaLean.pyLen array = (0 : Int) ∨ (array⦋(0 : Int)⦌ +ₚ array⦋(-1 : Int)⦌) %ₚ (2 : Int) = (0 : Int)) ∨
+            ∀ j ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen result -ₚ (1 : Int))),
+              result⦋j⦌ ≤ result⦋j +ₚ (1 : Int)⦌)) ∧
+        ((PastaLean.pyLen array = (0 : Int) ∨ (array⦋(0 : Int)⦌ +ₚ array⦋(-1 : Int)⦌) %ₚ (2 : Int) = (1 : Int)) ∨
+          ∀ j ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen result -ₚ (1 : Int))),
+            result⦋j⦌ ≥ result⦋j +ₚ (1 : Int)⦌) :=
   by
   intro array
   exact sort_array_spec True.intro
@@ -88,8 +108,9 @@ def sort_array'rn := fun (array : List Int) ↦
       * sort_array([2, 4, 3, 0, 1, 5, 6]) => [6, 5, 4, 3, 2, 1, 0]
       
   -/
-  -- The result is a permutation of the input, so it always has the same length;
-  -- in particular the empty input yields the empty list.
+  -- 1-2. The result is a permutation of the input (same length, same multiset).
+  -- 3. Odd endpoint-sum (or empty input) => ascending.
+  -- 4. Even endpoint-sum => descending.
   if array == [] then []
   else PastaLean.pySortBy (fun x => x) ((array⦋(0 : Int)⦌ +ₚ array⦋(-1 : Int)⦌) %ₚ (2 : Int) == (0 : Int)) array
 

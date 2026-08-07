@@ -44,7 +44,10 @@ def find_zero(xs: list):
     Requires(len(xs) >= 2)
     Requires(len(xs) % 2 == 0)
     Requires(xs[len(xs) - 1] != 0.0)
-    Ensures(abs(poly(xs, Result())) < 1e-5)
+    # The point: the returned x is a root of the polynomial, to the routine's own tolerance.
+    # `poly` is inlined (as sum of xs[i] * x**i) rather than called, so the postcondition is a
+    # self-contained statement about Result() and does not depend on a second function.
+    Ensures(abs(sum([xs[i] * Result() ** i for i in range(len(xs))])) < 1e-5)
 
 
     dxs = [xs[i] * i for i in range(1, len(xs))]
@@ -69,45 +72,47 @@ def find_zero(xs: list):
 
 namespace PastaBench.humaneval.FindZero
 
-def poly := fun xs ↦ fun (x : Rat) ↦
-  /-
-  
-      Evaluates polynomial with coefficients xs at point x.
-      return xs[0] + xs[1] * x + xs[1] * x^2 + .... xs[n] * x^n
-      
-  -/
-  PastaLean.pySum
-    ((PastaLean.pyIter (PastaLean.pyEnumerate xs)).map fun _pair_1 =>
-      let i := Prod.fst _pair_1;
-      let coeff := Prod.snd _pair_1;
-      coeff *ₚ Libraries.math.pyMathPowExact x i)
+def poly := fun (xs : List PyAny) ↦ fun (x : Rat) ↦
+  (show PastaLean.PyAny from
+    /-
+    
+        Evaluates polynomial with coefficients xs at point x.
+        return xs[0] + xs[1] * x + xs[1] * x^2 + .... xs[n] * x^n
+        
+    -/
+    PastaLean.pySum
+      ((PastaLean.pyIter (PastaLean.pyEnumerate xs)).map fun (_pair_1 : Int × PyAny) =>
+        let i := Prod.fst _pair_1;
+        let coeff := Prod.snd _pair_1;
+        coeff *ₚ Libraries.math.pyMathPowExact x i))
 
-attribute [simp, taste_ingr] poly
+attribute [simp] poly
 
-def poly'rn := fun xs ↦ fun (x : Float) ↦
-  /-
-  
-      Evaluates polynomial with coefficients xs at point x.
-      return xs[0] + xs[1] * x + xs[1] * x^2 + .... xs[n] * x^n
-      
-  -/
-  PastaLean.pySum
-    ((PastaLean.pyIter (PastaLean.pyEnumerate xs)).map fun _pair_1 =>
-      let i := Prod.fst _pair_1;
-      let coeff := Prod.snd _pair_1;
-      coeff *ₚ Libraries.math.pyMathPow x i)
+def poly'rn := fun (xs : List PyAny) ↦ fun (x : Float) ↦
+  (show PastaLean.PyAny from
+    /-
+    
+        Evaluates polynomial with coefficients xs at point x.
+        return xs[0] + xs[1] * x + xs[1] * x^2 + .... xs[n] * x^n
+        
+    -/
+    PastaLean.pySum
+      ((PastaLean.pyIter (PastaLean.pyEnumerate xs)).map fun (_pair_1 : Int × PyAny) =>
+        let i := Prod.fst _pair_1;
+        let coeff := Prod.snd _pair_1;
+        coeff *ₚ Libraries.math.pyMathPow x i))
 
-private def _find_zero'func := fun (x : Rat) ↦ fun xs ↦ poly xs x
+private def _find_zero'func := fun (x : Rat) ↦ fun (xs : List PyAny) ↦ (show PastaLean.PyAny from poly xs x)
 
-attribute [simp, taste_ingr] _find_zero'func
+attribute [simp] _find_zero'func
 
-private def _find_zero'derivative := fun (x : Rat) ↦ fun dxs ↦ poly dxs x
+private def _find_zero'derivative := fun (x : Rat) ↦ fun (dxs : List PyAny) ↦ (show PastaLean.PyAny from poly dxs x)
 
-attribute [simp, taste_ingr] _find_zero'derivative
+attribute [simp] _find_zero'derivative
 
-def find_zero := fun xs ↦
+def find_zero := fun (xs : List PyAny) ↦
   (do
-    let mut dxs := (PastaLean.pyRange (PastaLean.pyLen xs) (1 : Int)).map fun i => xs⦋i⦌ *ₚ i
+    let mut dxs : List PyAny := (PastaLean.pyRange (PastaLean.pyLen xs) (1 : Int)).map fun i => xs⦋i⦌ *ₚ i
     let _ := Libraries.passta.pyPassAssert (PastaLean.pyLen dxs == PastaLean.pyLen xs -ₚ (1 : Int))
     let __unpack_value_1 := ((0 : Int), (OfScientific.ofScientific 1 true 5 : Rat))
     let __unpack_pair_1 := __unpack_value_1
@@ -133,30 +138,35 @@ def find_zero := fun xs ↦
 theorem find_zero_spec :
     ⦃⌜(PastaLean.pyLen xs ≥ (2 : Int) ∧ PastaLean.pyLen xs %ₚ (2 : Int) = (0 : Int)) ∧
           xs⦋PastaLean.pyLen xs -ₚ (1 : Int)⦌ ≠ (0.0 : Rat)⌝⦄
-      find_zero xs ⦃⇓x => ⌜PastaLean.pyAbs (poly xs x) < (OfScientific.ofScientific 1 true 5 : Rat)⌝⦄ :=
+      find_zero xs ⦃⇓x =>
+      ⌜PastaLean.pyAbs (PastaLean.pySum ((PastaLean.pyRange (PastaLean.pyLen xs)).map fun i => xs⦋i⦌ *ₚ x ^ₚ i)) <
+          (OfScientific.ofScientific 1 true 5 : Rat)⌝⦄ :=
   by
   try
     mvcgen [find_zero, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · Invariant.withEarlyReturn (onReturn := fun _ _ => ⌜True⌝) (onContinue := fun _ _ => ⌜True⌝)
-  sorry
+  taste?
   all_goals sorry
 
 theorem find_zero_correct :
-    ∀ xs,
+    ∀ (xs : List PyAny),
       (PastaLean.pyLen xs ≥ (2 : Int) ∧ PastaLean.pyLen xs %ₚ (2 : Int) = (0 : Int)) ∧
           xs⦋PastaLean.pyLen xs -ₚ (1 : Int)⦌ ≠ (0.0 : Rat) →
         let x := (find_zero xs).run;
-        PastaLean.pyAbs (poly xs x) < (OfScientific.ofScientific 1 true 5 : Rat) :=
+        PastaLean.pyAbs (PastaLean.pySum ((PastaLean.pyRange (PastaLean.pyLen xs)).map fun i => xs⦋i⦌ *ₚ x ^ₚ i)) <
+          (OfScientific.ofScientific 1 true 5 : Rat) :=
   by
   intro xs hpre
   exact find_zero_spec hpre
 
-private def _find_zero'func'rn := fun (x : Float) ↦ fun xs ↦ poly'rn xs x
+private def _find_zero'func'rn := fun (x : Float) ↦ fun (xs : List PyAny) ↦ (show PastaLean.PyAny from poly'rn xs x)
 
-private def _find_zero'derivative'rn := fun (x : Float) ↦ fun dxs ↦ poly'rn dxs x
+private def _find_zero'derivative'rn := fun (x : Float) ↦ fun (dxs : List PyAny) ↦
+  (show PastaLean.PyAny from poly'rn dxs x)
 
-def find_zero'rn := fun xs ↦
-  (Id.run
+def find_zero'rn := fun (xs : List PyAny) ↦
+  (show Float from
+    Id.run
       (do
         /-
          xs are coefficients of a polynomial.
@@ -174,7 +184,10 @@ def find_zero'rn := fun xs ↦
         let _ := Libraries.passta.pyPassRequires (decide (PastaLean.pyLen xs ≥ (2 : Int)))
         let _ := Libraries.passta.pyPassRequires (PastaLean.pyLen xs %ₚ (2 : Int) == (0 : Int))
         let _ := Libraries.passta.pyPassRequires (xs⦋PastaLean.pyLen xs -ₚ (1 : Int)⦌ != (0.0 : Float))
-        let mut dxs := (PastaLean.pyRange (PastaLean.pyLen xs) (1 : Int)).map fun i => xs⦋i⦌ *ₚ i
+        -- The point: the returned x is a root of the polynomial, to the routine's own tolerance.
+        -- `poly` is inlined (as sum of xs[i] * x**i) rather than called, so the postcondition is a
+        -- self-contained statement about Result() and does not depend on a second function.
+        let mut dxs : List PyAny := (PastaLean.pyRange (PastaLean.pyLen xs) (1 : Int)).map fun i => xs⦋i⦌ *ₚ i
         let _ := Libraries.passta.pyPassAssert (PastaLean.pyLen dxs == PastaLean.pyLen xs -ₚ (1 : Int))
         let __unpack_value_1 := ((0 : Int), Float.ofScientific 1 true 5)
         let __unpack_pair_1 := __unpack_value_1
@@ -191,7 +204,6 @@ def find_zero'rn := fun xs ↦
             let _ := ()
           x := x -ₚ PastaLean.pyFloat fx /ₚ dfx
         let _ := Libraries.passta.pyPassAssert (decide (PastaLean.pyAbs (poly'rn xs x) < Float.ofScientific 1 true 5))
-        return x) :
-    Float)
+        return x))
 
 end PastaBench.humaneval.FindZero

@@ -41,7 +41,7 @@ attribute [simp] strlen
 
 @[taste_ingr]
 theorem strlen_correct : ∀ (string : String), strlen string ≥ (0 : Int) ∧ strlen string = PastaLean.pyLen string := by
-  intros; simp_all (config := { zetaDelta := true }) [taste_ingr]
+  taste?
 
 def strlen'rn := fun (string : String) ↦ PastaLean.pyLen string
 

@@ -11,7 +11,17 @@ def circular_shift(x, shift):
     """
     Requires(x >= 0)
     Requires(shift >= 0)
+    # A rotation and a reversal are both permutations of the digit string: same length,
+    # same digit multiset.
     Ensures(len(Result()) == len(str(x)))
+    Ensures(sorted(Result()) == sorted(str(x)))
+    # THE POINT: within range the result really is a rotation of str(x) -- there is an
+    # offset k with Result()[i] == str(x)[(i + k) % n] for every i; beyond range it is
+    # the reversal.
+    Ensures(shift > len(str(x)) or any(
+        all(Result()[i] == str(x)[(i + k) % len(str(x))] for i in range(len(str(x))))
+        for k in range(len(str(x)))))
+    Ensures(shift <= len(str(x)) or Result() == str(x)[::-1])
 
     s = str(x)
     # The length of the string representation of a non-negative integer is at least 1.

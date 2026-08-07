@@ -55,6 +55,7 @@ def max_fill(grid, capacity):
         * 1 <= capacity <= 10
     """
     Requires(capacity >= 1)
+    Requires(len(grid) >= 1)
     Requires(all(all(x == 0 or x == 1 for x in l) for l in grid))
 
     # The point of the function is to compute the total number of bucket trips, which is
@@ -62,10 +63,21 @@ def max_fill(grid, capacity):
     # ceiling of its water units divided by the bucket capacity.
     Ensures(Result() == sum(math.ceil(sum(l) / capacity) for l in grid))
 
-    ans = 0    
+    # The same statement, division-free: `capacity * Result()` brackets the total water from
+    # above, and overshoots by strictly less than one bucket per well. This is what "ceiling,
+    # summed per row" actually means, and it is stated without a single division.
+    Ensures(capacity * Result() >= sum(sum(l) for l in grid))
+    Ensures(capacity * Result() < sum(sum(l) for l in grid) + capacity * len(grid))
+    # No trip is wasted: with capacity >= 1 you never need more trips than units of water.
+    Ensures(Result() >= 0)
+    Ensures(Result() <= sum(sum(l) for l in grid))
+
+    ans = 0
     for l in grid:
         # The running total is always non-negative, as each term added is non-negative.
         Invariant(ans >= 0)
+        # Accumulator form of the upper bound, over the wells emptied so far.
+        Invariant(ans <= sum(sum(r) for r in grid))
         ans += math.ceil(sum(l) / capacity)
 
     # After the loop, `ans` holds the final sum, which is exactly the property
@@ -76,12 +88,16 @@ def max_fill(grid, capacity):
 
 namespace PastaBench.humaneval.MaxFill
 
-def max_fill := fun (grid : List (List Int)) ↦ fun (capacity : Int) ↦
+def max_fill := fun (grid : PyAny) ↦ fun (capacity : Int) ↦
   (do
     let mut ans : Int := (0 : Int)
     for l in (PastaLean.pyIter grid)do
       -- The running total is always non-negative, as each term added is non-negative.
       let _ := Libraries.passta.pyPassInvariant (decide (ans ≥ (0 : Int)))
+      -- Accumulator form of the upper bound, over the wells emptied so far.
+      let _ :=
+        Libraries.passta.pyPassInvariant
+          (decide (ans ≤ PastaLean.pySum ((PastaLean.pyIter grid).map fun r => PastaLean.pySum r)))
       ans := ans +ₚ Libraries.math.pyMathCeil (PastaLean.pySum l /ₚ capacity)
     let _ :=
       Libraries.passta.pyPassAssert
@@ -92,37 +108,45 @@ def max_fill := fun (grid : List (List Int)) ↦ fun (capacity : Int) ↦
 
 @[spec]
 theorem max_fill_spec :
-    ⦃⌜capacity ≥ (1 : Int) ∧
-          PastaLean.pyAll
-            ((PastaLean.pyIter grid).map fun l =>
-              PastaLean.pyAll ((PastaLean.pyIter l).map fun x => x == (0 : Int) || x == (1 : Int)))⌝⦄
+    ⦃⌜(capacity ≥ (1 : Int) ∧ PastaLean.pyLen grid ≥ (1 : Int)) ∧
+          ∀ l ∈ PastaLean.pyIter grid, ∀ x ∈ PastaLean.pyIter l, x = (0 : Int) ∨ x = (1 : Int)⌝⦄
       max_fill grid capacity ⦃⇓ans =>
-      ⌜ans =
-          PastaLean.pySum
-            ((PastaLean.pyIter grid).map fun l => Libraries.math.pyMathCeil (PastaLean.pySum l /ₚ capacity))⌝⦄ :=
+      ⌜(((ans =
+                  PastaLean.pySum
+                    ((PastaLean.pyIter grid).map fun l => Libraries.math.pyMathCeil (PastaLean.pySum l /ₚ capacity)) ∧
+                capacity *ₚ ans ≥ PastaLean.pySum ((PastaLean.pyIter grid).map fun l => PastaLean.pySum l)) ∧
+              capacity *ₚ ans <
+                PastaLean.pySum ((PastaLean.pyIter grid).map fun l => PastaLean.pySum l) +ₚ
+                  capacity *ₚ PastaLean.pyLen grid) ∧
+            ans ≥ (0 : Int)) ∧
+          ans ≤ PastaLean.pySum ((PastaLean.pyIter grid).map fun l => PastaLean.pySum l)⌝⦄ :=
   by
   try
     mvcgen [max_fill, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓⟨cur, ans⟩ => ⌜ans ≥ (0 : Int)⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+    · ⇓⟨cur, ans⟩ => ⌜ans ≥ (0 : Int) ∧ ans ≤ PastaLean.pySum ((PastaLean.pyIter grid).map fun r => PastaLean.pySum r)⌝
+  taste?
   all_goals sorry
 
 theorem max_fill_correct :
-    ∀ (grid : List (List Int)),
+    ∀ (grid : PyAny),
       ∀ (capacity : Int),
-        capacity ≥ (1 : Int) ∧
-            PastaLean.pyAll
-              ((PastaLean.pyIter grid).map fun l =>
-                PastaLean.pyAll ((PastaLean.pyIter l).map fun x => x == (0 : Int) || x == (1 : Int))) →
+        ((capacity ≥ (1 : Int) ∧ PastaLean.pyLen grid ≥ (1 : Int)) ∧
+            ∀ l ∈ PastaLean.pyIter grid, ∀ x ∈ PastaLean.pyIter l, x = (0 : Int) ∨ x = (1 : Int)) →
           let ans := (max_fill grid capacity).run;
-          ans =
-            PastaLean.pySum
-              ((PastaLean.pyIter grid).map fun l => Libraries.math.pyMathCeil (PastaLean.pySum l /ₚ capacity)) :=
+          (((ans =
+                    PastaLean.pySum
+                      ((PastaLean.pyIter grid).map fun l => Libraries.math.pyMathCeil (PastaLean.pySum l /ₚ capacity)) ∧
+                  capacity *ₚ ans ≥ PastaLean.pySum ((PastaLean.pyIter grid).map fun l => PastaLean.pySum l)) ∧
+                capacity *ₚ ans <
+                  PastaLean.pySum ((PastaLean.pyIter grid).map fun l => PastaLean.pySum l) +ₚ
+                    capacity *ₚ PastaLean.pyLen grid) ∧
+              ans ≥ (0 : Int)) ∧
+            ans ≤ PastaLean.pySum ((PastaLean.pyIter grid).map fun l => PastaLean.pySum l) :=
   by
   intro grid capacity hpre
   exact max_fill_spec hpre
 
-def max_fill'rn := fun (grid : List (List Int)) ↦ fun (capacity : Int) ↦
+def max_fill'rn := fun (grid : PyAny) ↦ fun (capacity : Int) ↦
   Id.run
     (do
       /-
@@ -161,6 +185,7 @@ def max_fill'rn := fun (grid : List (List Int)) ↦ fun (capacity : Int) ↦
           
       -/
       let _ := Libraries.passta.pyPassRequires (decide (capacity ≥ (1 : Int)))
+      let _ := Libraries.passta.pyPassRequires (decide (PastaLean.pyLen grid ≥ (1 : Int)))
       let _ :=
         Libraries.passta.pyPassRequires
           (PastaLean.pyAll
@@ -169,10 +194,18 @@ def max_fill'rn := fun (grid : List (List Int)) ↦ fun (capacity : Int) ↦
       -- The point of the function is to compute the total number of bucket trips, which is
       -- the sum of trips for each well. The number of trips for a single well is the
       -- ceiling of its water units divided by the bucket capacity.
+      -- The same statement, division-free: `capacity * Result()` brackets the total water from
+      -- above, and overshoots by strictly less than one bucket per well. This is what "ceiling,
+      -- summed per row" actually means, and it is stated without a single division.
+      -- No trip is wasted: with capacity >= 1 you never need more trips than units of water.
       let mut ans : Int := (0 : Int)
       for l in (PastaLean.pyIter grid)do
         -- The running total is always non-negative, as each term added is non-negative.
         let _ := Libraries.passta.pyPassInvariant (decide (ans ≥ (0 : Int)))
+        -- Accumulator form of the upper bound, over the wells emptied so far.
+        let _ :=
+          Libraries.passta.pyPassInvariant
+            (decide (ans ≤ PastaLean.pySum ((PastaLean.pyIter grid).map fun r => PastaLean.pySum r)))
         ans := ans +ₚ Libraries.math.pyMathCeil (PastaLean.pyFloat (PastaLean.pySum l) /ₚ capacity)
       -- After the loop, `ans` holds the final sum, which is exactly the property
       -- required by the postcondition.

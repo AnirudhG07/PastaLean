@@ -70,50 +70,43 @@ attribute [simp, taste_ingr] _sorted_list_sum'cmp
 def sorted_list_sum := fun lst ↦
   (do
     let _ := ()
-    let _ :=
-      PastaLean.pyUnsupported
-        "degraded Return: Error in code generation function PastaLean.returnSyntax for key 'Return' and syntax category 'doEle" :
-    Id _)
+    let __py_ret_1 :=
+      PastaLean.pySortByCmp _sorted_list_sum'cmp false
+        (PastaLean.pyList (PastaLean.pyFilter (fun s ↦ PastaLean.pyLen s %ₚ (2 : Int) == (0 : Int)) lst))
+    return __py_ret_1 : Id _)
 
 @[spec]
 theorem sorted_list_sum_spec :
     ⦃⌜True⌝⦄ sorted_list_sum lst ⦃⇓result =>
-      ⌜(((PastaLean.pyAll ((PastaLean.pyIter result).map fun s => PastaLean.pyLen s %ₚ (2 : Int) == (0 : Int)) ∧
-                PastaLean.pyAll ((PastaLean.pyIter result).map fun s => PastaLean.pyContains lst s)) ∧
-              PastaLean.pyAll
-                ((List.filter (fun s => PastaLean.pyLen s %ₚ (2 : Int) = (0 : Int)) (PastaLean.pyIter lst)).map
-                  fun s => PastaLean.pyContains result s)) ∧
+      ⌜((((∀ s ∈ PastaLean.pyIter result, PastaLean.pyLen s %ₚ (2 : Int) = (0 : Int)) ∧
+                ∀ s ∈ PastaLean.pyIter result, PastaLean.pyContains lst s) ∧
+              ∀ s ∈ PastaLean.pyIter lst, PastaLean.pyLen s %ₚ (2 : Int) = (0 : Int) → PastaLean.pyContains result s) ∧
             PastaLean.pyLen result =
               PastaLean.pySum
                 ((List.filter (fun s => PastaLean.pyLen s %ₚ (2 : Int) = (0 : Int)) (PastaLean.pyIter lst)).map
                   fun s => (1 : Int))) ∧
-          PastaLean.pyAll
-            ((PastaLean.pyRange (PastaLean.pyLen result -ₚ (1 : Int))).map fun i =>
-              decide (PastaLean.pyLen result⦋i⦌ < PastaLean.pyLen result⦋i +ₚ (1 : Int)⦌) ||
-                PastaLean.pyLen result⦋i⦌ == PastaLean.pyLen result⦋i +ₚ (1 : Int)⦌ &&
-                  decide (result⦋i⦌ ≤ result⦋i +ₚ (1 : Int)⦌))⌝⦄ :=
+          ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen result -ₚ (1 : Int))),
+            PastaLean.pyLen result⦋i⦌ < PastaLean.pyLen result⦋i +ₚ (1 : Int)⦌ ∨
+              PastaLean.pyLen result⦋i⦌ = PastaLean.pyLen result⦋i +ₚ (1 : Int)⦌ ∧
+                result⦋i⦌ ≤ result⦋i +ₚ (1 : Int)⦌⌝⦄ :=
   by
   mvcgen [sorted_list_sum, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  sorry
+  taste?
   all_goals sorry
 
 theorem sorted_list_sum_correct :
     ∀ lst,
       let result := (sorted_list_sum lst).run;
-      (((PastaLean.pyAll ((PastaLean.pyIter result).map fun s => PastaLean.pyLen s %ₚ (2 : Int) == (0 : Int)) ∧
-              PastaLean.pyAll ((PastaLean.pyIter result).map fun s => PastaLean.pyContains lst s)) ∧
-            PastaLean.pyAll
-              ((List.filter (fun s => PastaLean.pyLen s %ₚ (2 : Int) = (0 : Int)) (PastaLean.pyIter lst)).map fun s =>
-                PastaLean.pyContains result s)) ∧
+      ((((∀ s ∈ PastaLean.pyIter result, PastaLean.pyLen s %ₚ (2 : Int) = (0 : Int)) ∧
+              ∀ s ∈ PastaLean.pyIter result, PastaLean.pyContains lst s) ∧
+            ∀ s ∈ PastaLean.pyIter lst, PastaLean.pyLen s %ₚ (2 : Int) = (0 : Int) → PastaLean.pyContains result s) ∧
           PastaLean.pyLen result =
             PastaLean.pySum
               ((List.filter (fun s => PastaLean.pyLen s %ₚ (2 : Int) = (0 : Int)) (PastaLean.pyIter lst)).map fun s =>
                 (1 : Int))) ∧
-        PastaLean.pyAll
-          ((PastaLean.pyRange (PastaLean.pyLen result -ₚ (1 : Int))).map fun i =>
-            decide (PastaLean.pyLen result⦋i⦌ < PastaLean.pyLen result⦋i +ₚ (1 : Int)⦌) ||
-              PastaLean.pyLen result⦋i⦌ == PastaLean.pyLen result⦋i +ₚ (1 : Int)⦌ &&
-                decide (result⦋i⦌ ≤ result⦋i +ₚ (1 : Int)⦌)) :=
+        ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen result -ₚ (1 : Int))),
+          PastaLean.pyLen result⦋i⦌ < PastaLean.pyLen result⦋i +ₚ (1 : Int)⦌ ∨
+            PastaLean.pyLen result⦋i⦌ = PastaLean.pyLen result⦋i +ₚ (1 : Int)⦌ ∧ result⦋i⦌ ≤ result⦋i +ₚ (1 : Int)⦌ :=
   by
   intro lst
   exact sorted_list_sum_spec True.intro
@@ -123,32 +116,29 @@ private def _sorted_list_sum'cmp'rn := fun (s : String) ↦ fun (t : String) ↦
   else if s < t then -(1 : Int) else (1 : Int)
 
 def sorted_list_sum'rn := fun lst ↦
-  Id.run do
-    /-
-    Write a function that accepts a list of strings as a parameter,
-        deletes the strings that have odd lengths from it,
-        and returns the resulted list with a sorted order,
-        The list is always a list of strings and never an array of numbers,
-        and it may contain duplicates.
-        The order of the list should be ascending by length of each word, and you
-        should return the list sorted by that rule.
-        If two words have the same length, sort the list alphabetically.
-        The function should return a list of strings in sorted order.
-        You may assume that all words will have the same length.
-        For example:
-        assert list_sort(["aa", "a", "aaa"]) => ["aa"]
-        assert list_sort(["ab", "a", "aaa", "cd"]) => ["ab", "cd"]
-        
-    -/
-    -- The result contains only strings of even length.
-    -- The result's elements all originate from the input list.
-    -- The result contains all of the even-length strings from the input list.
-    -- The number of elements in the result is the number of even-length strings
-    -- in the input, preserving multiplicity.
-    -- The result is sorted first by string length, then alphabetically.
-    let _ := ()
-    let _ :=
-      PastaLean.pyUnsupported
-        "degraded Return: Error in code generation function PastaLean.returnSyntax for key 'Return' and syntax category 'doEle"
+  /-
+  Write a function that accepts a list of strings as a parameter,
+      deletes the strings that have odd lengths from it,
+      and returns the resulted list with a sorted order,
+      The list is always a list of strings and never an array of numbers,
+      and it may contain duplicates.
+      The order of the list should be ascending by length of each word, and you
+      should return the list sorted by that rule.
+      If two words have the same length, sort the list alphabetically.
+      The function should return a list of strings in sorted order.
+      You may assume that all words will have the same length.
+      For example:
+      assert list_sort(["aa", "a", "aaa"]) => ["aa"]
+      assert list_sort(["ab", "a", "aaa", "cd"]) => ["ab", "cd"]
+      
+  -/
+  -- The result contains only strings of even length.
+  -- The result's elements all originate from the input list.
+  -- The result contains all of the even-length strings from the input list.
+  -- The number of elements in the result is the number of even-length strings
+  -- in the input, preserving multiplicity.
+  -- The result is sorted first by string length, then alphabetically.
+  PastaLean.pySortByCmp _sorted_list_sum'cmp false
+    (PastaLean.pyList (PastaLean.pyFilter (fun s ↦ PastaLean.pyLen s %ₚ (2 : Int) == (0 : Int)) lst))
 
 end PastaBench.humaneval.SortedListSum

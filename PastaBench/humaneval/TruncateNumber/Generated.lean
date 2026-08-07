@@ -37,15 +37,15 @@ def truncate_number(number: float) -> float:
 
 namespace PastaBench.humaneval.TruncateNumber
 
-def truncate_number := fun (number : Rat) ↦ (number -ₚ PastaLean.pyInt number : Rat)
+def truncate_number := fun (number : Rat) ↦ (show Rat from number -ₚ PastaLean.pyInt number)
 
 attribute [simp] truncate_number
 
 @[taste_ingr]
 theorem truncate_number_correct :
     ∀ (number : Rat), number ≥ (0 : Int) → (0 : Int) ≤ truncate_number number ∧ truncate_number number < (1 : Int) := by
-  intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
 
-def truncate_number'rn := fun (number : Float) ↦ (number -ₚ PastaLean.pyInt number : Float)
+def truncate_number'rn := fun (number : Float) ↦ (show Float from number -ₚ PastaLean.pyInt number)
 
 end PastaBench.humaneval.TruncateNumber

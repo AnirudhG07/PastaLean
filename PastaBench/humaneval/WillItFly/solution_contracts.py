@@ -18,8 +18,9 @@ def will_it_fly(q,w):
     will_it_fly([3], 5) ➞ True
     # 3 is less than the maximum possible weight, and it's balanced.
     '''
-    Requires(all(x >= 0 for x in q))
-    Requires(w >= 0)
-    Ensures(Result() == (q == q[::-1] and sum(q) <= w))
+    # The point: "flies" == palindromic AND within the weight budget. Stated index-wise so the
+    # palindrome condition is a real quantified property rather than a reversal of the list.
+    # (No sign restriction on q: the recorded inputs include negative elements.)
+    Ensures(Result() == (all(q[i] == q[len(q) - 1 - i] for i in range(len(q))) and sum(q) <= w))
 
     return q == q[::-1] and sum(q) <= w

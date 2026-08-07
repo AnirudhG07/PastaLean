@@ -65,7 +65,7 @@ theorem specialFilter_spec : ⦃⌜True⌝⦄ specialFilter nums ⦃⇓ans => �
   try
     mvcgen [specialFilter, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓⟨cur, ans⟩ => ⌜ans ≥ (0 : Int) ∧ ans ≤ PastaLean.pyLen nums⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry; simp_all (config := { zetaDelta := true }) [taste_ingr]
+  taste?
   all_goals sorry
 
 theorem specialFilter_correct :

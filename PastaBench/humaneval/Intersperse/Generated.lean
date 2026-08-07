@@ -83,7 +83,7 @@ theorem intersperse_spec :
     · ⇓cur =>
       ⌜let i := (cur.prefix.length : Int);
         ((0 : Int) ≤ i ∧ i ≤ PastaLean.pyLen numbers) ∧ PastaLean.pyLen res = (2 : Int) *ₚ i⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem intersperse_correct :

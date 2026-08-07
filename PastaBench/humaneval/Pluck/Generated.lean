@@ -30,20 +30,35 @@ def pluck(arr):
     The plucked node should be returned in a list, [ smalest_value, its index ],
     If there are no even values or the given array is empty, return [].
     """
+    # THE POINT, as an exhaustive case split. Empty result EXACTLY when no even value exists (the
+    # second disjunct forces a length-2 result otherwise). Otherwise the pair is
+    # [value, index] where the value is even, is <= every even value in arr (minimality), sits at
+    # that index, and no EARLIER index carries it (first among ties).
     Ensures(
         (Result() == [] and all(val % 2 == 1 for val in arr))
         or (
             len(Result()) == 2
             and Result()[0] % 2 == 0
-            and Result()[0] == min(x for x in arr if x % 2 == 0)
+            and 0 <= Result()[1]
+            and Result()[1] < len(arr)
             and arr[Result()[1]] == Result()[0]
+            and all(x >= Result()[0] for x in arr if x % 2 == 0)
             and all(arr[k] != Result()[0] for k in range(Result()[1]))
         )
     )
 
     if all(val % 2 == 1 for val in arr): return []
     min_even = min(filter(lambda x: x % 2 == 0, arr))
+    # `min_even` is an even element of arr and no even element is smaller — the value half of the
+    # postcondition, established before the scan that supplies the index half.
+    Assert(min_even % 2 == 0)
+    Assert(min_even in arr)
+    Assert(all(x >= min_even for x in arr if x % 2 == 0))
     for i in range(len(arr)):
+        Invariant(0 <= i)
+        Invariant(i <= len(arr))
+        # Still scanning means every earlier position missed, so the first hit is the smallest index.
+        Invariant(all(arr[j] != min_even for j in range(i)))
         if arr[i] == min_even:
             return [min_even, i]
 -/
@@ -52,14 +67,25 @@ namespace PastaBench.humaneval.Pluck
 
 def pluck := fun (arr : PyAny) ↦
   (do
-    if h_1 :
-        PastaLean.pyTruthy (PastaLean.pyAll ((PastaLean.pyIter arr).map fun val => val %ₚ (2 : Int) == (1 : Int))) then 
+    if h_1 : PastaLean.pyTruthy (∀ val ∈ PastaLean.pyIter arr, val %ₚ (2 : Int) = (1 : Int)) then 
       let __py_ret_1 := []
       return __py_ret_1
     else
       let _ := ()
     let mut min_even := PastaLean.pyMin (PastaLean.pyFilter (fun x ↦ x %ₚ (2 : Int) == (0 : Int)) arr)
+    let _ := Libraries.passta.pyPassAssert (min_even %ₚ (2 : Int) == (0 : Int))
+    let _ := Libraries.passta.pyPassAssert (PastaLean.pyContains arr min_even)
+    let _ :=
+      Libraries.passta.pyPassAssert
+        (PastaLean.pyAll
+          ((List.filter (fun x => x %ₚ (2 : Int) = (0 : Int)) (PastaLean.pyIter arr)).map fun x =>
+            decide (x ≥ min_even)))
     for i in (PastaLean.pyRange (PastaLean.pyLen arr))do
+      let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i))
+      let _ := Libraries.passta.pyPassInvariant (decide (i ≤ PastaLean.pyLen arr))
+      -- Still scanning means every earlier position missed, so the first hit is the smallest index.
+      let _ :=
+        Libraries.passta.pyPassInvariant (PastaLean.pyAll ((PastaLean.pyRange i).map fun j => arr⦋j⦌ != min_even))
       if h_2 : arr⦋i⦌ = min_even then 
         let __py_ret_1 := [min_even, i]
         return __py_ret_1
@@ -70,38 +96,30 @@ def pluck := fun (arr : PyAny) ↦
 @[spec]
 theorem pluck_spec :
     ⦃⌜True⌝⦄ pluck arr ⦃⇓result =>
-      ⌜result = [] ∧
-            PastaLean.pyTruthy (PastaLean.pyAll ((PastaLean.pyIter arr).map fun val => val %ₚ (2 : Int) == (1 : Int))) =
-              true ∨
-          (((PastaLean.pyLen result = (2 : Int) ∧ result⦋(0 : Int)⦌ %ₚ (2 : Int) = (0 : Int)) ∧
-                result⦋(0 : Int)⦌ =
-                  PastaLean.pyMin
-                    ((List.filter (fun x => x %ₚ (2 : Int) = (0 : Int)) (PastaLean.pyIter arr)).map fun x => x)) ∧
-              arr⦋result⦋(1 : Int)⦌⦌ = result⦋(0 : Int)⦌) ∧
-            PastaLean.pyTruthy
-                (PastaLean.pyAll ((PastaLean.pyRange result⦋(1 : Int)⦌).map fun k => arr⦋k⦌ != result⦋(0 : Int)⦌)) =
-              true⌝⦄ :=
+      ⌜(result = [] ∧ ∀ val ∈ PastaLean.pyIter arr, val %ₚ (2 : Int) = (1 : Int)) ∨
+          (((((PastaLean.pyLen result = (2 : Int) ∧ result⦋(0 : Int)⦌ %ₚ (2 : Int) = (0 : Int)) ∧
+                    (0 : Int) ≤ result⦋(1 : Int)⦌) ∧
+                  result⦋(1 : Int)⦌ < PastaLean.pyLen arr) ∧
+                arr⦋result⦋(1 : Int)⦌⦌ = result⦋(0 : Int)⦌) ∧
+              ∀ x ∈ PastaLean.pyIter arr, x %ₚ (2 : Int) = (0 : Int) → x ≥ result⦋(0 : Int)⦌) ∧
+            ∀ k ∈ PastaLean.pyIter (PastaLean.pyRange result⦋(1 : Int)⦌), arr⦋k⦌ ≠ result⦋(0 : Int)⦌⌝⦄ :=
   by
   try
     mvcgen [pluck, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · Invariant.withEarlyReturn (onReturn := fun _ _ => ⌜True⌝) (onContinue := fun _ _ => ⌜True⌝)
-  grind; grind; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry; sorry
+  taste?
   all_goals sorry
 
 theorem pluck_correct :
     ∀ (arr : PyAny),
       let result := (pluck arr).run;
-      result = [] ∧
-          PastaLean.pyTruthy (PastaLean.pyAll ((PastaLean.pyIter arr).map fun val => val %ₚ (2 : Int) == (1 : Int))) =
-            true ∨
-        (((PastaLean.pyLen result = (2 : Int) ∧ result⦋(0 : Int)⦌ %ₚ (2 : Int) = (0 : Int)) ∧
-              result⦋(0 : Int)⦌ =
-                PastaLean.pyMin
-                  ((List.filter (fun x => x %ₚ (2 : Int) = (0 : Int)) (PastaLean.pyIter arr)).map fun x => x)) ∧
-            arr⦋result⦋(1 : Int)⦌⦌ = result⦋(0 : Int)⦌) ∧
-          PastaLean.pyTruthy
-              (PastaLean.pyAll ((PastaLean.pyRange result⦋(1 : Int)⦌).map fun k => arr⦋k⦌ != result⦋(0 : Int)⦌)) =
-            true :=
+      (result = [] ∧ ∀ val ∈ PastaLean.pyIter arr, val %ₚ (2 : Int) = (1 : Int)) ∨
+        (((((PastaLean.pyLen result = (2 : Int) ∧ result⦋(0 : Int)⦌ %ₚ (2 : Int) = (0 : Int)) ∧
+                  (0 : Int) ≤ result⦋(1 : Int)⦌) ∧
+                result⦋(1 : Int)⦌ < PastaLean.pyLen arr) ∧
+              arr⦋result⦋(1 : Int)⦌⦌ = result⦋(0 : Int)⦌) ∧
+            ∀ x ∈ PastaLean.pyIter arr, x %ₚ (2 : Int) = (0 : Int) → x ≥ result⦋(0 : Int)⦌) ∧
+          ∀ k ∈ PastaLean.pyIter (PastaLean.pyRange result⦋(1 : Int)⦌), arr⦋k⦌ ≠ result⦋(0 : Int)⦌ :=
   by
   intro arr
   exact pluck_spec True.intro
@@ -120,16 +138,31 @@ def pluck'rn := fun (arr : PyAny) ↦
           If there are no even values or the given array is empty, return [].
           
       -/
-      if h_1 :
-          PastaLean.pyTruthy
-            (PastaLean.pyAll ((PastaLean.pyIter arr).map fun val => val %ₚ (2 : Int) == (1 : Int))) then
-        
+      -- THE POINT, as an exhaustive case split. Empty result EXACTLY when no even value exists (the
+      -- second disjunct forces a length-2 result otherwise). Otherwise the pair is
+      -- [value, index] where the value is even, is <= every even value in arr (minimality), sits at
+      -- that index, and no EARLIER index carries it (first among ties).
+      if h_1 : PastaLean.pyTruthy (∀ val ∈ PastaLean.pyIter arr, val %ₚ (2 : Int) == (1 : Int)) then 
         let __py_ret_1 := []
         return __py_ret_1
       else
         let _ := ()
       let mut min_even := PastaLean.pyMin (PastaLean.pyFilter (fun x ↦ x %ₚ (2 : Int) == (0 : Int)) arr)
+      -- `min_even` is an even element of arr and no even element is smaller — the value half of the
+      -- postcondition, established before the scan that supplies the index half.
+      let _ := Libraries.passta.pyPassAssert (min_even %ₚ (2 : Int) == (0 : Int))
+      let _ := Libraries.passta.pyPassAssert (PastaLean.pyContains arr min_even)
+      let _ :=
+        Libraries.passta.pyPassAssert
+          (PastaLean.pyAll
+            ((List.filter (fun x => x %ₚ (2 : Int) == (0 : Int)) (PastaLean.pyIter arr)).map fun x =>
+              decide (x ≥ min_even)))
       for i in (PastaLean.pyRange (PastaLean.pyLen arr))do
+        let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i))
+        let _ := Libraries.passta.pyPassInvariant (decide (i ≤ PastaLean.pyLen arr))
+        -- Still scanning means every earlier position missed, so the first hit is the smallest index.
+        let _ :=
+          Libraries.passta.pyPassInvariant (PastaLean.pyAll ((PastaLean.pyRange i).map fun j => arr⦋j⦌ != min_even))
         if h_2 : arr⦋i⦌ == min_even then 
           let __py_ret_1 := [min_even, i]
           return __py_ret_1

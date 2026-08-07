@@ -163,7 +163,7 @@ theorem valid_date_spec :
                     (1 : Int)⦌)⌝⦄ :=
   by
   mvcgen [valid_date, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  sorry
+  taste?
   all_goals sorry
 
 theorem valid_date_correct :

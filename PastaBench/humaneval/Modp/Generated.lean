@@ -36,12 +36,19 @@ def modp(n: int, p: int):
     Requires(n >= 0)
     Requires(p > 0)
     n_0 = n
-    Ensures(Result() == pow(2, n_0, p))
+    # THE POINT: the result IS 2**n reduced mod p — stated division-free as "canonical residue in
+    # [0, p) that is congruent to 2**n". (`pow(2, n_0, p)` is not usable here: the runtime's modular
+    # `pow` is a fuelled square-and-multiply with no equational theory, so a spec written with it is
+    # unprovable rather than merely hard.)
+    Ensures(0 <= Result())
+    Ensures(Result() < p)
+    Ensures((Result() - 2 ** n_0) % p == 0)
 
     res, x = 1, 2
     while n != 0:
         Invariant(n >= 0)
-        Invariant((res * pow(x, n)) % p == pow(2, n_0, p))
+        # Square-and-multiply's carried equation: res * x**n stays congruent to 2**n_0 mod p.
+        Invariant((res * x ** n - 2 ** n_0) % p == 0)
         Decreases(n)
 
         if n % 2 == 1:
@@ -49,7 +56,6 @@ def modp(n: int, p: int):
         x = x * x % p
         n //= 2
 
-    Assert(res % p == pow(2, n_0, p))
     return res % p
 -/
 
@@ -65,7 +71,8 @@ def modp := fun (n : Int) ↦ fun (p : Int) ↦
     let mut x : Int := Prod.snd __unpack_pair_1
     while (n ≠ (0 : Int)) do
       let _ := Libraries.passta.pyPassInvariant (decide (n ≥ (0 : Int)))
-      let _ := Libraries.passta.pyPassInvariant (res *ₚ PastaLean.pyPow x n %ₚ p == PastaLean.pyPow (2 : Int) n_0 p)
+      -- Square-and-multiply's carried equation: res * x**n stays congruent to 2**n_0 mod p.
+      let _ := Libraries.passta.pyPassInvariant ((res *ₚ x ^ₚ n -ₚ (2 : Int) ^ₚ n_0) %ₚ p == (0 : Int))
       let _ := Libraries.passta.pyPassDecreases n
       if h_1 : n %ₚ (2 : Int) = (1 : Int) then 
         res := res *ₚ x %ₚ p
@@ -73,15 +80,16 @@ def modp := fun (n : Int) ↦ fun (p : Int) ↦
         let _ := ()
       x := x *ₚ x %ₚ p
       n := PastaLean.pyFloorDiv n (2 : Int)
-    let _ := Libraries.passta.pyPassAssert (res %ₚ p == PastaLean.pyPow (2 : Int) n_0 p)
     let __py_ret_1 := res %ₚ p
     return __py_ret_1 : Id _)
 
 @[spec]
-theorem modp_spec : ⦃⌜n ≥ (0 : Int) ∧ p > (0 : Int)⌝⦄ modp n p ⦃⇓result => ⌜result = PastaLean.pyPow (2 : Int) n p⌝⦄ :=
+theorem modp_spec :
+    ⦃⌜n ≥ (0 : Int) ∧ p > (0 : Int)⌝⦄ modp n p ⦃⇓result =>
+      ⌜((0 : Int) ≤ result ∧ result < p) ∧ (result -ₚ (2 : Int) ^ₚ n) %ₚ p = (0 : Int)⌝⦄ :=
   by
   mvcgen [modp, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  taste?
   all_goals sorry
 
 theorem modp_correct :
@@ -89,7 +97,7 @@ theorem modp_correct :
       ∀ (p : Int),
         n ≥ (0 : Int) ∧ p > (0 : Int) →
           let result := (modp n p).run;
-          result = PastaLean.pyPow (2 : Int) n p :=
+          ((0 : Int) ≤ result ∧ result < p) ∧ (result -ₚ (2 : Int) ^ₚ n) %ₚ p = (0 : Int) :=
   by
   intro n p hpre
   exact modp_spec hpre
@@ -115,13 +123,18 @@ def modp'rn := fun (n : Int) ↦ fun (p : Int) ↦
       let _ := Libraries.passta.pyPassRequires (decide (n ≥ (0 : Int)))
       let _ := Libraries.passta.pyPassRequires (decide (p > (0 : Int)))
       let mut n_0 : Int := n
+      -- THE POINT: the result IS 2**n reduced mod p — stated division-free as "canonical residue in
+      -- [0, p) that is congruent to 2**n". (`pow(2, n_0, p)` is not usable here: the runtime's modular
+      -- `pow` is a fuelled square-and-multiply with no equational theory, so a spec written with it is
+      -- unprovable rather than merely hard.)
       let __unpack_value_1 := ((1 : Int), (2 : Int))
       let __unpack_pair_1 := __unpack_value_1
       let mut res : Int := Prod.fst __unpack_pair_1
       let mut x : Int := Prod.snd __unpack_pair_1
       while (n != (0 : Int)) do
         let _ := Libraries.passta.pyPassInvariant (decide (n ≥ (0 : Int)))
-        let _ := Libraries.passta.pyPassInvariant (res *ₚ PastaLean.pyPow x n %ₚ p == PastaLean.pyPow (2 : Int) n_0 p)
+        -- Square-and-multiply's carried equation: res * x**n stays congruent to 2**n_0 mod p.
+        let _ := Libraries.passta.pyPassInvariant ((res *ₚ x ^ₚ n -ₚ (2 : Int) ^ₚ n_0) %ₚ p == (0 : Int))
         let _ := Libraries.passta.pyPassDecreases n
         if h_1 : n %ₚ (2 : Int) == (1 : Int) then 
           res := res *ₚ x %ₚ p
@@ -129,7 +142,6 @@ def modp'rn := fun (n : Int) ↦ fun (p : Int) ↦
           let _ := ()
         x := x *ₚ x %ₚ p
         n := PastaLean.pyFloorDiv n (2 : Int)
-      let _ := Libraries.passta.pyPassAssert (res %ₚ p == PastaLean.pyPow (2 : Int) n_0 p)
       let __py_ret_1 := res %ₚ p
       return __py_ret_1)
 

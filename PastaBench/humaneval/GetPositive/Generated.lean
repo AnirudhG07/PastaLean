@@ -41,12 +41,9 @@ attribute [simp] get_positive
 @[taste_ingr]
 theorem get_positive_correct :
     ∀ (l : List Int),
-      PastaLean.pyTruthy (PastaLean.pyAll ((PastaLean.pyIter (get_positive l)).map fun x => decide (x > (0 : Int)))) =
-          true ∧
-        PastaLean.pyTruthy
-            (PastaLean.pyAll ((PastaLean.pyIter (get_positive l)).map fun x => PastaLean.pyContains l x)) =
-          true :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+      (∀ x ∈ PastaLean.pyIter (get_positive l), x > (0 : Int)) ∧
+        ∀ x ∈ PastaLean.pyIter (get_positive l), PastaLean.pyContains l x :=
+  by taste?
 
 def get_positive'rn := fun (l : List Int) ↦ PastaLean.pyList (PastaLean.pyFilter (fun x ↦ decide (x > (0 : Int))) l)
 

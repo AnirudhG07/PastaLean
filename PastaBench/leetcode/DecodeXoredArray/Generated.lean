@@ -73,17 +73,15 @@ def decode := fun (encoded : List Int) ↦ fun (first : Int) ↦
 theorem decode_spec :
     ⦃⌜True⌝⦄ decode encoded first ⦃⇓ans =>
       ⌜PastaLean.pyLen ans = PastaLean.pyLen encoded +ₚ (1 : Int) ∧
-          PastaLean.pyAll
-            ((PastaLean.pyRange (PastaLean.pyLen encoded)).map fun i =>
-              PastaLean.pyBitXor ans⦋i⦌ ans⦋i +ₚ (1 : Int)⦌ == encoded⦋i⦌)⌝⦄ :=
+          ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen encoded)),
+            PastaLean.pyBitXor ans⦋i⦌ ans⦋i +ₚ (1 : Int)⦌ = encoded⦋i⦌⌝⦄ :=
   by
   try
     mvcgen [decode, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓cur =>
       ⌜PastaLean.pyLen ans ≤ PastaLean.pyLen encoded +ₚ (1 : Int) ∧
-          PastaLean.pyAll
-            ((PastaLean.pyRange (PastaLean.pyLen ans -ₚ (1 : Int))).map fun j =>
-              PastaLean.pyBitXor ans⦋j⦌ ans⦋j +ₚ (1 : Int)⦌ == encoded⦋j⦌)⌝
+          ∀ j ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen ans -ₚ (1 : Int))),
+            PastaLean.pyBitXor ans⦋j⦌ ans⦋j +ₚ (1 : Int)⦌ = encoded⦋j⦌⌝
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
@@ -92,9 +90,8 @@ theorem decode_correct :
       ∀ (first : Int),
         let ans := (decode encoded first).run;
         PastaLean.pyLen ans = PastaLean.pyLen encoded +ₚ (1 : Int) ∧
-          PastaLean.pyAll
-            ((PastaLean.pyRange (PastaLean.pyLen encoded)).map fun i =>
-              PastaLean.pyBitXor ans⦋i⦌ ans⦋i +ₚ (1 : Int)⦌ == encoded⦋i⦌) :=
+          ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen encoded)),
+            PastaLean.pyBitXor ans⦋i⦌ ans⦋i +ₚ (1 : Int)⦌ = encoded⦋i⦌ :=
   by
   intro encoded first
   exact decode_spec True.intro

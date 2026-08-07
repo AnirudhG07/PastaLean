@@ -34,21 +34,69 @@ def minPath(grid, k):
     Requires(k >= 1)
     Requires(len(grid) >= 2)
     Requires(all(len(row) == len(grid) for row in grid))
+    # "every integer in [1, N*N] appears exactly once" — in particular 1 is somewhere on the
+    # grid, which is what makes the cell found below well defined.
+    Requires(all(all(v >= 1 and v <= len(grid) * len(grid) for v in row) for row in grid))
+    Requires(any(1 in row for row in grid))
 
     Ensures(len(Result()) == k)
+    # The optimal path oscillates between the cell holding 1 and its cheapest neighbour.
     Ensures(all(Result()[i] == 1 for i in range(0, k, 2)))
     Ensures(all(Result()[i] > 1 for i in range(1, k, 2)))
+    Ensures(k < 2 or all(Result()[i] == Result()[1] for i in range(1, k, 2)))
+    # Every value emitted is genuinely a value on the grid — the path never invents a cell.
+    Ensures(all(any(v in row for row in grid) for v in Result()))
+    # The real content: the odd entry is the MINIMUM over the edge-neighbours of the 1-cell,
+    # and is attained by one of them. `len(grid)` is used instead of `N` because `N` is bound
+    # below this point.
+    Ensures(k < 2 or all(
+        grid[t // len(grid)][t % len(grid)] != 1
+        or all(
+            Result()[1] <= grid[u // len(grid)][u % len(grid)]
+            for u in range(len(grid) * len(grid))
+            if (t // len(grid) == u // len(grid)
+                and (t % len(grid) == u % len(grid) + 1
+                     or u % len(grid) == t % len(grid) + 1))
+            or (t % len(grid) == u % len(grid)
+                and (t // len(grid) == u // len(grid) + 1
+                     or u // len(grid) == t // len(grid) + 1))
+        )
+        for t in range(len(grid) * len(grid))
+    ))
+    Ensures(k < 2 or any(
+        grid[t // len(grid)][t % len(grid)] == 1
+        and any(
+            Result()[1] == grid[u // len(grid)][u % len(grid)]
+            for u in range(len(grid) * len(grid))
+            if (t // len(grid) == u // len(grid)
+                and (t % len(grid) == u % len(grid) + 1
+                     or u % len(grid) == t % len(grid) + 1))
+            or (t % len(grid) == u % len(grid)
+                and (t // len(grid) == u // len(grid) + 1
+                     or u // len(grid) == t // len(grid) + 1))
+        )
+        for t in range(len(grid) * len(grid))
+    ))
 
     N = len(grid)
     x, y = 0, 0
     for i in range(N):
-        Invariant(0 <= i <= N)
+        Invariant(0 <= i)
+        Invariant(i <= N)
+        # Once a 1 has been seen, (x, y) points at it and stays there.
+        Invariant(all(all(grid[r][c] != 1 for c in range(N)) for r in range(i)) or grid[x][y] == 1)
         for j in range(N):
-            Invariant(0 <= i < N)
-            Invariant(0 <= j <= N)
+            Invariant(0 <= i)
+            Invariant(i < N)
+            Invariant(0 <= j)
+            Invariant(j <= N)
+            Invariant(0 <= x)
+            Invariant(x < N)
+            Invariant(0 <= y)
+            Invariant(y < N)
             if grid[i][j] == 1:
                 x, y = i, j
-    
+
     Assert(0 <= x < N)
     Assert(0 <= y < N)
     Assert(grid[x][y] == 1)

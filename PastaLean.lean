@@ -4,6 +4,6 @@ import PastaLean.Basic
 import PastaLean.PyGens
 import Libraries
 import Mathlib
-import PastaLean.PyAPI.UnsupportedLinter
+import PastaLean.PyAPI.Linters
 import PastaLean.PyAPI.PyAnyProof
 import PastaLean.PyVerify.AssertTactic

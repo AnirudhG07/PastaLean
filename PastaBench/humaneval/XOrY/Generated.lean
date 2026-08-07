@@ -28,19 +28,20 @@ def x_or_y(n, x, y):
     for x_or_y(15, 8, 5) == 5
     
     """
-    Requires(n >= 0)
+    # The point: the choice between x and y is governed exactly by primality of n, stated as
+    # trial division over the full range(2, n) (no sqrt cutoff, no float reasoning). The
+    # disjunctive form is deliberate: it stays correct when x == y.
+    # No `Requires` on n — the recorded inputs include n < 0, which is simply "not prime".
     Ensures(
         (
-            (n >= 2 and all(n % d != 0 for d in range(2, int(n**0.5) + 1))) and Result() == x
+            (n >= 2 and all(n % d != 0 for d in range(2, n))) and Result() == x
         ) or
         (
-            not (n >= 2 and all(n % d != 0 for d in range(2, int(n**0.5) + 1))) and Result() == y
+            not (n >= 2 and all(n % d != 0 for d in range(2, n))) and Result() == y
         )
     )
 
     def is_prime(a):
-        Requires(a >= 0)
-        Ensures(Result() == (a >= 2 and all(a % d != 0 for d in range(2, int(a**0.5) + 1))))
         return not (a < 2 or any(a % x == 0 for x in range(2, int(a ** 0.5) + 1)))
     return x if is_prime(n) else y
 -/
@@ -56,19 +57,6 @@ private noncomputable def _x_or_y'is_prime := fun (a : Int) ↦
 
 attribute [simp] _x_or_y'is_prime
 
-@[taste_ingr]
-theorem _x_or_y'is_prime_spec :
-    ∀ (a : Int),
-      a ≥ (0 : Int) →
-        _x_or_y'is_prime a =
-          (a ≥ (2 : Int) ∧
-            PastaLean.pyTruthy
-                (PastaLean.pyAll
-                  ((PastaLean.pyRange (PastaLean.pyInt (a ^ₚ (0.5 : Rat)) +ₚ (1 : Int)) (2 : Int)).map fun d =>
-                    a %ₚ d != (0 : Int))) =
-              true) :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
-
 def x_or_y := fun (n : Int) ↦ fun (x : Int) ↦ fun y ↦ if PastaLean.pyTruthy (_x_or_y'is_prime n) then x else y
 
 attribute [simp] x_or_y
@@ -78,22 +66,11 @@ theorem x_or_y_correct :
     ∀ (n : Int),
       ∀ (x : Int),
         ∀ y,
-          n ≥ (0 : Int) →
-            (n ≥ (2 : Int) ∧
-                  PastaLean.pyTruthy
-                      (PastaLean.pyAll
-                        ((PastaLean.pyRange (PastaLean.pyInt (n ^ₚ (0.5 : Rat)) +ₚ (1 : Int)) (2 : Int)).map fun d =>
-                          n %ₚ d != (0 : Int))) =
-                    true) ∧
-                x_or_y n x y = x ∨
-              ¬(n ≥ (2 : Int) ∧
-                    PastaLean.pyTruthy
-                        (PastaLean.pyAll
-                          ((PastaLean.pyRange (PastaLean.pyInt (n ^ₚ (0.5 : Rat)) +ₚ (1 : Int)) (2 : Int)).map fun d =>
-                            n %ₚ d != (0 : Int))) =
-                      true) ∧
-                x_or_y n x y = y :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+          (n ≥ (2 : Int) ∧ ∀ d ∈ PastaLean.pyIter (PastaLean.pyRange n (2 : Int)), n %ₚ d ≠ (0 : Int)) ∧
+              x_or_y n x y = x ∨
+            ¬(n ≥ (2 : Int) ∧ ∀ d ∈ PastaLean.pyIter (PastaLean.pyRange n (2 : Int)), n %ₚ d ≠ (0 : Int)) ∧
+              x_or_y n x y = y :=
+  by taste?
 
 private def _x_or_y'is_prime'rn := fun (a : Int) ↦
   !if PastaLean.pyTruthy (decide (a < (2 : Int))) then decide (a < (2 : Int))

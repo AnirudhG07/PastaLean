@@ -1,6 +1,19 @@
 from contracts import *
 
 
+# Hoisted to module scope: it captures nothing from `order_by_points`, and a nested `def`
+# would make the contracts below reference a name that is not yet bound.
+def weight(x):
+    x_list = list(str(x))
+    if x_list[0] == "-":
+        x_list = x_list[1:]
+        x_list = list(map(int, x_list))
+        x_list[0] = -x_list[0]
+    else:
+        x_list = list(map(int, x_list))
+    return sum(x_list)
+
+
 def order_by_points(nums):
     """
     Write a function which sorts the given list of integers
@@ -12,30 +25,18 @@ def order_by_points(nums):
     >>> order_by_points([1, 11, -1, -11, -12]) == [-1, -11, 1, -12, 11]
     >>> order_by_points([]) == []
     """
-
-    # A key property of any sorting function is that the output is a
-    # permutation of the input. A full formal statement of this is complex,
-    # but at a minimum, the length must be preserved.
     Ensures(len(Result()) == len(nums))
-
-    # The main purpose of this function is to sort the list according to
-    # the custom `weight` function. This postcondition captures that intent.
-    # Note: this contract does not formally specify the stability property
-    # mentioned in the docstring (tie-breaking by original index), as that
-    # is complex to express. Python's `sorted` is stable by default, so
-    # the implementation is correct.
-    Ensures(len(Result()) < 2 or all(
-        weight(Result()[i]) <= weight(Result()[i+1])
-        for i in range(len(Result()) - 1)
+    # The output is a permutation of the input: every value keeps its multiplicity.
+    Ensures(all(Result().count(v) == nums.count(v) for v in nums))
+    # The output is non-decreasing in digit weight (`weight` negates the leading digit of a
+    # negative number, which is this problem's own convention).
+    Ensures(all(weight(Result()[i]) <= weight(Result()[i + 1]) for i in range(len(Result()) - 1)))
+    # Stability, stated exactly: within any one weight class the output preserves the input
+    # order. Together with the two facts above this pins the result down completely.
+    Ensures(all(
+        [y for y in Result() if weight(y) == weight(x)]
+        == [y for y in nums if weight(y) == weight(x)]
+        for x in nums
     ))
 
-    def weight(x):
-        x_list = list(str(x))
-        if x_list[0] == "-":
-            x_list = x_list[1:]
-            x_list = list(map(int, x_list))
-            x_list[0] = -x_list[0]
-        else:
-            x_list = list(map(int, x_list))
-        return sum(x_list)
     return sorted(nums, key=weight)

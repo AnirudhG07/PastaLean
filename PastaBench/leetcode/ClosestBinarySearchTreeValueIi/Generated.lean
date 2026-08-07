@@ -149,9 +149,8 @@ def closestKValues := fun (root : Option TreeNode) ↦ fun (target : Rat) ↦ fu
 @[spec]
 theorem closestKValues_spec :
     ⦃⌜k ≥ (0 : Int) ∧ (PastaLean.pyIsNone root ∨ k > (0 : Int))⌝⦄ closestKValues root target k ⦃⇓result =>
-      ⌜PastaLean.pyAll
-            ((PastaLean.pyRange (PastaLean.pyLen result -ₚ (1 : Int))).map fun i =>
-              decide (result⦋i⦌ ≤ result⦋i +ₚ (1 : Int)⦌)) ∧
+      ⌜(∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen result -ₚ (1 : Int))),
+            result⦋i⦌ ≤ result⦋i +ₚ (1 : Int)⦌) ∧
           PastaLean.pyLen result ≤ k⌝⦄ :=
   by
   mvcgen [closestKValues, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
@@ -164,9 +163,8 @@ theorem closestKValues_correct :
         ∀ (k : Int),
           k ≥ (0 : Int) ∧ (PastaLean.pyIsNone root ∨ k > (0 : Int)) →
             let result := (closestKValues root target k).run;
-            PastaLean.pyAll
-                ((PastaLean.pyRange (PastaLean.pyLen result -ₚ (1 : Int))).map fun i =>
-                  decide (result⦋i⦌ ≤ result⦋i +ₚ (1 : Int)⦌)) ∧
+            (∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen result -ₚ (1 : Int))),
+                result⦋i⦌ ≤ result⦋i +ₚ (1 : Int)⦌) ∧
               PastaLean.pyLen result ≤ k :=
   by
   intro root target k hpre

@@ -34,24 +34,30 @@ def unique_digits(x: List[int]):
     """
 
 
+    Requires(all(e >= 0 for e in x))
+    # 1. The result is sorted in non-decreasing order.
+    Ensures(all(Result()[i] <= Result()[i + 1] for i in range(len(Result()) - 1)))
+    # 2. Soundness: every element kept has only odd digits.
+    Ensures(all(all(int(c) % 2 != 0 for c in str(v)) for v in Result()))
+    # 3. Exactness (sub-multiset + completeness): for every value occurring in x, the result keeps
+    #    all of its occurrences when its digits are all odd, and none of them otherwise. The
+    #    `judge` predicate is inlined rather than called — a nested helper is not in scope for the
+    #    postcondition.
+    Ensures(all(
+        Result().count(v) == (x.count(v) if all(int(c) % 2 != 0 for c in str(v)) else 0)
+        for v in set(x)
+    ))
+
     def judge(num):
         Requires(num >= 0)
-        Ensures(Result() == all(int(c) % 2 != 0 for c in str(num)))
 
         for ch in str(num):
             if int(ch) % 2 == 0:
                 return False
-        
+
         Assert(all(int(c) % 2 != 0 for c in str(num)))
         return True
 
-    Requires(all(e >= 0 for e in x))
-    # The result must be sorted in non-decreasing order.
-    Ensures(all(Result()[i] <= Result()[i + 1] for i in range(len(Result()) - 1)))
-    # The multiset of the result must be exactly the multiset of elements from x
-    # for which `judge` returns true. This covers filtering and duplicate preservation.
-    Ensures(all(Result().count(v) == (x.count(v) if judge(v) else 0) for v in set(x)))
-    
     return sorted(list(filter(judge, x)))
 -/
 
@@ -70,17 +76,9 @@ private def _unique_digits'judge := fun (num : Int) ↦
           ((PastaLean.pyIter (PastaLean.pyStr num)).map fun c => PastaLean.pyInt c %ₚ (2 : Int) != (0 : Int)))
     return Bool.true : Id _)
 
-@[spec]
-theorem _unique_digits'judge_spec :
-    ⦃⌜num ≥ (0 : Int)⌝⦄ _unique_digits'judge num ⦃⇓result =>
-      ⌜result =
-          PastaLean.pyAll
-            ((PastaLean.pyIter (PastaLean.pyStr num)).map fun c => PastaLean.pyInt c %ₚ (2 : Int) != (0 : Int))⌝⦄ :=
+theorem _unique_digits'judge_spec : ⦃⌜num ≥ (0 : Int)⌝⦄ _unique_digits'judge num ⦃⇓_ => ⌜True⌝⦄ :=
   by
-  try
-    mvcgen [_unique_digits'judge, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · Invariant.withEarlyReturn (onReturn := fun _ _ => ⌜True⌝) (onContinue := fun _ _ => ⌜True⌝)
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  try (apply Std.Do.Triple.of_entails_wp; intro _; exact True.intro)
   all_goals sorry
 
 def unique_digits := fun (x : List Int) ↦
@@ -91,19 +89,19 @@ attribute [simp] unique_digits
 @[taste_ingr]
 theorem unique_digits_correct :
     ∀ (x : List Int),
-      PastaLean.pyAll ((PastaLean.pyIter x).map fun e => decide (e ≥ (0 : Int))) →
-        PastaLean.pyTruthy
-              (PastaLean.pyAll
-                ((PastaLean.pyRange (PastaLean.pyLen (unique_digits x) -ₚ (1 : Int))).map fun i =>
-                  decide ((unique_digits x)⦋i⦌ ≤ (unique_digits x)⦋i +ₚ (1 : Int)⦌))) =
-            true ∧
-          PastaLean.pyTruthy
-              (PastaLean.pyAll
-                ((PastaLean.pyIter (PastaLean.pySet x)).map fun v =>
-                  PastaLean.pyCount (unique_digits x) v ==
-                    if PastaLean.pyTruthy (_unique_digits'judge v) then PastaLean.pyCount x v else (0 : Int))) =
-            true :=
-  by intros; sorry
+      (∀ e ∈ PastaLean.pyIter x, e ≥ (0 : Int)) →
+        ((∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen (unique_digits x) -ₚ (1 : Int))),
+              (unique_digits x)⦋i⦌ ≤ (unique_digits x)⦋i +ₚ (1 : Int)⦌) ∧
+            ∀ v ∈ PastaLean.pyIter (unique_digits x),
+              ∀ c ∈ PastaLean.pyIter (PastaLean.pyStr v), PastaLean.pyInt c %ₚ (2 : Int) ≠ (0 : Int)) ∧
+          ∀ v ∈ PastaLean.pyIter (PastaLean.pySet x),
+            PastaLean.pyCount (unique_digits x) v =
+              if
+                  PastaLean.pyTruthy
+                    (∀ c ∈ PastaLean.pyIter (PastaLean.pyStr v), PastaLean.pyInt c %ₚ (2 : Int) ≠ (0 : Int)) then
+                PastaLean.pyCount x v
+              else (0 : Int) :=
+  by taste?
 
 private def _unique_digits'judge'rn := fun (num : Int) ↦
   Id.run

@@ -21,12 +21,12 @@ from contracts import *
 
 def solve(N):
     """Given a positive integer N, return the total sum of its digits in binary.
-    
+
     Example
         For N = 1000, the sum of digits will be 1 the output should be "1".
         For N = 150, the sum of digits will be 6 the output should be "110".
         For N = 147, the sum of digits will be 12 the output should be "1100".
-    
+
     Variables:
         @N integer
              Constraints: 0 ≤ N ≤ 10000.
@@ -34,19 +34,18 @@ def solve(N):
          a string of binary number
     """
     Requires(0 <= N <= 10000)
-    # The point of the function is that the integer value of the resulting binary string
-    # equals the sum of the decimal digits of the input number N.
-    Ensures(int(Result(), 2) == sum(map(lambda x: int(x), str(N))))
+    # The output really is a binary numeral: every character is a bit, it is non-empty,
+    # and it carries no leading zero (except for the numeral "0" itself).
+    Ensures(len(Result()) >= 1)
+    Ensures(all(c == "0" or c == "1" for c in Result()))
+    Ensures(len(Result()) == 1 or Result()[0] == "1")
+    # THE POINT: decoding that binary numeral gives back the decimal digit sum of N.
+    Ensures(sum([int(Result()[i]) * 2 ** (len(Result()) - 1 - i) for i in range(len(Result()))])
+            == sum([int(ch) for ch in str(N)]))
 
     s = sum(map(lambda x: int(x), str(N)))
 
-    # The sum of digits is non-negative. For N <= 10000, the maximum sum is for N=9999,
-    # which is 36. This gives a tight bound on the intermediate sum `s`.
-    Assert(0 <= s)
-    Assert(s <= 36)
-    # A number is congruent to the sum of its digits modulo 9. This is a strong
-    # arithmetic property connecting the input N and the intermediate sum s.
-    Assert(N % 9 == s % 9)
+    Assert(s >= 0)
 
     return bin(s)[2:]
 -/
@@ -64,12 +63,14 @@ theorem solve_correct :
     ∀ (N : Int),
       let s := PastaLean.pySum (PastaLean.pyMap (fun x ↦ PastaLean.pyInt x) (PastaLean.pyStr N))
       (0 : Int) ≤ N ∧ N ≤ (10000 : Int) →
-        ((PastaLean.pyIntBase (solve N) (2 : Int) =
-                PastaLean.pySum (PastaLean.pyMap (fun x ↦ PastaLean.pyInt x) (PastaLean.pyStr N)) ∧
-              (0 : Int) ≤ s) ∧
-            s ≤ (36 : Int)) ∧
-          N %ₚ (9 : Int) = s %ₚ (9 : Int) :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+        (((PastaLean.pyLen (solve N) ≥ (1 : Int) ∧ ∀ c ∈ PastaLean.pyIter (solve N), c = "0" ∨ c = "1") ∧
+              (PastaLean.pyLen (solve N) = (1 : Int) ∨ (solve N)⦋(0 : Int)⦌ = "1")) ∧
+            PastaLean.pySum
+                ((PastaLean.pyRange (PastaLean.pyLen (solve N))).map fun i =>
+                  PastaLean.pyInt (solve N)⦋i⦌ *ₚ (2 : Int) ^ₚ (PastaLean.pyLen (solve N) -ₚ (1 : Int) -ₚ i)) =
+              PastaLean.pySum ((PastaLean.pyIter (PastaLean.pyStr N)).map fun ch => PastaLean.pyInt ch)) ∧
+          s ≥ (0 : Int) :=
+  by taste?
 
 def solve'rn := fun (N : Int) ↦
   let s := PastaLean.pySum (PastaLean.pyMap (fun x ↦ PastaLean.pyInt x) (PastaLean.pyStr N))

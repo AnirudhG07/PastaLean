@@ -58,7 +58,7 @@ def triples_sum_to_zero(l: list):
 
 namespace PastaBench.humaneval.TriplesSumToZero
 
-def triples_sum_to_zero := fun l ↦
+def triples_sum_to_zero := fun (l : List PyAny) ↦
   (do
     for i in (PastaLean.pyRange (PastaLean.pyLen l))do
       let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i) && decide (i ≤ PastaLean.pyLen l))
@@ -84,18 +84,18 @@ theorem triples_sum_to_zero_spec :
     · ⇓cur =>
       ⌜let i := (cur.prefix.length : Int);
         (0 : Int) ≤ i ∧ i ≤ PastaLean.pyLen l⌝
-  sorry
+  taste?
   all_goals sorry
 
 theorem triples_sum_to_zero_correct :
-    ∀ l,
+    ∀ (l : List PyAny),
       let result := (triples_sum_to_zero l).run;
       ¬PastaLean.pyTruthy result = true ∨ PastaLean.pyLen l ≥ (3 : Int) :=
   by
   intro l
   exact triples_sum_to_zero_spec True.intro
 
-def triples_sum_to_zero'rn := fun l ↦
+def triples_sum_to_zero'rn := fun (l : List PyAny) ↦
   Id.run
     (do
       /-

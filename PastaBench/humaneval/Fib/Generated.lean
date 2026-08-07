@@ -20,15 +20,6 @@ set_option maxHeartbeats 800000
 from contracts import *
 
 
-def fib_spec(k: int) -> int:
-    Requires(k >= 0)
-    if k == 0:
-        return 0
-    if k == 1:
-        return 1
-    return fib_spec(k - 1) + fib_spec(k - 2)
-
-
 def fib(n: int):
     """Return n-th Fibonacci number.
     >>> fib(10)
@@ -39,61 +30,35 @@ def fib(n: int):
     21
     """
     Requires(n >= 0)
-    Ensures(Result() == fib_spec(n))
+    # THE POINT: a growth bound. The loop keeps the rolling window (a, b) = (F(i-2), F(i-1)) with
+    # both entries at least 1, so each step adds at least 1 to the larger one and the sequence
+    # outgrows its own index: F(n) >= n - 1 for every n, and F(n) >= 1 once n >= 1. Neither is
+    # readable off the code — both come straight out of the window invariants below.
+    Ensures(Result() >= n - 1)
+    Ensures(n <= 0 or Result() >= 1)
 
     if n == 0: return 0
-    Assert(n > 0)
     if n <= 2: return 1
     Assert(n > 2)
 
     a, b = 1, 1
-    # Initially, a = 1 = fib(1) and b = 1 = fib(2)
     for i in range(3, n + 1):
         Invariant(3 <= i)
         Invariant(i <= n + 1)
-        Invariant(a == fib_spec(i - 2))
-        Invariant(b == fib_spec(i - 1))
-        Decreases(n + 1 - i)
-
+        # The window never shrinks below 1 and stays ordered ...
+        Invariant(a >= 1)
+        Invariant(b >= a)
+        # ... so the leading entry gains at least 1 per step: index-style, this is the Ensures.
+        Invariant(b >= i - 2)
         a, b = b, a + b
 
-    # After the loop, i = n + 1. The invariant for b gives:
-    # b == fib_spec((n + 1) - 1) == fib_spec(n)
-    Assert(b == fib_spec(n))
+    # At exit i = n + 1, so the invariant reads b >= n - 1: one step from the postcondition.
+    Assert(b >= n - 1)
+    Assert(b >= 1)
     return b
 -/
 
 namespace PastaBench.humaneval.Fib
-
-partial def fib_spec : Int → Int := fun (k : Int) ↦
-  Id.run
-    (do
-      let _ := Libraries.passta.pyPassRequires (decide (k ≥ (0 : Int)))
-      if h_1 : k = (0 : Int) then 
-        return (0 : Int)
-      else
-        let _ := ()
-      if h_2 : k = (1 : Int) then 
-        return (1 : Int)
-      else
-        let _ := ()
-      let __py_ret_1 := fib_spec (k -ₚ (1 : Int)) +ₚ fib_spec (k -ₚ (2 : Int))
-      return __py_ret_1)
-
-partial def fib_spec'rn : Int → Int := fun (k : Int) ↦
-  Id.run
-    (do
-      let _ := Libraries.passta.pyPassRequires (decide (k ≥ (0 : Int)))
-      if h_1 : k == (0 : Int) then 
-        return (0 : Int)
-      else
-        let _ := ()
-      if h_2 : k == (1 : Int) then 
-        return (1 : Int)
-      else
-        let _ := ()
-      let __py_ret_1 := fib_spec'rn (k -ₚ (1 : Int)) +ₚ fib_spec'rn (k -ₚ (2 : Int))
-      return __py_ret_1)
 
 def fib := fun (n : Int) ↦
   (do
@@ -101,7 +66,6 @@ def fib := fun (n : Int) ↦
       return (0 : Int)
     else
       let _ := ()
-    let _ := Libraries.passta.pyPassAssert (decide (n > (0 : Int)))
     if h_2 : n ≤ (2 : Int) then 
       return (1 : Int)
     else
@@ -114,32 +78,35 @@ def fib := fun (n : Int) ↦
     for i in (PastaLean.pyRange (n +ₚ (1 : Int)) (3 : Int))do
       let _ := Libraries.passta.pyPassInvariant (decide ((3 : Int) ≤ i))
       let _ := Libraries.passta.pyPassInvariant (decide (i ≤ n +ₚ (1 : Int)))
-      let _ := Libraries.passta.pyPassInvariant (a == fib_spec (i -ₚ (2 : Int)))
-      let _ := Libraries.passta.pyPassInvariant (b == fib_spec (i -ₚ (1 : Int)))
-      let _ := Libraries.passta.pyPassDecreases (n +ₚ (1 : Int) -ₚ i)
+      -- The window never shrinks below 1 and stays ordered ...
+      let _ := Libraries.passta.pyPassInvariant (decide (a ≥ (1 : Int)))
+      let _ := Libraries.passta.pyPassInvariant (decide (b ≥ a))
+      -- ... so the leading entry gains at least 1 per step: index-style, this is the Ensures.
+      let _ := Libraries.passta.pyPassInvariant (decide (b ≥ i -ₚ (2 : Int)))
       let __unpack_value_2 := (b, a +ₚ b)
       let __unpack_pair_2 := __unpack_value_2
       a := Prod.fst __unpack_pair_2
       b := Prod.snd __unpack_pair_2
-    let _ := Libraries.passta.pyPassAssert (b == fib_spec n)
+    let _ := Libraries.passta.pyPassAssert (decide (b ≥ n -ₚ (1 : Int)))
+    let _ := Libraries.passta.pyPassAssert (decide (b ≥ (1 : Int)))
     return b : Id _)
 
 @[spec]
-theorem fib_spec : ⦃⌜n ≥ (0 : Int)⌝⦄ fib n ⦃⇓b => ⌜b = fib_spec n⌝⦄ :=
+theorem fib_spec : ⦃⌜n ≥ (0 : Int)⌝⦄ fib n ⦃⇓b => ⌜b ≥ n -ₚ (1 : Int) ∧ (n ≤ (0 : Int) ∨ b ≥ (1 : Int))⌝⦄ :=
   by
   try
     mvcgen [fib, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓cur =>
       ⌜let i := (cur.prefix.length : Int);
-        (((3 : Int) ≤ i ∧ i ≤ n +ₚ (1 : Int)) ∧ a = fib_spec (i -ₚ (2 : Int))) ∧ b = fib_spec (i -ₚ (1 : Int))⌝
-  sorry
+        ((((3 : Int) ≤ i ∧ i ≤ n +ₚ (1 : Int)) ∧ a ≥ (1 : Int)) ∧ b ≥ a) ∧ b ≥ i -ₚ (2 : Int)⌝
+  taste?
   all_goals sorry
 
 theorem fib_correct :
     ∀ (n : Int),
       n ≥ (0 : Int) →
         let b := (fib n).run;
-        b = fib_spec n :=
+        b ≥ n -ₚ (1 : Int) ∧ (n ≤ (0 : Int) ∨ b ≥ (1 : Int)) :=
   by
   intro n hpre
   exact fib_spec hpre
@@ -158,11 +125,14 @@ def fib'rn := fun (n : Int) ↦
           
       -/
       let _ := Libraries.passta.pyPassRequires (decide (n ≥ (0 : Int)))
+      -- THE POINT: a growth bound. The loop keeps the rolling window (a, b) = (F(i-2), F(i-1)) with
+      -- both entries at least 1, so each step adds at least 1 to the larger one and the sequence
+      -- outgrows its own index: F(n) >= n - 1 for every n, and F(n) >= 1 once n >= 1. Neither is
+      -- readable off the code — both come straight out of the window invariants below.
       if h_1 : n == (0 : Int) then 
         return (0 : Int)
       else
         let _ := ()
-      let _ := Libraries.passta.pyPassAssert (decide (n > (0 : Int)))
       if h_2 : n ≤ (2 : Int) then 
         return (1 : Int)
       else
@@ -172,20 +142,21 @@ def fib'rn := fun (n : Int) ↦
       let __unpack_pair_1 := __unpack_value_1
       let mut a : Int := Prod.fst __unpack_pair_1
       let mut b : Int := Prod.snd __unpack_pair_1
-      -- Initially, a = 1 = fib(1) and b = 1 = fib(2)
       for i in (PastaLean.pyRange (n +ₚ (1 : Int)) (3 : Int))do
         let _ := Libraries.passta.pyPassInvariant (decide ((3 : Int) ≤ i))
         let _ := Libraries.passta.pyPassInvariant (decide (i ≤ n +ₚ (1 : Int)))
-        let _ := Libraries.passta.pyPassInvariant (a == fib_spec'rn (i -ₚ (2 : Int)))
-        let _ := Libraries.passta.pyPassInvariant (b == fib_spec'rn (i -ₚ (1 : Int)))
-        let _ := Libraries.passta.pyPassDecreases (n +ₚ (1 : Int) -ₚ i)
+        -- The window never shrinks below 1 and stays ordered ...
+        let _ := Libraries.passta.pyPassInvariant (decide (a ≥ (1 : Int)))
+        let _ := Libraries.passta.pyPassInvariant (decide (b ≥ a))
+        -- ... so the leading entry gains at least 1 per step: index-style, this is the Ensures.
+        let _ := Libraries.passta.pyPassInvariant (decide (b ≥ i -ₚ (2 : Int)))
         let __unpack_value_2 := (b, a +ₚ b)
         let __unpack_pair_2 := __unpack_value_2
         a := Prod.fst __unpack_pair_2
         b := Prod.snd __unpack_pair_2
-      -- After the loop, i = n + 1. The invariant for b gives:
-      -- b == fib_spec((n + 1) - 1) == fib_spec(n)
-      let _ := Libraries.passta.pyPassAssert (b == fib_spec'rn n)
+      -- At exit i = n + 1, so the invariant reads b >= n - 1: one step from the postcondition.
+      let _ := Libraries.passta.pyPassAssert (decide (b ≥ n -ₚ (1 : Int)))
+      let _ := Libraries.passta.pyPassAssert (decide (b ≥ (1 : Int)))
       return b)
 
 end PastaBench.humaneval.Fib

@@ -18,6 +18,7 @@ set_option maxHeartbeats 800000
 /- Python source converted to produce the Lean below (the exact input to PastaLean):
 
 from contracts import *
+import math
 
 
 def sum_squares(lst):
@@ -33,10 +34,15 @@ def sum_squares(lst):
     
 
     """
+    import math
+    # The exact fold: ceiling first, then square, then total.
+    Ensures(Result() == sum(math.ceil(v) ** 2 for v in lst))
+    # Every summand is a square, hence non-negative, so the total dominates each of them
+    # individually and is itself non-negative (empty list => 0).
+    Ensures(all(Result() >= math.ceil(v) ** 2 for v in lst))
     Ensures(Result() >= 0)
     Ensures(len(lst) > 0 or Result() == 0)
 
-    import math
     return sum(map(lambda x: math.ceil(x) ** 2, lst))
 -/
 
@@ -51,16 +57,22 @@ def sum_squares := fun (lst : PyAny) ↦
 @[spec]
 theorem sum_squares_spec :
     ⦃⌜True⌝⦄ sum_squares lst ⦃⇓result =>
-      ⌜result ≥ (0 : Int) ∧ (PastaLean.pyLen lst > (0 : Int) ∨ result = (0 : Int))⌝⦄ :=
+      ⌜((result = PastaLean.pySum ((PastaLean.pyIter lst).map fun v => Libraries.math.pyMathCeil v ^ₚ (2 : Int)) ∧
+              ∀ v ∈ PastaLean.pyIter lst, result ≥ Libraries.math.pyMathCeil v ^ₚ (2 : Int)) ∧
+            result ≥ (0 : Int)) ∧
+          (PastaLean.pyLen lst > (0 : Int) ∨ result = (0 : Int))⌝⦄ :=
   by
   mvcgen [sum_squares, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  sorry
+  taste?
   all_goals sorry
 
 theorem sum_squares_correct :
     ∀ (lst : PyAny),
       let result := (sum_squares lst).run;
-      result ≥ (0 : Int) ∧ (PastaLean.pyLen lst > (0 : Int) ∨ result = (0 : Int)) :=
+      ((result = PastaLean.pySum ((PastaLean.pyIter lst).map fun v => Libraries.math.pyMathCeil v ^ₚ (2 : Int)) ∧
+            ∀ v ∈ PastaLean.pyIter lst, result ≥ Libraries.math.pyMathCeil v ^ₚ (2 : Int)) ∧
+          result ≥ (0 : Int)) ∧
+        (PastaLean.pyLen lst > (0 : Int) ∨ result = (0 : Int)) :=
   by
   intro lst
   exact sum_squares_spec True.intro
@@ -80,6 +92,9 @@ def sum_squares'rn := fun (lst : PyAny) ↦
   
       
   -/
+  -- The exact fold: ceiling first, then square, then total.
+  -- Every summand is a square, hence non-negative, so the total dominates each of them
+  -- individually and is itself non-negative (empty list => 0).
   PastaLean.pySum (PastaLean.pyMap (fun x ↦ Libraries.math.pyMathCeil x ^ₚ (2 : Int)) lst)
 
 end PastaBench.humaneval.SumSquares133

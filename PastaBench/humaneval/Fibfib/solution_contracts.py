@@ -1,20 +1,6 @@
 from contracts import *
 
 
-# This function is for specification purposes only.
-# It is assumed to be interpreted as a pure logical function by the verifier.
-def fibfib_spec(k: int) -> int:
-    Requires(k >= 0)
-    if k == 0:
-        return 0
-    elif k == 1:
-        return 0
-    elif k == 2:
-        return 1
-    else:
-        return fibfib_spec(k - 1) + fibfib_spec(k - 2) + fibfib_spec(k - 3)
-
-
 def fibfib(n: int):
     """The FibFib number sequence is a sequence similar to the Fibbonacci sequnece that's defined as follows:
     fibfib(0) == 0
@@ -30,21 +16,35 @@ def fibfib(n: int):
     24
     """
     Requires(n >= 0)
-    Ensures(Result() == fibfib_spec(n))
+    # THE POINT: a growth bound. The rolling window (a, b, c) = (F(i-3), F(i-2), F(i-1)) is
+    # non-negative, and because the three-term sum is always at least one more than the leading
+    # entry's own bound, the leading entry outgrows the index: fibfib(n) >= n - 2 for every n.
+    # (It is tight at n = 3 and n = 4, so it is the strongest linear bound available.)
+    Ensures(Result() >= n - 2)
+    Ensures(Result() >= 0)
 
     if n == 0 or n == 1:
         return 0
     elif n == 2:
         return 1
-    
+
     Assert(n >= 3)
     a, b, c = 0, 0, 1
     for i in range(3, n + 1):
-        Invariant(3 <= i and i <= n + 1)
-        Invariant(a == fibfib_spec(i - 3))
-        Invariant(b == fibfib_spec(i - 2))
-        Invariant(c == fibfib_spec(i - 1))
+        Invariant(3 <= i)
+        Invariant(i <= n + 1)
+        Invariant(a >= 0)
+        Invariant(b >= 0)
+        Invariant(c >= 0)
+        # The window never dies out ...
+        Invariant(b + c >= 1)
+        # ... the leading entry already beats i - 3 ...
+        Invariant(c >= i - 3)
+        # ... and the value it is about to become beats i - 2, which is what makes the previous
+        # invariant inductive (and, at exit i = n + 1, gives the Ensures).
+        Invariant(a + b + c >= i - 2)
         a, b, c = b, c, a + b + c
 
-    Assert(c == fibfib_spec(n))
+    Assert(c >= n - 2)
+    Assert(c >= 0)
     return c

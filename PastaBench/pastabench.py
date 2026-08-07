@@ -19,13 +19,16 @@ coexist in one library; `Proofs.lean` opens it and states the theorems.
 Subcommands
     select      choose the problems from a dataset and write manifest.json
     materialize create the per-problem directories from the manifest (seeds Proofs.lean stubs)
-    contracts   LLM pre-pass: write solution_contracts.py per unit (resumable, validated)
+    contracts   write + verify solution_contracts.py per unit — generate → verify → repair,
+                gated deterministically (docs/contract-qa.md). Resumable; nothing that fails a
+                gate is ever written.
     regen       re-translate the Python → Generated.lean (Proofs.lean untouched)
     status      report proof coverage: how many units have contracts / sorry-free proofs
 
     python3 PastaBench/pastabench.py select --dataset cp_harness/dataset_leetcode
     python3 PastaBench/pastabench.py materialize
-    python3 PastaBench/pastabench.py contracts --track leetcode --workers 8
+    python3 PastaBench/pastabench.py contracts --track humaneval --attempts 0   # verify, no LLM
+    python3 PastaBench/pastabench.py contracts --track humaneval --attempts 2   # + repair
     python3 PastaBench/pastabench.py regen --only HouseRobberIii
     python3 PastaBench/pastabench.py status
 """
@@ -383,75 +386,47 @@ def _entry_defs(source: str) -> set[str]:
         return set()
 
 
-def _annotate_one(t: dict, provider: str, model: str | None, force: bool) -> tuple[str, str]:
-    """Annotate one unit. Returns `(module, status)` where status is `ok` / `skip` / an error."""
-    dst = t["dir"] / CONTRACTS_FILE
-    if dst.exists() and not force:
-        return t["module"], "skip"
-    original = (t["dir"] / "solution.py").read_text()
-    from pastalean.transpile import llm  # noqa: PLC0415  (imported after sys.path setup)
+#: Where the pipeline parks a generated/repaired file unless `--in-place` is given, so a sweep can
+#: never clobber a hand-edited `solution_contracts.py`.
+QA_OUT_DIR = BENCH_ROOT / "_contract_qa"
+
+TRACK_DIRS = {"leetcode": LEETCODE_DIR, "stdlib": STDLIB_DIR, "humaneval": HUMANEVAL_DIR}
+
+
+def contracts(args) -> int:
+    """Write and verify `solution_contracts.py` per unit.
+
+    One command, one loop: every candidate — whether freshly generated or already on disk — goes
+    through the deterministic gates (static / behaviour identity / contract truth / mutation score),
+    and a file that fails one is never written. `--attempts 0` is a pure verification sweep and
+    makes no LLM calls at all. See `docs/contract-qa.md`; the implementation is
+    `pastalean.transpile.contract_qa`."""
+    # Prefer the installed package: repair reaches `pastalean.transpile.llm` through it.
     try:
-        annotated = llm.contract_code(original, provider=provider, model=model)
-    except Exception as exc:  # noqa: BLE001  (one refusal must not stop 300)
-        return t["module"], f"llm error: {type(exc).__name__}: {exc}"
-    if not annotated or not annotated.strip():
-        return t["module"], "empty response"
-    # Three cheap guards against a rewrite that would poison the benchmark: it must parse, it must
-    # actually carry contracts, and it must still define every function the original did (the model
-    # is told not to restructure, but a dropped helper would silently change what is being proved).
-    if not _entry_defs(annotated) and "def " in original:
-        return t["module"], "unparsable output"
-    missing = _entry_defs(original) - _entry_defs(annotated)
-    if missing:
-        return t["module"], f"dropped definitions: {', '.join(sorted(missing))}"
-    if not CONTRACT_RE.search(annotated):
-        return t["module"], "no contracts inserted"
-    dst.write_text(annotated)
-    return t["module"], "ok"
+        from pastalean.transpile.contract_qa.__main__ import main as qa_main  # noqa: PLC0415
+    except ImportError:
+        sys.path.insert(0, str(REPO_ROOT / "src" / "transpile"))
+        from contract_qa.__main__ import main as qa_main  # noqa: PLC0415
 
-
-def contracts(only: list[str] | None, track: str, provider: str, model: str | None,
-              workers: int, force: bool) -> int:
-    """Run the `--contracts` LLM pre-pass over the benchmark, writing `solution_contracts.py`
-    beside each `solution.py`. Resumable: a unit that already has one is skipped unless `--force`,
-    so an interrupted sweep costs nothing to restart."""
-    sys.path.insert(0, str(REPO_ROOT / "src"))
-    todo = [t for t in targets(only) if track == "all" or t["prefix"].endswith(track)]
-    if not todo:
-        print("[!] nothing selected")
-        return 1
-    pending = [t for t in todo if force or not (t["dir"] / CONTRACTS_FILE).exists()]
-    print(f"[*] {len(todo)} selected, {len(pending)} need annotation "
-          f"(provider={provider}, model={model or 'provider default'}, workers={workers})")
-    results: dict[str, str] = {}
-    with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as pool:
-        futures = {pool.submit(_annotate_one, t, provider, model, force): t for t in todo}
-        for i, fut in enumerate(concurrent.futures.as_completed(futures), 1):
-            module, status = fut.result()
-            results[module] = status
-            if status != "skip":
-                print(f"[{i}/{len(todo)}] {status:>12}  {module}")
-    # Merge into any previous summary: a `--only` retry pass must refine the record, not replace
-    # it with just the handful of units it touched.
-    summary_path = BENCH_ROOT / "contracts_summary.json"
-    merged: dict[str, str] = {}
-    if summary_path.exists():
-        merged.update(json.loads(summary_path.read_text()).get("results", {}))
-    merged.update(results)
-    # A unit that has a file is `ok` however it got there (an earlier pass, or a hand-written one).
-    for t in targets(None):
-        if (t["dir"] / CONTRACTS_FILE).exists():
-            merged[t["module"]] = "ok"
-    counts: dict[str, int] = {}
-    for status in merged.values():
-        key = status if status in ("ok", "skip") else status.split(":")[0]
-        counts[key] = counts.get(key, 0) + 1
-    summary_path.write_text(
-        json.dumps({"provider": provider, "model": model, "counts": counts,
-                    "results": dict(sorted(merged.items()))}, indent=2) + "\n")
-    print("\n[*] " + ", ".join(f"{k}={v}" for k, v in sorted(counts.items())))
-    print(f"[*] Summary written to {BENCH_ROOT / 'contracts_summary.json'}")
-    return 0
+    argv = [str(TRACK_DIRS[args.track]),
+            "--mutants", str(args.mutants), "--mutation-tests", str(args.mutation_tests),
+            "--workers", str(args.workers), "--provider", args.provider,
+            "--out-dir", str(QA_OUT_DIR), "--attempts", str(args.attempts)]
+    if args.only:
+        argv += ["--only", *args.only]
+    if args.model:
+        argv += ["--model", args.model]
+    if args.min_mutation_score is not None:
+        argv += ["--min-mutation-score", str(args.min_mutation_score)]
+    if args.report:
+        argv += ["--report", args.report]
+    if args.critic:
+        argv.append("--critic")
+    if args.in_place:
+        argv.append("--in-place")
+    if args.verbose:
+        argv.append("--verbose")
+    return qa_main(argv)
 
 
 # -- curation: contract-gated selection ----------------------------------------------------
@@ -460,45 +435,21 @@ CURATE_DIR = BENCH_ROOT / "_curate"          # staging: generated contracts + th
 GATE_CACHE = CURATE_DIR / "gate.json"
 
 
-def _mentions_result(expr: ast.expr) -> bool:
-    """Does the expression talk about `Result()` — i.e. is it a property about the OUTPUT?"""
-    return any(isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id == "Result"
-               for n in ast.walk(expr))
-
-
-def _is_trivial_ensures(expr: ast.expr) -> bool:
-    """A vacuous postcondition — a one-sided bound against a constant (`Result() >= 0`,
-    `len(x) <= n`, `Result() != None`). Real properties relate the output to a FORMULA over the
-    inputs (`2 * Result() == n * (n + 1)`), which this deliberately does not match."""
-    if not (isinstance(expr, ast.Compare) and len(expr.comparators) == 1):
-        return False
-    left, right = expr.left, expr.comparators[0]
-    def literalish(n: ast.expr) -> bool:
-        return (isinstance(n, ast.Constant)
-                or (isinstance(n, ast.UnaryOp) and isinstance(n.operand, ast.Constant)))
-    def bare_ref(n: ast.expr) -> bool:  # Result()/len()/abs() of one thing, or a bare name
-        if isinstance(n, ast.Call) and isinstance(n.func, ast.Name):
-            return n.func.id in ("Result", "len", "abs") and all(literalish(a) or isinstance(a, ast.Name) for a in n.args)
-        return isinstance(n, ast.Name)
-    return (literalish(left) and bare_ref(right)) or (literalish(right) and bare_ref(left))
-
-
 def substantive_ensures_count(source: str) -> int:
     """How many NON-TRIVIAL `Ensures(...)` the contracted source states about its output: each must
     mention `Result()` and not be a bare constant bound. This is the 'we can extract a real property'
-    gate — a program with 0 is not benchmark-worthy however well it converts."""
+    gate — a program with 0 is not benchmark-worthy however well it converts.
+
+    The canonical implementation lives with the rest of the static gates, in
+    `pastalean.transpile.contract_qa.static_gates`."""
     try:
-        tree = ast.parse(source)
-    except SyntaxError:
-        return 0
-    n = 0
-    for node in ast.walk(tree):
-        if (isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
-                and node.func.id == "Ensures" and node.args):
-            expr = node.args[0]
-            if _mentions_result(expr) and not _is_trivial_ensures(expr):
-                n += 1
-    return n
+        from pastalean.transpile.contract_qa.static_gates import (  # noqa: PLC0415
+            substantive_ensures_count as impl)
+    except ImportError:
+        sys.path.insert(0, str(REPO_ROOT / "src" / "transpile"))
+        from contract_qa.static_gates import substantive_ensures_count as impl  # noqa: PLC0415
+
+    return impl(source)
 
 
 def _load_gate() -> dict:
@@ -690,7 +641,7 @@ def targets(only: list[str] | None) -> list[dict]:
     return [t for t in out if not only or t["module"] in only]
 
 
-def regen(only: list[str] | None) -> int:
+def regen(only: list[str] | None, prove: bool = True) -> int:
     """Re-translate each `solution.py` and rewrite ONLY `Generated.lean`. `Proofs.lean` is never
     read or written here — that is the whole point of the two-file split."""
     sys.path.insert(0, str(REPO_ROOT / "src"))
@@ -703,7 +654,7 @@ def regen(only: list[str] | None) -> int:
     failures, done = [], 0
     for mode in sorted({t["mode"] for t in todo}):          # one warm backend per mode
         batch = [t for t in todo if t["mode"] == mode]
-        with Session(target="command", mode=mode) as session:
+        with Session(target="command", mode=mode, prove_asserts=prove) as session:
             for t in batch:
                 done += 1
                 try:
@@ -789,17 +740,34 @@ def main() -> int:
     p.add_argument("--force-proofs", action="store_true",
                    help="overwrite existing Proofs.lean (destroys hand-written proofs)")
 
-    p = sub.add_parser("contracts", help="LLM pre-pass: write solution_contracts.py per unit")
-    p.add_argument("--only", nargs="*", help="module names (default: all)")
-    p.add_argument("--track", choices=["leetcode", "stdlib", "humaneval", "all"], default="leetcode")
-    p.add_argument("--provider", default="openai")
+    p = sub.add_parser("contracts", help="write + verify solution_contracts.py: static gates, "
+                                         "behaviour identity, contract truth, mutation score, "
+                                         "and a bounded LLM repair loop")
+    p.add_argument("--track", choices=["leetcode", "stdlib", "humaneval"], default="humaneval")
+    p.add_argument("--only", nargs="*", help="module names (default: the whole track)")
+    p.add_argument("--attempts", type=int, default=2,
+                   help="max LLM generations per unit that needs one; 0 = verify only, no LLM calls")
+    p.add_argument("--mutants", type=int, default=30, help="mutants per unit (0 disables)")
+    p.add_argument("--mutation-tests", type=int, default=12)
+    p.add_argument("--min-mutation-score", type=float, default=None,
+                   help="regenerate when the spec kills less than this fraction of live mutants")
+    p.add_argument("--critic", action="store_true",
+                   help="also ask the advisory LLM reviewer (one extra call per repair turn)")
+    p.add_argument("--workers", type=int, default=6)
+    p.add_argument("--provider", default="gemini")
     p.add_argument("--model", default=None, help="default: the provider's default chat model")
-    p.add_argument("--workers", type=int, default=8)
-    p.add_argument("--force", action="store_true",
-                   help="re-annotate units that already have solution_contracts.py")
+    p.add_argument("--report", default=None, help="write the full JSON report here")
+    p.add_argument("--in-place", action="store_true",
+                   help="overwrite solution_contracts.py (default: write to PastaBench/_contract_qa/)")
+    p.add_argument("--verbose", "-v", action="store_true")
 
     p = sub.add_parser("regen", help="re-translate solution.py -> Generated.lean")
     p.add_argument("--only", nargs="*", help="module names to regenerate (default: all)")
+    # Codegen-only sweep: skips the `taste?` prove-and-replace pass, which dominates regen's runtime.
+    # The `def`s and spec STATEMENTS are identical; only the tactic block keeps a literal `taste?`,
+    # so the output is not a shippable artifact — re-run without this before committing.
+    p.add_argument("--no-prove", action="store_true",
+                   help="skip the taste? proving pass (fast; leaves `taste?` in the output)")
 
     p = sub.add_parser("curate", help="contract-gated re-selection: pick the 300 by non-trivial "
                                       "provable property (gemini contracts + compile), resumable")
@@ -825,10 +793,9 @@ def main() -> int:
     elif args.cmd == "materialize":
         materialize(args.force_proofs)
     elif args.cmd == "contracts":
-        return contracts(args.only, args.track, args.provider, args.model,
-                         args.workers, args.force)
+        return contracts(args)
     elif args.cmd == "regen":
-        return regen(args.only)
+        return regen(args.only, prove=not args.no_prove)
     elif args.cmd == "curate":
         ds = (REPO_ROOT / args.dataset) if not Path(args.dataset).is_absolute() else Path(args.dataset)
         return curate(ds, args.seed, args.provider, args.model, args.workers,

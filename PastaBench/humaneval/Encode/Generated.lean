@@ -34,12 +34,20 @@ def encode(message: str) -> str:
     >>> encode('This is a message')
     'tHKS KS C MGSSCGG'
     """
+    # Both passes are char-for-char, so the length is preserved.
     Ensures(len(Result()) == len(message))
+    # THE POINT (a): character-set closure. Every vowel of the case-swapped message is
+    # shifted to a+2 = c, e+2 = g, i+2 = k, o+2 = q, u+2 = w (same for uppercase), none of
+    # which is a vowel, and no non-vowel is touched -- so the output has no vowels at all.
+    Ensures(all(c not in "aeiouAEIOU" for c in Result()))
+    # THE POINT (b): case really is swapped -- the +2 vowel shift never crosses a case
+    # boundary, so an alphabetic input character comes out in the opposite case.
+    Ensures(all(Result()[i].islower() == message[i].isupper()
+                for i in range(len(message)) if message[i].isalpha()))
 
 
     def switch_case(ch: str) -> str:
         Requires(len(ch) == 1)
-        Ensures(len(Result()) == 1)
         if ord("A") <= ord(ch) <= ord("Z"):
             return chr(ord(ch) + 32)
         elif ord("a") <= ord(ch) <= ord("z"):
@@ -49,7 +57,6 @@ def encode(message: str) -> str:
     
     def vowel_change(ch: str) -> str:
         Requires(len(ch) == 1)
-        Ensures(len(Result()) == 1)
         return ch if ch not in "aeiouAEIOU" else chr(ord(ch) + 2)
     
     m = "".join(map(switch_case, message))
@@ -60,27 +67,30 @@ def encode(message: str) -> str:
 namespace PastaBench.humaneval.Encode
 
 private def _encode'switch_case := fun (ch : String) ↦
-  if PastaLean.pyOrd "A" ≤ PastaLean.pyOrd ch ∧ PastaLean.pyOrd ch ≤ PastaLean.pyOrd "Z" then
-    PastaLean.pyChr (PastaLean.pyOrd ch +ₚ (32 : Int))
-  else
-    if PastaLean.pyOrd "a" ≤ PastaLean.pyOrd ch ∧ PastaLean.pyOrd ch ≤ PastaLean.pyOrd "z" then
-      PastaLean.pyChr (PastaLean.pyOrd ch -ₚ (32 : Int))
-    else ch
+  Id.run
+    (do
+      let _ := Libraries.passta.pyPassRequires (PastaLean.pyLen ch == (1 : Int))
+      if h_1 : PastaLean.pyOrd "A" ≤ PastaLean.pyOrd ch ∧ PastaLean.pyOrd ch ≤ PastaLean.pyOrd "Z" then 
+        let __py_ret_1 := PastaLean.pyChr (PastaLean.pyOrd ch +ₚ (32 : Int))
+        return __py_ret_1
+      else
+        if h_2 : PastaLean.pyOrd "a" ≤ PastaLean.pyOrd ch ∧ PastaLean.pyOrd ch ≤ PastaLean.pyOrd "z" then 
+          let __py_ret_1 := PastaLean.pyChr (PastaLean.pyOrd ch -ₚ (32 : Int))
+          return __py_ret_1
+        else
+          return ch)
 
-attribute [simp] _encode'switch_case
-
-@[taste_ingr]
-theorem _encode'switch_case_spec :
-    ∀ (ch : String), PastaLean.pyLen ch = (1 : Int) → PastaLean.pyLen (_encode'switch_case ch) = (1 : Int) := by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+attribute [simp, taste_ingr] _encode'switch_case
 
 private def _encode'vowel_change := fun (ch : String) ↦
-  if !(PastaLean.pyContains "aeiouAEIOU" ch) then ch else PastaLean.pyChr (PastaLean.pyOrd ch +ₚ (2 : Int))
+  Id.run
+    (do
+      let _ := Libraries.passta.pyPassRequires (PastaLean.pyLen ch == (1 : Int))
+      let __py_ret_1 :=
+        if !(PastaLean.pyContains "aeiouAEIOU" ch) then ch else PastaLean.pyChr (PastaLean.pyOrd ch +ₚ (2 : Int))
+      return __py_ret_1)
 
-attribute [simp] _encode'vowel_change
-
-@[taste_ingr]
-theorem _encode'vowel_change_spec :
-    ∀ (ch : String), PastaLean.pyLen ch = (1 : Int) → PastaLean.pyLen (_encode'vowel_change ch) = (1 : Int) := by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+attribute [simp, taste_ingr] _encode'vowel_change
 
 def encode := fun (message : String) ↦
   let m := (PastaLean.pyStringJoin "" (PastaLean.pyMap _encode'switch_case message) : String)
@@ -92,19 +102,38 @@ attribute [simp] encode
 theorem encode_correct :
     ∀ (message : String),
       let m := PastaLean.pyStringJoin "" (PastaLean.pyMap _encode'switch_case message)
-      PastaLean.pyLen (encode message) = PastaLean.pyLen message ∧ PastaLean.pyLen m = PastaLean.pyLen message :=
-  by sorry
+      ((PastaLean.pyLen (encode message) = PastaLean.pyLen message ∧
+            ∀ c ∈ PastaLean.pyIter (encode message), !(PastaLean.pyContains "aeiouAEIOU" c)) ∧
+          ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen message)),
+            PastaLean.pyIsAlpha message⦋i⦌ → PastaLean.pyIsLower (encode message)⦋i⦌ = PastaLean.pyIsUpper message⦋i⦌) ∧
+        PastaLean.pyLen m = PastaLean.pyLen message :=
+  by taste?
 
 private def _encode'switch_case'rn := fun (ch : String) ↦
-  if decide (PastaLean.pyOrd "A" ≤ PastaLean.pyOrd ch) && decide (PastaLean.pyOrd ch ≤ PastaLean.pyOrd "Z") then
-    PastaLean.pyChr (PastaLean.pyOrd ch +ₚ (32 : Int))
-  else
-    if decide (PastaLean.pyOrd "a" ≤ PastaLean.pyOrd ch) && decide (PastaLean.pyOrd ch ≤ PastaLean.pyOrd "z") then
-      PastaLean.pyChr (PastaLean.pyOrd ch -ₚ (32 : Int))
-    else ch
+  Id.run
+    (do
+      let _ := Libraries.passta.pyPassRequires (PastaLean.pyLen ch == (1 : Int))
+      if h_1 :
+          decide (PastaLean.pyOrd "A" ≤ PastaLean.pyOrd ch) && decide (PastaLean.pyOrd ch ≤ PastaLean.pyOrd "Z") then 
+        let __py_ret_1 := PastaLean.pyChr (PastaLean.pyOrd ch +ₚ (32 : Int))
+        return __py_ret_1
+      else
+        if h_2 :
+            decide (PastaLean.pyOrd "a" ≤ PastaLean.pyOrd ch) &&
+              decide (PastaLean.pyOrd ch ≤ PastaLean.pyOrd "z") then
+          
+          let __py_ret_1 := PastaLean.pyChr (PastaLean.pyOrd ch -ₚ (32 : Int))
+          return __py_ret_1
+        else
+          return ch)
 
 private def _encode'vowel_change'rn := fun (ch : String) ↦
-  if !(PastaLean.pyContains "aeiouAEIOU" ch) then ch else PastaLean.pyChr (PastaLean.pyOrd ch +ₚ (2 : Int))
+  Id.run
+    (do
+      let _ := Libraries.passta.pyPassRequires (PastaLean.pyLen ch == (1 : Int))
+      let __py_ret_1 :=
+        if !(PastaLean.pyContains "aeiouAEIOU" ch) then ch else PastaLean.pyChr (PastaLean.pyOrd ch +ₚ (2 : Int))
+      return __py_ret_1)
 
 def encode'rn := fun (message : String) ↦
   let m := (PastaLean.pyStringJoin "" (PastaLean.pyMap _encode'switch_case message) : String)

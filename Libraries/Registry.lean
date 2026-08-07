@@ -4,6 +4,7 @@ import Libraries.Behaviour
 import Libraries.bisect.Mapping
 import Libraries.collections.Mapping
 import Libraries.functools.Mapping
+import Libraries.hashlib.Mapping
 import Libraries.heapq.Mapping
 import Libraries.itertools.Mapping
 import Libraries.math.Mapping
@@ -11,6 +12,7 @@ import Libraries.operator.Mapping
 import Libraries.string.Mapping
 import Libraries.numpy.Mapping
 import Libraries.passta.Mapping
+import Libraries.random.Mapping
 import Libraries.scipy.Mapping
 import Libraries.pandas.Mapping
 import Libraries.sortedcontainers.Mapping
@@ -29,6 +31,7 @@ def pythonLibraryMap? (moduleName member : String) : Option Lean.Name :=
   | "bisect" => bisect.pythonBisectMemberMap? member
   | "collections" => collections.pythonCollectionsMemberMap? member
   | "functools" => functools.pythonFunctoolsMemberMap? member
+  | "hashlib" => hashlib.pythonHashlibMemberMap? member
   | "heapq" => heapq.pythonHeapqMemberMap? member
   | "itertools" => itertools.pythonItertoolsMemberMap? member
   | "math" => math.pythonMathMemberMap? member
@@ -36,6 +39,7 @@ def pythonLibraryMap? (moduleName member : String) : Option Lean.Name :=
   | "string" => string.pythonStringMemberMap? member
   | "numpy" => numpy.pythonNumpyMemberMap? member
   | "passta" => passta.pythonPasstaMemberMap? member
+  | "random" => random.pythonRandomMemberMap? member
   | "scipy" => scipy.pythonScipyMemberMap? member
   | "pandas" => pandas.pythonPandasMemberMap? member
   | "sortedcontainers" => sortedcontainers.pythonSortedcontainersMemberMap? member
@@ -73,6 +77,8 @@ def memberBehaviour? (moduleName member : String) : Option Behaviour :=
   | "itertools"   => itertools.itertoolsBehaviour? member
   | "collections" => collections.collectionsBehaviour? member
   | "bisect"      => bisect.bisectBehaviour? member
+  | "functools"   => functools.functoolsBehaviour? member
+  | "hashlib"     => hashlib.hashlibBehaviour? member
   | "math"        => math.mathBehaviour? member
   | "scipy"       => scipy.scipyBehaviour? member
   | "numpy"       => numpy.numpyBehaviour? member
@@ -87,6 +93,7 @@ def bareBehaviour? (name : String) : Option Behaviour :=
   (itertools.itertoolsBehaviour? name).orElse fun _ =>
   (heapq.heapqBehaviour? name).orElse fun _ =>
   (collections.collectionsBehaviour? name).orElse fun _ =>
+  (functools.functoolsBehaviour? name).orElse fun _ =>
   (bisect.bisectBehaviour? name)
 
 /-! ### Views derived from `memberBehaviour?` — one field each, so existing call sites are unchanged. -/
@@ -105,6 +112,33 @@ def libraryMutator? (moduleName member : String) : Option LibraryMutator :=
 /-- The unbounded-iterator spec of a library member, for the core codegen. -/
 def libraryInfiniteIter? (moduleName member : String) : Option InfiniteIter :=
   (memberBehaviour? moduleName member).bind (·.infiniteIter)
+
+/-- Library modules whose members live in `IO` because they read or advance global mutable state
+(`random`'s generator). A call to one makes its enclosing function IO-effectful, exactly as
+`input()` does. Declared here rather than in the Python driver so a library's facts stay in one
+place; the driver reads it over the `libraryInfo` backend task. -/
+def ioEffectfulLibraries : List String := ["random"]
+
+/-- Does this member construct a library-owned object (`hashlib.md5()`)? Codegen tags the assigned
+variable with the owning module so its methods route through `libraryMethod?`. -/
+def libraryObjectConstructor? (moduleName member : String) : Bool :=
+  ((memberBehaviour? moduleName member).map (·.constructsObject)).getD false
+
+/-- A METHOD on a library-owned object → its runtime function. Consulted only when the receiver is
+a variable known to hold an object of that module, so a name that collides with a builtin method
+(`update`) still resolves correctly for ordinary dicts and sets. One entry point, so codegen names
+no specific library. -/
+def libraryMethod? (moduleName member : String) : Option Lean.Name :=
+  match moduleName with
+  | "hashlib" => hashlib.hashlibMethod? member
+  | _ => none
+
+/-- Does this member wrap a comparator into a sort key (`functools.cmp_to_key`)? Keyed on the member
+name alone as well as qualified, since it reaches codegen either way (`from functools import
+cmp_to_key` gives a bare name). Lets the core sort lowering unwrap it without naming any library. -/
+def isCmpKeyWrapper (member : String) : Bool :=
+  ((bareBehaviour? member).map (·.cmpKeyWrapper)).getD false ||
+    ((memberBehaviour? "functools" member).map (·.cmpKeyWrapper)).getD false
 
 /-- A method that a library declares as a no-op, for the core codegen — keyed on the method name
 alone (these come from decorated values, e.g. `f.cache_clear()`, which carry no module tag). One

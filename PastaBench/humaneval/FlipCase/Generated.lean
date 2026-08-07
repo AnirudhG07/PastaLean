@@ -38,7 +38,7 @@ attribute [simp] flip_case
 
 @[taste_ingr]
 theorem flip_case_correct : ∀ (string : String), PastaLean.pyLen (flip_case string) = PastaLean.pyLen string := by
-  sorry
+  taste?
 
 def flip_case'rn := fun (string : String) ↦
   PastaLean.pyStringJoin "" (PastaLean.pyMap (fun x ↦ PastaLean.pyStringSwapcase x) string)

@@ -170,9 +170,7 @@ def kBigIndices := fun (nums : List Int) ↦ fun (k : Int) ↦
 
 @[spec]
 theorem kBigIndices_spec :
-    ⦃⌜k ≥ (0 : Int) ∧
-          PastaLean.pyAll ((PastaLean.pyIter nums).map fun v => decide ((1 : Int) ≤ v) && decide (v ≤ n))⌝⦄
-      kBigIndices nums k ⦃⇓ans =>
+    ⦃⌜k ≥ (0 : Int) ∧ ∀ v ∈ PastaLean.pyIter nums, (1 : Int) ≤ v ∧ v ≤ n⌝⦄ kBigIndices nums k ⦃⇓ans =>
       ⌜ans =
           PastaLean.pySum
             ((List.filter
@@ -208,8 +206,7 @@ theorem kBigIndices_spec :
 theorem kBigIndices_correct :
     ∀ (nums : List Int),
       ∀ (k : Int),
-        k ≥ (0 : Int) ∧
-            PastaLean.pyAll ((PastaLean.pyIter nums).map fun v => decide ((1 : Int) ≤ v) && decide (v ≤ n)) →
+        (k ≥ (0 : Int) ∧ ∀ v ∈ PastaLean.pyIter nums, (1 : Int) ≤ v ∧ v ≤ n) →
           let ans := (kBigIndices nums k).run;
           ans =
             PastaLean.pySum

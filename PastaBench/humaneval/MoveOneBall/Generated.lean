@@ -54,6 +54,16 @@ def move_one_ball(arr: list[int]):
         len(arr) == 0 or
         any(arr[i:] + arr[:i] == sorted(arr) for i in range(len(arr)))
     ))
+    # THE TECHNICAL FORM: a cyclic sequence is a rotation of its sorted order exactly when it has
+    # at most ONE cyclic descent ("dip"). This is not something the code checks — it inspects whole
+    # rotations — so it can only be established by reasoning about the rotation structure.
+    Ensures(len(arr) == 0 or Result() == (
+        len([i for i in range(len(arr)) if arr[i] > arr[(i + 1) % len(arr)]]) <= 1
+    ))
+    # Consequence worth stating on its own: answering True means the array is sorted from the dip
+    # onwards and again up to it, i.e. it has no two separate descents.
+    Ensures(Result() == False or len(arr) == 0 or
+            len([i for i in range(len(arr) - 1) if arr[i] > arr[i + 1]]) <= 1)
 
     sorted_arr = sorted(arr)
     if arr == sorted_arr:
@@ -119,32 +129,52 @@ def move_one_ball := fun (arr : List Int) ↦
 @[spec]
 theorem move_one_ball_spec :
     ⦃⌜True⌝⦄ move_one_ball arr ⦃⇓result =>
-      ⌜result =
-          (PastaLean.pyLen arr = (0 : Int) ∨
-            PastaLean.pyTruthy
-                (PastaLean.pyStdAny
-                  ((PastaLean.pyRange (PastaLean.pyLen arr)).map fun i =>
-                    PastaLean.pySlice arr (some i) none none +ₚ PastaLean.pySlice arr none (some i) none ==
-                      PastaLean.pySort arr)) =
-              true)⌝⦄ :=
+      ⌜(result =
+              (PastaLean.pyLen arr = (0 : Int) ∨
+                ∃ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen arr)),
+                  PastaLean.pySlice arr (some i) none none +ₚ PastaLean.pySlice arr none (some i) none =
+                    PastaLean.pySort arr) ∧
+            (PastaLean.pyLen arr = (0 : Int) ∨
+              result =
+                (PastaLean.pyLen
+                    ((List.filter (fun i => arr⦋i⦌ > arr⦋(i +ₚ (1 : Int)) %ₚ PastaLean.pyLen arr⦌)
+                          (PastaLean.pyRange (PastaLean.pyLen arr))).map
+                      fun i => i) ≤
+                  (1 : Int)))) ∧
+          ((result = Bool.false ∨ PastaLean.pyLen arr = (0 : Int)) ∨
+            PastaLean.pyLen
+                ((List.filter (fun i => arr⦋i⦌ > arr⦋i +ₚ (1 : Int)⦌)
+                      (PastaLean.pyRange (PastaLean.pyLen arr -ₚ (1 : Int)))).map
+                  fun i => i) ≤
+              (1 : Int))⌝⦄ :=
   by
   try
     mvcgen [move_one_ball, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · Invariant.withEarlyReturn (onReturn := fun _ _ => ⌜True⌝) (onContinue := fun _ _ => ⌜True⌝)
-  sorry
+  taste?
   all_goals sorry
 
 theorem move_one_ball_correct :
     ∀ (arr : List Int),
       let result := (move_one_ball arr).run;
-      result =
-        (PastaLean.pyLen arr = (0 : Int) ∨
-          PastaLean.pyTruthy
-              (PastaLean.pyStdAny
-                ((PastaLean.pyRange (PastaLean.pyLen arr)).map fun i =>
-                  PastaLean.pySlice arr (some i) none none +ₚ PastaLean.pySlice arr none (some i) none ==
-                    PastaLean.pySort arr)) =
-            true) :=
+      (result =
+            (PastaLean.pyLen arr = (0 : Int) ∨
+              ∃ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen arr)),
+                PastaLean.pySlice arr (some i) none none +ₚ PastaLean.pySlice arr none (some i) none =
+                  PastaLean.pySort arr) ∧
+          (PastaLean.pyLen arr = (0 : Int) ∨
+            result =
+              (PastaLean.pyLen
+                  ((List.filter (fun i => arr⦋i⦌ > arr⦋(i +ₚ (1 : Int)) %ₚ PastaLean.pyLen arr⦌)
+                        (PastaLean.pyRange (PastaLean.pyLen arr))).map
+                    fun i => i) ≤
+                (1 : Int)))) ∧
+        ((result = Bool.false ∨ PastaLean.pyLen arr = (0 : Int)) ∨
+          PastaLean.pyLen
+              ((List.filter (fun i => arr⦋i⦌ > arr⦋i +ₚ (1 : Int)⦌)
+                    (PastaLean.pyRange (PastaLean.pyLen arr -ₚ (1 : Int)))).map
+                fun i => i) ≤
+            (1 : Int)) :=
   by
   intro arr
   exact move_one_ball_spec True.intro
@@ -183,6 +213,11 @@ def move_one_ball'rn := fun (arr : List Int) ↦
       -- THE POINT: The function checks if `arr` is a cyclic permutation of its sorted version.
       -- This is true if and only if there exists a shift `i` such that the shifted
       -- array equals the sorted array. The empty array is a special case, defined as true.
+      -- THE TECHNICAL FORM: a cyclic sequence is a rotation of its sorted order exactly when it has
+      -- at most ONE cyclic descent ("dip"). This is not something the code checks — it inspects whole
+      -- rotations — so it can only be established by reasoning about the rotation structure.
+      -- Consequence worth stating on its own: answering True means the array is sorted from the dip
+      -- onwards and again up to it, i.e. it has no two separate descents.
       let mut sorted_arr : List Int := PastaLean.pySort arr
       if h_1 : arr == sorted_arr then 
         return Bool.true

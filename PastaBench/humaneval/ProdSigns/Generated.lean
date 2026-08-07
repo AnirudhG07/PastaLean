@@ -139,7 +139,7 @@ theorem prod_signs_spec :
                     ((PastaLean.pyIter arr).map fun x => PastaLean.pyFloorDiv x (PastaLean.pyAbs x)))⌝⦄ :=
   by
   mvcgen [prod_signs, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  sorry
+  taste?
   all_goals sorry
 
 theorem prod_signs_correct :

@@ -32,7 +32,11 @@ def is_simple_power(x, n):
     is_simple_power(3, 1) => false
     is_simple_power(5, 3) => false
     """
-    Ensures(not Result() or x == 1 or n == 0 or (x % n == 0))
+    # For |n| >= 2 the powers grow at least as fast as 2**k, so bounding |x| bounds the
+    # exponent that has to be searched: k <= 62 whenever n ** k == x.
+    Requires(-(2 ** 62) <= x <= 2 ** 62)
+    # THE POINT: the answer is exactly "x is n raised to some non-negative integer power".
+    Ensures(Result() == any(n ** k == x for k in range(0, 63)))
 
     if x == 1: return True
     if n == 0: return x == 0
@@ -43,7 +47,9 @@ def is_simple_power(x, n):
 
     p = n
     while abs(p) <= abs(x):
-        Invariant(p % n == 0)
+        # THE loop invariant: p is always an exact power of n, so the `p == x` test below
+        # can only ever answer True for an x that genuinely is a power of n.
+        Invariant(any(p == n ** k for k in range(0, 63)))
         Invariant(abs(n) >= 2)
         Decreases(abs(x) + 1 - abs(p))
         if p == x: return True
@@ -77,7 +83,11 @@ def is_simple_power := fun (x : Int) ↦ fun (n : Int) ↦
     let _ := Libraries.passta.pyPassAssert (decide (PastaLean.pyAbs n ≥ (2 : Int)))
     let mut p : Int := n
     while (PastaLean.pyAbs p ≤ PastaLean.pyAbs x) do
-      let _ := Libraries.passta.pyPassInvariant (p %ₚ n == (0 : Int))
+      -- THE loop invariant: p is always an exact power of n, so the `p == x` test below
+      -- can only ever answer True for an x that genuinely is a power of n.
+      let _ :=
+        Libraries.passta.pyPassInvariant
+          (PastaLean.pyStdAny ((PastaLean.pyRange (63 : Int) (0 : Int)).map fun k => p == n ^ₚ k))
       let _ := Libraries.passta.pyPassInvariant (decide (PastaLean.pyAbs n ≥ (2 : Int)))
       let _ := Libraries.passta.pyPassDecreases (PastaLean.pyAbs x +ₚ (1 : Int) -ₚ PastaLean.pyAbs p)
       if h_5 : p = x then 
@@ -89,8 +99,8 @@ def is_simple_power := fun (x : Int) ↦ fun (n : Int) ↦
 
 @[spec]
 theorem is_simple_power_spec :
-    ⦃⌜True⌝⦄ is_simple_power x n ⦃⇓result =>
-      ⌜((¬PastaLean.pyTruthy result = true ∨ x = (1 : Int)) ∨ n = (0 : Int)) ∨ x %ₚ n = (0 : Int)⌝⦄ :=
+    ⦃⌜-(2 : Int) ^ₚ (62 : Int) ≤ x ∧ x ≤ (2 : Int) ^ₚ (62 : Int)⌝⦄ is_simple_power x n ⦃⇓result =>
+      ⌜result = ∃ k ∈ PastaLean.pyIter (PastaLean.pyRange (63 : Int) (0 : Int)), n ^ₚ k = x⌝⦄ :=
   by
   try
     mvcgen [is_simple_power, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
@@ -101,19 +111,21 @@ theorem is_simple_power_spec :
       ⌜Sum.elim
           (fun st =>
             let p := st;
-            p %ₚ n = (0 : Int) ∧ PastaLean.pyAbs n ≥ (2 : Int))
+            (∃ k ∈ PastaLean.pyIter (PastaLean.pyRange (63 : Int) (0 : Int)), p = n ^ₚ k) ∧
+              PastaLean.pyAbs n ≥ (2 : Int))
           (fun _ => True) s⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem is_simple_power_correct :
     ∀ (x : Int),
       ∀ (n : Int),
-        let result := (is_simple_power x n).run;
-        ((¬PastaLean.pyTruthy result = true ∨ x = (1 : Int)) ∨ n = (0 : Int)) ∨ x %ₚ n = (0 : Int) :=
+        -(2 : Int) ^ₚ (62 : Int) ≤ x ∧ x ≤ (2 : Int) ^ₚ (62 : Int) →
+          let result := (is_simple_power x n).run;
+          result = ∃ k ∈ PastaLean.pyIter (PastaLean.pyRange (63 : Int) (0 : Int)), n ^ₚ k = x :=
   by
-  intro x n
-  exact is_simple_power_spec True.intro
+  intro x n hpre
+  exact is_simple_power_spec hpre
 
 def is_simple_power'rn := fun (x : Int) ↦ fun (n : Int) ↦
   Id.run
@@ -131,6 +143,12 @@ def is_simple_power'rn := fun (x : Int) ↦ fun (n : Int) ↦
           is_simple_power(5, 3) => false
           
       -/
+      -- For |n| >= 2 the powers grow at least as fast as 2**k, so bounding |x| bounds the
+      -- exponent that has to be searched: k <= 62 whenever n ** k == x.
+      let _ :=
+        Libraries.passta.pyPassRequires
+          (decide (-(2 : Int) ^ₚ (62 : Int) ≤ x) && decide (x ≤ (2 : Int) ^ₚ (62 : Int)))
+      -- THE POINT: the answer is exactly "x is n raised to some non-negative integer power".
       if h_1 : x == (1 : Int) then 
         return Bool.true
       else
@@ -153,7 +171,11 @@ def is_simple_power'rn := fun (x : Int) ↦ fun (n : Int) ↦
       let _ := Libraries.passta.pyPassAssert (decide (PastaLean.pyAbs n ≥ (2 : Int)))
       let mut p : Int := n
       while (PastaLean.pyAbs p ≤ PastaLean.pyAbs x) do
-        let _ := Libraries.passta.pyPassInvariant (p %ₚ n == (0 : Int))
+        -- THE loop invariant: p is always an exact power of n, so the `p == x` test below
+        -- can only ever answer True for an x that genuinely is a power of n.
+        let _ :=
+          Libraries.passta.pyPassInvariant
+            (PastaLean.pyStdAny ((PastaLean.pyRange (63 : Int) (0 : Int)).map fun k => p == n ^ₚ k))
         let _ := Libraries.passta.pyPassInvariant (decide (PastaLean.pyAbs n ≥ (2 : Int)))
         let _ := Libraries.passta.pyPassDecreases (PastaLean.pyAbs x +ₚ (1 : Int) -ₚ PastaLean.pyAbs p)
         if h_5 : p == x then 

@@ -19,10 +19,11 @@ set_option maxHeartbeats 800000
 
 from contracts import *
 
+
 def is_nested(string):
     '''
     Create a function that takes a string as input which contains only square brackets.
-    The function should return True if and only if there is a valid subsequence of brackets 
+    The function should return True if and only if there is a valid subsequence of brackets
     where at least one bracket in the subsequence is nested.
 
     is_nested('[[]]') ➞ True
@@ -33,30 +34,39 @@ def is_nested(string):
     is_nested('[[]][[') ➞ True
     '''
     Requires(all(c == '[' or c == ']' for c in string))
+    # The point, stated as the index pair the two loops search for: the scan reports True exactly
+    # when some start i carries two openers back to back (string[i] and string[i+1] are both '[')
+    # AND that start is eventually closed off — some j > i makes string[i:j+1] balanced. The
+    # adjacency is what forces the depth to reach 2 before the first return to depth 0, which is
+    # the `max_nest >= 2` test; the balanced j is the `cnt == 0` test.
+    Ensures(Result() == any(
+        string[i] == '[' and string[i + 1] == '['
+        and any(string[i:j + 1].count('[') == string[i:j + 1].count(']')
+                for j in range(i + 1, len(string)))
+        for i in range(len(string) - 1)))
 
     for i in range(len(string)):
-        Invariant(0 <= i <= len(string))
+        Invariant(0 <= i)
+        Invariant(i <= len(string))
         if string[i] == "]": continue
-        
-        Assert(0 <= i < len(string))
+
+        Assert(0 <= i)
+        Assert(i < len(string))
         Assert(string[i] == '[')
         cnt, max_nest = 0, 0
         for j in range(i, len(string)):
-            Invariant(0 <= i < len(string))
-            Invariant(i <= j <= len(string))
-            Invariant(string[i] == '[')
-            
-            # Invariant: `max_nest` tracks the maximum nesting depth, which cannot be negative.
-            Invariant(max_nest >= 0)
-            
-            # Invariant: `cnt` tracks the balance of brackets in the prefix `string[i:j]`.
-            # Its value is bounded by the number of characters processed.
-            Invariant(i - j <= cnt)
-            Invariant(cnt <= j - i)
+            Invariant(0 <= i)
+            Invariant(i < len(string))
+            Invariant(i <= j)
+            Invariant(j <= len(string))
 
-            # Invariant: `max_nest` is the maximum of `cnt` values seen so far in this scan.
+            # cnt is exactly the bracket depth of the window already consumed, string[i:j].
+            Invariant(cnt == string[i:j].count('[') - string[i:j].count(']'))
+
+            # max_nest is the running maximum of those depths, so it dominates cnt and is >= 0.
+            Invariant(max_nest >= 0)
             Invariant(cnt <= max_nest)
-            
+
             Decreases(len(string) - j)
 
             if string[j] == "[":
@@ -64,10 +74,10 @@ def is_nested(string):
             else:
                 cnt -= 1
             max_nest = max(max_nest, cnt)
-            
+
             if cnt == 0:
-                # A balanced subsequence `string[i:j+1]` has been found.
-                # If its maximum nesting depth was 2 or more, it's a success.
+                # string[i:j+1] is balanced. Depth 2 was reached inside it iff string[i+1] was
+                # also an opener, which is exactly the nesting we are looking for.
                 if max_nest >= 2:
                     return True
                 break
@@ -79,28 +89,32 @@ namespace PastaBench.humaneval.IsNested
 def is_nested := fun (string : List String) ↦
   (do
     for i in (PastaLean.pyRange (PastaLean.pyLen string))do
-      let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i) && decide (i ≤ PastaLean.pyLen string))
+      let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i))
+      let _ := Libraries.passta.pyPassInvariant (decide (i ≤ PastaLean.pyLen string))
       if h_1 : string⦋i⦌ = "]" then 
         continue
       else
         let _ := ()
-      let _ := Libraries.passta.pyPassAssert (decide ((0 : Int) ≤ i) && decide (i < PastaLean.pyLen string))
+      let _ := Libraries.passta.pyPassAssert (decide ((0 : Int) ≤ i))
+      let _ := Libraries.passta.pyPassAssert (decide (i < PastaLean.pyLen string))
       let _ := Libraries.passta.pyPassAssert (string⦋i⦌ == "[")
       let __unpack_value_1 := ((0 : Int), (0 : Int))
       let __unpack_pair_1 := __unpack_value_1
       let mut cnt : Int := Prod.fst __unpack_pair_1
       let mut max_nest : Int := Prod.snd __unpack_pair_1
       for j in (PastaLean.pyRange (PastaLean.pyLen string) i)do
-        let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i) && decide (i < PastaLean.pyLen string))
-        let _ := Libraries.passta.pyPassInvariant (decide (i ≤ j) && decide (j ≤ PastaLean.pyLen string))
-        let _ := Libraries.passta.pyPassInvariant (string⦋i⦌ == "[")
-        -- Invariant: `max_nest` tracks the maximum nesting depth, which cannot be negative.
+        let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i))
+        let _ := Libraries.passta.pyPassInvariant (decide (i < PastaLean.pyLen string))
+        let _ := Libraries.passta.pyPassInvariant (decide (i ≤ j))
+        let _ := Libraries.passta.pyPassInvariant (decide (j ≤ PastaLean.pyLen string))
+        -- cnt is exactly the bracket depth of the window already consumed, string[i:j].
+        let _ :=
+          Libraries.passta.pyPassInvariant
+            (cnt ==
+              PastaLean.pyCount (PastaLean.pySlice string (some i) (some j) none) "[" -ₚ
+                PastaLean.pyCount (PastaLean.pySlice string (some i) (some j) none) "]")
+        -- max_nest is the running maximum of those depths, so it dominates cnt and is >= 0.
         let _ := Libraries.passta.pyPassInvariant (decide (max_nest ≥ (0 : Int)))
-        -- Invariant: `cnt` tracks the balance of brackets in the prefix `string[i:j]`.
-        -- Its value is bounded by the number of characters processed.
-        let _ := Libraries.passta.pyPassInvariant (decide (i -ₚ j ≤ cnt))
-        let _ := Libraries.passta.pyPassInvariant (decide (cnt ≤ j -ₚ i))
-        -- Invariant: `max_nest` is the maximum of `cnt` values seen so far in this scan.
         let _ := Libraries.passta.pyPassInvariant (decide (cnt ≤ max_nest))
         let _ := Libraries.passta.pyPassDecreases (PastaLean.pyLen string -ₚ j)
         if h_2 : string⦋j⦌ = "[" then 
@@ -109,8 +123,8 @@ def is_nested := fun (string : List String) ↦
           cnt := cnt -ₚ (1 : Int)
         max_nest := PastaLean.pyMax [max_nest, cnt]
         if h_3 : cnt = (0 : Int) then 
-          -- A balanced subsequence `string[i:j+1]` has been found.
-          -- If its maximum nesting depth was 2 or more, it's a success.
+          -- string[i:j+1] is balanced. Depth 2 was reached inside it iff string[i+1] was
+          -- also an opener, which is exactly the nesting we are looking for.
           if h_4 : max_nest ≥ (2 : Int) then 
             return Bool.true
           else
@@ -120,10 +134,37 @@ def is_nested := fun (string : List String) ↦
           let _ := ()
     return Bool.false : Id _)
 
+@[spec]
 theorem is_nested_spec :
-    ⦃⌜PastaLean.pyAll ((PastaLean.pyIter string).map fun c => c == "[" || c == "]")⌝⦄ is_nested string ⦃⇓_ =>
-      ⌜True⌝⦄ :=
-  by apply Std.Do.Triple.of_entails_wp; intro _; exact True.intro
+    ⦃⌜∀ c ∈ PastaLean.pyIter string, c = "[" ∨ c = "]"⌝⦄ is_nested string ⦃⇓result =>
+      ⌜result =
+          ∃ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen string -ₚ (1 : Int))),
+            (string⦋i⦌ = "[" ∧ string⦋i +ₚ (1 : Int)⦌ = "[") ∧
+              ∃ j ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen string) (i +ₚ (1 : Int))),
+                PastaLean.pyCount (PastaLean.pySlice string (some i) (some (j +ₚ (1 : Int))) none) "[" =
+                  PastaLean.pyCount (PastaLean.pySlice string (some i) (some (j +ₚ (1 : Int))) none) "]"⌝⦄ :=
+  by
+  try
+    mvcgen [is_nested, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · ⇓cur =>
+      ⌜let i := (cur.prefix.length : Int);
+        (0 : Int) ≤ i ∧ i ≤ PastaLean.pyLen string⌝
+  taste?
+  all_goals sorry
+
+theorem is_nested_correct :
+    ∀ (string : List String),
+      (∀ c ∈ PastaLean.pyIter string, c = "[" ∨ c = "]") →
+        let result := (is_nested string).run;
+        result =
+          ∃ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen string -ₚ (1 : Int))),
+            (string⦋i⦌ = "[" ∧ string⦋i +ₚ (1 : Int)⦌ = "[") ∧
+              ∃ j ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen string) (i +ₚ (1 : Int))),
+                PastaLean.pyCount (PastaLean.pySlice string (some i) (some (j +ₚ (1 : Int))) none) "[" =
+                  PastaLean.pyCount (PastaLean.pySlice string (some i) (some (j +ₚ (1 : Int))) none) "]" :=
+  by
+  intro string hpre
+  exact is_nested_spec hpre
 
 def is_nested'rn := fun (string : List String) ↦
   Id.run
@@ -131,7 +172,7 @@ def is_nested'rn := fun (string : List String) ↦
       /-
       
           Create a function that takes a string as input which contains only square brackets.
-          The function should return True if and only if there is a valid subsequence of brackets 
+          The function should return True if and only if there is a valid subsequence of brackets
           where at least one bracket in the subsequence is nested.
       
           is_nested('[[]]') ➞ True
@@ -144,29 +185,38 @@ def is_nested'rn := fun (string : List String) ↦
       -/
       let _ :=
         Libraries.passta.pyPassRequires (PastaLean.pyAll ((PastaLean.pyIter string).map fun c => c == "[" || c == "]"))
+      -- The point, stated as the index pair the two loops search for: the scan reports True exactly
+      -- when some start i carries two openers back to back (string[i] and string[i+1] are both '[')
+      -- AND that start is eventually closed off — some j > i makes string[i:j+1] balanced. The
+      -- adjacency is what forces the depth to reach 2 before the first return to depth 0, which is
+      -- the `max_nest >= 2` test; the balanced j is the `cnt == 0` test.
       for i in (PastaLean.pyRange (PastaLean.pyLen string))do
-        let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i) && decide (i ≤ PastaLean.pyLen string))
+        let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i))
+        let _ := Libraries.passta.pyPassInvariant (decide (i ≤ PastaLean.pyLen string))
         if h_1 : string⦋i⦌ == "]" then 
           continue
         else
           let _ := ()
-        let _ := Libraries.passta.pyPassAssert (decide ((0 : Int) ≤ i) && decide (i < PastaLean.pyLen string))
+        let _ := Libraries.passta.pyPassAssert (decide ((0 : Int) ≤ i))
+        let _ := Libraries.passta.pyPassAssert (decide (i < PastaLean.pyLen string))
         let _ := Libraries.passta.pyPassAssert (string⦋i⦌ == "[")
         let __unpack_value_1 := ((0 : Int), (0 : Int))
         let __unpack_pair_1 := __unpack_value_1
         let mut cnt : Int := Prod.fst __unpack_pair_1
         let mut max_nest : Int := Prod.snd __unpack_pair_1
         for j in (PastaLean.pyRange (PastaLean.pyLen string) i)do
-          let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i) && decide (i < PastaLean.pyLen string))
-          let _ := Libraries.passta.pyPassInvariant (decide (i ≤ j) && decide (j ≤ PastaLean.pyLen string))
-          let _ := Libraries.passta.pyPassInvariant (string⦋i⦌ == "[")
-          -- Invariant: `max_nest` tracks the maximum nesting depth, which cannot be negative.
+          let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i))
+          let _ := Libraries.passta.pyPassInvariant (decide (i < PastaLean.pyLen string))
+          let _ := Libraries.passta.pyPassInvariant (decide (i ≤ j))
+          let _ := Libraries.passta.pyPassInvariant (decide (j ≤ PastaLean.pyLen string))
+          -- cnt is exactly the bracket depth of the window already consumed, string[i:j].
+          let _ :=
+            Libraries.passta.pyPassInvariant
+              (cnt ==
+                PastaLean.pyCount (PastaLean.pySlice string (some i) (some j) none) "[" -ₚ
+                  PastaLean.pyCount (PastaLean.pySlice string (some i) (some j) none) "]")
+          -- max_nest is the running maximum of those depths, so it dominates cnt and is >= 0.
           let _ := Libraries.passta.pyPassInvariant (decide (max_nest ≥ (0 : Int)))
-          -- Invariant: `cnt` tracks the balance of brackets in the prefix `string[i:j]`.
-          -- Its value is bounded by the number of characters processed.
-          let _ := Libraries.passta.pyPassInvariant (decide (i -ₚ j ≤ cnt))
-          let _ := Libraries.passta.pyPassInvariant (decide (cnt ≤ j -ₚ i))
-          -- Invariant: `max_nest` is the maximum of `cnt` values seen so far in this scan.
           let _ := Libraries.passta.pyPassInvariant (decide (cnt ≤ max_nest))
           let _ := Libraries.passta.pyPassDecreases (PastaLean.pyLen string -ₚ j)
           if h_2 : string⦋j⦌ == "[" then 
@@ -175,8 +225,8 @@ def is_nested'rn := fun (string : List String) ↦
             cnt := cnt -ₚ (1 : Int)
           max_nest := PastaLean.pyMax [max_nest, cnt]
           if h_3 : cnt == (0 : Int) then 
-            -- A balanced subsequence `string[i:j+1]` has been found.
-            -- If its maximum nesting depth was 2 or more, it's a success.
+            -- string[i:j+1] is balanced. Depth 2 was reached inside it iff string[i+1] was
+            -- also an opener, which is exactly the nesting we are looking for.
             if h_4 : max_nest ≥ (2 : Int) then 
               return Bool.true
             else

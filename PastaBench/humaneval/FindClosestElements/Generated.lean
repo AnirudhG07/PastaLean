@@ -113,7 +113,7 @@ theorem find_closest_elements_spec :
           min_pair⦋(1 : Int)⦌ -ₚ min_pair⦋(0 : Int)⦌ ≥ (0.0 : Rat)⌝⦄ :=
   by
   mvcgen [find_closest_elements, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  sorry
+  taste?
   all_goals sorry
 
 theorem find_closest_elements_correct :
@@ -128,60 +128,59 @@ theorem find_closest_elements_correct :
   exact find_closest_elements_spec hpre
 
 def find_closest_elements'rn := fun (numbers : List Float) ↦
-  (Id.run
-      (do
-        let mut numbers := numbers
-        /-
-         From a supplied list of numbers (of length at least two) select and return two that are the closest to each
-            other and return them in order (smaller number, larger number).
-            >>> find_closest_elements([1.0, 2.0, 3.0, 4.0, 5.0, 2.2])
-            (2.0, 2.2)
-            >>> find_closest_elements([1.0, 2.0, 3.0, 4.0, 5.0, 2.0])
-            (2.0, 2.0)
-            
-        -/
-        let _ := Libraries.passta.pyPassRequires (decide (PastaLean.pyLen numbers ≥ (2 : Int)))
-        -- The returned pair should be ordered.
-        -- The elements of the pair must be present in the (sorted) list.
-        -- The difference must be non-negative.
-        numbers := PastaLean.pySort numbers
-        let mut min_diff := PastaLean.pyNonFinite "inf"
-        let mut min_pair := Option.none
-        for _pair_1 in
-          (PastaLean.pyIter
-            (PastaLean.pyZip (PastaLean.pySlice numbers none (some (-(1 : Int))) none)
-              (PastaLean.pySlice numbers (some (1 : Int)) none none)))do
-          let l := Prod.fst _pair_1
-          let r := Prod.snd _pair_1
-          -- Invariants on the accumulator state.
-          -- `min_diff` is either infinity or the smallest non-negative difference found so far.
-          let _ :=
-            Libraries.passta.pyPassInvariant
-              (min_diff == PastaLean.pyNonFinite "inf" || decide (min_diff ≥ (0.0 : Float)))
-          -- `min_pair` is either None or a pair from the list reflecting the current `min_diff`.
-          let _ :=
-            Libraries.passta.pyPassInvariant
-              (PastaLean.pyIsNone min_pair ||
-                PastaLean.pyContains numbers min_pair⦋(0 : Int)⦌ && PastaLean.pyContains numbers min_pair⦋(1 : Int)⦌)
-          let _ :=
-            Libraries.passta.pyPassInvariant
-              (PastaLean.pyIsNone min_pair || decide (min_pair⦋(0 : Int)⦌ ≤ min_pair⦋(1 : Int)⦌))
-          let _ :=
-            Libraries.passta.pyPassInvariant
-              (PastaLean.pyIsNone min_pair || min_pair⦋(1 : Int)⦌ -ₚ min_pair⦋(0 : Int)⦌ == min_diff)
-          let mut diff := r -ₚ l
-          -- After sorting, any adjacent pair (l, r) will have l <= r, so their difference is non-negative.
-          -- This fact is crucial for proving the invariant on min_diff is maintained.
-          let _ := Libraries.passta.pyPassAssert (decide (diff ≥ (0.0 : Float)))
-          if h_1 : diff < min_diff then 
-            min_diff := diff
-            min_pair := (l, r)
-          else
-            let _ := ()
-        -- The precondition `len(numbers) >= 2` ensures the loop runs at least once,
-        -- so `min_pair` will be assigned a value.
-        let _ := Libraries.passta.pyPassAssert !PastaLean.pyIsNone min_pair
-        return min_pair) :
-    Float)
+  Id.run
+    (do
+      let mut numbers := numbers
+      /-
+       From a supplied list of numbers (of length at least two) select and return two that are the closest to each
+          other and return them in order (smaller number, larger number).
+          >>> find_closest_elements([1.0, 2.0, 3.0, 4.0, 5.0, 2.2])
+          (2.0, 2.2)
+          >>> find_closest_elements([1.0, 2.0, 3.0, 4.0, 5.0, 2.0])
+          (2.0, 2.0)
+          
+      -/
+      let _ := Libraries.passta.pyPassRequires (decide (PastaLean.pyLen numbers ≥ (2 : Int)))
+      -- The returned pair should be ordered.
+      -- The elements of the pair must be present in the (sorted) list.
+      -- The difference must be non-negative.
+      numbers := PastaLean.pySort numbers
+      let mut min_diff := PastaLean.pyNonFinite "inf"
+      let mut min_pair := Option.none
+      for _pair_1 in
+        (PastaLean.pyIter
+          (PastaLean.pyZip (PastaLean.pySlice numbers none (some (-(1 : Int))) none)
+            (PastaLean.pySlice numbers (some (1 : Int)) none none)))do
+        let l := Prod.fst _pair_1
+        let r := Prod.snd _pair_1
+        -- Invariants on the accumulator state.
+        -- `min_diff` is either infinity or the smallest non-negative difference found so far.
+        let _ :=
+          Libraries.passta.pyPassInvariant
+            (min_diff == PastaLean.pyNonFinite "inf" || decide (min_diff ≥ (0.0 : Float)))
+        -- `min_pair` is either None or a pair from the list reflecting the current `min_diff`.
+        let _ :=
+          Libraries.passta.pyPassInvariant
+            (PastaLean.pyIsNone min_pair ||
+              PastaLean.pyContains numbers min_pair⦋(0 : Int)⦌ && PastaLean.pyContains numbers min_pair⦋(1 : Int)⦌)
+        let _ :=
+          Libraries.passta.pyPassInvariant
+            (PastaLean.pyIsNone min_pair || decide (min_pair⦋(0 : Int)⦌ ≤ min_pair⦋(1 : Int)⦌))
+        let _ :=
+          Libraries.passta.pyPassInvariant
+            (PastaLean.pyIsNone min_pair || min_pair⦋(1 : Int)⦌ -ₚ min_pair⦋(0 : Int)⦌ == min_diff)
+        let mut diff := r -ₚ l
+        -- After sorting, any adjacent pair (l, r) will have l <= r, so their difference is non-negative.
+        -- This fact is crucial for proving the invariant on min_diff is maintained.
+        let _ := Libraries.passta.pyPassAssert (decide (diff ≥ (0.0 : Float)))
+        if h_1 : diff < min_diff then 
+          min_diff := diff
+          min_pair := (l, r)
+        else
+          let _ := ()
+      -- The precondition `len(numbers) >= 2` ensures the loop runs at least once,
+      -- so `min_pair` will be assigned a value.
+      let _ := Libraries.passta.pyPassAssert !PastaLean.pyIsNone min_pair
+      return min_pair)
 
 end PastaBench.humaneval.FindClosestElements

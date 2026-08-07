@@ -48,17 +48,11 @@ attribute [simp] filter_by_substring
 theorem filter_by_substring_correct :
     ∀ (strings : List String),
       ∀ (substring : String),
-        PastaLean.pyTruthy
-              (PastaLean.pyAll
-                ((PastaLean.pyIter (filter_by_substring strings substring)).map fun s =>
-                  PastaLean.pyContains s substring && PastaLean.pyContains strings s)) =
-            true ∧
-          PastaLean.pyTruthy
-              (PastaLean.pyAll
-                ((List.filter (fun s => PastaLean.pyContains s substring) (PastaLean.pyIter strings)).map fun s =>
-                  PastaLean.pyContains (filter_by_substring strings substring) s)) =
-            true :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+        (∀ s ∈ PastaLean.pyIter (filter_by_substring strings substring),
+            PastaLean.pyContains s substring ∧ PastaLean.pyContains strings s) ∧
+          ∀ s ∈ PastaLean.pyIter strings,
+            PastaLean.pyContains s substring → PastaLean.pyContains (filter_by_substring strings substring) s :=
+  by taste?
 
 def filter_by_substring'rn := fun (strings : List String) ↦ fun (substring : String) ↦
   PastaLean.pyList (PastaLean.pyFilter (fun s ↦ PastaLean.pyContains s substring) strings)

@@ -30,8 +30,12 @@ def sum_product(numbers: List[int]) -> Tuple[int, int]:
     >>> sum_product([1, 2, 3, 4])
     (10, 24)
     """
+    # The two exact folds ...
     Ensures(Result()[0] == sum(numbers))
     Ensures(Result()[1] == math.prod(numbers))
+    # ... and the empty-input identities the problem calls out explicitly (0 for the empty sum,
+    # 1 for the empty product — the neutral element of each operation).
+    Ensures(len(numbers) > 0 or (Result()[0] == 0 and Result()[1] == 1))
 
     s, p = 0, 1
     # The for-each loop is expressed with an explicit index `i` via `enumerate`
@@ -74,16 +78,18 @@ def sum_product := fun (numbers : List Int) ↦
 @[spec]
 theorem sum_product_spec :
     ⦃⌜True⌝⦄ sum_product numbers ⦃⇓result =>
-      ⌜result⦋(0 : Int)⦌ = PastaLean.pySum numbers ∧ result⦋(1 : Int)⦌ = Libraries.math.pyMathProd numbers⌝⦄ :=
+      ⌜(result⦋(0 : Int)⦌ = PastaLean.pySum numbers ∧ result⦋(1 : Int)⦌ = Libraries.math.pyMathProd numbers) ∧
+          (PastaLean.pyLen numbers > (0 : Int) ∨ result⦋(0 : Int)⦌ = (0 : Int) ∧ result⦋(1 : Int)⦌ = (1 : Int))⌝⦄ :=
   by
   mvcgen [sum_product, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  taste?
   all_goals sorry
 
 theorem sum_product_correct :
     ∀ (numbers : List Int),
       let result := (sum_product numbers).run;
-      result⦋(0 : Int)⦌ = PastaLean.pySum numbers ∧ result⦋(1 : Int)⦌ = Libraries.math.pyMathProd numbers :=
+      (result⦋(0 : Int)⦌ = PastaLean.pySum numbers ∧ result⦋(1 : Int)⦌ = Libraries.math.pyMathProd numbers) ∧
+        (PastaLean.pyLen numbers > (0 : Int) ∨ result⦋(0 : Int)⦌ = (0 : Int) ∧ result⦋(1 : Int)⦌ = (1 : Int)) :=
   by
   intro numbers
   exact sum_product_spec True.intro
@@ -100,6 +106,9 @@ def sum_product'rn := fun (numbers : List Int) ↦
           (10, 24)
           
       -/
+      -- The two exact folds ...
+      -- ... and the empty-input identities the problem calls out explicitly (0 for the empty sum,
+      -- 1 for the empty product — the neutral element of each operation).
       let __unpack_value_1 := ((0 : Int), (1 : Int))
       let __unpack_pair_1 := __unpack_value_1
       let mut s : Int := Prod.fst __unpack_pair_1

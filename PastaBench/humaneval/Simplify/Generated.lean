@@ -79,7 +79,7 @@ theorem simplify_spec :
             (0 : Int))⌝⦄ :=
   by
   mvcgen [simplify, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  sorry
+  taste?
   all_goals sorry
 
 theorem simplify_correct :

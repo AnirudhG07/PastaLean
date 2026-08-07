@@ -35,19 +35,20 @@ def make_a_pile(n: int) -> list[int]:
     [3, 5, 7]
     """
     Requires(n >= 0)
+    # THE POINT: n levels holding the arithmetic progression n, n+2, …, n+2(n-1). Length pins the
+    # level count; the total pins the progression's closed form, n*n + n*(n-1) = 2n^2 - n.
     Ensures(len(Result()) == n)
-    # The list elements form an arithmetic progression starting at n with a step of 2.
-    Ensures(n == 0 or Result()[0] == n)
-    Ensures(n == 0 or Result()[n - 1] == n + 2 * (n - 1))
+    Ensures(sum(Result()) == 2 * n * n - n)
 
     ans, num = [], n
     for i in range(n):
-        Invariant(0 <= i <= n)
+        Invariant(0 <= i)
+        Invariant(i <= n)
         Invariant(len(ans) == i)
         Invariant(num == n + 2 * i)
-        # At the start of iteration i, the list `ans` contains the results of the
-        # previous i iterations, so its last element corresponds to step i-1.
-        Invariant(i == 0 or ans[i - 1] == n + 2 * (i - 1))
+        # Index-style: after i levels the running total is i*n + i*(i-1), which at i == n IS the
+        # postcondition 2n^2 - n.
+        Invariant(sum(ans) == i * n + i * (i - 1))
 
         ans.append(num)
         num += 2
@@ -63,13 +64,13 @@ def make_a_pile := fun (n : Int) ↦
     let mut ans : List Int := Prod.fst __unpack_pair_1
     let mut num : Int := Prod.snd __unpack_pair_1
     for i in (PastaLean.pyRange n)do
-      let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i) && decide (i ≤ n))
+      let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i))
+      let _ := Libraries.passta.pyPassInvariant (decide (i ≤ n))
       let _ := Libraries.passta.pyPassInvariant (PastaLean.pyLen ans == i)
       let _ := Libraries.passta.pyPassInvariant (num == n +ₚ (2 : Int) *ₚ i)
-      -- At the start of iteration i, the list `ans` contains the results of the
-      -- previous i iterations, so its last element corresponds to step i-1.
-      let _ :=
-        Libraries.passta.pyPassInvariant (i == (0 : Int) || ans⦋i -ₚ (1 : Int)⦌ == n +ₚ (2 : Int) *ₚ (i -ₚ (1 : Int)))
+      -- Index-style: after i levels the running total is i*n + i*(i-1), which at i == n IS the
+      -- postcondition 2n^2 - n.
+      let _ := Libraries.passta.pyPassInvariant (PastaLean.pySum ans == i *ₚ n +ₚ i *ₚ (i -ₚ (1 : Int)))
       ans := PastaLean.pyAppend ans num
       num := num +ₚ (2 : Int)
     return ans : Id _)
@@ -77,24 +78,22 @@ def make_a_pile := fun (n : Int) ↦
 @[spec]
 theorem make_a_pile_spec :
     ⦃⌜n ≥ (0 : Int)⌝⦄ make_a_pile n ⦃⇓ans =>
-      ⌜(PastaLean.pyLen ans = n ∧ (n = (0 : Int) ∨ ans⦋(0 : Int)⦌ = n)) ∧
-          (n = (0 : Int) ∨ ans⦋n -ₚ (1 : Int)⦌ = n +ₚ (2 : Int) *ₚ (n -ₚ (1 : Int)))⌝⦄ :=
+      ⌜PastaLean.pyLen ans = n ∧ PastaLean.pySum ans = (2 : Int) *ₚ n *ₚ n -ₚ n⌝⦄ :=
   by
   try
     mvcgen [make_a_pile, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓⟨cur, num⟩ =>
       ⌜let i := (cur.prefix.length : Int);
         ((((0 : Int) ≤ i ∧ i ≤ n) ∧ PastaLean.pyLen ans = i) ∧ num = n +ₚ (2 : Int) *ₚ i) ∧
-          (i = (0 : Int) ∨ ans⦋i -ₚ (1 : Int)⦌ = n +ₚ (2 : Int) *ₚ (i -ₚ (1 : Int)))⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+          PastaLean.pySum ans = i *ₚ n +ₚ i *ₚ (i -ₚ (1 : Int))⌝
+  taste?
   all_goals sorry
 
 theorem make_a_pile_correct :
     ∀ (n : Int),
       n ≥ (0 : Int) →
         let ans := (make_a_pile n).run;
-        (PastaLean.pyLen ans = n ∧ (n = (0 : Int) ∨ ans⦋(0 : Int)⦌ = n)) ∧
-          (n = (0 : Int) ∨ ans⦋n -ₚ (1 : Int)⦌ = n +ₚ (2 : Int) *ₚ (n -ₚ (1 : Int))) :=
+        PastaLean.pyLen ans = n ∧ PastaLean.pySum ans = (2 : Int) *ₚ n *ₚ n -ₚ n :=
   by
   intro n hpre
   exact make_a_pile_spec hpre
@@ -118,19 +117,20 @@ def make_a_pile'rn := fun (n : Int) ↦
           
       -/
       let _ := Libraries.passta.pyPassRequires (decide (n ≥ (0 : Int)))
-      -- The list elements form an arithmetic progression starting at n with a step of 2.
+      -- THE POINT: n levels holding the arithmetic progression n, n+2, …, n+2(n-1). Length pins the
+      -- level count; the total pins the progression's closed form, n*n + n*(n-1) = 2n^2 - n.
       let __unpack_value_1 := ([], n)
       let __unpack_pair_1 := __unpack_value_1
       let mut ans : List Int := Prod.fst __unpack_pair_1
       let mut num : Int := Prod.snd __unpack_pair_1
       for i in (PastaLean.pyRange n)do
-        let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i) && decide (i ≤ n))
+        let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i))
+        let _ := Libraries.passta.pyPassInvariant (decide (i ≤ n))
         let _ := Libraries.passta.pyPassInvariant (PastaLean.pyLen ans == i)
         let _ := Libraries.passta.pyPassInvariant (num == n +ₚ (2 : Int) *ₚ i)
-        -- At the start of iteration i, the list `ans` contains the results of the
-        -- previous i iterations, so its last element corresponds to step i-1.
-        let _ :=
-          Libraries.passta.pyPassInvariant (i == (0 : Int) || ans⦋i -ₚ (1 : Int)⦌ == n +ₚ (2 : Int) *ₚ (i -ₚ (1 : Int)))
+        -- Index-style: after i levels the running total is i*n + i*(i-1), which at i == n IS the
+        -- postcondition 2n^2 - n.
+        let _ := Libraries.passta.pyPassInvariant (PastaLean.pySum ans == i *ₚ n +ₚ i *ₚ (i -ₚ (1 : Int)))
         ans := PastaLean.pyAppend ans num
         num := num +ₚ (2 : Int)
       return ans)

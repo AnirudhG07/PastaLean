@@ -14,6 +14,9 @@ def file_name_check(file_name):
     file_name_check("example.txt") # => 'Yes'
     file_name_check("1example.dll") # => 'No' (the name should start with a latin alphapet letter)
     """
+    # The two clauses together pin Result() exactly: it is one of the two verdicts, and it
+    # is 'Yes' precisely when the four validity conditions of the problem statement hold.
+    Ensures(Result() == 'Yes' or Result() == 'No')
     Ensures((Result() == 'Yes') == (
         sum(1 for c in file_name if c.isdigit()) <= 3 and
         file_name.count('.') == 1 and

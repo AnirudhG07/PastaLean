@@ -285,12 +285,42 @@ def _body_has_direct_exception_syntax(body):
     return False
 
 
+#: Library modules whose members are `IO` (global mutable state), so a call to one makes its
+#: enclosing function IO-effectful exactly as `input()` does. Populated from the Lean registry
+#: (`Libraries.ioEffectfulLibraries`) via the `libraryInfo` backend task — the fact is DECLARED by
+#: the library, never duplicated here. Empty until the backend is reachable, which is safe: the
+#: worst case is a missed effect annotation, the same as before the query existed.
+_IO_EFFECTFUL_LIBRARIES: set[str] = set()
+
+
+def refresh_library_info(client):
+    """Pull library facts from the Lean registry once per backend process."""
+    global _IO_EFFECTFUL_LIBRARIES
+    try:
+        info = client.library_info()
+    except Exception:  # noqa: BLE001  (a missing enrichment must never break translation)
+        return
+    names = info.get("ioEffectfulLibraries")
+    if isinstance(names, list):
+        _IO_EFFECTFUL_LIBRARIES = {n for n in names if isinstance(n, str)}
+
+
+def _is_io_effectful_library_call(func):
+    """A `random.randint(...)`-style call: resolved to a library whose members live in `IO`."""
+    return (
+        isinstance(func, dict)
+        and func.get("library_module") in _IO_EFFECTFUL_LIBRARIES
+    )
+
+
 def _body_has_direct_io_syntax(body):
     for stmt in body:
         for node in _walk_json_nodes(stmt, skip_nested_function_bodies=True):
             if _node_type(node) != "Call":
                 continue
             func = node.get("func")
+            if _is_io_effectful_library_call(func):
+                return True
             if (
                 isinstance(func, dict)
                 and func.get("node_type") == "Name"
@@ -354,7 +384,9 @@ def _annotate_direct_io_calls(node):
     if isinstance(node, dict):
         if node.get("node_type") == "Call":
             func = node.get("func")
-            if (
+            if _is_io_effectful_library_call(func):
+                node.setdefault("effect_mode", "io")
+            elif (
                 isinstance(func, dict)
                 and func.get("node_type") == "Name"
             ):
@@ -1014,10 +1046,13 @@ def _comprehension_target_names(node):
     return names
 
 
-def _annotate_library_refs_in_expr(node, import_env):
+def _annotate_library_refs_in_expr(node, import_env, shadowed=frozenset()):
+    """`shadowed` are names bound LOCALLY (parameters, assignments, comprehension/lambda binders).
+    They must not be read as library references even when they happen to share a name with a
+    supported library — `def f(string)` makes `string.lower()` a method call, not `string.lower`."""
     if isinstance(node, list):
         for item in node:
-            _annotate_library_refs_in_expr(item, import_env)
+            _annotate_library_refs_in_expr(item, import_env, shadowed)
         return
     if not isinstance(node, dict):
         return
@@ -1036,8 +1071,9 @@ def _annotate_library_refs_in_expr(node, import_env):
             for gen in node.get("generators", []) or []:
                 bound |= _comprehension_target_names(gen.get("target"))
         sub_env = {k: v for k, v in import_env.items() if k not in bound} if bound else import_env
+        sub_shadowed = (shadowed | bound) if bound else shadowed
         for value in node.values():
-            _annotate_library_refs_in_expr(value, sub_env)
+            _annotate_library_refs_in_expr(value, sub_env, sub_shadowed)
         return
 
     if node_type == "Name":
@@ -1053,7 +1089,7 @@ def _annotate_library_refs_in_expr(node, import_env):
             if binding and binding.get("kind") == "module":
                 node["library_module"] = binding["module"]
                 node["library_member"] = node.get("attr")
-            elif vid in SUPPORTED_LIBRARY_IMPORTS:
+            elif vid in SUPPORTED_LIBRARY_IMPORTS and vid not in shadowed:
                 # `bisect.bisect_left(...)`: a supported-library name used as `X.attr` is the MODULE,
                 # even if `from bisect import *` also bound `bisect` (the function alias) — the attribute
                 # access disambiguates to the module. Clear the receiver's stale member stamp so it is
@@ -1066,7 +1102,7 @@ def _annotate_library_refs_in_expr(node, import_env):
     for key, value in node.items():
         if node_type == "FunctionDef" and key == "body":
             continue
-        _annotate_library_refs_in_expr(value, import_env)
+        _annotate_library_refs_in_expr(value, import_env, shadowed)
 
 
 @functools.lru_cache(maxsize=None)
@@ -1134,8 +1170,11 @@ def _scope_bound_names(body):
     return names
 
 
-def _annotate_library_imports_in_scope(body, inherited_env=None):
+def _annotate_library_imports_in_scope(body, inherited_env=None, shadowed=frozenset()):
     env = dict(inherited_env or {})
+    # Locally-bound names in THIS scope shadow same-named libraries for the whole scope (Python
+    # binds per-function, not per-statement), so collect them up front.
+    shadowed = set(shadowed) | set(_scope_bound_names(body))
     for stmt in body:
         if not isinstance(stmt, dict):
             continue
@@ -1184,7 +1223,7 @@ def _annotate_library_imports_in_scope(body, inherited_env=None):
                         }
             continue
 
-        _annotate_library_refs_in_expr(stmt, env)
+        _annotate_library_refs_in_expr(stmt, env, shadowed)
         _strip_library_annotation_from_binders(stmt)
 
         # A binding here shadows a star-imported member from now on (`from math import *` then
@@ -1202,25 +1241,29 @@ def _annotate_library_imports_in_scope(body, inherited_env=None):
                     child_env.pop(arg_name, None)
                 for local_name in _scope_bound_names(method.get("body", [])):
                     child_env.pop(local_name, None)
-                _annotate_library_imports_in_scope(method.get("body", []), child_env)
+                _annotate_library_imports_in_scope(
+                    method.get("body", []), child_env,
+                    shadowed | set(_function_arg_names(method)))
         elif node_type == "FunctionDef":
             child_env = dict(env)
             for arg_name in _function_arg_names(stmt):
                 child_env.pop(arg_name, None)
             for local_name in _scope_bound_names(stmt.get("body", [])):
                 child_env.pop(local_name, None)
-            _annotate_library_imports_in_scope(stmt.get("body", []), child_env)
+            _annotate_library_imports_in_scope(
+                stmt.get("body", []), child_env,
+                shadowed | set(_function_arg_names(stmt)))
         else:
             for body_key in ("body", "orelse", "finalbody"):
                 nested = stmt.get(body_key)
                 if isinstance(nested, list):
-                    _annotate_library_imports_in_scope(nested, dict(env))
+                    _annotate_library_imports_in_scope(nested, dict(env), shadowed)
             for handler in stmt.get("handlers", []):
                 if isinstance(handler, dict):
-                    _annotate_library_imports_in_scope(handler.get("body", []), dict(env))
+                    _annotate_library_imports_in_scope(handler.get("body", []), dict(env), shadowed)
             for case in stmt.get("cases", []):
                 if isinstance(case, dict):
-                    _annotate_library_imports_in_scope(case.get("body", []), dict(env))
+                    _annotate_library_imports_in_scope(case.get("body", []), dict(env), shadowed)
 
         for bound_name in _stmt_bound_names(stmt):
             env.pop(bound_name, None)

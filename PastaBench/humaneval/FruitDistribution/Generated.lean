@@ -63,7 +63,7 @@ def fruit_distribution := fun (s : String) ↦ fun (n : Int) ↦
     let __unpack_pair_1 := __unpack_value_1
     let mut c1 : Int := Prod.fst __unpack_pair_1
     let mut c2 : Int := Prod.snd __unpack_pair_1
-    have ht_1 : n -ₚ c1 -ₚ c2 ≥ (0 : Int) := by simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+    have ht_1 : n -ₚ c1 -ₚ c2 ≥ (0 : Int) := by taste?
     let _ := Libraries.passta.pyPassAssert (decide (n -ₚ c1 -ₚ c2 ≥ (0 : Int)))
     let __py_ret_1 := n -ₚ c1 -ₚ c2
     return __py_ret_1 : Id _)
@@ -76,6 +76,7 @@ theorem fruit_distribution_spec :
             PastaLean.pyInt (PastaLean.pyStringSplit s " ")⦋(3 : Int)⦌⌝⦄ :=
   by
   mvcgen [fruit_distribution, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
+  taste?
   all_goals sorry
 
 theorem fruit_distribution_correct :

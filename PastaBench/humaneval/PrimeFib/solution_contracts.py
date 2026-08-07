@@ -16,17 +16,15 @@ def prime_fib(n: int):
     89
     """
     Requires(n > 0)
-    # STUB: primality here is decided by a Miller-Rabin test that uses random.randint
-    # and Python's 3-argument pow (modular exponentiation), both unsupported by
-    # PastaLean. The body degrades to pyUnsupported placeholders, so no non-trivial
-    # correctness property can be characterized; the specification is left trivial.
-    Ensures(True)
+    # The result is a prime, so it is 2, 3, or coprime to 6 — i.e. +/-1 mod 6.
+    Ensures(Result() >= 2)
+    Ensures(Result() == 2 or Result() == 3 or Result() % 6 == 1 or Result() % 6 == 5)
 
     import random
     def miller_rabin(n, k=10):
         """Test if n is prime using the Miller-Rabin primality test."""
-        # This function is non-deterministic due to `random` and thus not verifiable.
-        # It is treated as a correct primality oracle by the caller's contracts.
+        # Non-deterministic (random.randint) and uses 3-argument pow; treated as an opaque
+        # primality oracle. No contract is attached to it.
         if n < 2:
             return False
         if n == 2 or n == 3:
@@ -57,26 +55,20 @@ def prime_fib(n: int):
     c_prime = 0
     a, b = 0, 1
     while c_prime < n:
-        Invariant(c_prime >= 0)
-        # The loop condition implies `c_prime < n` at the top of every iteration.
+        Invariant(0 <= c_prime)
         Invariant(c_prime < n)
-        Invariant(a >= 0)
-        # The Fibonacci sequence here is F_0, F_1, F_2, ... = 0, 1, 1, 2, 3, ...
-        # `b` takes values F_1, F_2, ... which are all positive.
-        Invariant(b > 0)
-        # The number of primes remaining to be found is strictly decreasing.
-        # This assumes there are at least `n` prime Fibonacci numbers.
+        Invariant(0 <= a)
+        Invariant(a <= b)
+        # Cassini's identity. It is exactly the statement "a and b are consecutive Fibonacci
+        # numbers": it holds at (0, 1) and the step (a, b) -> (b, a + b) flips its sign,
+        # since (a+b)^2 - b(a+b) - b^2 = -(b^2 - ab - a^2). So the returned b is a Fibonacci
+        # number, which is the half of the specification the code can actually establish.
+        Invariant(b * b - a * b - a * a == 1 or b * b - a * b - a * a == -1)
         Decreases(n - c_prime)
-        
+
         a, b = b, a + b
         if miller_rabin(b):
             c_prime += 1
-    
-    # Upon loop exit, the loop condition is false (`c_prime >= n`).
-    # With the invariant `c_prime <= n` (which holds before the last check),
-    # we can conclude `c_prime == n`.
-    Assert(c_prime == n)
-    # The loop must have terminated because `c_prime` was incremented to `n`.
-    # This happens only when `miller_rabin(b)` is true for the final `b`.
-    Assert(miller_rabin(b))
+
+    Assert(b * b - a * b - a * a == 1 or b * b - a * b - a * a == -1)
     return b

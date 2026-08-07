@@ -40,7 +40,7 @@ attribute [simp] incr_list
 
 @[taste_ingr]
 theorem incr_list_correct : ∀ (l : List Int), incr_list l = (PastaLean.pyIter l).map fun x => x +ₚ (1 : Int) := by
-  intros; simp_all (config := { zetaDelta := true }) [taste_ingr]
+  taste?
 
 def incr_list'rn := fun (l : List Int) ↦ (PastaLean.pyIter l).map fun x => x +ₚ (1 : Int)
 

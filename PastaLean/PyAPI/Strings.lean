@@ -417,4 +417,9 @@ theorem pyFind_eq_pyIndex (s sub : String) : pyStringFind s sub ≠ -1 → pyStr
   | none => unfold pyStringFind at h; simp [hm] at h
 
 -- #check String.split
+/-- **DUMMY** `str.encode(...)` / `bytes.decode(...)`. There is no `bytes` type here — a byte string
+is modelled as the `String` itself — so this is the identity. Anything depending on the actual
+encoded octets is wrong. -/
+def pyStringEncodeDummy (s : String) (_encoding : String := "utf-8") : String := s
+
 end PastaLean

@@ -31,7 +31,14 @@ def mean_absolute_deviation(numbers: List[float]) -> float:
     1.0
     """
     Requires(len(numbers) > 0)
+    # The defining identity, stated division-free on the *outer* average: n times the answer is
+    # the total absolute deviation. (The inner mean keeps its division — clearing it too, to
+    # `n*n*Result() == sum(abs(n*x - sum(numbers)))`, is NOT float-exact and was rejected.)
+    Ensures(len(numbers) * Result()
+            == sum(abs(v - sum(numbers) / len(numbers)) for v in numbers))
+    # Sharp two-sided bound: a deviation is never negative and never exceeds the spread.
     Ensures(Result() >= 0.0)
+    Ensures(Result() <= max(numbers) - min(numbers))
 
     mean = sum(numbers) / len(numbers)
     return sum(abs(x - mean) for x in numbers) / len(numbers)
@@ -40,9 +47,9 @@ def mean_absolute_deviation(numbers: List[float]) -> float:
 namespace PastaBench.humaneval.MeanAbsoluteDeviation
 
 def mean_absolute_deviation := fun (numbers : List Rat) ↦
-  (let mean := PastaLean.pySum numbers /ₚ PastaLean.pyLen numbers
-    PastaLean.pySum ((PastaLean.pyIter numbers).map fun x => PastaLean.pyAbs (x -ₚ mean)) /ₚ PastaLean.pyLen numbers :
-    Rat)
+  (show Rat from
+    let mean := PastaLean.pySum numbers /ₚ PastaLean.pyLen numbers
+    PastaLean.pySum ((PastaLean.pyIter numbers).map fun x => PastaLean.pyAbs (x -ₚ mean)) /ₚ PastaLean.pyLen numbers)
 
 attribute [simp] mean_absolute_deviation
 
@@ -50,13 +57,19 @@ attribute [simp] mean_absolute_deviation
 theorem mean_absolute_deviation_correct :
     ∀ (numbers : List Rat),
       let mean := PastaLean.pySum numbers /ₚ PastaLean.pyLen numbers
-      PastaLean.pyLen numbers > (0 : Int) → mean_absolute_deviation numbers ≥ (0.0 : Rat) :=
-  by intros; sorry
+      PastaLean.pyLen numbers > (0 : Int) →
+        (PastaLean.pyLen numbers *ₚ mean_absolute_deviation numbers =
+              PastaLean.pySum
+                ((PastaLean.pyIter numbers).map fun v =>
+                  PastaLean.pyAbs (v -ₚ PastaLean.pySum numbers /ₚ PastaLean.pyLen numbers)) ∧
+            mean_absolute_deviation numbers ≥ (0.0 : Rat)) ∧
+          mean_absolute_deviation numbers ≤ PastaLean.pyMax numbers -ₚ PastaLean.pyMin numbers :=
+  by taste?
 
 def mean_absolute_deviation'rn := fun (numbers : List Float) ↦
-  (let mean := PastaLean.pyFloat (PastaLean.pySum numbers) /ₚ PastaLean.pyLen numbers
+  (show Float from
+    let mean := PastaLean.pyFloat (PastaLean.pySum numbers) /ₚ PastaLean.pyLen numbers
     PastaLean.pyFloat (PastaLean.pySum ((PastaLean.pyIter numbers).map fun x => PastaLean.pyAbs (x -ₚ mean))) /ₚ
-      PastaLean.pyLen numbers :
-    Float)
+      PastaLean.pyLen numbers)
 
 end PastaBench.humaneval.MeanAbsoluteDeviation

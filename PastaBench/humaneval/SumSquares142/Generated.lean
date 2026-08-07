@@ -31,10 +31,14 @@ def sum_squares(lst):
     For lst = []  the output should be 0
     For lst = [-1,-5,2,-1,-5]  the output should be -126
     """
+    # The exact index-dependent fold: square at index % 3 == 0, cube at index % 4 == 0 (and not
+    # % 3), the entry itself otherwise. Note index 0 is a multiple of BOTH, and the `elif` in the
+    # code makes the square win — the nesting order here mirrors that.
     Ensures(Result() == sum(
         lst[k] ** 2 if k % 3 == 0 else (lst[k] ** 3 if k % 4 == 0 else lst[k])
         for k in range(len(lst))
     ))
+    Ensures(len(lst) > 0 or Result() == 0)
 
     ans = 0
     for i, num in enumerate(lst):
@@ -94,23 +98,25 @@ def sum_squares := fun (lst : List Int) ↦
 theorem sum_squares_spec :
     ⦃⌜True⌝⦄ sum_squares lst ⦃⇓ans =>
       ⌜ans =
-          PastaLean.pySum
-            ((PastaLean.pyRange (PastaLean.pyLen lst)).map fun k =>
-              if k %ₚ (3 : Int) = (0 : Int) then lst⦋k⦌ ^ₚ (2 : Int)
-              else if k %ₚ (4 : Int) = (0 : Int) then lst⦋k⦌ ^ₚ (3 : Int) else lst⦋k⦌)⌝⦄ :=
+            PastaLean.pySum
+              ((PastaLean.pyRange (PastaLean.pyLen lst)).map fun k =>
+                if k %ₚ (3 : Int) = (0 : Int) then lst⦋k⦌ ^ₚ (2 : Int)
+                else if k %ₚ (4 : Int) = (0 : Int) then lst⦋k⦌ ^ₚ (3 : Int) else lst⦋k⦌) ∧
+          (PastaLean.pyLen lst > (0 : Int) ∨ ans = (0 : Int))⌝⦄ :=
   by
   mvcgen [sum_squares, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  taste?
   all_goals sorry
 
 theorem sum_squares_correct :
     ∀ (lst : List Int),
       let ans := (sum_squares lst).run;
       ans =
-        PastaLean.pySum
-          ((PastaLean.pyRange (PastaLean.pyLen lst)).map fun k =>
-            if k %ₚ (3 : Int) = (0 : Int) then lst⦋k⦌ ^ₚ (2 : Int)
-            else if k %ₚ (4 : Int) = (0 : Int) then lst⦋k⦌ ^ₚ (3 : Int) else lst⦋k⦌) :=
+          PastaLean.pySum
+            ((PastaLean.pyRange (PastaLean.pyLen lst)).map fun k =>
+              if k %ₚ (3 : Int) = (0 : Int) then lst⦋k⦌ ^ₚ (2 : Int)
+              else if k %ₚ (4 : Int) = (0 : Int) then lst⦋k⦌ ^ₚ (3 : Int) else lst⦋k⦌) ∧
+        (PastaLean.pyLen lst > (0 : Int) ∨ ans = (0 : Int)) :=
   by
   intro lst
   exact sum_squares_spec True.intro
@@ -130,6 +136,9 @@ def sum_squares'rn := fun (lst : List Int) ↦
           For lst = [-1,-5,2,-1,-5]  the output should be -126
           
       -/
+      -- The exact index-dependent fold: square at index % 3 == 0, cube at index % 4 == 0 (and not
+      -- % 3), the entry itself otherwise. Note index 0 is a multiple of BOTH, and the `elif` in the
+      -- code makes the square win — the nesting order here mirrors that.
       let mut ans : Int := (0 : Int)
       for _pair_1 in (PastaLean.pyIter (PastaLean.pyEnumerate lst))do
         let i := Prod.fst _pair_1

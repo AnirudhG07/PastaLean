@@ -37,21 +37,18 @@ def derivative(xs: list):
 
 namespace PastaBench.humaneval.Derivative
 
-def derivative := fun xs ↦ (PastaLean.pyRange (PastaLean.pyLen xs) (1 : Int)).map fun i => xs⦋i⦌ *ₚ i
+def derivative := fun (xs : List PyAny) ↦ (PastaLean.pyRange (PastaLean.pyLen xs) (1 : Int)).map fun i => xs⦋i⦌ *ₚ i
 
 attribute [simp] derivative
 
 @[taste_ingr]
 theorem derivative_correct :
-    ∀ xs,
+    ∀ (xs : List PyAny),
       PastaLean.pyLen (derivative xs) = PastaLean.pyMax [(0 : Int), PastaLean.pyLen xs -ₚ (1 : Int)] ∧
-        PastaLean.pyTruthy
-            (PastaLean.pyAll
-              ((PastaLean.pyRange (PastaLean.pyLen (derivative xs))).map fun j =>
-                (derivative xs)⦋j⦌ == xs⦋j +ₚ (1 : Int)⦌ *ₚ (j +ₚ (1 : Int)))) =
-          true :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+        ∀ j ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen (derivative xs))),
+          (derivative xs)⦋j⦌ = xs⦋j +ₚ (1 : Int)⦌ *ₚ (j +ₚ (1 : Int)) :=
+  by taste?
 
-def derivative'rn := fun xs ↦ (PastaLean.pyRange (PastaLean.pyLen xs) (1 : Int)).map fun i => xs⦋i⦌ *ₚ i
+def derivative'rn := fun (xs : List PyAny) ↦ (PastaLean.pyRange (PastaLean.pyLen xs) (1 : Int)).map fun i => xs⦋i⦌ *ₚ i
 
 end PastaBench.humaneval.Derivative

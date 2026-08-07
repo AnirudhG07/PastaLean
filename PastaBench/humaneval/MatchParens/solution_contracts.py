@@ -1,5 +1,24 @@
 from contracts import *
 
+
+def valid_parens(s: str) -> bool:
+    Requires(all(c == '(' or c == ')' for c in s))
+    # The depth argument in full: s is good exactly when no prefix has more ')' than '(' and the
+    # two totals agree.
+    Ensures(Result() == (
+        s.count('(') == s.count(')')
+        and all(s[:k].count('(') >= s[:k].count(')') for k in range(len(s) + 1))))
+    cnt = 0
+    for ch in s:
+        # The scan returns the moment the depth would go negative, so it is non-negative here.
+        Invariant(cnt >= 0)
+        cnt = cnt + 1 if ch == "(" else cnt - 1
+        if cnt < 0:
+            return False
+    Assert(cnt == s.count('(') - s.count(')'))
+    return cnt == 0
+
+
 def match_parens(lst):
     '''
     You are given a list of two strings, both strings consist of open
@@ -16,32 +35,14 @@ def match_parens(lst):
     match_parens([')', ')']) == 'No'
     '''
     Requires(len(lst) == 2)
-    Requires(isinstance(lst[0], str))
-    Requires(isinstance(lst[1], str))
     # Per the docstring, the inputs are guaranteed to only contain parentheses.
-    # This is a key assumption for the logic of valid_parens.
     Requires(all(c == '(' or c == ')' for c in lst[0]))
     Requires(all(c == '(' or c == ')' for c in lst[1]))
-    Ensures(Result() == 'Yes' or Result() == 'No')
-
-
-    def valid_parens(s: str) -> bool:
-        # This helper is only called with strings composed of parentheses,
-        # due to the Requires contracts on the outer function.
-        Assume(all(c == '(' or c == ')' for c in s))
-        cnt = 0
-        for ch in s:
-            # The invariant is that the balance of parentheses is never negative
-            # for any prefix of the string processed so far.
-            Invariant(cnt >= 0)
-            cnt = cnt + 1 if ch == "(" else cnt - 1
-            if cnt < 0:
-                return False
-        # The loop invariant implies the final count is non-negative.
-        Assert(cnt >= 0)
-        # This asserts that the final count reflects the total balance of the string.
-        # This is provable by induction over the loop, given the assumption
-        # that the string only contains '(' and ')'.
-        Assert(cnt == s.count('(') - s.count(')'))
-        return cnt == 0
+    # The point: 'Yes' exactly when one of the two concatenation orders is balanced, spelled out
+    # with the same running-depth argument the scan uses (no prefix goes negative, totals match)
+    # rather than by naming valid_parens.
+    Ensures(Result() == ("Yes" if any(
+        t.count('(') == t.count(')')
+        and all(t[:k].count('(') >= t[:k].count(')') for k in range(len(t) + 1))
+        for t in [lst[0] + lst[1], lst[1] + lst[0]]) else "No"))
     return "Yes" if valid_parens(lst[0] + lst[1]) or valid_parens(lst[1] + lst[0]) else "No"

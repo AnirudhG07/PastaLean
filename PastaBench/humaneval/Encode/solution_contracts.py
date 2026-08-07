@@ -15,12 +15,20 @@ def encode(message: str) -> str:
     >>> encode('This is a message')
     'tHKS KS C MGSSCGG'
     """
+    # Both passes are char-for-char, so the length is preserved.
     Ensures(len(Result()) == len(message))
+    # THE POINT (a): character-set closure. Every vowel of the case-swapped message is
+    # shifted to a+2 = c, e+2 = g, i+2 = k, o+2 = q, u+2 = w (same for uppercase), none of
+    # which is a vowel, and no non-vowel is touched -- so the output has no vowels at all.
+    Ensures(all(c not in "aeiouAEIOU" for c in Result()))
+    # THE POINT (b): case really is swapped -- the +2 vowel shift never crosses a case
+    # boundary, so an alphabetic input character comes out in the opposite case.
+    Ensures(all(Result()[i].islower() == message[i].isupper()
+                for i in range(len(message)) if message[i].isalpha()))
 
 
     def switch_case(ch: str) -> str:
         Requires(len(ch) == 1)
-        Ensures(len(Result()) == 1)
         if ord("A") <= ord(ch) <= ord("Z"):
             return chr(ord(ch) + 32)
         elif ord("a") <= ord(ch) <= ord("z"):
@@ -30,7 +38,6 @@ def encode(message: str) -> str:
     
     def vowel_change(ch: str) -> str:
         Requires(len(ch) == 1)
-        Ensures(len(Result()) == 1)
         return ch if ch not in "aeiouAEIOU" else chr(ord(ch) + 2)
     
     m = "".join(map(switch_case, message))

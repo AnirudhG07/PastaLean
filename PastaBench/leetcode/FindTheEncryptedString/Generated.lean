@@ -70,15 +70,14 @@ def getEncryptedString := fun (s : String) ↦ fun (k : Int) ↦
 @[spec]
 theorem getEncryptedString_spec :
     ⦃⌜True⌝⦄ getEncryptedString s k ⦃⇓result =>
-      ⌜PastaLean.pyAll
-          ((PastaLean.pyRange (PastaLean.pyLen s)).map fun i => result⦋i⦌ == s⦋(i +ₚ k) %ₚ PastaLean.pyLen s⦌)⌝⦄ :=
+      ⌜∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen s)), result⦋i⦌ = s⦋(i +ₚ k) %ₚ PastaLean.pyLen s⦌⌝⦄ :=
   by
   try
     mvcgen [getEncryptedString, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓cur =>
       ⌜let i := (cur.prefix.length : Int);
         ((0 : Int) ≤ i ∧ i < PastaLean.pyLen s) ∧
-          PastaLean.pyAll ((PastaLean.pyRange i).map fun j => cs⦋j⦌ == s⦋(j +ₚ k) %ₚ PastaLean.pyLen s⦌)⌝
+          ∀ j ∈ PastaLean.pyIter (PastaLean.pyRange i), cs⦋j⦌ = s⦋(j +ₚ k) %ₚ PastaLean.pyLen s⦌⌝
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
@@ -86,8 +85,7 @@ theorem getEncryptedString_correct :
     ∀ (s : String),
       ∀ (k : Int),
         let result := (getEncryptedString s k).run;
-        PastaLean.pyAll
-          ((PastaLean.pyRange (PastaLean.pyLen s)).map fun i => result⦋i⦌ == s⦋(i +ₚ k) %ₚ PastaLean.pyLen s⦌) :=
+        ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen s)), result⦋i⦌ = s⦋(i +ₚ k) %ₚ PastaLean.pyLen s⦌ :=
   by
   intro s k
   exact getEncryptedString_spec True.intro

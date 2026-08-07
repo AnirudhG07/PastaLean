@@ -62,6 +62,11 @@ def maximum(arr, k):
     # if the result is non-empty and `k <= len(arr)`. Our Requires covers this.
     Ensures(k == 0 or all(x >= sorted(arr)[len(arr) - k] for x in Result()))
 
+    # THE POINT, and what makes the spec complete: every element left OUT is <= every element kept.
+    # An element of `arr` is left out when the result keeps fewer copies of it than `arr` has.
+    # Result() is sorted, so Result()[0] is the smallest kept element. Together with the three
+    # facts above (length k, sorted, sub-multiset) this pins the answer down uniquely.
+    Ensures(k == 0 or all(x <= Result()[0] for x in arr if arr.count(x) > Result().count(x)))
 
     return sorted(sorted(arr)[::-1][:k])
 -/
@@ -81,24 +86,17 @@ theorem maximum_correct :
       ∀ (k : Int),
         (0 : Int) ≤ k →
           k ≤ PastaLean.pyLen arr →
-            ((PastaLean.pyLen (maximum arr k) = k ∧
-                  PastaLean.pyTruthy
-                      (PastaLean.pyAll
-                        ((PastaLean.pyRange (k -ₚ (1 : Int))).map fun i =>
-                          decide ((maximum arr k)⦋i⦌ ≤ (maximum arr k)⦋i +ₚ (1 : Int)⦌))) =
-                    true) ∧
-                PastaLean.pyTruthy
-                    (PastaLean.pyAll
-                      ((PastaLean.pyIter (PastaLean.pySet (maximum arr k))).map fun x =>
-                        decide (PastaLean.pyCount (maximum arr k) x ≤ PastaLean.pyCount arr x))) =
-                  true) ∧
+            (((PastaLean.pyLen (maximum arr k) = k ∧
+                    ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (k -ₚ (1 : Int))),
+                      (maximum arr k)⦋i⦌ ≤ (maximum arr k)⦋i +ₚ (1 : Int)⦌) ∧
+                  ∀ x ∈ PastaLean.pyIter (PastaLean.pySet (maximum arr k)),
+                    PastaLean.pyCount (maximum arr k) x ≤ PastaLean.pyCount arr x) ∧
+                (k = (0 : Int) ∨
+                  ∀ x ∈ PastaLean.pyIter (maximum arr k), x ≥ (PastaLean.pySort arr)⦋PastaLean.pyLen arr -ₚ k⦌)) ∧
               (k = (0 : Int) ∨
-                PastaLean.pyTruthy
-                    (PastaLean.pyAll
-                      ((PastaLean.pyIter (maximum arr k)).map fun x =>
-                        decide (x ≥ (PastaLean.pySort arr)⦋PastaLean.pyLen arr -ₚ k⦌))) =
-                  true) :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+                ∀ x ∈ PastaLean.pyIter arr,
+                  PastaLean.pyCount arr x > PastaLean.pyCount (maximum arr k) x → x ≤ (maximum arr k)⦋(0 : Int)⦌) :=
+  by taste?
 
 def maximum'rn := fun (arr : PyAny) ↦ fun (k : Int) ↦
   PastaLean.pySort

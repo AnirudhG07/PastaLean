@@ -67,9 +67,8 @@ def findPoisonedDuration := fun (timeSeries : List Int) ↦ fun (duration : Int)
 @[spec]
 theorem findPoisonedDuration_spec :
     ⦃⌜duration ≥ (0 : Int) ∧
-          PastaLean.pyAll
-            ((PastaLean.pyRange (PastaLean.pyLen timeSeries -ₚ (1 : Int))).map fun i =>
-              decide (timeSeries⦋i⦌ < timeSeries⦋i +ₚ (1 : Int)⦌))⌝⦄
+          ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen timeSeries -ₚ (1 : Int))),
+            timeSeries⦋i⦌ < timeSeries⦋i +ₚ (1 : Int)⦌⌝⦄
       findPoisonedDuration timeSeries duration ⦃⇓ans =>
       ⌜ans =
           duration +ₚ
@@ -84,10 +83,9 @@ theorem findPoisonedDuration_spec :
 theorem findPoisonedDuration_correct :
     ∀ (timeSeries : List Int),
       ∀ (duration : Int),
-        duration ≥ (0 : Int) ∧
-            PastaLean.pyAll
-              ((PastaLean.pyRange (PastaLean.pyLen timeSeries -ₚ (1 : Int))).map fun i =>
-                decide (timeSeries⦋i⦌ < timeSeries⦋i +ₚ (1 : Int)⦌)) →
+        (duration ≥ (0 : Int) ∧
+            ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen timeSeries -ₚ (1 : Int))),
+              timeSeries⦋i⦌ < timeSeries⦋i +ₚ (1 : Int)⦌) →
           let ans := (findPoisonedDuration timeSeries duration).run;
           ans =
             duration +ₚ

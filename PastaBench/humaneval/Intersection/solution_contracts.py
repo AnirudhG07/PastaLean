@@ -22,23 +22,28 @@ def intersection(interval1, interval2):
     intersection((-3, -1), (-5, 5)) ==> "YES"
     """
 
-    # Helper function is defined before contracts to be in scope for them.
-    # This is a behavior-preserving reordering of statements.
-    def is_prime(a):
-        return not (a < 2 or any(a % x == 0 for x in range(2, int(a ** 0.5) + 1)))
-
     Requires(len(interval1) == 2)
     Requires(len(interval2) == 2)
     Requires(interval1[0] <= interval1[1])
     Requires(interval2[0] <= interval2[1])
 
     Ensures(Result() == "YES" or Result() == "NO")
-    # The point of the function: the result string reflects the primality of the intersection's length.
-    # The intersection is [max(start1, start2), min(end1, end2)].
-    # Its length is min(end1, end2) - max(start1, start2).
-    # is_prime returns False for non-positive lengths, correctly handling empty intersections.
-    Ensures((Result() == "YES") == is_prime(min(interval1[1], interval2[1]) - max(interval1[0], interval2[0])))
+    # THE POINT: the answer is "YES" exactly when the length of the intersection
+    # [max(start1, start2), min(end1, end2)] is a prime number. Primality is stated by
+    # full trial division over range(2, L) — NOT by the sqrt-bounded loop the code runs, so this
+    # is a genuine statement about the number rather than a restatement of `is_prime`.
+    # A non-positive length (the intervals miss each other) has L < 2, hence "NO".
+    # The expression is symmetric in interval1/interval2, so the swap below cannot disturb it.
+    Ensures((Result() == "YES") == (
+        min(interval1[1], interval2[1]) - max(interval1[0], interval2[0]) >= 2
+        and all(
+            (min(interval1[1], interval2[1]) - max(interval1[0], interval2[0])) % x != 0
+            for x in range(2, min(interval1[1], interval2[1]) - max(interval1[0], interval2[0]))
+        )
+    ))
 
+    def is_prime(a):
+        return not (a < 2 or any(a % x == 0 for x in range(2, int(a ** 0.5) + 1)))
     if interval1[0] > interval2[0]: interval1, interval2 = interval2, interval1
     # This assertion establishes the ordering after the potential swap, which is a key
     # lemma for proving that the subsequent calculation of l and r is correct.

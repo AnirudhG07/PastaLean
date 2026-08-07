@@ -49,9 +49,9 @@ def sort_third(l: list):
 
 namespace PastaBench.humaneval.SortThird
 
-def sort_third := fun l ↦
+def sort_third := fun (l : List PyAny) ↦
   (do
-    let mut third :=
+    let mut third : List PyAny :=
       (List.filter (fun i => i %ₚ (3 : Int) = (0 : Int)) (PastaLean.pyRange (PastaLean.pyLen l))).map fun i => l⦋i⦌
     let _ :=
       Libraries.passta.pyPassAssert
@@ -72,9 +72,8 @@ def sort_third := fun l ↦
 theorem sort_third_spec :
     ⦃⌜True⌝⦄ sort_third l ⦃⇓result =>
       ⌜(PastaLean.pyLen result = PastaLean.pyLen l ∧
-            PastaLean.pyAll
-              ((List.filter (fun i => i %ₚ (3 : Int) ≠ (0 : Int)) (PastaLean.pyRange (PastaLean.pyLen l))).map fun i =>
-                result⦋i⦌ == l⦋i⦌)) ∧
+            ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen l)),
+              i %ₚ (3 : Int) ≠ (0 : Int) → result⦋i⦌ = l⦋i⦌) ∧
           ((List.filter (fun i => i %ₚ (3 : Int) = (0 : Int)) (PastaLean.pyRange (PastaLean.pyLen l))).map fun i =>
               result⦋i⦌) =
             PastaLean.pySort
@@ -82,16 +81,15 @@ theorem sort_third_spec :
                 l⦋i⦌)⌝⦄ :=
   by
   mvcgen [sort_third, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  sorry
+  taste?
   all_goals sorry
 
 theorem sort_third_correct :
-    ∀ l,
+    ∀ (l : List PyAny),
       let result := (sort_third l).run;
       (PastaLean.pyLen result = PastaLean.pyLen l ∧
-          PastaLean.pyAll
-            ((List.filter (fun i => i %ₚ (3 : Int) ≠ (0 : Int)) (PastaLean.pyRange (PastaLean.pyLen l))).map fun i =>
-              result⦋i⦌ == l⦋i⦌)) ∧
+          ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen l)),
+            i %ₚ (3 : Int) ≠ (0 : Int) → result⦋i⦌ = l⦋i⦌) ∧
         ((List.filter (fun i => i %ₚ (3 : Int) = (0 : Int)) (PastaLean.pyRange (PastaLean.pyLen l))).map fun i =>
             result⦋i⦌) =
           PastaLean.pySort
@@ -101,7 +99,7 @@ theorem sort_third_correct :
   intro l
   exact sort_third_spec True.intro
 
-def sort_third'rn := fun l ↦
+def sort_third'rn := fun (l : List PyAny) ↦
   Id.run
     (do
       /-
@@ -114,7 +112,7 @@ def sort_third'rn := fun l ↦
           [2, 6, 3, 4, 8, 9, 5]
           
       -/
-      let mut third :=
+      let mut third : List PyAny :=
         (List.filter (fun i => i %ₚ (3 : Int) == (0 : Int)) (PastaLean.pyRange (PastaLean.pyLen l))).map fun i => l⦋i⦌
       let _ :=
         Libraries.passta.pyPassAssert

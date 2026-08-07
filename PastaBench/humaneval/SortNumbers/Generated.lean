@@ -34,22 +34,20 @@ def sort_numbers(numbers: str) -> str:
             for word in numbers.split(" ")
         )
     )
-    # The postcondition states that the output is the numerically sorted version of the input words.
-    # It handles the empty case, and for non-empty cases, asserts that the output words
-    # are in non-decreasing order and that the number of words is preserved.
-    # We assume `to_int` is in scope at the function's exit points where the postcondition is checked.
-    Ensures(
-        (numbers == "" and Result() == "") or
-        (numbers != "" and (lambda words:
-            len(words) == len(numbers.split(" ")) and
-            (len(words) <= 1 or all(
-                to_int[words[i]] <= to_int[words[i+1]]
-                for i in range(len(words) - 1)
-            ))
-        )(Result().split(" ")))
-    )
+    # 1. The output words are a permutation of the input words (a rearrangement, nothing added
+    #    or dropped) — same count, same multiset.
+    Ensures(len(Result().split(" ")) == len(numbers.split(" ")))
+    Ensures(sorted(Result().split(" ")) == sorted(numbers.split(" ")))
+    # 2. The output words are in non-decreasing NUMERIC order. The numeral's value is its position
+    #    in the vocabulary list, spelled out inline so the contract needs no function-local name.
+    Ensures(all(
+        ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine']
+            .index(Result().split(" ")[j])
+        <= ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine']
+            .index(Result().split(" ")[j + 1])
+        for j in range(len(Result().split(" ")) - 1)))
 
-    
+
     to_int = {'zero': 0, 'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5, 'six': 6, 'seven': 7, 'eight': 8, 'nine': 9}
 
     if numbers == "": return ""
@@ -78,74 +76,41 @@ def sort_numbers := fun (numbers : String) ↦
 @[spec]
 theorem sort_numbers_spec :
     ⦃⌜numbers = "" ∨
-          PastaLean.pyTruthy
-              (PastaLean.pyAll
-                ((PastaLean.pyIter (PastaLean.pyStringSplit numbers " ")).map fun word =>
-                  PastaLean.pyContains ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"]
-                    word)) =
-            true⌝⦄
+          ∀ word ∈ PastaLean.pyIter (PastaLean.pyStringSplit numbers " "),
+            PastaLean.pyContains ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"] word⌝⦄
       sort_numbers numbers ⦃⇓result =>
-      ⌜numbers = "" ∧ result = "" ∨
-          numbers ≠ "" ∧
-            PastaLean.pyTruthy
-                ((fun words ↦
-                    PastaLean.pyLen words = PastaLean.pyLen (PastaLean.pyStringSplit numbers " ") ∧
-                      (PastaLean.pyLen words ≤ (1 : Int) ∨
-                        PastaLean.pyTruthy
-                            (PastaLean.pyAll
-                              ((PastaLean.pyRange (PastaLean.pyLen words -ₚ (1 : Int))).map fun i =>
-                                decide
-                                  ((Std.HashMap.ofList
-                                        [("zero", (0 : Int)), ("one", (1 : Int)), ("two", (2 : Int)),
-                                          ("three", (3 : Int)), ("four", (4 : Int)), ("five", (5 : Int)),
-                                          ("six", (6 : Int)), ("seven", (7 : Int)), ("eight", (8 : Int)),
-                                          ("nine", (9 : Int))])⦋words⦋i⦌⦌ ≤
-                                    (Std.HashMap.ofList
-                                        [("zero", (0 : Int)), ("one", (1 : Int)), ("two", (2 : Int)),
-                                          ("three", (3 : Int)), ("four", (4 : Int)), ("five", (5 : Int)),
-                                          ("six", (6 : Int)), ("seven", (7 : Int)), ("eight", (8 : Int)),
-                                          ("nine", (9 : Int))])⦋words⦋i +ₚ (1 : Int)⦌⦌))) =
-                          true))
-                  (PastaLean.pyStringSplit result " ")) =
-              true⌝⦄ :=
+      ⌜(PastaLean.pyLen (PastaLean.pyStringSplit result " ") = PastaLean.pyLen (PastaLean.pyStringSplit numbers " ") ∧
+            PastaLean.pySort (PastaLean.pyStringSplit result " ") =
+              PastaLean.pySort (PastaLean.pyStringSplit numbers " ")) ∧
+          ∀
+            j ∈
+              PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen (PastaLean.pyStringSplit result " ") -ₚ (1 : Int))),
+            PastaLean.pyIndex ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"]
+                (PastaLean.pyStringSplit result " ")⦋j⦌ ≤
+              PastaLean.pyIndex ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"]
+                (PastaLean.pyStringSplit result " ")⦋j +ₚ (1 : Int)⦌⌝⦄ :=
   by
   mvcgen [sort_numbers, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  grind; sorry
+  taste?
   all_goals sorry
 
 theorem sort_numbers_correct :
     ∀ (numbers : String),
-      numbers = "" ∨
-          PastaLean.pyTruthy
-              (PastaLean.pyAll
-                ((PastaLean.pyIter (PastaLean.pyStringSplit numbers " ")).map fun word =>
-                  PastaLean.pyContains ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"]
-                    word)) =
-            true →
+      (numbers = "" ∨
+          ∀ word ∈ PastaLean.pyIter (PastaLean.pyStringSplit numbers " "),
+            PastaLean.pyContains ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"]
+              word) →
         let result := (sort_numbers numbers).run;
-        numbers = "" ∧ result = "" ∨
-          numbers ≠ "" ∧
-            PastaLean.pyTruthy
-                ((fun words ↦
-                    PastaLean.pyLen words = PastaLean.pyLen (PastaLean.pyStringSplit numbers " ") ∧
-                      (PastaLean.pyLen words ≤ (1 : Int) ∨
-                        PastaLean.pyTruthy
-                            (PastaLean.pyAll
-                              ((PastaLean.pyRange (PastaLean.pyLen words -ₚ (1 : Int))).map fun i =>
-                                decide
-                                  ((Std.HashMap.ofList
-                                        [("zero", (0 : Int)), ("one", (1 : Int)), ("two", (2 : Int)),
-                                          ("three", (3 : Int)), ("four", (4 : Int)), ("five", (5 : Int)),
-                                          ("six", (6 : Int)), ("seven", (7 : Int)), ("eight", (8 : Int)),
-                                          ("nine", (9 : Int))])⦋words⦋i⦌⦌ ≤
-                                    (Std.HashMap.ofList
-                                        [("zero", (0 : Int)), ("one", (1 : Int)), ("two", (2 : Int)),
-                                          ("three", (3 : Int)), ("four", (4 : Int)), ("five", (5 : Int)),
-                                          ("six", (6 : Int)), ("seven", (7 : Int)), ("eight", (8 : Int)),
-                                          ("nine", (9 : Int))])⦋words⦋i +ₚ (1 : Int)⦌⦌))) =
-                          true))
-                  (PastaLean.pyStringSplit result " ")) =
-              true :=
+        (PastaLean.pyLen (PastaLean.pyStringSplit result " ") = PastaLean.pyLen (PastaLean.pyStringSplit numbers " ") ∧
+            PastaLean.pySort (PastaLean.pyStringSplit result " ") =
+              PastaLean.pySort (PastaLean.pyStringSplit numbers " ")) ∧
+          ∀
+            j ∈
+              PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen (PastaLean.pyStringSplit result " ") -ₚ (1 : Int))),
+            PastaLean.pyIndex ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"]
+                (PastaLean.pyStringSplit result " ")⦋j⦌ ≤
+              PastaLean.pyIndex ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"]
+                (PastaLean.pyStringSplit result " ")⦋j +ₚ (1 : Int)⦌ :=
   by
   intro numbers hpre
   exact sort_numbers_spec hpre
@@ -169,10 +134,10 @@ def sort_numbers'rn := fun (numbers : String) ↦
               ((PastaLean.pyIter (PastaLean.pyStringSplit numbers " ")).map fun word =>
                 PastaLean.pyContains ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"]
                   word))
-      -- The postcondition states that the output is the numerically sorted version of the input words.
-      -- It handles the empty case, and for non-empty cases, asserts that the output words
-      -- are in non-decreasing order and that the number of words is preserved.
-      -- We assume `to_int` is in scope at the function's exit points where the postcondition is checked.
+      -- 1. The output words are a permutation of the input words (a rearrangement, nothing added
+      -- or dropped) — same count, same multiset.
+      -- 2. The output words are in non-decreasing NUMERIC order. The numeral's value is its position
+      -- in the vocabulary list, spelled out inline so the contract needs no function-local name.
       let mut to_int : Std.HashMap String Int :=
         Std.HashMap.ofList
           [("zero", (0 : Int)), ("one", (1 : Int)), ("two", (2 : Int)), ("three", (3 : Int)), ("four", (4 : Int)),

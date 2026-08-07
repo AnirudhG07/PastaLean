@@ -131,6 +131,12 @@ def hasMidFunctionPostcondition (body : Array Json) : Bool := Id.run do
       if isPostcondition body[i] && lo < i && i < lastLoop then return true
     return false
 
+/-- Conjoin a list of `Prop` terms (empty → `True`). -/
+def conjoin (ps : Array (TSyntax `term)) : PygenM (TSyntax `term) :=
+  match ps.toList with
+  | [] => `(True)
+  | p :: rest => rest.foldlM (fun acc q => `($acc ∧ $q)) p
+
 /-- A *pure, straight-line* contracted function (`Requires`/`Ensures`, `let`s, `return` —
 no loops, IO, or `raise`). Splits the body into the runnable statements (contracts stripped) and the
 proof data. Returns `(cleanBody, lets, hyps, concl)`. `none` if monadic, if any statement isn't a
@@ -138,7 +144,7 @@ fresh `let`/`return`/contract, if an `Invariant`/`Decreases` appears (those impl
 or if there's no `Ensures`/`Assert` to prove. Multiple `Ensures` conjoin into one conclusion. -/
 def contractShape? (fnName : String) (referenceFn : Bool) (paramNames : Array String)
     (body substantive : Array Json) :
-    Option (Array Json × Array Json × Array Json × Json) := Id.run do
+    Option (Array Json × Array Json × Array Json × Array Json) := Id.run do
   if bodyNeedsIOMonad body || bodyNeedsExceptionMonad body then return none
   let mut lets : Array Json := #[]
   let mut hyps : Array Json := #[]
@@ -182,8 +188,6 @@ def contractShape? (fnName : String) (referenceFn : Bool) (paramNames : Array St
         else return none
       | _ => return none
   if !sawContract || concls.isEmpty || !sawReturn then return none
-  let concl0 := if concls.size == 1 then concls[0]!
-    else Json.mkObj [("node_type", Json.str "BoolOp"), ("op", Json.str "and"), ("values", Json.arr concls)]
   -- `Result()` in an `Ensures` denotes the function's return value. Normally we keep the spec
   -- *referring to the function by name* (`fnName params`) rather than inlining the return expression, so
   -- the theorem reads as "the function satisfies its contract". The function is `@[simp]`, so `taste?`'s
@@ -199,9 +203,9 @@ def contractShape? (fnName : String) (referenceFn : Bool) (paramNames : Array St
         ("args", Json.arr (paramNames.map (fun p =>
           Json.mkObj [("node_type", Json.str "Name"), ("id", Json.str p)]))),
         ("keywords", Json.mkObj [])]
-      substResultWith callNode concl0
-    | false, some e => substResultWith e concl0
-    | false, none => concl0
+      concls.map (substResultWith callNode)
+    | false, some e => concls.map (substResultWith e)
+    | false, none => concls
   return some (clean, lets, hyps, concl)
 
 /-- Build `@[taste_ingr] theorem <thmName> : ∀ params, <hyps> → (let-binders; <concl>) := by taste?`
@@ -209,12 +213,14 @@ from extracted proof data. Shared by the lone-assert promotion (`theoremShape?`)
 (`_spec`) path.  -/
 def buildSpecTheorem (thmName : TSyntax `ident)
     (argInfos : Array (TSyntax `ident × Option (TSyntax `term)))
-    (letJsons hypJsons : Array Json) (conclJson : Json) : PygenM (TSyntax `command) :=
+    (letJsons hypJsons : Array Json) (conclJsons : Array Json) : PygenM (TSyntax `command) :=
   withFreshVariables do
     for letJson in letJsons do
       if let .ok tname := (letJson.getObjVal? "target").bind (·.getObjValAs? String "id") then
         addVar tname.toName
-    let mut propTy ← withPropCondition true (getCode conclJson `term)
+    -- Conjoin the `Ensures` at the Lean level (as the monadic path does), not by synthesising a
+    -- Python `BoolOp` — that would re-lower each conjunct through the `Bool` coercion.
+    let mut propTy ← conjoin (← conclJsons.mapM (fun c => withPropCondition true (getCode c `term)))
     for hypJson in hypJsons.reverse do
       propTy ← `($(← withPropCondition true (getCode hypJson `term)) → $propTy)
     for letJson in letJsons.reverse do
@@ -546,12 +552,6 @@ def whileContractShape? (paramNames : Array String) (substantive : Array Json) :
   if stateVars.isEmpty || carried.any (!initVals.contains ·) then return none
   let inits := stateVars.map (initVals.get! ·)
   return some { requires, ensures, retExpr, stateVars, inits, test, invariants, decreases, bodyAssigns }
-
-/-- Conjoin a list of `Prop` terms (empty → `True`). -/
-def conjoin (ps : Array (TSyntax `term)) : PygenM (TSyntax `term) :=
-  match ps.toList with
-  | [] => `(True)
-  | p :: rest => rest.foldlM (fun acc q => `($acc ∧ $q)) p
 
 /-- One invariant bullet for a loop. The predicate relates the accumulators to `cur.prefix`:
 * user `Invariant(...)` markers, conjoined — for a `range` loop the loop variable is bound to

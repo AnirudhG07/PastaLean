@@ -41,23 +41,28 @@ def intersection(interval1, interval2):
     intersection((-3, -1), (-5, 5)) ==> "YES"
     """
 
-    # Helper function is defined before contracts to be in scope for them.
-    # This is a behavior-preserving reordering of statements.
-    def is_prime(a):
-        return not (a < 2 or any(a % x == 0 for x in range(2, int(a ** 0.5) + 1)))
-
     Requires(len(interval1) == 2)
     Requires(len(interval2) == 2)
     Requires(interval1[0] <= interval1[1])
     Requires(interval2[0] <= interval2[1])
 
     Ensures(Result() == "YES" or Result() == "NO")
-    # The point of the function: the result string reflects the primality of the intersection's length.
-    # The intersection is [max(start1, start2), min(end1, end2)].
-    # Its length is min(end1, end2) - max(start1, start2).
-    # is_prime returns False for non-positive lengths, correctly handling empty intersections.
-    Ensures((Result() == "YES") == is_prime(min(interval1[1], interval2[1]) - max(interval1[0], interval2[0])))
+    # THE POINT: the answer is "YES" exactly when the length of the intersection
+    # [max(start1, start2), min(end1, end2)] is a prime number. Primality is stated by
+    # full trial division over range(2, L) — NOT by the sqrt-bounded loop the code runs, so this
+    # is a genuine statement about the number rather than a restatement of `is_prime`.
+    # A non-positive length (the intervals miss each other) has L < 2, hence "NO".
+    # The expression is symmetric in interval1/interval2, so the swap below cannot disturb it.
+    Ensures((Result() == "YES") == (
+        min(interval1[1], interval2[1]) - max(interval1[0], interval2[0]) >= 2
+        and all(
+            (min(interval1[1], interval2[1]) - max(interval1[0], interval2[0])) % x != 0
+            for x in range(2, min(interval1[1], interval2[1]) - max(interval1[0], interval2[0]))
+        )
+    ))
 
+    def is_prime(a):
+        return not (a < 2 or any(a % x == 0 for x in range(2, int(a ** 0.5) + 1)))
     if interval1[0] > interval2[0]: interval1, interval2 = interval2, interval1
     # This assertion establishes the ordering after the potential swap, which is a key
     # lemma for proving that the subsequent calculation of l and r is correct.
@@ -69,7 +74,7 @@ def intersection(interval1, interval2):
 
 namespace PastaBench.humaneval.Intersection
 
-private noncomputable def _intersection'is_prime := fun (a : PyAny) ↦
+private noncomputable def _intersection'is_prime := fun (a : Int) ↦
   !if PastaLean.pyTruthy (decide (a < (2 : Int))) then decide (a < (2 : Int))
     else
       PastaLean.pyStdAny
@@ -78,7 +83,7 @@ private noncomputable def _intersection'is_prime := fun (a : PyAny) ↦
 
 attribute [simp] _intersection'is_prime
 
-def intersection := fun (interval1 : PyAny) ↦ fun (interval2 : PyAny) ↦
+def intersection := fun (interval1 : List Int) ↦ fun (interval2 : List Int) ↦
   (do
     let mut interval1 := interval1
     let mut interval2 := interval2
@@ -92,8 +97,8 @@ def intersection := fun (interval1 : PyAny) ↦ fun (interval2 : PyAny) ↦
     let _ := Libraries.passta.pyPassAssert (decide (interval1⦋(0 : Int)⦌ ≤ interval2⦋(0 : Int)⦌))
     let __unpack_value_1 := (interval2⦋(0 : Int)⦌, PastaLean.pyMin [interval1⦋(1 : Int)⦌, interval2⦋(1 : Int)⦌])
     let __unpack_pair_1 := __unpack_value_1
-    let mut l : PyAny := Prod.fst __unpack_pair_1
-    let mut r : PyAny := Prod.snd __unpack_pair_1
+    let mut l : Int := Prod.fst __unpack_pair_1
+    let mut r : Int := Prod.snd __unpack_pair_1
     let __py_ret_1 := if PastaLean.pyTruthy (_intersection'is_prime (r -ₚ l)) then "YES" else "NO"
     return __py_ret_1 : Id _)
 
@@ -105,38 +110,60 @@ theorem intersection_spec :
       intersection interval1 interval2 ⦃⇓result =>
       ⌜(result = "YES" ∨ result = "NO") ∧
           (result = "YES") =
-            _intersection'is_prime
-              (PastaLean.pyMin [interval1⦋(1 : Int)⦌, interval2⦋(1 : Int)⦌] -ₚ
-                PastaLean.pyMax [interval1⦋(0 : Int)⦌, interval2⦋(0 : Int)⦌])⌝⦄ :=
+            (PastaLean.pyMin [interval1⦋(1 : Int)⦌, interval2⦋(1 : Int)⦌] -ₚ
+                  PastaLean.pyMax [interval1⦋(0 : Int)⦌, interval2⦋(0 : Int)⦌] ≥
+                (2 : Int) ∧
+              ∀
+                x ∈
+                  PastaLean.pyIter
+                    (PastaLean.pyRange
+                      (PastaLean.pyMin [interval1⦋(1 : Int)⦌, interval2⦋(1 : Int)⦌] -ₚ
+                        PastaLean.pyMax [interval1⦋(0 : Int)⦌, interval2⦋(0 : Int)⦌])
+                      (2 : Int)),
+                (PastaLean.pyMin [interval1⦋(1 : Int)⦌, interval2⦋(1 : Int)⦌] -ₚ
+                      PastaLean.pyMax [interval1⦋(0 : Int)⦌, interval2⦋(0 : Int)⦌]) %ₚ
+                    x ≠
+                  (0 : Int))⌝⦄ :=
   by
   mvcgen [intersection, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  intros; sorry
+  taste?
   all_goals sorry
 
 theorem intersection_correct :
-    ∀ (interval1 : PyAny),
-      ∀ (interval2 : PyAny),
+    ∀ (interval1 : List Int),
+      ∀ (interval2 : List Int),
         ((PastaLean.pyLen interval1 = (2 : Int) ∧ PastaLean.pyLen interval2 = (2 : Int)) ∧
               interval1⦋(0 : Int)⦌ ≤ interval1⦋(1 : Int)⦌) ∧
             interval2⦋(0 : Int)⦌ ≤ interval2⦋(1 : Int)⦌ →
           let result := (intersection interval1 interval2).run;
           (result = "YES" ∨ result = "NO") ∧
             (result = "YES") =
-              _intersection'is_prime
-                (PastaLean.pyMin [interval1⦋(1 : Int)⦌, interval2⦋(1 : Int)⦌] -ₚ
-                  PastaLean.pyMax [interval1⦋(0 : Int)⦌, interval2⦋(0 : Int)⦌]) :=
+              (PastaLean.pyMin [interval1⦋(1 : Int)⦌, interval2⦋(1 : Int)⦌] -ₚ
+                    PastaLean.pyMax [interval1⦋(0 : Int)⦌, interval2⦋(0 : Int)⦌] ≥
+                  (2 : Int) ∧
+                ∀
+                  x ∈
+                    PastaLean.pyIter
+                      (PastaLean.pyRange
+                        (PastaLean.pyMin [interval1⦋(1 : Int)⦌, interval2⦋(1 : Int)⦌] -ₚ
+                          PastaLean.pyMax [interval1⦋(0 : Int)⦌, interval2⦋(0 : Int)⦌])
+                        (2 : Int)),
+                  (PastaLean.pyMin [interval1⦋(1 : Int)⦌, interval2⦋(1 : Int)⦌] -ₚ
+                        PastaLean.pyMax [interval1⦋(0 : Int)⦌, interval2⦋(0 : Int)⦌]) %ₚ
+                      x ≠
+                    (0 : Int)) :=
   by
   intro interval1 interval2 hpre
   exact intersection_spec hpre
 
-private def _intersection'is_prime'rn := fun (a : PyAny) ↦
+private def _intersection'is_prime'rn := fun (a : Int) ↦
   !if PastaLean.pyTruthy (decide (a < (2 : Int))) then decide (a < (2 : Int))
     else
       PastaLean.pyStdAny
         ((PastaLean.pyRange (PastaLean.pyInt (a ^ₚ (0.5 : Float)) +ₚ (1 : Int)) (2 : Int)).map fun x =>
           a %ₚ x == (0 : Int))
 
-def intersection'rn := fun (interval1 : PyAny) ↦ fun (interval2 : PyAny) ↦
+def intersection'rn := fun (interval1 : List Int) ↦ fun (interval2 : List Int) ↦
   Id.run
     (do
       let mut interval1 := interval1
@@ -162,16 +189,16 @@ def intersection'rn := fun (interval1 : PyAny) ↦ fun (interval2 : PyAny) ↦
           intersection((-3, -1), (-5, 5)) ==> "YES"
           
       -/
-      -- Helper function is defined before contracts to be in scope for them.
-      -- This is a behavior-preserving reordering of statements.
       let _ := Libraries.passta.pyPassRequires (PastaLean.pyLen interval1 == (2 : Int))
       let _ := Libraries.passta.pyPassRequires (PastaLean.pyLen interval2 == (2 : Int))
       let _ := Libraries.passta.pyPassRequires (decide (interval1⦋(0 : Int)⦌ ≤ interval1⦋(1 : Int)⦌))
       let _ := Libraries.passta.pyPassRequires (decide (interval2⦋(0 : Int)⦌ ≤ interval2⦋(1 : Int)⦌))
-      -- The point of the function: the result string reflects the primality of the intersection's length.
-      -- The intersection is [max(start1, start2), min(end1, end2)].
-      -- Its length is min(end1, end2) - max(start1, start2).
-      -- is_prime returns False for non-positive lengths, correctly handling empty intersections.
+      -- THE POINT: the answer is "YES" exactly when the length of the intersection
+      -- [max(start1, start2), min(end1, end2)] is a prime number. Primality is stated by
+      -- full trial division over range(2, L) — NOT by the sqrt-bounded loop the code runs, so this
+      -- is a genuine statement about the number rather than a restatement of `is_prime`.
+      -- A non-positive length (the intervals miss each other) has L < 2, hence "NO".
+      -- The expression is symmetric in interval1/interval2, so the swap below cannot disturb it.
       if h_1 : interval1⦋(0 : Int)⦌ > interval2⦋(0 : Int)⦌ then 
         let __unpack_value_1 := (interval2, interval1)
         let __unpack_pair_1 := __unpack_value_1
@@ -184,8 +211,8 @@ def intersection'rn := fun (interval1 : PyAny) ↦ fun (interval2 : PyAny) ↦
       let _ := Libraries.passta.pyPassAssert (decide (interval1⦋(0 : Int)⦌ ≤ interval2⦋(0 : Int)⦌))
       let __unpack_value_1 := (interval2⦋(0 : Int)⦌, PastaLean.pyMin [interval1⦋(1 : Int)⦌, interval2⦋(1 : Int)⦌])
       let __unpack_pair_1 := __unpack_value_1
-      let mut l : PyAny := Prod.fst __unpack_pair_1
-      let mut r : PyAny := Prod.snd __unpack_pair_1
+      let mut l : Int := Prod.fst __unpack_pair_1
+      let mut r : Int := Prod.snd __unpack_pair_1
       let __py_ret_1 := if PastaLean.pyTruthy (_intersection'is_prime'rn (r -ₚ l)) then "YES" else "NO"
       return __py_ret_1)
 

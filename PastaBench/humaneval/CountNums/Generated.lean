@@ -29,10 +29,11 @@ def count_nums(arr):
     >>> count_nums([-1, 11, -11]) == 1
     >>> count_nums([1, 1, 2]) == 3
     """
-    Ensures(0 <= Result() <= len(arr))
+    # The point: the result counts elements, so it is a genuine count bounded by the array size.
+    Ensures(0 <= Result())
+    Ensures(Result() <= len(arr))
 
     def judge(x: int) -> int:
-        Ensures(0 <= Result() <= 1)
         l = list(str(x))
         if l[0] == "-":
             l = l[1:]
@@ -47,23 +48,19 @@ def count_nums(arr):
 namespace PastaBench.humaneval.CountNums
 
 private def _count_nums'judge := fun (x : Int) ↦
-  (do
-    let mut l : List String := PastaLean.pyList (PastaLean.pyStr x)
-    if h_1 : l⦋(0 : Int)⦌ = "-" then 
-      l := PastaLean.pySlice l (some (1 : Int)) none none
-      l := PastaLean.pyList (PastaLean.pyMap PastaLean.pyInt l)
-      l := PastaLean.pySetItem l (0 : Int) (-l⦋(0 : Int)⦌)
-    else
-      l := PastaLean.pyList (PastaLean.pyMap PastaLean.pyInt l)
-    let __py_ret_1 := if PastaLean.pySum l > (0 : Int) then (1 : Int) else (0 : Int)
-    return __py_ret_1 : Id _)
+  Id.run
+    (do
+      let mut l : List String := PastaLean.pyList (PastaLean.pyStr x)
+      if h_1 : l⦋(0 : Int)⦌ = "-" then 
+        l := PastaLean.pySlice l (some (1 : Int)) none none
+        l := PastaLean.pyList (PastaLean.pyMap PastaLean.pyInt l)
+        l := PastaLean.pySetItem l (0 : Int) (-l⦋(0 : Int)⦌)
+      else
+        l := PastaLean.pyList (PastaLean.pyMap PastaLean.pyInt l)
+      let __py_ret_1 := if PastaLean.pySum l > (0 : Int) then (1 : Int) else (0 : Int)
+      return __py_ret_1)
 
-@[spec]
-theorem _count_nums'judge_spec : ⦃⌜True⌝⦄ _count_nums'judge x ⦃⇓result => ⌜(0 : Int) ≤ result ∧ result ≤ (1 : Int)⌝⦄ :=
-  by
-  mvcgen [_count_nums'judge, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  pyany_cases <;> grind +locals; pyany_cases <;> grind +locals
-  all_goals sorry
+attribute [simp, taste_ingr] _count_nums'judge
 
 def count_nums := fun (arr : PyAny) ↦ PastaLean.pySum (PastaLean.pyMap _count_nums'judge arr)
 
@@ -71,7 +68,7 @@ attribute [simp] count_nums
 
 @[taste_ingr]
 theorem count_nums_correct : ∀ (arr : PyAny), (0 : Int) ≤ count_nums arr ∧ count_nums arr ≤ PastaLean.pyLen arr := by
-  intros; sorry
+  taste?
 
 private def _count_nums'judge'rn := fun (x : Int) ↦
   Id.run

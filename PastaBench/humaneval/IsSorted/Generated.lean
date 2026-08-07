@@ -37,7 +37,17 @@ def is_sorted(lst: List[int]):
     is_sorted([1, 2, 2, 2, 3, 4]) ➞ False
     '''
     Requires(all(x >= 0 for x in lst))
-    Ensures(Result() == (all(lst.count(x) <= 2 for x in set(lst)) and lst == sorted(lst)))
+    # THE POINT: an exact iff with the pairwise ordering AND the "at most two copies of any value"
+    # side condition. Stated against adjacent pairs, not against `sorted(lst)`, so it is a claim
+    # about the ordering itself rather than a restatement of a library call.
+    Ensures(Result() == (
+        all(lst.count(x) <= 2 for x in lst)
+        and all(lst[i] <= lst[i + 1] for i in range(len(lst) - 1))
+    ))
+    # Answering True forces both halves separately: no value occurs three times ...
+    Ensures(Result() == False or all(lst.count(x) <= 2 for x in lst))
+    # ... and the list is non-decreasing at every adjacent position.
+    Ensures(Result() == False or all(lst[i] <= lst[i + 1] for i in range(len(lst) - 1)))
 
     count = dict()
     for x in lst:
@@ -47,7 +57,9 @@ def is_sorted(lst: List[int]):
         count[x] += 1
         if count[x] > 2: return False
     
-    Assert(all(lst.count(x) <= 2 for x in set(lst)))
+    # Surviving the loop means the duplicate half of the postcondition is already discharged,
+    # so the returned comparison decides the ordering half alone.
+    Assert(all(lst.count(x) <= 2 for x in lst))
     return lst == sorted(lst)
 -/
 
@@ -74,39 +86,40 @@ def is_sorted := fun (lst : List Int) ↦
         let _ := ()
     let _ :=
       Libraries.passta.pyPassAssert
-        (PastaLean.pyAll
-          ((PastaLean.pyIter (PastaLean.pySet lst)).map fun x => decide (PastaLean.pyCount lst x ≤ (2 : Int))))
+        (PastaLean.pyAll ((PastaLean.pyIter lst).map fun x => decide (PastaLean.pyCount lst x ≤ (2 : Int))))
     let __py_ret_1 := lst == PastaLean.pySort lst
     return __py_ret_1 : Id _)
 
 @[spec]
 theorem is_sorted_spec :
-    ⦃⌜PastaLean.pyAll ((PastaLean.pyIter lst).map fun x => decide (x ≥ (0 : Int)))⌝⦄ is_sorted lst ⦃⇓result =>
-      ⌜result =
-          (PastaLean.pyTruthy
-                (PastaLean.pyAll
-                  ((PastaLean.pyIter (PastaLean.pySet lst)).map fun x =>
-                    decide (PastaLean.pyCount lst x ≤ (2 : Int)))) =
-              true ∧
-            lst = PastaLean.pySort lst)⌝⦄ :=
+    ⦃⌜∀ x ∈ PastaLean.pyIter lst, x ≥ (0 : Int)⌝⦄ is_sorted lst ⦃⇓result =>
+      ⌜(result =
+              ((∀ x ∈ PastaLean.pyIter lst, PastaLean.pyCount lst x ≤ (2 : Int)) ∧
+                ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen lst -ₚ (1 : Int))),
+                  lst⦋i⦌ ≤ lst⦋i +ₚ (1 : Int)⦌) ∧
+            (result = Bool.false ∨ ∀ x ∈ PastaLean.pyIter lst, PastaLean.pyCount lst x ≤ (2 : Int))) ∧
+          (result = Bool.false ∨
+            ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen lst -ₚ (1 : Int))),
+              lst⦋i⦌ ≤ lst⦋i +ₚ (1 : Int)⦌)⌝⦄ :=
   by
   try
     mvcgen [is_sorted, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · Invariant.withEarlyReturn (onReturn := fun _ _ => ⌜True⌝) (onContinue := fun _ _ => ⌜True⌝)
-  sorry
+  taste?
   all_goals sorry
 
 theorem is_sorted_correct :
     ∀ (lst : List Int),
-      PastaLean.pyAll ((PastaLean.pyIter lst).map fun x => decide (x ≥ (0 : Int))) →
+      (∀ x ∈ PastaLean.pyIter lst, x ≥ (0 : Int)) →
         let result := (is_sorted lst).run;
-        result =
-          (PastaLean.pyTruthy
-                (PastaLean.pyAll
-                  ((PastaLean.pyIter (PastaLean.pySet lst)).map fun x =>
-                    decide (PastaLean.pyCount lst x ≤ (2 : Int)))) =
-              true ∧
-            lst = PastaLean.pySort lst) :=
+        (result =
+              ((∀ x ∈ PastaLean.pyIter lst, PastaLean.pyCount lst x ≤ (2 : Int)) ∧
+                ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen lst -ₚ (1 : Int))),
+                  lst⦋i⦌ ≤ lst⦋i +ₚ (1 : Int)⦌) ∧
+            (result = Bool.false ∨ ∀ x ∈ PastaLean.pyIter lst, PastaLean.pyCount lst x ≤ (2 : Int))) ∧
+          (result = Bool.false ∨
+            ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen lst -ₚ (1 : Int))),
+              lst⦋i⦌ ≤ lst⦋i +ₚ (1 : Int)⦌) :=
   by
   intro lst hpre
   exact is_sorted_spec hpre
@@ -133,6 +146,11 @@ def is_sorted'rn := fun (lst : List Int) ↦
       -/
       let _ :=
         Libraries.passta.pyPassRequires (PastaLean.pyAll ((PastaLean.pyIter lst).map fun x => decide (x ≥ (0 : Int))))
+      -- THE POINT: an exact iff with the pairwise ordering AND the "at most two copies of any value"
+      -- side condition. Stated against adjacent pairs, not against `sorted(lst)`, so it is a claim
+      -- about the ordering itself rather than a restatement of a library call.
+      -- Answering True forces both halves separately: no value occurs three times ...
+      -- ... and the list is non-decreasing at every adjacent position.
       let mut count : Std.HashMap Int Int := Std.HashMap.ofList []
       for x in (PastaLean.pyIter lst)do
         let _ :=
@@ -150,10 +168,11 @@ def is_sorted'rn := fun (lst : List Int) ↦
           return Bool.false
         else
           let _ := ()
+      -- Surviving the loop means the duplicate half of the postcondition is already discharged,
+      -- so the returned comparison decides the ordering half alone.
       let _ :=
         Libraries.passta.pyPassAssert
-          (PastaLean.pyAll
-            ((PastaLean.pyIter (PastaLean.pySet lst)).map fun x => decide (PastaLean.pyCount lst x ≤ (2 : Int))))
+          (PastaLean.pyAll ((PastaLean.pyIter lst).map fun x => decide (PastaLean.pyCount lst x ≤ (2 : Int))))
       let __py_ret_1 := lst == PastaLean.pySort lst
       return __py_ret_1)
 

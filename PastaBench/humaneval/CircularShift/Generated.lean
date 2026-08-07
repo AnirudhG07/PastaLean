@@ -30,7 +30,17 @@ def circular_shift(x, shift):
     """
     Requires(x >= 0)
     Requires(shift >= 0)
+    # A rotation and a reversal are both permutations of the digit string: same length,
+    # same digit multiset.
     Ensures(len(Result()) == len(str(x)))
+    Ensures(sorted(Result()) == sorted(str(x)))
+    # THE POINT: within range the result really is a rotation of str(x) -- there is an
+    # offset k with Result()[i] == str(x)[(i + k) % n] for every i; beyond range it is
+    # the reversal.
+    Ensures(shift > len(str(x)) or any(
+        all(Result()[i] == str(x)[(i + k) % len(str(x))] for i in range(len(str(x))))
+        for k in range(len(str(x)))))
+    Ensures(shift <= len(str(x)) or Result() == str(x)[::-1])
 
     s = str(x)
     # The length of the string representation of a non-negative integer is at least 1.
@@ -89,10 +99,17 @@ def circular_shift := fun (x : Int) ↦ fun (shift : Int) ↦
 @[spec]
 theorem circular_shift_spec :
     ⦃⌜x ≥ (0 : Int) ∧ shift ≥ (0 : Int)⌝⦄ circular_shift x shift ⦃⇓result =>
-      ⌜PastaLean.pyLen result = PastaLean.pyLen (PastaLean.pyStr x)⌝⦄ :=
+      ⌜((PastaLean.pyLen result = PastaLean.pyLen (PastaLean.pyStr x) ∧
+              PastaLean.pySort result = PastaLean.pySort (PastaLean.pyStr x)) ∧
+            (shift > PastaLean.pyLen (PastaLean.pyStr x) ∨
+              ∃ k ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen (PastaLean.pyStr x))),
+                ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen (PastaLean.pyStr x))),
+                  result⦋i⦌ = (PastaLean.pyStr x)⦋(i +ₚ k) %ₚ PastaLean.pyLen (PastaLean.pyStr x)⦌)) ∧
+          (shift ≤ PastaLean.pyLen (PastaLean.pyStr x) ∨
+            result = PastaLean.pySlice (PastaLean.pyStr x) none none (some (-(1 : Int))))⌝⦄ :=
   by
   mvcgen [circular_shift, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  sorry
+  taste?
   all_goals sorry
 
 theorem circular_shift_correct :
@@ -100,7 +117,14 @@ theorem circular_shift_correct :
       ∀ (shift : Int),
         x ≥ (0 : Int) ∧ shift ≥ (0 : Int) →
           let result := (circular_shift x shift).run;
-          PastaLean.pyLen result = PastaLean.pyLen (PastaLean.pyStr x) :=
+          ((PastaLean.pyLen result = PastaLean.pyLen (PastaLean.pyStr x) ∧
+                PastaLean.pySort result = PastaLean.pySort (PastaLean.pyStr x)) ∧
+              (shift > PastaLean.pyLen (PastaLean.pyStr x) ∨
+                ∃ k ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen (PastaLean.pyStr x))),
+                  ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen (PastaLean.pyStr x))),
+                    result⦋i⦌ = (PastaLean.pyStr x)⦋(i +ₚ k) %ₚ PastaLean.pyLen (PastaLean.pyStr x)⦌)) ∧
+            (shift ≤ PastaLean.pyLen (PastaLean.pyStr x) ∨
+              result = PastaLean.pySlice (PastaLean.pyStr x) none none (some (-(1 : Int)))) :=
   by
   intro x shift hpre
   exact circular_shift_spec hpre
@@ -121,6 +145,11 @@ def circular_shift'rn := fun (x : Int) ↦ fun (shift : Int) ↦
       -/
       let _ := Libraries.passta.pyPassRequires (decide (x ≥ (0 : Int)))
       let _ := Libraries.passta.pyPassRequires (decide (shift ≥ (0 : Int)))
+      -- A rotation and a reversal are both permutations of the digit string: same length,
+      -- same digit multiset.
+      -- THE POINT: within range the result really is a rotation of str(x) -- there is an
+      -- offset k with Result()[i] == str(x)[(i + k) % n] for every i; beyond range it is
+      -- the reversal.
       let mut s : String := PastaLean.pyStr x
       -- The length of the string representation of a non-negative integer is at least 1.
       -- This is a crucial precondition for the modulo operation `shift % len(s)`.

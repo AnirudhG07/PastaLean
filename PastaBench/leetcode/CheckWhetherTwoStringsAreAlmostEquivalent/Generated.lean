@@ -65,9 +65,8 @@ def checkAlmostEquivalent := fun (word1 : String) ↦ fun (word2 : String) ↦
 theorem checkAlmostEquivalent_spec :
     ⦃⌜True⌝⦄ checkAlmostEquivalent word1 word2 ⦃⇓result =>
       ⌜result =
-          PastaLean.pyAll
-            ((PastaLean.pyIter Libraries.string.pyStringPrintable).map fun c =>
-              decide (PastaLean.pyAbs (PastaLean.pyCount word1 c -ₚ PastaLean.pyCount word2 c) ≤ (3 : Int)))⌝⦄ :=
+          ∀ c ∈ PastaLean.pyIter Libraries.string.pyStringPrintable,
+            PastaLean.pyAbs (PastaLean.pyCount word1 c -ₚ PastaLean.pyCount word2 c) ≤ (3 : Int)⌝⦄ :=
   by
   try
     mvcgen [checkAlmostEquivalent, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
@@ -80,9 +79,8 @@ theorem checkAlmostEquivalent_correct :
       ∀ (word2 : String),
         let result := (checkAlmostEquivalent word1 word2).run;
         result =
-          PastaLean.pyAll
-            ((PastaLean.pyIter Libraries.string.pyStringPrintable).map fun c =>
-              decide (PastaLean.pyAbs (PastaLean.pyCount word1 c -ₚ PastaLean.pyCount word2 c) ≤ (3 : Int))) :=
+          ∀ c ∈ PastaLean.pyIter Libraries.string.pyStringPrintable,
+            PastaLean.pyAbs (PastaLean.pyCount word1 c -ₚ PastaLean.pyCount word2 c) ≤ (3 : Int) :=
   by
   intro word1 word2
   exact checkAlmostEquivalent_spec True.intro

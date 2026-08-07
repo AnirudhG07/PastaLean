@@ -51,17 +51,13 @@ theorem _greatest_common_divisor'query_gcd_spec :
     ∀ (a : Int),
       ∀ (b : Int),
         ((_greatest_common_divisor'query_gcd a b = (0 : Int)) = (a = (0 : Int) ∧ b = (0 : Int)) ∧
-            PastaLean.pyTruthy
-                (if _greatest_common_divisor'query_gcd a b ≠ (0 : Int) then
-                  a %ₚ _greatest_common_divisor'query_gcd a b = (0 : Int)
-                else a = (0 : Int)) =
-              true) ∧
-          PastaLean.pyTruthy
-              (if _greatest_common_divisor'query_gcd a b ≠ (0 : Int) then
-                b %ₚ _greatest_common_divisor'query_gcd a b = (0 : Int)
-              else b = (0 : Int)) =
-            true :=
-  by intros; sorry
+            if _greatest_common_divisor'query_gcd a b ≠ (0 : Int) then
+              a %ₚ _greatest_common_divisor'query_gcd a b = (0 : Int)
+            else a = (0 : Int)) ∧
+          if _greatest_common_divisor'query_gcd a b ≠ (0 : Int) then
+            b %ₚ _greatest_common_divisor'query_gcd a b = (0 : Int)
+          else b = (0 : Int) :=
+  by taste?
 
 def greatest_common_divisor := fun (a : Int) ↦ fun (b : Int) ↦ _greatest_common_divisor'query_gcd a b
 
@@ -72,15 +68,11 @@ theorem greatest_common_divisor_correct :
     ∀ (a : Int),
       ∀ (b : Int),
         ((greatest_common_divisor a b = (0 : Int)) = (a = (0 : Int) ∧ b = (0 : Int)) ∧
-            PastaLean.pyTruthy
-                (if greatest_common_divisor a b ≠ (0 : Int) then a %ₚ greatest_common_divisor a b = (0 : Int)
-                else a = (0 : Int)) =
-              true) ∧
-          PastaLean.pyTruthy
-              (if greatest_common_divisor a b ≠ (0 : Int) then b %ₚ greatest_common_divisor a b = (0 : Int)
-              else b = (0 : Int)) =
-            true :=
-  by intros; sorry
+            if greatest_common_divisor a b ≠ (0 : Int) then a %ₚ greatest_common_divisor a b = (0 : Int)
+            else a = (0 : Int)) ∧
+          if greatest_common_divisor a b ≠ (0 : Int) then b %ₚ greatest_common_divisor a b = (0 : Int)
+          else b = (0 : Int) :=
+  by taste?
 
 private def _greatest_common_divisor'query_gcd'rn := fun (a : Int) ↦ fun (b : Int) ↦
   if b == (0 : Int) then a else _greatest_common_divisor'query_gcd'rn b (a %ₚ b)

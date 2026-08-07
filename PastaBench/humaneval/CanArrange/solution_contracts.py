@@ -10,22 +10,20 @@ def can_arrange(arr):
     can_arrange([1,2,4,3,5]) = 3
     can_arrange([1,2,3]) = -1
     """
-    # The docstring guarantees that the input array has no duplicate values.
-    Requires(len(set(arr)) == len(arr))
-
-    # The result is always a valid index in the range [1, len(arr)-1] or -1.
     Ensures(-1 <= Result() < len(arr))
-    # If an index is returned (i.e., Result() > 0), it must point to a
-    # "descent" where arr[i] < arr[i-1]. If -1 is returned, this condition
-    # is vacuously true. This captures the core correctness property.
-    Ensures(Result() <= 0 or arr[Result()] < arr[Result() - 1])
-
+    # THE POINT (part 1): a returned index really is a descent, arr[i] < arr[i-1].
+    Ensures(Result() == -1 or (1 <= Result() and arr[Result()] < arr[Result() - 1]))
+    # THE POINT (part 2): it is the LARGEST such index — nothing above it is a descent.
+    Ensures(Result() == -1 or all(arr[j] >= arr[j - 1] for j in range(Result() + 1, len(arr))))
+    # ... and -1 is returned only when the array has no descent at all.
+    Ensures(Result() != -1 or all(arr[j] >= arr[j - 1] for j in range(1, len(arr))))
 
     for i in range(len(arr) - 1, 0, -1):
-        # Invariant: i is always a valid index for accessing arr[i] and arr[i-1].
-        # The loop runs for i from len(arr)-1 down to 1, so 1 <= i < len(arr).
-        Invariant(1 <= i < len(arr))
-        # The loop terminates because i strictly decreases and is bounded by 0.
+        Invariant(1 <= i)
+        Invariant(i < len(arr))
+        # Accumulator carrying the maximality clause: every index already scanned
+        # (strictly above i) was not a descent.
+        Invariant(all(arr[j] >= arr[j - 1] for j in range(i + 1, len(arr))))
         Decreases(i)
 
         if not (arr[i] >= arr[i - 1]):

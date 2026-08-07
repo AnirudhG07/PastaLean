@@ -44,15 +44,11 @@ attribute [simp] filter_integers
 @[taste_ingr]
 theorem filter_integers_correct :
     ∀ values,
-      (PastaLean.pyTruthy (PastaLean.pyAll ((PastaLean.pyIter (filter_integers values)).map fun x => type x == int)) =
-            true ∧
-          PastaLean.pyTruthy
-              (PastaLean.pyAll
-                ((PastaLean.pyIter (filter_integers values)).map fun x => PastaLean.pyContains values x)) =
-            true) ∧
+      ((∀ x ∈ PastaLean.pyIter (filter_integers values), type x = int) ∧
+          ∀ x ∈ PastaLean.pyIter (filter_integers values), PastaLean.pyContains values x) ∧
         PastaLean.pyLen (filter_integers values) =
           PastaLean.pySum ((List.filter (fun v => type v = int) (PastaLean.pyIter values)).map fun v => (1 : Int)) :=
-  by sorry
+  by taste?
 
 def filter_integers'rn := fun values ↦ PastaLean.pyList (PastaLean.pyFilter (fun x ↦ type x == int) values)
 

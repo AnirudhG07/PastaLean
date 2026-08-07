@@ -60,17 +60,13 @@ theorem reverse_delete_correct :
       ∀ c,
         let ss := PastaLean.pyStringJoin "" (PastaLean.pyFilter (fun ch ↦ !(PastaLean.pyContains c ch)) s)
         (((PastaLean.pyLen (reverse_delete s c)⦋(0 : Int)⦌ ≤ PastaLean.pyLen s ∧
-                PastaLean.pyTruthy
-                    (PastaLean.pyAll
-                      ((PastaLean.pyIter (reverse_delete s c)⦋(0 : Int)⦌).map fun ch => !(PastaLean.pyContains c ch))) =
-                  true) ∧
+                ∀ ch ∈ PastaLean.pyIter (reverse_delete s c)⦋(0 : Int)⦌, !(PastaLean.pyContains c ch)) ∧
               (reverse_delete s c)⦋(1 : Int)⦌ =
                 ((reverse_delete s c)⦋(0 : Int)⦌ =
                   PastaLean.pySlice (reverse_delete s c)⦋(0 : Int)⦌ none none (some (-(1 : Int))))) ∧
             PastaLean.pyLen ss ≤ PastaLean.pyLen s) ∧
-          PastaLean.pyTruthy (PastaLean.pyAll ((PastaLean.pyIter ss).map fun ch => !(PastaLean.pyContains c ch))) =
-            true :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+          ∀ ch ∈ PastaLean.pyIter ss, !(PastaLean.pyContains c ch) :=
+  by taste?
 
 def reverse_delete'rn := fun (s : PyAny) ↦ fun c ↦
   let ss := (PastaLean.pyStringJoin "" (PastaLean.pyFilter (fun ch ↦ !(PastaLean.pyContains c ch)) s) : String)

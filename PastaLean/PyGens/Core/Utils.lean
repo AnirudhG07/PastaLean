@@ -246,7 +246,10 @@ def getStmtDoElem (elem : Json) : PygenM (TSyntax `doElem) := do
       getCode elem `doElem
     catch e =>
       let nt := (elem.getObjValAs? String "node_type").toOption.getD "statement"
-      let emsg := ((← e.toMessageData.toString).replace "\n" " ").take 100
+      -- Keep enough of the message to name the actual cause: at 100 chars a nested `getCode`
+      -- failure showed only the wrapper ("Error in code generation function … for key …"), which
+      -- says a generator threw but never why.
+      let emsg := ((← e.toMessageData.toString).replace "\n" " ").take 400
       `(doElem| let _ := PastaLean.pyUnsupported $(Syntax.mkStrLit s!"degraded {nt}: {emsg}"))
   else
     getCode elem `doElem

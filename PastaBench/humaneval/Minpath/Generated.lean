@@ -53,21 +53,69 @@ def minPath(grid, k):
     Requires(k >= 1)
     Requires(len(grid) >= 2)
     Requires(all(len(row) == len(grid) for row in grid))
+    # "every integer in [1, N*N] appears exactly once" — in particular 1 is somewhere on the
+    # grid, which is what makes the cell found below well defined.
+    Requires(all(all(v >= 1 and v <= len(grid) * len(grid) for v in row) for row in grid))
+    Requires(any(1 in row for row in grid))
 
     Ensures(len(Result()) == k)
+    # The optimal path oscillates between the cell holding 1 and its cheapest neighbour.
     Ensures(all(Result()[i] == 1 for i in range(0, k, 2)))
     Ensures(all(Result()[i] > 1 for i in range(1, k, 2)))
+    Ensures(k < 2 or all(Result()[i] == Result()[1] for i in range(1, k, 2)))
+    # Every value emitted is genuinely a value on the grid — the path never invents a cell.
+    Ensures(all(any(v in row for row in grid) for v in Result()))
+    # The real content: the odd entry is the MINIMUM over the edge-neighbours of the 1-cell,
+    # and is attained by one of them. `len(grid)` is used instead of `N` because `N` is bound
+    # below this point.
+    Ensures(k < 2 or all(
+        grid[t // len(grid)][t % len(grid)] != 1
+        or all(
+            Result()[1] <= grid[u // len(grid)][u % len(grid)]
+            for u in range(len(grid) * len(grid))
+            if (t // len(grid) == u // len(grid)
+                and (t % len(grid) == u % len(grid) + 1
+                     or u % len(grid) == t % len(grid) + 1))
+            or (t % len(grid) == u % len(grid)
+                and (t // len(grid) == u // len(grid) + 1
+                     or u // len(grid) == t // len(grid) + 1))
+        )
+        for t in range(len(grid) * len(grid))
+    ))
+    Ensures(k < 2 or any(
+        grid[t // len(grid)][t % len(grid)] == 1
+        and any(
+            Result()[1] == grid[u // len(grid)][u % len(grid)]
+            for u in range(len(grid) * len(grid))
+            if (t // len(grid) == u // len(grid)
+                and (t % len(grid) == u % len(grid) + 1
+                     or u % len(grid) == t % len(grid) + 1))
+            or (t % len(grid) == u % len(grid)
+                and (t // len(grid) == u // len(grid) + 1
+                     or u // len(grid) == t // len(grid) + 1))
+        )
+        for t in range(len(grid) * len(grid))
+    ))
 
     N = len(grid)
     x, y = 0, 0
     for i in range(N):
-        Invariant(0 <= i <= N)
+        Invariant(0 <= i)
+        Invariant(i <= N)
+        # Once a 1 has been seen, (x, y) points at it and stays there.
+        Invariant(all(all(grid[r][c] != 1 for c in range(N)) for r in range(i)) or grid[x][y] == 1)
         for j in range(N):
-            Invariant(0 <= i < N)
-            Invariant(0 <= j <= N)
+            Invariant(0 <= i)
+            Invariant(i < N)
+            Invariant(0 <= j)
+            Invariant(j <= N)
+            Invariant(0 <= x)
+            Invariant(x < N)
+            Invariant(0 <= y)
+            Invariant(y < N)
             if grid[i][j] == 1:
                 x, y = i, j
-    
+
     Assert(0 <= x < N)
     Assert(0 <= y < N)
     Assert(grid[x][y] == 1)
@@ -94,10 +142,29 @@ def minPath := fun (grid : PyAny) ↦ fun (k : Int) ↦
     let mut x : Int := Prod.fst __unpack_pair_1
     let mut y : Int := Prod.snd __unpack_pair_1
     for i in (PastaLean.pyRange N)do
-      let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i) && decide (i ≤ N))
+      let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i))
+      let _ := Libraries.passta.pyPassInvariant (decide (i ≤ N))
+      -- Once a 1 has been seen, (x, y) points at it and stays there.
+      let _ :=
+        Libraries.passta.pyPassInvariant
+          (if
+              PastaLean.pyTruthy
+                (PastaLean.pyAll
+                  ((PastaLean.pyRange i).map fun r =>
+                    PastaLean.pyAll ((PastaLean.pyRange N).map fun c => grid⦋r⦌⦋c⦌ != (1 : Int)))) then
+            PastaLean.pyAll
+              ((PastaLean.pyRange i).map fun r =>
+                PastaLean.pyAll ((PastaLean.pyRange N).map fun c => grid⦋r⦌⦋c⦌ != (1 : Int)))
+          else grid⦋x⦌⦋y⦌ == (1 : Int))
       for j in (PastaLean.pyRange N)do
-        let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i) && decide (i < N))
-        let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ j) && decide (j ≤ N))
+        let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i))
+        let _ := Libraries.passta.pyPassInvariant (decide (i < N))
+        let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ j))
+        let _ := Libraries.passta.pyPassInvariant (decide (j ≤ N))
+        let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ x))
+        let _ := Libraries.passta.pyPassInvariant (decide (x < N))
+        let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ y))
+        let _ := Libraries.passta.pyPassInvariant (decide (y < N))
         if h_1 : grid⦋i⦌⦋j⦌ = (1 : Int) then 
           let __unpack_value_2 := (i, j)
           let __unpack_pair_2 := __unpack_value_2
@@ -132,30 +199,101 @@ def minPath := fun (grid : PyAny) ↦ fun (k : Int) ↦
 
 @[spec]
 theorem minPath_spec :
-    ⦃⌜(k ≥ (1 : Int) ∧ PastaLean.pyLen grid ≥ (2 : Int)) ∧
-          PastaLean.pyAll ((PastaLean.pyIter grid).map fun row => PastaLean.pyLen row == PastaLean.pyLen grid)⌝⦄
+    ⦃⌜(((k ≥ (1 : Int) ∧ PastaLean.pyLen grid ≥ (2 : Int)) ∧
+              ∀ row ∈ PastaLean.pyIter grid, PastaLean.pyLen row = PastaLean.pyLen grid) ∧
+            ∀ row ∈ PastaLean.pyIter grid,
+              ∀ v ∈ PastaLean.pyIter row, v ≥ (1 : Int) ∧ v ≤ PastaLean.pyLen grid *ₚ PastaLean.pyLen grid) ∧
+          ∃ row ∈ PastaLean.pyIter grid, PastaLean.pyContains row (1 : Int)⌝⦄
       minPath grid k ⦃⇓result =>
-      ⌜(PastaLean.pyLen result = k ∧
-            PastaLean.pyAll ((PastaLean.pyRange k (0 : Int) (2 : Int)).map fun i => result⦋i⦌ == (1 : Int))) ∧
-          PastaLean.pyAll ((PastaLean.pyRange k (1 : Int) (2 : Int)).map fun i => decide (result⦋i⦌ > (1 : Int)))⌝⦄ :=
+      ⌜(((((PastaLean.pyLen result = k ∧
+                    ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange k (0 : Int) (2 : Int)), result⦋i⦌ = (1 : Int)) ∧
+                  ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange k (1 : Int) (2 : Int)), result⦋i⦌ > (1 : Int)) ∧
+                (k < (2 : Int) ∨
+                  ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange k (1 : Int) (2 : Int)), result⦋i⦌ = result⦋(1 : Int)⦌)) ∧
+              ∀ v ∈ PastaLean.pyIter result, ∃ row ∈ PastaLean.pyIter grid, PastaLean.pyContains row v) ∧
+            (k < (2 : Int) ∨
+              ∀ t ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen grid *ₚ PastaLean.pyLen grid)),
+                grid⦋PastaLean.pyFloorDiv t (PastaLean.pyLen grid)⦌⦋t %ₚ PastaLean.pyLen grid⦌ ≠ (1 : Int) ∨
+                  ∀ u ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen grid *ₚ PastaLean.pyLen grid)),
+                    PastaLean.pyFloorDiv t (PastaLean.pyLen grid) = PastaLean.pyFloorDiv u (PastaLean.pyLen grid) ∧
+                          (t %ₚ PastaLean.pyLen grid = u %ₚ PastaLean.pyLen grid +ₚ (1 : Int) ∨
+                            u %ₚ PastaLean.pyLen grid = t %ₚ PastaLean.pyLen grid +ₚ (1 : Int)) ∨
+                        t %ₚ PastaLean.pyLen grid = u %ₚ PastaLean.pyLen grid ∧
+                          (PastaLean.pyFloorDiv t (PastaLean.pyLen grid) =
+                              PastaLean.pyFloorDiv u (PastaLean.pyLen grid) +ₚ (1 : Int) ∨
+                            PastaLean.pyFloorDiv u (PastaLean.pyLen grid) =
+                              PastaLean.pyFloorDiv t (PastaLean.pyLen grid) +ₚ (1 : Int)) →
+                      result⦋(1 : Int)⦌ ≤
+                        grid⦋PastaLean.pyFloorDiv u (PastaLean.pyLen grid)⦌⦋u %ₚ PastaLean.pyLen grid⦌)) ∧
+          (k < (2 : Int) ∨
+            ∃ t ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen grid *ₚ PastaLean.pyLen grid)),
+              grid⦋PastaLean.pyFloorDiv t (PastaLean.pyLen grid)⦌⦋t %ₚ PastaLean.pyLen grid⦌ = (1 : Int) ∧
+                ∃ u ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen grid *ₚ PastaLean.pyLen grid)),
+                  (PastaLean.pyFloorDiv t (PastaLean.pyLen grid) = PastaLean.pyFloorDiv u (PastaLean.pyLen grid) ∧
+                        (t %ₚ PastaLean.pyLen grid = u %ₚ PastaLean.pyLen grid +ₚ (1 : Int) ∨
+                          u %ₚ PastaLean.pyLen grid = t %ₚ PastaLean.pyLen grid +ₚ (1 : Int)) ∨
+                      t %ₚ PastaLean.pyLen grid = u %ₚ PastaLean.pyLen grid ∧
+                        (PastaLean.pyFloorDiv t (PastaLean.pyLen grid) =
+                            PastaLean.pyFloorDiv u (PastaLean.pyLen grid) +ₚ (1 : Int) ∨
+                          PastaLean.pyFloorDiv u (PastaLean.pyLen grid) =
+                            PastaLean.pyFloorDiv t (PastaLean.pyLen grid) +ₚ (1 : Int))) ∧
+                    result⦋(1 : Int)⦌ =
+                      grid⦋PastaLean.pyFloorDiv u (PastaLean.pyLen grid)⦌⦋u %ₚ PastaLean.pyLen grid⦌)⌝⦄ :=
   by
   try
     mvcgen [minPath, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓cur =>
       ⌜let i := (cur.prefix.length : Int);
-        (0 : Int) ≤ i ∧ i ≤ N⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+        ((0 : Int) ≤ i ∧ i ≤ N) ∧
+          ((∀ r ∈ PastaLean.pyIter (PastaLean.pyRange i),
+              ∀ c ∈ PastaLean.pyIter (PastaLean.pyRange N), grid⦋r⦌⦋c⦌ ≠ (1 : Int)) ∨
+            grid⦋x⦌⦋y⦌ = (1 : Int))⌝
+  taste?
   all_goals sorry
 
 theorem minPath_correct :
     ∀ (grid : PyAny),
       ∀ (k : Int),
-        (k ≥ (1 : Int) ∧ PastaLean.pyLen grid ≥ (2 : Int)) ∧
-            PastaLean.pyAll ((PastaLean.pyIter grid).map fun row => PastaLean.pyLen row == PastaLean.pyLen grid) →
+        ((((k ≥ (1 : Int) ∧ PastaLean.pyLen grid ≥ (2 : Int)) ∧
+                ∀ row ∈ PastaLean.pyIter grid, PastaLean.pyLen row = PastaLean.pyLen grid) ∧
+              ∀ row ∈ PastaLean.pyIter grid,
+                ∀ v ∈ PastaLean.pyIter row, v ≥ (1 : Int) ∧ v ≤ PastaLean.pyLen grid *ₚ PastaLean.pyLen grid) ∧
+            ∃ row ∈ PastaLean.pyIter grid, PastaLean.pyContains row (1 : Int)) →
           let result := (minPath grid k).run;
-          (PastaLean.pyLen result = k ∧
-              PastaLean.pyAll ((PastaLean.pyRange k (0 : Int) (2 : Int)).map fun i => result⦋i⦌ == (1 : Int))) ∧
-            PastaLean.pyAll ((PastaLean.pyRange k (1 : Int) (2 : Int)).map fun i => decide (result⦋i⦌ > (1 : Int))) :=
+          (((((PastaLean.pyLen result = k ∧
+                      ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange k (0 : Int) (2 : Int)), result⦋i⦌ = (1 : Int)) ∧
+                    ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange k (1 : Int) (2 : Int)), result⦋i⦌ > (1 : Int)) ∧
+                  (k < (2 : Int) ∨
+                    ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange k (1 : Int) (2 : Int)), result⦋i⦌ = result⦋(1 : Int)⦌)) ∧
+                ∀ v ∈ PastaLean.pyIter result, ∃ row ∈ PastaLean.pyIter grid, PastaLean.pyContains row v) ∧
+              (k < (2 : Int) ∨
+                ∀ t ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen grid *ₚ PastaLean.pyLen grid)),
+                  grid⦋PastaLean.pyFloorDiv t (PastaLean.pyLen grid)⦌⦋t %ₚ PastaLean.pyLen grid⦌ ≠ (1 : Int) ∨
+                    ∀ u ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen grid *ₚ PastaLean.pyLen grid)),
+                      PastaLean.pyFloorDiv t (PastaLean.pyLen grid) = PastaLean.pyFloorDiv u (PastaLean.pyLen grid) ∧
+                            (t %ₚ PastaLean.pyLen grid = u %ₚ PastaLean.pyLen grid +ₚ (1 : Int) ∨
+                              u %ₚ PastaLean.pyLen grid = t %ₚ PastaLean.pyLen grid +ₚ (1 : Int)) ∨
+                          t %ₚ PastaLean.pyLen grid = u %ₚ PastaLean.pyLen grid ∧
+                            (PastaLean.pyFloorDiv t (PastaLean.pyLen grid) =
+                                PastaLean.pyFloorDiv u (PastaLean.pyLen grid) +ₚ (1 : Int) ∨
+                              PastaLean.pyFloorDiv u (PastaLean.pyLen grid) =
+                                PastaLean.pyFloorDiv t (PastaLean.pyLen grid) +ₚ (1 : Int)) →
+                        result⦋(1 : Int)⦌ ≤
+                          grid⦋PastaLean.pyFloorDiv u (PastaLean.pyLen grid)⦌⦋u %ₚ PastaLean.pyLen grid⦌)) ∧
+            (k < (2 : Int) ∨
+              ∃ t ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen grid *ₚ PastaLean.pyLen grid)),
+                grid⦋PastaLean.pyFloorDiv t (PastaLean.pyLen grid)⦌⦋t %ₚ PastaLean.pyLen grid⦌ = (1 : Int) ∧
+                  ∃ u ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen grid *ₚ PastaLean.pyLen grid)),
+                    (PastaLean.pyFloorDiv t (PastaLean.pyLen grid) = PastaLean.pyFloorDiv u (PastaLean.pyLen grid) ∧
+                          (t %ₚ PastaLean.pyLen grid = u %ₚ PastaLean.pyLen grid +ₚ (1 : Int) ∨
+                            u %ₚ PastaLean.pyLen grid = t %ₚ PastaLean.pyLen grid +ₚ (1 : Int)) ∨
+                        t %ₚ PastaLean.pyLen grid = u %ₚ PastaLean.pyLen grid ∧
+                          (PastaLean.pyFloorDiv t (PastaLean.pyLen grid) =
+                              PastaLean.pyFloorDiv u (PastaLean.pyLen grid) +ₚ (1 : Int) ∨
+                            PastaLean.pyFloorDiv u (PastaLean.pyLen grid) =
+                              PastaLean.pyFloorDiv t (PastaLean.pyLen grid) +ₚ (1 : Int))) ∧
+                      result⦋(1 : Int)⦌ =
+                        grid⦋PastaLean.pyFloorDiv u (PastaLean.pyLen grid)⦌⦋u %ₚ PastaLean.pyLen grid⦌) :=
   by
   intro grid k hpre
   exact minPath_spec hpre
@@ -199,16 +337,52 @@ def minPath'rn := fun (grid : PyAny) ↦ fun (k : Int) ↦
       let _ :=
         Libraries.passta.pyPassRequires
           (PastaLean.pyAll ((PastaLean.pyIter grid).map fun row => PastaLean.pyLen row == PastaLean.pyLen grid))
+      -- "every integer in [1, N*N] appears exactly once" — in particular 1 is somewhere on the
+      -- grid, which is what makes the cell found below well defined.
+      let _ :=
+        Libraries.passta.pyPassRequires
+          (PastaLean.pyAll
+            ((PastaLean.pyIter grid).map fun row =>
+              PastaLean.pyAll
+                ((PastaLean.pyIter row).map fun v =>
+                  decide (v ≥ (1 : Int)) && decide (v ≤ PastaLean.pyLen grid *ₚ PastaLean.pyLen grid))))
+      let _ :=
+        Libraries.passta.pyPassRequires
+          (PastaLean.pyStdAny ((PastaLean.pyIter grid).map fun row => PastaLean.pyContains row (1 : Int)))
+      -- The optimal path oscillates between the cell holding 1 and its cheapest neighbour.
+      -- Every value emitted is genuinely a value on the grid — the path never invents a cell.
+      -- The real content: the odd entry is the MINIMUM over the edge-neighbours of the 1-cell,
+      -- and is attained by one of them. `len(grid)` is used instead of `N` because `N` is bound
+      -- below this point.
       let mut N : Int := PastaLean.pyLen grid
       let __unpack_value_1 := ((0 : Int), (0 : Int))
       let __unpack_pair_1 := __unpack_value_1
       let mut x : Int := Prod.fst __unpack_pair_1
       let mut y : Int := Prod.snd __unpack_pair_1
       for i in (PastaLean.pyRange N)do
-        let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i) && decide (i ≤ N))
+        let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i))
+        let _ := Libraries.passta.pyPassInvariant (decide (i ≤ N))
+        -- Once a 1 has been seen, (x, y) points at it and stays there.
+        let _ :=
+          Libraries.passta.pyPassInvariant
+            (if
+                PastaLean.pyTruthy
+                  (PastaLean.pyAll
+                    ((PastaLean.pyRange i).map fun r =>
+                      PastaLean.pyAll ((PastaLean.pyRange N).map fun c => grid⦋r⦌⦋c⦌ != (1 : Int)))) then
+              PastaLean.pyAll
+                ((PastaLean.pyRange i).map fun r =>
+                  PastaLean.pyAll ((PastaLean.pyRange N).map fun c => grid⦋r⦌⦋c⦌ != (1 : Int)))
+            else grid⦋x⦌⦋y⦌ == (1 : Int))
         for j in (PastaLean.pyRange N)do
-          let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i) && decide (i < N))
-          let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ j) && decide (j ≤ N))
+          let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i))
+          let _ := Libraries.passta.pyPassInvariant (decide (i < N))
+          let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ j))
+          let _ := Libraries.passta.pyPassInvariant (decide (j ≤ N))
+          let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ x))
+          let _ := Libraries.passta.pyPassInvariant (decide (x < N))
+          let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ y))
+          let _ := Libraries.passta.pyPassInvariant (decide (y < N))
           if h_1 : grid⦋i⦌⦋j⦌ == (1 : Int) then 
             let __unpack_value_2 := (i, j)
             let __unpack_pair_2 := __unpack_value_2

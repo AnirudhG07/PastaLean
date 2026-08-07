@@ -49,13 +49,9 @@ attribute [simp] rolling_max
 theorem rolling_max_correct :
     ∀ (numbers : List Int),
       PastaLean.pyLen (rolling_max numbers) = PastaLean.pyLen numbers ∧
-        PastaLean.pyTruthy
-            (PastaLean.pyAll
-              ((PastaLean.pyRange (PastaLean.pyLen numbers)).map fun i =>
-                (rolling_max numbers)⦋i⦌ ==
-                  PastaLean.pyMax (PastaLean.pySlice numbers none (some (i +ₚ (1 : Int))) none))) =
-          true :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+        ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen numbers)),
+          (rolling_max numbers)⦋i⦌ = PastaLean.pyMax (PastaLean.pySlice numbers none (some (i +ₚ (1 : Int))) none) :=
+  by taste?
 
 def rolling_max'rn := fun (numbers : List Int) ↦
   (PastaLean.pyRange (PastaLean.pyLen numbers)).map fun i =>

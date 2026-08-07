@@ -32,11 +32,16 @@ def anti_shuffle(s: str) -> str:
     anti_shuffle('hello') returns 'ehllo'
     anti_shuffle('Hello World!!!') returns 'Hello !!!Wdlor'
     """
-    # The number of words (substrings separated by spaces) is preserved.
+    # Splitting on " " and re-joining on " " is length-preserving on the whole string,
+    # and preserves the word decomposition position for position.
+    Ensures(len(Result()) == len(s))
     Ensures(len(Result().split(" ")) == len(s.split(" ")))
-    # Sorting characters within words is a permutation, which preserves the total
-    # count of non-space characters across the entire string.
-    Ensures(len(Result().replace(" ", "")) == len(s.replace(" ", "")))
+    # THE POINT (a): every output word is in ascending ASCII order.
+    Ensures(all("".join(sorted(w)) == w for w in Result().split(" ")))
+    # THE POINT (b): each output word is a permutation of the input word at the same
+    # position -- together with (a) this pins the result exactly.
+    Ensures(all(sorted(Result().split(" ")[i]) == sorted(s.split(" ")[i])
+                for i in range(len(s.split(" ")))))
 
     words = s.split(" ")
     return " ".join(map(lambda x: "".join(sorted(x, key=lambda ch: ord(ch))), words))
@@ -56,10 +61,15 @@ attribute [simp] anti_shuffle
 theorem anti_shuffle_correct :
     ∀ (s : String),
       let words := PastaLean.pyStringSplit s " "
-      PastaLean.pyLen (PastaLean.pyStringSplit (anti_shuffle s) " ") = PastaLean.pyLen (PastaLean.pyStringSplit s " ") ∧
-        PastaLean.pyLen (PastaLean.pyStringReplace (anti_shuffle s) " " "") =
-          PastaLean.pyLen (PastaLean.pyStringReplace s " " "") :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+      ((PastaLean.pyLen (anti_shuffle s) = PastaLean.pyLen s ∧
+            PastaLean.pyLen (PastaLean.pyStringSplit (anti_shuffle s) " ") =
+              PastaLean.pyLen (PastaLean.pyStringSplit s " ")) ∧
+          ∀ w ∈ PastaLean.pyIter (PastaLean.pyStringSplit (anti_shuffle s) " "),
+            PastaLean.pyStringJoin "" (PastaLean.pySort w) = w) ∧
+        ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen (PastaLean.pyStringSplit s " "))),
+          PastaLean.pySort (PastaLean.pyStringSplit (anti_shuffle s) " ")⦋i⦌ =
+            PastaLean.pySort (PastaLean.pyStringSplit s " ")⦋i⦌ :=
+  by taste?
 
 def anti_shuffle'rn := fun (s : String) ↦
   let words := (PastaLean.pyStringSplit s " " : List String)

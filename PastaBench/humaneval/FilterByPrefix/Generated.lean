@@ -45,22 +45,14 @@ attribute [simp] filter_by_prefix
 theorem filter_by_prefix_correct :
     ∀ (strings : List String),
       ∀ («prefix» : String),
-        (PastaLean.pyTruthy
-                (PastaLean.pyAll
-                  ((PastaLean.pyIter (filter_by_prefix strings «prefix»)).map fun s =>
-                    PastaLean.pyStringStartswith s «prefix»)) =
-              true ∧
-            PastaLean.pyTruthy
-                (PastaLean.pyAll
-                  ((PastaLean.pyIter (filter_by_prefix strings «prefix»)).map fun s =>
-                    PastaLean.pyContains strings s)) =
-              true) ∧
+        ((∀ s ∈ PastaLean.pyIter (filter_by_prefix strings «prefix»), PastaLean.pyStringStartswith s «prefix») ∧
+            ∀ s ∈ PastaLean.pyIter (filter_by_prefix strings «prefix»), PastaLean.pyContains strings s) ∧
           PastaLean.pyLen (filter_by_prefix strings «prefix») =
             PastaLean.pyLen
               ((List.filter (fun s => PastaLean.pyTruthy (PastaLean.pyStringStartswith s «prefix»))
                     (PastaLean.pyIter strings)).map
                 fun s => s) :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  by taste?
 
 def filter_by_prefix'rn := fun (strings : List String) ↦ fun («prefix» : String) ↦
   PastaLean.pyList (PastaLean.pyFilter (fun x ↦ PastaLean.pyStringStartswith x «prefix») strings)

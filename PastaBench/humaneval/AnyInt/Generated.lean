@@ -24,25 +24,27 @@ def any_int(x, y, z):
     Create a function that takes 3 numbers.
     Returns true if one of the numbers is equal to the sum of the other two, and all numbers are integers.
     Returns false in any other cases.
-    
+
     Examples
     any_int(5, 2, 7) ➞ True
-    
+
     any_int(3, 2, 2) ➞ False
 
     any_int(3, -2, 1) ➞ True
-    
-    any_int(3.6, -2.2, 2) ➞ False
-  
 
-    
+    any_int(3.6, -2.2, 2) ➞ False
+
+
+
     '''
-    # For integer inputs the type guard is always satisfied, so the result is
-    # exactly the "one number equals the sum of the other two" predicate.
-    Ensures(Result() == (x == y + z or y == x + z or z == x + y))
+    # THE POINT: the result is exactly the conjunction of the two stated requirements —
+    # all three arguments are integers AND one of them is the sum of the other two.
+    # Both halves matter: on (1.5, 5, 3.5) the sum condition holds yet the answer is False.
+    Ensures(Result() == (type(x) == int and type(y) == int and type(z) == int
+                         and (x == y + z or y == x + z or z == x + y)))
 
     if type(x) != int or type(y) != int or type(z) != int: return False
-    
+
     Assert(type(x) == int and type(y) == int and type(z) == int)
     return x == y + z or y == x + z or z == y + x
 -/
@@ -62,10 +64,12 @@ def any_int := fun x ↦ fun y ↦ fun z ↦
     return __py_ret_1 : Id _)
 
 @[spec]
-theorem any_int_spec : ⦃⌜True⌝⦄ any_int x y z ⦃⇓result => ⌜result = ((x = y +ₚ z ∨ y = x +ₚ z) ∨ z = x +ₚ y)⌝⦄ :=
+theorem any_int_spec :
+    ⦃⌜True⌝⦄ any_int x y z ⦃⇓result =>
+      ⌜result = (((type x = int ∧ type y = int) ∧ type z = int) ∧ ((x = y +ₚ z ∨ y = x +ₚ z) ∨ z = x +ₚ y))⌝⦄ :=
   by
   mvcgen [any_int, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  sorry
+  taste?
   all_goals sorry
 
 theorem any_int_correct :
@@ -73,7 +77,7 @@ theorem any_int_correct :
       ∀ y,
         ∀ z,
           let result := (any_int x y z).run;
-          result = ((x = y +ₚ z ∨ y = x +ₚ z) ∨ z = x +ₚ y) :=
+          result = (((type x = int ∧ type y = int) ∧ type z = int) ∧ ((x = y +ₚ z ∨ y = x +ₚ z) ∨ z = x +ₚ y)) :=
   by
   intro x y z
   exact any_int_spec True.intro
@@ -86,22 +90,23 @@ def any_int'rn := fun x ↦ fun y ↦ fun z ↦
           Create a function that takes 3 numbers.
           Returns true if one of the numbers is equal to the sum of the other two, and all numbers are integers.
           Returns false in any other cases.
-          
+      
           Examples
           any_int(5, 2, 7) ➞ True
-          
+      
           any_int(3, 2, 2) ➞ False
       
           any_int(3, -2, 1) ➞ True
-          
+      
           any_int(3.6, -2.2, 2) ➞ False
-        
+      
+      
       
           
-          
       -/
-      -- For integer inputs the type guard is always satisfied, so the result is
-      -- exactly the "one number equals the sum of the other two" predicate.
+      -- THE POINT: the result is exactly the conjunction of the two stated requirements —
+      -- all three arguments are integers AND one of them is the sum of the other two.
+      -- Both halves matter: on (1.5, 5, 3.5) the sum condition holds yet the answer is False.
       if h_1 : type x != int || type y != int || type z != int then 
         return Bool.false
       else

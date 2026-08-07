@@ -28,10 +28,15 @@ def string_xor(a: str, b: str) -> str:
     '100'
     """
     Requires(len(a) == len(b))
-    Requires(all(c in '01' for c in a))
-    Requires(all(c in '01' for c in b))
+    Requires(all(c == '0' or c == '1' for c in a))
+    Requires(all(c == '0' or c == '1' for c in b))
     Ensures(len(Result()) == len(a))
-    Ensures(all(c in '01' for c in Result()))
+    Ensures(len(Result()) == len(b))
+    Ensures(all(c == '0' or c == '1' for c in Result()))
+    # The point: the output really is the bitwise XOR — position i is '0' exactly when the two
+    # input bits agree there, and '1' exactly when they differ. This elementwise clause is what
+    # distinguishes XOR from any other length-preserving bit map.
+    Ensures(all(Result()[i] == ('0' if a[i] == b[i] else '1') for i in range(len(a))))
 
     return "".join(str(int(a[i]) ^ int(b[i])) for i in range(len(a)))
 -/
@@ -50,13 +55,14 @@ theorem string_xor_correct :
     ∀ (a : String),
       ∀ (b : String),
         PastaLean.pyLen a = PastaLean.pyLen b →
-          PastaLean.pyAll ((PastaLean.pyIter a).map fun c => PastaLean.pyContains "01" c) →
-            PastaLean.pyAll ((PastaLean.pyIter b).map fun c => PastaLean.pyContains "01" c) →
-              PastaLean.pyLen (string_xor a b) = PastaLean.pyLen a ∧
-                PastaLean.pyTruthy
-                    (PastaLean.pyAll ((PastaLean.pyIter (string_xor a b)).map fun c => PastaLean.pyContains "01" c)) =
-                  true :=
-  by sorry
+          (∀ c ∈ PastaLean.pyIter a, c = "0" ∨ c = "1") →
+            (∀ c ∈ PastaLean.pyIter b, c = "0" ∨ c = "1") →
+              ((PastaLean.pyLen (string_xor a b) = PastaLean.pyLen a ∧
+                    PastaLean.pyLen (string_xor a b) = PastaLean.pyLen b) ∧
+                  ∀ c ∈ PastaLean.pyIter (string_xor a b), c = "0" ∨ c = "1") ∧
+                ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen a)),
+                  (string_xor a b)⦋i⦌ = if a⦋i⦌ = b⦋i⦌ then "0" else "1" :=
+  by taste?
 
 def string_xor'rn := fun (a : String) ↦ fun (b : String) ↦
   PastaLean.pyStringJoin ""

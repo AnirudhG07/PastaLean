@@ -47,10 +47,9 @@ attribute [simp] words_string
 theorem words_string_correct :
     ∀ (s : String),
       let words := PastaLean.pyStringSplit (PastaLean.pyStringReplace s "," " ")
-      PastaLean.pyAll
-        ((PastaLean.pyIter (words_string s)).map fun w =>
-          w != "" && !(PastaLean.pyStrContainsSubstr w ",") && !(PastaLean.pyStrContainsSubstr w " ")) :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+      ∀ w ∈ PastaLean.pyIter (words_string s),
+        (w ≠ "" ∧ !(PastaLean.pyStrContainsSubstr w ",")) ∧ !(PastaLean.pyStrContainsSubstr w " ") :=
+  by taste?
 
 def words_string'rn := fun (s : String) ↦
   let words := (PastaLean.pyStringSplit (PastaLean.pyStringReplace s "," " ") : List String)

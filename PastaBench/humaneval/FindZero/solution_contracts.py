@@ -25,7 +25,10 @@ def find_zero(xs: list):
     Requires(len(xs) >= 2)
     Requires(len(xs) % 2 == 0)
     Requires(xs[len(xs) - 1] != 0.0)
-    Ensures(abs(poly(xs, Result())) < 1e-5)
+    # The point: the returned x is a root of the polynomial, to the routine's own tolerance.
+    # `poly` is inlined (as sum of xs[i] * x**i) rather than called, so the postcondition is a
+    # self-contained statement about Result() and does not depend on a second function.
+    Ensures(abs(sum([xs[i] * Result() ** i for i in range(len(xs))])) < 1e-5)
 
 
     dxs = [xs[i] * i for i in range(1, len(xs))]

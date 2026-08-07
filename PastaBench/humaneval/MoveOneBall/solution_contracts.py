@@ -35,6 +35,16 @@ def move_one_ball(arr: list[int]):
         len(arr) == 0 or
         any(arr[i:] + arr[:i] == sorted(arr) for i in range(len(arr)))
     ))
+    # THE TECHNICAL FORM: a cyclic sequence is a rotation of its sorted order exactly when it has
+    # at most ONE cyclic descent ("dip"). This is not something the code checks — it inspects whole
+    # rotations — so it can only be established by reasoning about the rotation structure.
+    Ensures(len(arr) == 0 or Result() == (
+        len([i for i in range(len(arr)) if arr[i] > arr[(i + 1) % len(arr)]]) <= 1
+    ))
+    # Consequence worth stating on its own: answering True means the array is sorted from the dip
+    # onwards and again up to it, i.e. it has no two separate descents.
+    Ensures(Result() == False or len(arr) == 0 or
+            len([i for i in range(len(arr) - 1) if arr[i] > arr[i + 1]]) <= 1)
 
     sorted_arr = sorted(arr)
     if arr == sorted_arr:

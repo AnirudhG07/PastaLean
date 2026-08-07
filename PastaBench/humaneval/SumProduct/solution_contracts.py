@@ -11,8 +11,12 @@ def sum_product(numbers: List[int]) -> Tuple[int, int]:
     >>> sum_product([1, 2, 3, 4])
     (10, 24)
     """
+    # The two exact folds ...
     Ensures(Result()[0] == sum(numbers))
     Ensures(Result()[1] == math.prod(numbers))
+    # ... and the empty-input identities the problem calls out explicitly (0 for the empty sum,
+    # 1 for the empty product — the neutral element of each operation).
+    Ensures(len(numbers) > 0 or (Result()[0] == 0 and Result()[1] == 1))
 
     s, p = 0, 1
     # The for-each loop is expressed with an explicit index `i` via `enumerate`

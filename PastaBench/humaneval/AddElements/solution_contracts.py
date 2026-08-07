@@ -14,16 +14,32 @@ def add_elements(arr, k):
         1. 1 <= len(arr) <= 100
         2. 1 <= k <= len(arr)
     """
-    Requires(1 <= len(arr) <= 100)
-    Requires(1 <= k <= len(arr))
-    # The result is bounded by k times the maximum absolute value of a 2-digit number.
-    Ensures(-99 * k <= Result() <= 99 * k)
-
+    Requires(1 <= len(arr))
+    Requires(len(arr) <= 100)
+    Requires(1 <= k)
+    Requires(k <= len(arr))
+    # THE POINT: "at most two digits" is an arithmetic window, -99 <= x <= 99, and at most k
+    # elements are ever summed. So the answer is confined to [-99*k, 99*k] — a bound tied to the
+    # number of terms, which only follows from decoding the digit test into that window.
+    Ensures(-99 * k <= Result())
+    Ensures(Result() <= 99 * k)
 
     def digits(x: int) -> int:
-        # This contract provides the crucial arithmetic meaning of "at most two digits".
-        # It's the lemma that allows proving the Ensures of the parent function.
-        Ensures((Result() <= 2) == (-99 <= x <= 99))
         s = str(x)
         return len(s) - 1 if s[0] == "-" else len(s)
-    return sum(filter(lambda x: digits(x) <= 2, arr[:k]))
+
+    total = 0
+    for i in range(k):
+        Invariant(0 <= i)
+        Invariant(i <= k)
+        # Index-style: after i steps at most i terms have been added, each within [-99, 99].
+        Invariant(-99 * i <= total)
+        Invariant(total <= 99 * i)
+        if digits(arr[i]) <= 2:
+            # The bridge the bound rests on: `digits(x) <= 2` spelled arithmetically.
+            Assert(-99 <= arr[i])
+            Assert(arr[i] <= 99)
+            total += arr[i]
+    Assert(-99 * k <= total)
+    Assert(total <= 99 * k)
+    return total

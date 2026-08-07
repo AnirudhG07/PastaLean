@@ -118,8 +118,7 @@ def countDifferentSubsequenceGCDs := fun (nums : List Int) ↦
 
 @[spec]
 theorem countDifferentSubsequenceGCDs_spec :
-    ⦃⌜PastaLean.pyLen nums > (0 : Int) ∧
-          PastaLean.pyAll ((PastaLean.pyIter nums).map fun n => decide (n > (0 : Int)))⌝⦄
+    ⦃⌜PastaLean.pyLen nums > (0 : Int) ∧ ∀ n ∈ PastaLean.pyIter nums, n > (0 : Int)⌝⦄
       countDifferentSubsequenceGCDs nums ⦃⇓ans => ⌜ans ≥ (0 : Int) ∧ ans ≤ PastaLean.pyMax nums⌝⦄ :=
   by
   try
@@ -132,8 +131,7 @@ theorem countDifferentSubsequenceGCDs_spec :
 
 theorem countDifferentSubsequenceGCDs_correct :
     ∀ (nums : List Int),
-      PastaLean.pyLen nums > (0 : Int) ∧
-          PastaLean.pyAll ((PastaLean.pyIter nums).map fun n => decide (n > (0 : Int))) →
+      (PastaLean.pyLen nums > (0 : Int) ∧ ∀ n ∈ PastaLean.pyIter nums, n > (0 : Int)) →
         let ans := (countDifferentSubsequenceGCDs nums).run;
         ans ≥ (0 : Int) ∧ ans ≤ PastaLean.pyMax nums :=
   by

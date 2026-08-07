@@ -10,11 +10,13 @@ def median(l: list):
     """
 
     Requires(len(l) > 0)
-    Ensures(
-        Result() == sorted(l)[len(l) // 2]
-        if len(l) % 2 == 1
-        else 2 * Result() == sorted(l)[len(l) // 2 - 1] + sorted(l)[len(l) // 2]
-    )
+    # THE POINT: the result is the middle of the SORTED list — stated against sorted(l), which the
+    # code never inspects positionally. Odd length: exactly the middle element.
+    Ensures(len(l) % 2 == 0 or Result() == sorted(l)[len(l) // 2])
+    # Even length: the mean of the two middle elements, written division-free.
+    Ensures(len(l) % 2 == 1 or 2 * Result() == sorted(l)[len(l) // 2 - 1] + sorted(l)[len(l) // 2])
+    # The median always sits between the extremes: at least one element is <= it and one is >= it.
+    Ensures(any(x <= Result() for x in l) and any(x >= Result() for x in l))
 
     sorted_l = sorted(l)
     Assert(len(sorted_l) == len(l))

@@ -63,7 +63,7 @@ theorem rounded_avg_spec :
       ⌜if n > m then result = -(1 : Int) else result = PastaLean.pyBin (PastaLean.pyRound ((n +ₚ m) /ₚ (2 : Int)))⌝⦄ :=
   by
   mvcgen [rounded_avg, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  grind; sorry
+  taste?
   all_goals sorry
 
 theorem rounded_avg_correct :
@@ -77,7 +77,8 @@ theorem rounded_avg_correct :
   exact rounded_avg_spec hpre
 
 def rounded_avg'rn := fun (n : Int) ↦ fun (m : Int) ↦
-  (Id.run
+  (show PastaLean.PyAny from
+    Id.run
       (do
         /-
         You are given two positive integers n and m, and your task is to compute the
@@ -101,7 +102,6 @@ def rounded_avg'rn := fun (n : Int) ↦ fun (m : Int) ↦
         let _ := Libraries.passta.pyPassAssert (decide (n ≤ m))
         let mut avg := PastaLean.pyRound (PastaLean.pyFloat (n +ₚ m) /ₚ (2 : Int))
         let __py_ret_1 := (PastaLean.pyBin avg : PastaLean.PyAny)
-        return __py_ret_1) :
-    PastaLean.PyAny)
+        return __py_ret_1))
 
 end PastaBench.humaneval.RoundedAvg

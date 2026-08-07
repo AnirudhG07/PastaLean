@@ -30,24 +30,27 @@ def f(n):
     """
     Requires(n >= 0)
     Ensures(len(Result()) == n)
-    Ensures(n < 1 or Result()[0] == 1)
+    # Position k holds the value for i = k + 1. i odd (k even) => the triangular number
+    # 1 + ... + i, stated division-free as 2 * ans[k] == (k+1) * (k+2).
+    Ensures(all(2 * Result()[k] == (k + 1) * (k + 2) for k in range(n) if k % 2 == 0))
+    # i even (k odd) => i!, stated by its own recurrence i! = (i-2)! * (i-1) * i, with 2! = 2 as base.
     Ensures(n < 2 or Result()[1] == 2)
-
+    Ensures(all(Result()[k] == Result()[k - 2] * k * (k + 1) for k in range(3, n) if k % 2 == 1))
 
     if n == 0: return []
     if n == 1: return [1]
     if n == 2: return [1, 2]
 
-    Assert(n >= 3)
     ans = [1, 2]
     for i in range(3, n + 1):
         Decreases(n + 1 - i)
         Invariant(3 <= i)
         Invariant(i <= n + 1)
         Invariant(len(ans) == i - 1)
-        Invariant(ans[0] == 1)
         Invariant(ans[1] == 2)
-        # Bridge assertion to prove safe indexing of ans[-2], which is ans[i-3].
+        Invariant(all(2 * ans[k] == (k + 1) * (k + 2) for k in range(len(ans)) if k % 2 == 0))
+        Invariant(all(ans[k] == ans[k - 2] * k * (k + 1) for k in range(3, len(ans)) if k % 2 == 1))
+        # ans[-2] is ans[i-3]; this is the bound that makes that read safe.
         Assert(0 <= i - 3 < len(ans))
 
         if i % 2 == 1:
@@ -78,16 +81,25 @@ def f := fun (n : Int) ↦
       return __py_ret_1
     else
       let _ := ()
-    let _ := Libraries.passta.pyPassAssert (decide (n ≥ (3 : Int)))
     let mut ans : List Int := [(1 : Int), (2 : Int)]
     for i in (PastaLean.pyRange (n +ₚ (1 : Int)) (3 : Int))do
       let _ := Libraries.passta.pyPassDecreases (n +ₚ (1 : Int) -ₚ i)
       let _ := Libraries.passta.pyPassInvariant (decide ((3 : Int) ≤ i))
       let _ := Libraries.passta.pyPassInvariant (decide (i ≤ n +ₚ (1 : Int)))
       let _ := Libraries.passta.pyPassInvariant (PastaLean.pyLen ans == i -ₚ (1 : Int))
-      let _ := Libraries.passta.pyPassInvariant (ans⦋(0 : Int)⦌ == (1 : Int))
       let _ := Libraries.passta.pyPassInvariant (ans⦋(1 : Int)⦌ == (2 : Int))
-      -- Bridge assertion to prove safe indexing of ans[-2], which is ans[i-3].
+      let _ :=
+        Libraries.passta.pyPassInvariant
+          (PastaLean.pyAll
+            ((List.filter (fun k => k %ₚ (2 : Int) = (0 : Int)) (PastaLean.pyRange (PastaLean.pyLen ans))).map fun k =>
+              (2 : Int) *ₚ ans⦋k⦌ == (k +ₚ (1 : Int)) *ₚ (k +ₚ (2 : Int))))
+      let _ :=
+        Libraries.passta.pyPassInvariant
+          (PastaLean.pyAll
+            ((List.filter (fun k => k %ₚ (2 : Int) = (1 : Int))
+                  (PastaLean.pyRange (PastaLean.pyLen ans) (3 : Int))).map
+              fun k => ans⦋k⦌ == ans⦋k -ₚ (2 : Int)⦌ *ₚ k *ₚ (k +ₚ (1 : Int))))
+      -- ans[-2] is ans[i-3]; this is the bound that makes that read safe.
       let _ :=
         Libraries.passta.pyPassAssert
           (decide ((0 : Int) ≤ i -ₚ (3 : Int)) && decide (i -ₚ (3 : Int) < PastaLean.pyLen ans))
@@ -101,24 +113,35 @@ def f := fun (n : Int) ↦
 @[spec]
 theorem f_spec :
     ⦃⌜n ≥ (0 : Int)⌝⦄ f n ⦃⇓ans =>
-      ⌜(PastaLean.pyLen ans = n ∧ (n < (1 : Int) ∨ ans⦋(0 : Int)⦌ = (1 : Int))) ∧
-          (n < (2 : Int) ∨ ans⦋(1 : Int)⦌ = (2 : Int))⌝⦄ :=
+      ⌜((PastaLean.pyLen ans = n ∧
+              ∀ k ∈ PastaLean.pyIter (PastaLean.pyRange n),
+                k %ₚ (2 : Int) = (0 : Int) → (2 : Int) *ₚ ans⦋k⦌ = (k +ₚ (1 : Int)) *ₚ (k +ₚ (2 : Int))) ∧
+            (n < (2 : Int) ∨ ans⦋(1 : Int)⦌ = (2 : Int))) ∧
+          ∀ k ∈ PastaLean.pyIter (PastaLean.pyRange n (3 : Int)),
+            k %ₚ (2 : Int) = (1 : Int) → ans⦋k⦌ = ans⦋k -ₚ (2 : Int)⦌ *ₚ k *ₚ (k +ₚ (1 : Int))⌝⦄ :=
   by
   try
     mvcgen [f, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓cur =>
       ⌜let i := (cur.prefix.length : Int);
-        ((((3 : Int) ≤ i ∧ i ≤ n +ₚ (1 : Int)) ∧ PastaLean.pyLen ans = i -ₚ (1 : Int)) ∧ ans⦋(0 : Int)⦌ = (1 : Int)) ∧
-          ans⦋(1 : Int)⦌ = (2 : Int)⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+        (((((3 : Int) ≤ i ∧ i ≤ n +ₚ (1 : Int)) ∧ PastaLean.pyLen ans = i -ₚ (1 : Int)) ∧ ans⦋(1 : Int)⦌ = (2 : Int)) ∧
+            ∀ k ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen ans)),
+              k %ₚ (2 : Int) = (0 : Int) → (2 : Int) *ₚ ans⦋k⦌ = (k +ₚ (1 : Int)) *ₚ (k +ₚ (2 : Int))) ∧
+          ∀ k ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen ans) (3 : Int)),
+            k %ₚ (2 : Int) = (1 : Int) → ans⦋k⦌ = ans⦋k -ₚ (2 : Int)⦌ *ₚ k *ₚ (k +ₚ (1 : Int))⌝
+  taste?
   all_goals sorry
 
 theorem f_correct :
     ∀ (n : Int),
       n ≥ (0 : Int) →
         let ans := (f n).run;
-        (PastaLean.pyLen ans = n ∧ (n < (1 : Int) ∨ ans⦋(0 : Int)⦌ = (1 : Int))) ∧
-          (n < (2 : Int) ∨ ans⦋(1 : Int)⦌ = (2 : Int)) :=
+        ((PastaLean.pyLen ans = n ∧
+              ∀ k ∈ PastaLean.pyIter (PastaLean.pyRange n),
+                k %ₚ (2 : Int) = (0 : Int) → (2 : Int) *ₚ ans⦋k⦌ = (k +ₚ (1 : Int)) *ₚ (k +ₚ (2 : Int))) ∧
+            (n < (2 : Int) ∨ ans⦋(1 : Int)⦌ = (2 : Int))) ∧
+          ∀ k ∈ PastaLean.pyIter (PastaLean.pyRange n (3 : Int)),
+            k %ₚ (2 : Int) = (1 : Int) → ans⦋k⦌ = ans⦋k -ₚ (2 : Int)⦌ *ₚ k *ₚ (k +ₚ (1 : Int)) :=
   by
   intro n hpre
   exact f_spec hpre
@@ -137,6 +160,9 @@ def f'rn := fun (n : Int) ↦
           
       -/
       let _ := Libraries.passta.pyPassRequires (decide (n ≥ (0 : Int)))
+      -- Position k holds the value for i = k + 1. i odd (k even) => the triangular number
+      -- 1 + ... + i, stated division-free as 2 * ans[k] == (k+1) * (k+2).
+      -- i even (k odd) => i!, stated by its own recurrence i! = (i-2)! * (i-1) * i, with 2! = 2 as base.
       if h_1 : n == (0 : Int) then 
         let __py_ret_1 := []
         return __py_ret_1
@@ -152,16 +178,25 @@ def f'rn := fun (n : Int) ↦
         return __py_ret_1
       else
         let _ := ()
-      let _ := Libraries.passta.pyPassAssert (decide (n ≥ (3 : Int)))
       let mut ans : List Int := [(1 : Int), (2 : Int)]
       for i in (PastaLean.pyRange (n +ₚ (1 : Int)) (3 : Int))do
         let _ := Libraries.passta.pyPassDecreases (n +ₚ (1 : Int) -ₚ i)
         let _ := Libraries.passta.pyPassInvariant (decide ((3 : Int) ≤ i))
         let _ := Libraries.passta.pyPassInvariant (decide (i ≤ n +ₚ (1 : Int)))
         let _ := Libraries.passta.pyPassInvariant (PastaLean.pyLen ans == i -ₚ (1 : Int))
-        let _ := Libraries.passta.pyPassInvariant (ans⦋(0 : Int)⦌ == (1 : Int))
         let _ := Libraries.passta.pyPassInvariant (ans⦋(1 : Int)⦌ == (2 : Int))
-        -- Bridge assertion to prove safe indexing of ans[-2], which is ans[i-3].
+        let _ :=
+          Libraries.passta.pyPassInvariant
+            (PastaLean.pyAll
+              ((List.filter (fun k => k %ₚ (2 : Int) == (0 : Int)) (PastaLean.pyRange (PastaLean.pyLen ans))).map
+                fun k => (2 : Int) *ₚ ans⦋k⦌ == (k +ₚ (1 : Int)) *ₚ (k +ₚ (2 : Int))))
+        let _ :=
+          Libraries.passta.pyPassInvariant
+            (PastaLean.pyAll
+              ((List.filter (fun k => k %ₚ (2 : Int) == (1 : Int))
+                    (PastaLean.pyRange (PastaLean.pyLen ans) (3 : Int))).map
+                fun k => ans⦋k⦌ == ans⦋k -ₚ (2 : Int)⦌ *ₚ k *ₚ (k +ₚ (1 : Int))))
+        -- ans[-2] is ans[i-3]; this is the bound that makes that read safe.
         let _ :=
           Libraries.passta.pyPassAssert
             (decide ((0 : Int) ≤ i -ₚ (3 : Int)) && decide (i -ₚ (3 : Int) < PastaLean.pyLen ans))

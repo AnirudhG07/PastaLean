@@ -19,8 +19,15 @@ def make_palindrome(string: str) -> str:
     >>> make_palindrome('cata')
     'catac'
     """
-    Ensures(is_palindrome(Result()))
+    # THE POINT: the result is a palindrome that begins with `string`, and it is the
+    # SHORTEST one. A palindrome of length len(string)+k starting with `string` must be
+    # exactly `string + reverse(string[:k])`, so minimality is: no smaller k gives one.
+    Ensures(len(Result()) >= len(string))
     Ensures(Result().startswith(string))
+    Ensures(Result() == Result()[::-1])
+    Ensures(Result() == string + string[:len(Result()) - len(string)][::-1])
+    Ensures(all((string + string[:k][::-1]) != (string + string[:k][::-1])[::-1]
+                for k in range(len(Result()) - len(string))))
 
     if is_palindrome(string):
         Assert(is_palindrome(string))

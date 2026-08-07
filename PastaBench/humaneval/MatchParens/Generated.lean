@@ -19,6 +19,25 @@ set_option maxHeartbeats 800000
 
 from contracts import *
 
+
+def valid_parens(s: str) -> bool:
+    Requires(all(c == '(' or c == ')' for c in s))
+    # The depth argument in full: s is good exactly when no prefix has more ')' than '(' and the
+    # two totals agree.
+    Ensures(Result() == (
+        s.count('(') == s.count(')')
+        and all(s[:k].count('(') >= s[:k].count(')') for k in range(len(s) + 1))))
+    cnt = 0
+    for ch in s:
+        # The scan returns the moment the depth would go negative, so it is non-negative here.
+        Invariant(cnt >= 0)
+        cnt = cnt + 1 if ch == "(" else cnt - 1
+        if cnt < 0:
+            return False
+    Assert(cnt == s.count('(') - s.count(')'))
+    return cnt == 0
+
+
 def match_parens(lst):
     '''
     You are given a list of two strings, both strings consist of open
@@ -35,65 +54,88 @@ def match_parens(lst):
     match_parens([')', ')']) == 'No'
     '''
     Requires(len(lst) == 2)
-    Requires(isinstance(lst[0], str))
-    Requires(isinstance(lst[1], str))
     # Per the docstring, the inputs are guaranteed to only contain parentheses.
-    # This is a key assumption for the logic of valid_parens.
     Requires(all(c == '(' or c == ')' for c in lst[0]))
     Requires(all(c == '(' or c == ')' for c in lst[1]))
-    Ensures(Result() == 'Yes' or Result() == 'No')
-
-
-    def valid_parens(s: str) -> bool:
-        # This helper is only called with strings composed of parentheses,
-        # due to the Requires contracts on the outer function.
-        Assume(all(c == '(' or c == ')' for c in s))
-        cnt = 0
-        for ch in s:
-            # The invariant is that the balance of parentheses is never negative
-            # for any prefix of the string processed so far.
-            Invariant(cnt >= 0)
-            cnt = cnt + 1 if ch == "(" else cnt - 1
-            if cnt < 0:
-                return False
-        # The loop invariant implies the final count is non-negative.
-        Assert(cnt >= 0)
-        # This asserts that the final count reflects the total balance of the string.
-        # This is provable by induction over the loop, given the assumption
-        # that the string only contains '(' and ')'.
-        Assert(cnt == s.count('(') - s.count(')'))
-        return cnt == 0
+    # The point: 'Yes' exactly when one of the two concatenation orders is balanced, spelled out
+    # with the same running-depth argument the scan uses (no prefix goes negative, totals match)
+    # rather than by naming valid_parens.
+    Ensures(Result() == ("Yes" if any(
+        t.count('(') == t.count(')')
+        and all(t[:k].count('(') >= t[:k].count(')') for k in range(len(t) + 1))
+        for t in [lst[0] + lst[1], lst[1] + lst[0]]) else "No"))
     return "Yes" if valid_parens(lst[0] + lst[1]) or valid_parens(lst[1] + lst[0]) else "No"
 -/
 
 namespace PastaBench.humaneval.MatchParens
 
-private def _match_parens'valid_parens := fun (s : String) ↦
+def valid_parens := fun (s : String) ↦
   (do
     let mut cnt : Int := (0 : Int)
     for ch in (PastaLean.pyIter s)do
-      -- The invariant is that the balance of parentheses is never negative
-      -- for any prefix of the string processed so far.
+      -- The scan returns the moment the depth would go negative, so it is non-negative here.
       let _ := Libraries.passta.pyPassInvariant (decide (cnt ≥ (0 : Int)))
       cnt := if ch = "(" then cnt +ₚ (1 : Int) else cnt -ₚ (1 : Int)
       if h_1 : cnt < (0 : Int) then 
         return Bool.false
       else
         let _ := ()
-    let _ := Libraries.passta.pyPassAssert (decide (cnt ≥ (0 : Int)))
     let _ := Libraries.passta.pyPassAssert (cnt == PastaLean.pyCount s "(" -ₚ PastaLean.pyCount s ")")
     let __py_ret_1 := cnt == (0 : Int)
     return __py_ret_1 : Id _)
 
-theorem _match_parens'valid_parens_spec :
-    ⦃⌜PastaLean.pyAll ((PastaLean.pyIter s).map fun c => c == "(" || c == ")")⌝⦄ _match_parens'valid_parens s ⦃⇓_ =>
-      ⌜True⌝⦄ :=
-  by apply Std.Do.Triple.of_entails_wp; intro _; exact True.intro
+@[spec]
+theorem valid_parens_spec :
+    ⦃⌜∀ c ∈ PastaLean.pyIter s, c = "(" ∨ c = ")"⌝⦄ valid_parens s ⦃⇓result =>
+      ⌜result =
+          (PastaLean.pyCount s "(" = PastaLean.pyCount s ")" ∧
+            ∀ k ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen s +ₚ (1 : Int))),
+              PastaLean.pyCount (PastaLean.pySlice s none (some k) none) "(" ≥
+                PastaLean.pyCount (PastaLean.pySlice s none (some k) none) ")")⌝⦄ :=
+  by
+  try
+    mvcgen [valid_parens, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · Invariant.withEarlyReturn (onReturn := fun _ _ => ⌜True⌝) (onContinue := fun _ _ => ⌜True⌝)
+  taste?
+  all_goals sorry
+
+theorem valid_parens_correct :
+    ∀ (s : String),
+      (∀ c ∈ PastaLean.pyIter s, c = "(" ∨ c = ")") →
+        let result := (valid_parens s).run;
+        result =
+          (PastaLean.pyCount s "(" = PastaLean.pyCount s ")" ∧
+            ∀ k ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen s +ₚ (1 : Int))),
+              PastaLean.pyCount (PastaLean.pySlice s none (some k) none) "(" ≥
+                PastaLean.pyCount (PastaLean.pySlice s none (some k) none) ")") :=
+  by
+  intro s hpre
+  exact valid_parens_spec hpre
+
+def valid_parens'rn := fun (s : String) ↦
+  Id.run
+    (do
+      let _ :=
+        Libraries.passta.pyPassRequires (PastaLean.pyAll ((PastaLean.pyIter s).map fun c => c == "(" || c == ")"))
+      -- The depth argument in full: s is good exactly when no prefix has more ')' than '(' and the
+      -- two totals agree.
+      let mut cnt : Int := (0 : Int)
+      for ch in (PastaLean.pyIter s)do
+        -- The scan returns the moment the depth would go negative, so it is non-negative here.
+        let _ := Libraries.passta.pyPassInvariant (decide (cnt ≥ (0 : Int)))
+        cnt := if ch == "(" then cnt +ₚ (1 : Int) else cnt -ₚ (1 : Int)
+        if h_1 : cnt < (0 : Int) then 
+          return Bool.false
+        else
+          let _ := ()
+      let _ := Libraries.passta.pyPassAssert (cnt == PastaLean.pyCount s "(" -ₚ PastaLean.pyCount s ")")
+      let __py_ret_1 := cnt == (0 : Int)
+      return __py_ret_1)
 
 def match_parens := fun (lst : PyAny) ↦
   if
-      PastaLean.pyTruthy (_match_parens'valid_parens (lst⦋(0 : Int)⦌ +ₚ lst⦋(1 : Int)⦌)) = true ∨
-        PastaLean.pyTruthy (_match_parens'valid_parens (lst⦋(1 : Int)⦌ +ₚ lst⦋(0 : Int)⦌)) = true then
+      PastaLean.pyTruthy (valid_parens (lst⦋(0 : Int)⦌ +ₚ lst⦋(1 : Int)⦌)) = true ∨
+        PastaLean.pyTruthy (valid_parens (lst⦋(1 : Int)⦌ +ₚ lst⦋(0 : Int)⦌)) = true then
     "Yes"
   else "No"
 
@@ -103,42 +145,24 @@ attribute [simp] match_parens
 theorem match_parens_correct :
     ∀ (lst : PyAny),
       PastaLean.pyLen lst = (2 : Int) →
-        isinstance lst⦋(0 : Int)⦌ str →
-          isinstance lst⦋(1 : Int)⦌ str →
-            PastaLean.pyAll ((PastaLean.pyIter lst⦋(0 : Int)⦌).map fun c => c == "(" || c == ")") →
-              PastaLean.pyAll ((PastaLean.pyIter lst⦋(1 : Int)⦌).map fun c => c == "(" || c == ")") →
-                match_parens lst = "Yes" ∨ match_parens lst = "No" :=
-  by grind +locals +suggestions
-
-private def _match_parens'valid_parens'rn := fun (s : String) ↦
-  Id.run
-    (do
-      -- This helper is only called with strings composed of parentheses,
-      -- due to the Requires contracts on the outer function.
-      let _ := Libraries.passta.pyPassAssume (PastaLean.pyAll ((PastaLean.pyIter s).map fun c => c == "(" || c == ")"))
-      let mut cnt : Int := (0 : Int)
-      for ch in (PastaLean.pyIter s)do
-        -- The invariant is that the balance of parentheses is never negative
-        -- for any prefix of the string processed so far.
-        let _ := Libraries.passta.pyPassInvariant (decide (cnt ≥ (0 : Int)))
-        cnt := if ch == "(" then cnt +ₚ (1 : Int) else cnt -ₚ (1 : Int)
-        if h_1 : cnt < (0 : Int) then 
-          return Bool.false
-        else
-          let _ := ()
-      -- The loop invariant implies the final count is non-negative.
-      let _ := Libraries.passta.pyPassAssert (decide (cnt ≥ (0 : Int)))
-      -- This asserts that the final count reflects the total balance of the string.
-      -- This is provable by induction over the loop, given the assumption
-      -- that the string only contains '(' and ')'.
-      let _ := Libraries.passta.pyPassAssert (cnt == PastaLean.pyCount s "(" -ₚ PastaLean.pyCount s ")")
-      let __py_ret_1 := cnt == (0 : Int)
-      return __py_ret_1)
+        (∀ c ∈ PastaLean.pyIter lst⦋(0 : Int)⦌, c = "(" ∨ c = ")") →
+          (∀ c ∈ PastaLean.pyIter lst⦋(1 : Int)⦌, c = "(" ∨ c = ")") →
+            match_parens lst =
+              if
+                  PastaLean.pyTruthy
+                    (∃ t ∈ PastaLean.pyIter [lst⦋(0 : Int)⦌ +ₚ lst⦋(1 : Int)⦌, lst⦋(1 : Int)⦌ +ₚ lst⦋(0 : Int)⦌],
+                      PastaLean.pyCount t "(" = PastaLean.pyCount t ")" ∧
+                        ∀ k ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen t +ₚ (1 : Int))),
+                          PastaLean.pyCount (PastaLean.pySlice t none (some k) none) "(" ≥
+                            PastaLean.pyCount (PastaLean.pySlice t none (some k) none) ")") then
+                "Yes"
+              else "No" :=
+  by taste?
 
 def match_parens'rn := fun (lst : PyAny) ↦
   if
-      PastaLean.pyTruthy (_match_parens'valid_parens'rn (lst⦋(0 : Int)⦌ +ₚ lst⦋(1 : Int)⦌)) ||
-        PastaLean.pyTruthy (_match_parens'valid_parens'rn (lst⦋(1 : Int)⦌ +ₚ lst⦋(0 : Int)⦌)) then
+      PastaLean.pyTruthy (valid_parens'rn (lst⦋(0 : Int)⦌ +ₚ lst⦋(1 : Int)⦌)) ||
+        PastaLean.pyTruthy (valid_parens'rn (lst⦋(1 : Int)⦌ +ₚ lst⦋(0 : Int)⦌)) then
     "Yes"
   else "No"
 

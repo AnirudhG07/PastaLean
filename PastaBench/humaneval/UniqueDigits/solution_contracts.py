@@ -15,22 +15,28 @@ def unique_digits(x: List[int]):
     """
 
 
+    Requires(all(e >= 0 for e in x))
+    # 1. The result is sorted in non-decreasing order.
+    Ensures(all(Result()[i] <= Result()[i + 1] for i in range(len(Result()) - 1)))
+    # 2. Soundness: every element kept has only odd digits.
+    Ensures(all(all(int(c) % 2 != 0 for c in str(v)) for v in Result()))
+    # 3. Exactness (sub-multiset + completeness): for every value occurring in x, the result keeps
+    #    all of its occurrences when its digits are all odd, and none of them otherwise. The
+    #    `judge` predicate is inlined rather than called — a nested helper is not in scope for the
+    #    postcondition.
+    Ensures(all(
+        Result().count(v) == (x.count(v) if all(int(c) % 2 != 0 for c in str(v)) else 0)
+        for v in set(x)
+    ))
+
     def judge(num):
         Requires(num >= 0)
-        Ensures(Result() == all(int(c) % 2 != 0 for c in str(num)))
 
         for ch in str(num):
             if int(ch) % 2 == 0:
                 return False
-        
+
         Assert(all(int(c) % 2 != 0 for c in str(num)))
         return True
 
-    Requires(all(e >= 0 for e in x))
-    # The result must be sorted in non-decreasing order.
-    Ensures(all(Result()[i] <= Result()[i + 1] for i in range(len(Result()) - 1)))
-    # The multiset of the result must be exactly the multiset of elements from x
-    # for which `judge` returns true. This covers filtering and duplicate preservation.
-    Ensures(all(Result().count(v) == (x.count(v) if judge(v) else 0) for v in set(x)))
-    
     return sorted(list(filter(judge, x)))

@@ -1,5 +1,6 @@
 from contracts import *
 
+
 def split_words(txt):
     '''
     Given a string of words, return a list of words split on whitespace, if no whitespaces exists in the text you
@@ -8,41 +9,47 @@ def split_words(txt):
     Examples
     split_words("Hello world!") ➞ ["Hello", "world!"]
     split_words("Hello,world!") ➞ ["Hello", "world!"]
-    split_words("abcdef") == 3 
+    split_words("abcdef") == 3
     '''
-    Ensures(
-        Implies(any(c in txt for c in ' \n\r\t'),
-                Result() == txt.split())
-    )
-    Ensures(
-        Implies(not any(c in txt for c in ' \n\r\t') and "," in txt,
-                Result() == txt.split(","))
-    )
-    Ensures(
-        Implies(not any(c in txt for c in ' \n\r\t') and "," not in txt,
-                Result() == sum(1 for ch in txt if ch.islower() and (ord(ch) - ord("a")) % 2 == 1))
-    )
+    # The point is the three-way branch, so all three branches are stated. Each guard is written
+    # out as the character-level condition it tests, and each disjunction below is an implication
+    # in disguise (`not guard or conclusion`), since Implies() has no Lean meaning.
+    #
+    # Whitespace anywhere: the words split on whitespace runs.
+    Ensures(not any(c == ' ' or c == '\n' or c == '\r' or c == '\t' for c in txt)
+            or Result() == txt.split())
+    # No whitespace but a comma: the comma-separated fields.
+    Ensures(any(c == ' ' or c == '\n' or c == '\r' or c == '\t' for c in txt)
+            or "," not in txt
+            or Result() == txt.split(","))
+    # Neither: the count of lowercase letters sitting at an odd position of the alphabet
+    # (ord('b') - ord('a') == 1, ord('d') - ord('a') == 3, ...).
+    Ensures(any(c == ' ' or c == '\n' or c == '\r' or c == '\t' for c in txt)
+            or "," in txt
+            or Result() == len([c for c in txt
+                                if c.islower() and (ord(c) - ord("a")) % 2 == 1]))
 
     whitespace = tuple(' \n\r\t')
     if any([x in txt for x in whitespace]):
         return txt.split()
 
-    Assert(not any(c in txt for c in ' \n\r\t'))
+    # Bridge the first guard onto the fall-through path.
+    Assert(not any(c == ' ' or c == '\n' or c == '\r' or c == '\t' for c in txt))
 
     if "," in txt:
         return txt.split(",")
 
-    Assert(not any(c in txt for c in ' \n\r\t') and "," not in txt)
+    # Bridge the second guard too: from here on the counting branch is the one that applies.
+    Assert("," not in txt)
 
     cnt = 0
     for ch in txt:
-        # This invariant is too weak to prove the final sum, as a for-each loop
-        # does not expose an index to relate the accumulator to the prefix of `txt`.
+        # A for-each over the characters exposes no index, so the only invariant available is
+        # that the tally never goes backwards; the counted-set identity is bridged after the loop.
         Invariant(cnt >= 0)
         if ch.islower() and (ord(ch) - ord("a")) % 2 == 1:
             cnt += 1
-    
-    # This assertion bridges the loop's result to the Ensures clause.
-    # Proving it would require a stronger loop invariant.
-    Assert(cnt == sum(1 for c in txt if ch.islower() and (ord(ch) - ord("a")) % 2 == 1))
+
+    # The loop's result-level fact, one step from the third Ensures.
+    Assert(cnt == len([c for c in txt if c.islower() and (ord(c) - ord("a")) % 2 == 1]))
     return cnt

@@ -24,13 +24,12 @@ def encode_shift(s: str):
     """
     returns encoded string by shifting every character by 5 in the alphabet.
     """
-    Requires(all(ord('a') <= ord(c) <= ord('z') for c in s))
+    Requires(all(ord('a') <= ord(c) and ord(c) <= ord('z') for c in s))
     Ensures(len(Result()) == len(s))
-    Ensures(all(ord('a') <= ord(c) <= ord('z') for c in Result()))
-    Ensures(all(
-        ord(Result()[i]) == ((ord(s[i]) - ord('a') + 5) % 26) + ord('a')
-        for i in range(len(s))
-    ))
+    # The shift stays inside the lowercase alphabet — this is what makes it invertible.
+    Ensures(all(ord('a') <= ord(c) and ord(c) <= ord('z') for c in Result()))
+    Ensures(all(Result()[i] == chr((ord(s[i]) - ord('a') + 5) % 26 + ord('a'))
+                for i in range(len(s))))
     return "".join([chr(((ord(ch) + 5 - ord("a")) % 26) + ord("a")) for ch in s])
 
 
@@ -38,13 +37,16 @@ def decode_shift(s: str):
     """
     takes as input string encoded with encode_shift function. Returns decoded string.
     """
-    Requires(all(ord('a') <= ord(c) <= ord('z') for c in s))
+    Requires(all(ord('a') <= ord(c) and ord(c) <= ord('z') for c in s))
     Ensures(len(Result()) == len(s))
-    Ensures(all(ord('a') <= ord(c) <= ord('z') for c in Result()))
-    Ensures(all(
-        ord(Result()[i]) == ((ord(s[i]) - ord('a') - 5 + 26) % 26) + ord('a')
-        for i in range(len(s))
-    ))
+    Ensures(all(ord('a') <= ord(c) and ord(c) <= ord('z') for c in Result()))
+    # The point: decode is a genuine left inverse of encode. Re-encoding the answer reproduces
+    # the input exactly, i.e. encode_shift ∘ decode_shift is the identity on lowercase strings.
+    # This is strictly stronger than any per-character restatement of the body: it forces the
+    # two modular shifts to cancel, wrap-around included.
+    Ensures(encode_shift(Result()) == s)
+    Ensures(all(Result()[i] == chr((ord(s[i]) - ord('a') - 5 + 26) % 26 + ord('a'))
+                for i in range(len(s))))
     return "".join([chr((ord(ch) - ord("a") - 5 + 26) % 26 + ord("a")) for ch in s])
 -/
 
@@ -60,22 +62,14 @@ attribute [simp] encode_shift
 @[taste_ingr]
 theorem encode_shift_correct :
     ∀ (s : String),
-      PastaLean.pyAll
-          ((PastaLean.pyIter s).map fun c =>
-            decide (PastaLean.pyOrd "a" ≤ PastaLean.pyOrd c) && decide (PastaLean.pyOrd c ≤ PastaLean.pyOrd "z")) →
+      (∀ c ∈ PastaLean.pyIter s, PastaLean.pyOrd "a" ≤ PastaLean.pyOrd c ∧ PastaLean.pyOrd c ≤ PastaLean.pyOrd "z") →
         (PastaLean.pyLen (encode_shift s) = PastaLean.pyLen s ∧
-            PastaLean.pyTruthy
-                (PastaLean.pyAll
-                  ((PastaLean.pyIter (encode_shift s)).map fun c =>
-                    decide (PastaLean.pyOrd "a" ≤ PastaLean.pyOrd c) &&
-                      decide (PastaLean.pyOrd c ≤ PastaLean.pyOrd "z"))) =
-              true) ∧
-          PastaLean.pyTruthy
-              (PastaLean.pyAll
-                ((PastaLean.pyRange (PastaLean.pyLen s)).map fun i =>
-                  PastaLean.pyOrd (encode_shift s)⦋i⦌ ==
-                    (PastaLean.pyOrd s⦋i⦌ -ₚ PastaLean.pyOrd "a" +ₚ (5 : Int)) %ₚ (26 : Int) +ₚ PastaLean.pyOrd "a")) =
-            true :=
+            ∀ c ∈ PastaLean.pyIter (encode_shift s),
+              PastaLean.pyOrd "a" ≤ PastaLean.pyOrd c ∧ PastaLean.pyOrd c ≤ PastaLean.pyOrd "z") ∧
+          ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen s)),
+            (encode_shift s)⦋i⦌ =
+              PastaLean.pyChr
+                ((PastaLean.pyOrd s⦋i⦌ -ₚ PastaLean.pyOrd "a" +ₚ (5 : Int)) %ₚ (26 : Int) +ₚ PastaLean.pyOrd "a") :=
   by taste?
 
 def encode_shift'rn := fun (s : String) ↦
@@ -94,23 +88,16 @@ attribute [simp] decode_shift
 @[taste_ingr]
 theorem decode_shift_correct :
     ∀ (s : String),
-      PastaLean.pyAll
-          ((PastaLean.pyIter s).map fun c =>
-            decide (PastaLean.pyOrd "a" ≤ PastaLean.pyOrd c) && decide (PastaLean.pyOrd c ≤ PastaLean.pyOrd "z")) →
-        (PastaLean.pyLen (decode_shift s) = PastaLean.pyLen s ∧
-            PastaLean.pyTruthy
-                (PastaLean.pyAll
-                  ((PastaLean.pyIter (decode_shift s)).map fun c =>
-                    decide (PastaLean.pyOrd "a" ≤ PastaLean.pyOrd c) &&
-                      decide (PastaLean.pyOrd c ≤ PastaLean.pyOrd "z"))) =
-              true) ∧
-          PastaLean.pyTruthy
-              (PastaLean.pyAll
-                ((PastaLean.pyRange (PastaLean.pyLen s)).map fun i =>
-                  PastaLean.pyOrd (decode_shift s)⦋i⦌ ==
-                    (PastaLean.pyOrd s⦋i⦌ -ₚ PastaLean.pyOrd "a" -ₚ (5 : Int) +ₚ (26 : Int)) %ₚ (26 : Int) +ₚ
-                      PastaLean.pyOrd "a")) =
-            true :=
+      (∀ c ∈ PastaLean.pyIter s, PastaLean.pyOrd "a" ≤ PastaLean.pyOrd c ∧ PastaLean.pyOrd c ≤ PastaLean.pyOrd "z") →
+        ((PastaLean.pyLen (decode_shift s) = PastaLean.pyLen s ∧
+              ∀ c ∈ PastaLean.pyIter (decode_shift s),
+                PastaLean.pyOrd "a" ≤ PastaLean.pyOrd c ∧ PastaLean.pyOrd c ≤ PastaLean.pyOrd "z") ∧
+            encode_shift (decode_shift s) = s) ∧
+          ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen s)),
+            (decode_shift s)⦋i⦌ =
+              PastaLean.pyChr
+                ((PastaLean.pyOrd s⦋i⦌ -ₚ PastaLean.pyOrd "a" -ₚ (5 : Int) +ₚ (26 : Int)) %ₚ (26 : Int) +ₚ
+                  PastaLean.pyOrd "a") :=
   by taste?
 
 def decode_shift'rn := fun (s : String) ↦

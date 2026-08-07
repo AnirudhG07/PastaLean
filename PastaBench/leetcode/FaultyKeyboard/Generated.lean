@@ -63,19 +63,18 @@ def finalString := fun (s : String) ↦
     return __py_ret_1 : Id _)
 
 @[spec]
-theorem finalString_spec :
-    ⦃⌜True⌝⦄ finalString s ⦃⇓result => ⌜PastaLean.pyAll ((PastaLean.pyIter result).map fun c => c != "i")⌝⦄ :=
+theorem finalString_spec : ⦃⌜True⌝⦄ finalString s ⦃⇓result => ⌜∀ c ∈ PastaLean.pyIter result, c ≠ "i"⌝⦄ :=
   by
   try
     mvcgen [finalString, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓⟨cur, t⟩ => ⌜PastaLean.pyAll ((PastaLean.pyIter t).map fun tc => tc != "i")⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+    · ⇓⟨cur, t⟩ => ⌜∀ tc ∈ PastaLean.pyIter t, tc ≠ "i"⌝
+  intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
 theorem finalString_correct :
     ∀ (s : String),
       let result := (finalString s).run;
-      PastaLean.pyAll ((PastaLean.pyIter result).map fun c => c != "i") :=
+      ∀ c ∈ PastaLean.pyIter result, c ≠ "i" :=
   by
   intro s
   exact finalString_spec True.intro

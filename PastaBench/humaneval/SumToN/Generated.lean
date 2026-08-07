@@ -46,7 +46,7 @@ def sum_to_n := fun (n : Int) ↦ PastaLean.pyFloorDiv ((n +ₚ (1 : Int)) *ₚ 
 attribute [simp] sum_to_n
 
 @[taste_ingr]
-theorem sum_to_n_correct : ∀ (n : Int), n ≥ (0 : Int) → (2 : Int) *ₚ sum_to_n n = n *ₚ (n +ₚ (1 : Int)) := by sorry
+theorem sum_to_n_correct : ∀ (n : Int), n ≥ (0 : Int) → (2 : Int) *ₚ sum_to_n n = n *ₚ (n +ₚ (1 : Int)) := by taste?
 
 def sum_to_n'rn := fun (n : Int) ↦ PastaLean.pyFloorDiv ((n +ₚ (1 : Int)) *ₚ n) (2 : Int)
 

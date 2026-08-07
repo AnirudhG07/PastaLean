@@ -34,14 +34,14 @@ def triangle_area(a, h):
 
 namespace PastaBench.humaneval.TriangleArea45
 
-def triangle_area := fun (a : Int) ↦ fun (h : Int) ↦ (a *ₚ h /ₚ (2 : Int) : Rat)
+def triangle_area := fun (a : Int) ↦ fun (h : Int) ↦ (show Rat from a *ₚ h /ₚ (2 : Int))
 
 attribute [simp] triangle_area
 
 @[taste_ingr]
 theorem triangle_area_correct :
-    ∀ (a : Int), ∀ (h : Int), a ≥ (0 : Int) → h ≥ (0 : Int) → (2 : Int) *ₚ triangle_area a h = a *ₚ h := by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+    ∀ (a : Int), ∀ (h : Int), a ≥ (0 : Int) → h ≥ (0 : Int) → (2 : Int) *ₚ triangle_area a h = a *ₚ h := by taste?
 
-def triangle_area'rn := fun (a : Int) ↦ fun (h : Int) ↦ (PastaLean.pyFloat (a *ₚ h) /ₚ (2 : Int) : Float)
+def triangle_area'rn := fun (a : Int) ↦ fun (h : Int) ↦ (show Float from PastaLean.pyFloat (a *ₚ h) /ₚ (2 : Int))
 
 end PastaBench.humaneval.TriangleArea45

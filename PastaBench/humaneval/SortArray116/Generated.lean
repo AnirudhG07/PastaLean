@@ -17,10 +17,11 @@ set_option maxHeartbeats 800000
 
 /- Python source converted to produce the Lean below (the exact input to PastaLean):
 
+from typing import *
 from contracts import *
 
 
-def sort_array(arr):
+def sort_array(arr: List[int]):
     """
     In this Kata, you have to sort an array of non-negative integers according to
     number of ones in their binary representation in ascending order.
@@ -31,21 +32,27 @@ def sort_array(arr):
     >>> sort_array([-2, -3, -4, -5, -6]) == [-6, -5, -4, -3, -2]
     >>> sort_array([1, 0, 2, 3, 4]) [0, 1, 2, 3, 4]
     """
+    # 1-2. The result is a permutation of the input (same length, same multiset).
     Ensures(len(Result()) == len(arr))
     Ensures(sorted(Result()) == sorted(arr))
+    # 3. The result is ordered by the key (popcount, value): consecutive entries either strictly
+    #    increase in the number of binary ones, or tie there and then increase in decimal value.
+    Ensures(all(
+        bin(Result()[j]).count("1") < bin(Result()[j + 1]).count("1")
+        or (bin(Result()[j]).count("1") == bin(Result()[j + 1]).count("1")
+            and Result()[j] <= Result()[j + 1])
+        for j in range(len(Result()) - 1)))
 
     from functools import cmp_to_key
     def cmp(x: int, y: int) -> int:
-        Ensures((x1 > y1 and Result() > 0) or
-                (x1 < y1 and Result() < 0) or
-                (x1 == y1 and Result() == x - y))
-
         x1 = len(list(filter(lambda ch: ch == "1", bin(x))))
         y1 = len(list(filter(lambda ch: ch == "1", bin(y))))
 
-        Assert(x1 >= 0)
-        Assert(y1 >= 0)
-        
+        # Bridge the filter/len popcount to the `bin(...).count("1")` form the Ensures speaks in.
+        Assert(x1 == bin(x).count("1"))
+        Assert(y1 == bin(y).count("1"))
+        Assert(x1 >= 0 and y1 >= 0)
+
         if x1 != y1: return x1 - y1
         return x - y
     return sorted(arr, key=cmp_to_key(cmp))
@@ -54,57 +61,57 @@ def sort_array(arr):
 namespace PastaBench.humaneval.SortArray116
 
 private def _sort_array'cmp := fun (x : Int) ↦ fun (y : Int) ↦
-  (do
-    let mut x1 : Int := PastaLean.pyLen (PastaLean.pyList (PastaLean.pyFilter (fun ch ↦ ch == "1") (PastaLean.pyBin x)))
-    let mut y1 : Int := PastaLean.pyLen (PastaLean.pyList (PastaLean.pyFilter (fun ch ↦ ch == "1") (PastaLean.pyBin y)))
-    let _ := Libraries.passta.pyPassAssert (decide (x1 ≥ (0 : Int)))
-    let _ := Libraries.passta.pyPassAssert (decide (y1 ≥ (0 : Int)))
-    if h_1 : x1 ≠ y1 then 
-      let __py_ret_1 := x1 -ₚ y1
-      return __py_ret_1
-    else
-      let _ := ()
-    let __py_ret_1 := x -ₚ y
-    return __py_ret_1 : Id _)
+  Id.run
+    (do
+      let mut x1 : Int :=
+        PastaLean.pyLen (PastaLean.pyList (PastaLean.pyFilter (fun ch ↦ ch == "1") (PastaLean.pyBin x)))
+      let mut y1 : Int :=
+        PastaLean.pyLen (PastaLean.pyList (PastaLean.pyFilter (fun ch ↦ ch == "1") (PastaLean.pyBin y)))
+      -- Bridge the filter/len popcount to the `bin(...).count("1")` form the Ensures speaks in.
+      let _ := Libraries.passta.pyPassAssert (x1 == PastaLean.pyCount (PastaLean.pyBin x) "1")
+      let _ := Libraries.passta.pyPassAssert (y1 == PastaLean.pyCount (PastaLean.pyBin y) "1")
+      let _ := Libraries.passta.pyPassAssert (decide (x1 ≥ (0 : Int)) && decide (y1 ≥ (0 : Int)))
+      if h_1 : x1 ≠ y1 then 
+        let __py_ret_1 := x1 -ₚ y1
+        return __py_ret_1
+      else
+        let _ := ()
+      let __py_ret_1 := x -ₚ y
+      return __py_ret_1)
 
-@[spec]
-theorem _sort_array'cmp_spec :
-    ⦃⌜True⌝⦄ _sort_array'cmp x y ⦃⇓result =>
-      ⌜(PastaLean.pyLen (PastaLean.pyList (PastaLean.pyFilter (fun ch ↦ ch = "1") (PastaLean.pyBin x))) >
-                PastaLean.pyLen (PastaLean.pyList (PastaLean.pyFilter (fun ch ↦ ch = "1") (PastaLean.pyBin y))) ∧
-              result > (0 : Int) ∨
-            PastaLean.pyLen (PastaLean.pyList (PastaLean.pyFilter (fun ch ↦ ch = "1") (PastaLean.pyBin x))) <
-                PastaLean.pyLen (PastaLean.pyList (PastaLean.pyFilter (fun ch ↦ ch = "1") (PastaLean.pyBin y))) ∧
-              result < (0 : Int)) ∨
-          PastaLean.pyLen (PastaLean.pyList (PastaLean.pyFilter (fun ch ↦ ch = "1") (PastaLean.pyBin x))) =
-              PastaLean.pyLen (PastaLean.pyList (PastaLean.pyFilter (fun ch ↦ ch = "1") (PastaLean.pyBin y))) ∧
-            result = x -ₚ y⌝⦄ :=
-  by
-  mvcgen [_sort_array'cmp, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals; pyany_cases <;> grind +locals
-  all_goals sorry
+attribute [simp, taste_ingr] _sort_array'cmp
 
-def sort_array := fun (arr : PyAny) ↦
+def sort_array := fun (arr : List Int) ↦
   (do
     let _ := ()
-    let _ :=
-      PastaLean.pyUnsupported
-        "degraded Return: Error in code generation function PastaLean.returnSyntax for key 'Return' and syntax category 'doEle" :
-    Id _)
+    let __py_ret_1 := PastaLean.pySortByCmp _sort_array'cmp false arr
+    return __py_ret_1 : Id _)
 
 @[spec]
 theorem sort_array_spec :
     ⦃⌜True⌝⦄ sort_array arr ⦃⇓result =>
-      ⌜PastaLean.pyLen result = PastaLean.pyLen arr ∧ PastaLean.pySort result = PastaLean.pySort arr⌝⦄ :=
+      ⌜(PastaLean.pyLen result = PastaLean.pyLen arr ∧ PastaLean.pySort result = PastaLean.pySort arr) ∧
+          ∀ j ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen result -ₚ (1 : Int))),
+            PastaLean.pyCount (PastaLean.pyBin result⦋j⦌) "1" <
+                PastaLean.pyCount (PastaLean.pyBin result⦋j +ₚ (1 : Int)⦌) "1" ∨
+              PastaLean.pyCount (PastaLean.pyBin result⦋j⦌) "1" =
+                  PastaLean.pyCount (PastaLean.pyBin result⦋j +ₚ (1 : Int)⦌) "1" ∧
+                result⦋j⦌ ≤ result⦋j +ₚ (1 : Int)⦌⌝⦄ :=
   by
   mvcgen [sort_array, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  sorry
+  taste?
   all_goals sorry
 
 theorem sort_array_correct :
-    ∀ (arr : PyAny),
+    ∀ (arr : List Int),
       let result := (sort_array arr).run;
-      PastaLean.pyLen result = PastaLean.pyLen arr ∧ PastaLean.pySort result = PastaLean.pySort arr :=
+      (PastaLean.pyLen result = PastaLean.pyLen arr ∧ PastaLean.pySort result = PastaLean.pySort arr) ∧
+        ∀ j ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen result -ₚ (1 : Int))),
+          PastaLean.pyCount (PastaLean.pyBin result⦋j⦌) "1" <
+              PastaLean.pyCount (PastaLean.pyBin result⦋j +ₚ (1 : Int)⦌) "1" ∨
+            PastaLean.pyCount (PastaLean.pyBin result⦋j⦌) "1" =
+                PastaLean.pyCount (PastaLean.pyBin result⦋j +ₚ (1 : Int)⦌) "1" ∧
+              result⦋j⦌ ≤ result⦋j +ₚ (1 : Int)⦌ :=
   by
   intro arr
   exact sort_array_spec True.intro
@@ -116,8 +123,10 @@ private def _sort_array'cmp'rn := fun (x : Int) ↦ fun (y : Int) ↦
         PastaLean.pyLen (PastaLean.pyList (PastaLean.pyFilter (fun ch ↦ ch == "1") (PastaLean.pyBin x)))
       let mut y1 : Int :=
         PastaLean.pyLen (PastaLean.pyList (PastaLean.pyFilter (fun ch ↦ ch == "1") (PastaLean.pyBin y)))
-      let _ := Libraries.passta.pyPassAssert (decide (x1 ≥ (0 : Int)))
-      let _ := Libraries.passta.pyPassAssert (decide (y1 ≥ (0 : Int)))
+      -- Bridge the filter/len popcount to the `bin(...).count("1")` form the Ensures speaks in.
+      let _ := Libraries.passta.pyPassAssert (x1 == PastaLean.pyCount (PastaLean.pyBin x) "1")
+      let _ := Libraries.passta.pyPassAssert (y1 == PastaLean.pyCount (PastaLean.pyBin y) "1")
+      let _ := Libraries.passta.pyPassAssert (decide (x1 ≥ (0 : Int)) && decide (y1 ≥ (0 : Int)))
       if h_1 : x1 != y1 then 
         let __py_ret_1 := x1 -ₚ y1
         return __py_ret_1
@@ -126,23 +135,22 @@ private def _sort_array'cmp'rn := fun (x : Int) ↦ fun (y : Int) ↦
       let __py_ret_1 := x -ₚ y
       return __py_ret_1)
 
-def sort_array'rn := fun (arr : PyAny) ↦
-  Id.run do
-    /-
-    
-        In this Kata, you have to sort an array of non-negative integers according to
-        number of ones in their binary representation in ascending order.
-        For similar number of ones, sort based on decimal value.
-    
-        It must be implemented like this:
-        >>> sort_array([1, 5, 2, 3, 4]) == [1, 2, 3, 4, 5]
-        >>> sort_array([-2, -3, -4, -5, -6]) == [-6, -5, -4, -3, -2]
-        >>> sort_array([1, 0, 2, 3, 4]) [0, 1, 2, 3, 4]
-        
-    -/
-    let _ := ()
-    let _ :=
-      PastaLean.pyUnsupported
-        "degraded Return: Error in code generation function PastaLean.returnSyntax for key 'Return' and syntax category 'doEle"
+def sort_array'rn := fun (arr : List Int) ↦
+  /-
+  
+      In this Kata, you have to sort an array of non-negative integers according to
+      number of ones in their binary representation in ascending order.
+      For similar number of ones, sort based on decimal value.
+  
+      It must be implemented like this:
+      >>> sort_array([1, 5, 2, 3, 4]) == [1, 2, 3, 4, 5]
+      >>> sort_array([-2, -3, -4, -5, -6]) == [-6, -5, -4, -3, -2]
+      >>> sort_array([1, 0, 2, 3, 4]) [0, 1, 2, 3, 4]
+      
+  -/
+  -- 1-2. The result is a permutation of the input (same length, same multiset).
+  -- 3. The result is ordered by the key (popcount, value): consecutive entries either strictly
+  -- increase in the number of binary ones, or tie there and then increase in decimal value.
+  PastaLean.pySortByCmp _sort_array'cmp false arr
 
 end PastaBench.humaneval.SortArray116

@@ -54,7 +54,7 @@ theorem remove_vowels_correct :
       remove_vowels text =
         PastaLean.pyStringJoin ""
           ((List.filter (fun c => !(PastaLean.pyContains "aeiouAEIOU" c)) (PastaLean.pyIter text)).map fun c => c) :=
-  by sorry
+  by taste?
 
 def remove_vowels'rn := fun text ↦
   PastaLean.pyStringJoin ""

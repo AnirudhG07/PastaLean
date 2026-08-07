@@ -29,15 +29,14 @@ def prime_length(string):
     prime_length('kittens') == True
     prime_length('orange') == False
     """
+    # The point: True exactly when len(string) is prime. Primality is spelled out as trial
+    # division over EVERY candidate divisor in range(2, n) — the full definition — rather than
+    # by appealing to the sqrt-bounded helper, so the contract is not a restatement of the body:
+    # closing it requires the sqrt bound to be justified.
+    Ensures(Result() == (len(string) > 1
+                         and all(len(string) % d != 0 for d in range(2, len(string)))))
 
     def is_prime(a):
-        Requires(a >= 0)
-        # A prime number must be greater than 1.
-        Ensures(not Result() or a > 1)
-        # If a number is prime, it must be 2 or be odd.
-        Ensures(not Result() or a == 2 or a % 2 != 0)
-        # The function should correctly identify some small composite numbers.
-        Ensures(not (a == 4 or a == 6 or a == 8 or a == 9) or not Result())
         return not (a < 2 or any(a % x == 0 for x in range(2, int(a ** 0.5) + 1)))
 
     return is_prime(len(string))
@@ -54,30 +53,18 @@ private noncomputable def _prime_length'is_prime := fun (a : Int) ↦
 
 attribute [simp] _prime_length'is_prime
 
+def prime_length := fun (string : PyAny) ↦ _prime_length'is_prime (PastaLean.pyLen string)
+
+attribute [simp] prime_length
+
 @[taste_ingr]
-theorem _prime_length'is_prime_spec :
-    ∀ (a : Int),
-      a ≥ (0 : Int) →
-        ((¬PastaLean.pyTruthy (_prime_length'is_prime a) = true ∨ a > (1 : Int)) ∧
-            ((¬PastaLean.pyTruthy (_prime_length'is_prime a) = true ∨ a = (2 : Int)) ∨ a %ₚ (2 : Int) ≠ (0 : Int))) ∧
-          (¬(((a = (4 : Int) ∨ a = (6 : Int)) ∨ a = (8 : Int)) ∨ a = (9 : Int)) ∨
-            ¬PastaLean.pyTruthy (_prime_length'is_prime a) = true) :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
-
-def prime_length := fun (string : PyAny) ↦
-  /-
-  Write a function that takes a string and returns True if the string
-      length is a prime number or False otherwise
-      Examples
-      prime_length('Hello') == True
-      prime_length('abcdcba') == True
-      prime_length('kittens') == True
-      prime_length('orange') == False
-      
-  -/
-  _prime_length'is_prime (PastaLean.pyLen string)
-
-attribute [simp, taste_ingr] prime_length
+theorem prime_length_correct :
+    ∀ (string : PyAny),
+      prime_length string =
+        (PastaLean.pyLen string > (1 : Int) ∧
+          ∀ d ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen string) (2 : Int)),
+            PastaLean.pyLen string %ₚ d ≠ (0 : Int)) :=
+  by taste?
 
 private def _prime_length'is_prime'rn := fun (a : Int) ↦
   !if PastaLean.pyTruthy (decide (a < (2 : Int))) then decide (a < (2 : Int))
@@ -86,17 +73,6 @@ private def _prime_length'is_prime'rn := fun (a : Int) ↦
         ((PastaLean.pyRange (PastaLean.pyInt (a ^ₚ (0.5 : Float)) +ₚ (1 : Int)) (2 : Int)).map fun x =>
           a %ₚ x == (0 : Int))
 
-def prime_length'rn := fun (string : PyAny) ↦
-  /-
-  Write a function that takes a string and returns True if the string
-      length is a prime number or False otherwise
-      Examples
-      prime_length('Hello') == True
-      prime_length('abcdcba') == True
-      prime_length('kittens') == True
-      prime_length('orange') == False
-      
-  -/
-  _prime_length'is_prime'rn (PastaLean.pyLen string)
+def prime_length'rn := fun (string : PyAny) ↦ _prime_length'is_prime'rn (PastaLean.pyLen string)
 
 end PastaBench.humaneval.PrimeLength

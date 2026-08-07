@@ -54,16 +54,30 @@ def do_algebra(operator, operand):
     # Safety precondition: ensure no division by zero will occur in the `eval` call.
     Requires(all(operator[i] != '//' or operand[i+1] != 0 for i in range(len(operator))))
 
+    # `eval` is opaque, so the result cannot be pinned down in general. What CAN be defended
+    # are the closed forms of the two homogeneous expressions, both of which need the string
+    # built below to be the correct interleaving before they mean anything.
+    Ensures(not all(op == '+' for op in operator) or Result() == sum(operand))
+    Ensures(not all(op == '-' for op in operator) or Result() == operand[0] - sum(operand[1:]))
+    # Subtraction is the only operation here that can leave the non-negative integers, so
+    # without it the whole expression stays non-negative whatever the precedence turns out
+    # to be. This is a statement about every operator in the list at once.
+    Ensures(any(op == '-' for op in operator) or Result() >= 0)
+
     exp = ""
     for i in range(len(operator)):
         # Bounded-index invariant to prove memory safety of accesses inside the loop.
-        Invariant(0 <= i <= len(operator))
+        Invariant(0 <= i)
+        Invariant(i <= len(operator))
+        # The point of the loop: `exp` is exactly the interleaving of the first `i` operands
+        # with the first `i` operators, in order.
+        Invariant(exp == "".join([str(operand[j]) + operator[j] for j in range(i)]))
         exp += str(operand[i]) + operator[i]
     exp += str(operand[-1])
 
-    # An `Ensures` contract on the result is not possible because `eval` is opaque
-    # to the verifier. The preconditions are the most meaningful contracts here,
-    # as they guarantee the safe execution of the function.
+    # The full infix expression, one step from the postconditions above.
+    Assert(exp == "".join([str(operand[j]) + operator[j] for j in range(len(operator))])
+                  + str(operand[len(operand) - 1]))
     return eval(exp)
 -/
 
@@ -74,22 +88,66 @@ def do_algebra := fun (operator : List String) ↦ fun (operand : List Int) ↦
     let mut exp : String := ""
     for i in (PastaLean.pyRange (PastaLean.pyLen operator))do
       -- Bounded-index invariant to prove memory safety of accesses inside the loop.
-      let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i) && decide (i ≤ PastaLean.pyLen operator))
+      let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i))
+      let _ := Libraries.passta.pyPassInvariant (decide (i ≤ PastaLean.pyLen operator))
+      -- The point of the loop: `exp` is exactly the interleaving of the first `i` operands
+      -- with the first `i` operators, in order.
+      let _ :=
+        Libraries.passta.pyPassInvariant
+          (exp ==
+            PastaLean.pyStringJoin "" ((PastaLean.pyRange i).map fun j => PastaLean.pyStr operand⦋j⦌ +ₚ operator⦋j⦌))
       exp := exp +ₚ (PastaLean.pyStr operand⦋i⦌ +ₚ operator⦋i⦌)
     exp := exp +ₚ PastaLean.pyStr operand⦋(-1 : Int)⦌
+    let _ :=
+      Libraries.passta.pyPassAssert
+        (exp ==
+          PastaLean.pyStringJoin ""
+              ((PastaLean.pyRange (PastaLean.pyLen operator)).map fun j => PastaLean.pyStr operand⦋j⦌ +ₚ operator⦋j⦌) +ₚ
+            PastaLean.pyStr operand⦋PastaLean.pyLen operand -ₚ (1 : Int)⦌)
     let __py_ret_1 := eval exp
     return __py_ret_1 : Id _)
 
+@[spec]
 theorem do_algebra_spec :
     ⦃⌜(((PastaLean.pyLen operator = PastaLean.pyLen operand -ₚ (1 : Int) ∧ PastaLean.pyLen operator ≥ (1 : Int)) ∧
-              PastaLean.pyAll ((PastaLean.pyIter operand).map fun x => decide (x ≥ (0 : Int)))) ∧
-            PastaLean.pyAll
-              ((PastaLean.pyIter operator).map fun op => PastaLean.pyContains ["+", "-", "*", "//", "**"] op)) ∧
-          PastaLean.pyAll
-            ((PastaLean.pyRange (PastaLean.pyLen operator)).map fun i =>
-              operator⦋i⦌ != "//" || operand⦋i +ₚ (1 : Int)⦌ != (0 : Int))⌝⦄
-      do_algebra operator operand ⦃⇓_ => ⌜True⌝⦄ :=
-  by apply Std.Do.Triple.of_entails_wp; intro _; exact True.intro
+              ∀ x ∈ PastaLean.pyIter operand, x ≥ (0 : Int)) ∧
+            ∀ op ∈ PastaLean.pyIter operator, PastaLean.pyContains ["+", "-", "*", "//", "**"] op) ∧
+          ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen operator)),
+            operator⦋i⦌ ≠ "//" ∨ operand⦋i +ₚ (1 : Int)⦌ ≠ (0 : Int)⌝⦄
+      do_algebra operator operand ⦃⇓result =>
+      ⌜(((¬∀ op ∈ PastaLean.pyIter operator, op = "+") ∨ result = PastaLean.pySum operand) ∧
+            ((¬∀ op ∈ PastaLean.pyIter operator, op = "-") ∨
+              result =
+                operand⦋(0 : Int)⦌ -ₚ PastaLean.pySum (PastaLean.pySlice operand (some (1 : Int)) none none))) ∧
+          ((∃ op ∈ PastaLean.pyIter operator, op = "-") ∨ result ≥ (0 : Int))⌝⦄ :=
+  by
+  try
+    mvcgen [do_algebra, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · ⇓⟨cur, exp⟩ =>
+      ⌜let i := (cur.prefix.length : Int);
+        ((0 : Int) ≤ i ∧ i ≤ PastaLean.pyLen operator) ∧
+          exp =
+            PastaLean.pyStringJoin "" ((PastaLean.pyRange i).map fun j => PastaLean.pyStr operand⦋j⦌ +ₚ operator⦋j⦌)⌝
+  taste?
+  all_goals sorry
+
+theorem do_algebra_correct :
+    ∀ (operator : List String),
+      ∀ (operand : List Int),
+        ((((PastaLean.pyLen operator = PastaLean.pyLen operand -ₚ (1 : Int) ∧ PastaLean.pyLen operator ≥ (1 : Int)) ∧
+                ∀ x ∈ PastaLean.pyIter operand, x ≥ (0 : Int)) ∧
+              ∀ op ∈ PastaLean.pyIter operator, PastaLean.pyContains ["+", "-", "*", "//", "**"] op) ∧
+            ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen operator)),
+              operator⦋i⦌ ≠ "//" ∨ operand⦋i +ₚ (1 : Int)⦌ ≠ (0 : Int)) →
+          let result := (do_algebra operator operand).run;
+          (((¬∀ op ∈ PastaLean.pyIter operator, op = "+") ∨ result = PastaLean.pySum operand) ∧
+              ((¬∀ op ∈ PastaLean.pyIter operator, op = "-") ∨
+                result =
+                  operand⦋(0 : Int)⦌ -ₚ PastaLean.pySum (PastaLean.pySlice operand (some (1 : Int)) none none))) ∧
+            ((∃ op ∈ PastaLean.pyIter operator, op = "-") ∨ result ≥ (0 : Int)) :=
+  by
+  intro operator operand hpre
+  exact do_algebra_spec hpre
 
 def do_algebra'rn := fun (operator : List String) ↦ fun (operand : List Int) ↦
   Id.run
@@ -136,15 +194,33 @@ def do_algebra'rn := fun (operator : List String) ↦ fun (operand : List Int) �
           (PastaLean.pyAll
             ((PastaLean.pyRange (PastaLean.pyLen operator)).map fun i =>
               operator⦋i⦌ != "//" || operand⦋i +ₚ (1 : Int)⦌ != (0 : Int)))
+      -- `eval` is opaque, so the result cannot be pinned down in general. What CAN be defended
+      -- are the closed forms of the two homogeneous expressions, both of which need the string
+      -- built below to be the correct interleaving before they mean anything.
+      -- Subtraction is the only operation here that can leave the non-negative integers, so
+      -- without it the whole expression stays non-negative whatever the precedence turns out
+      -- to be. This is a statement about every operator in the list at once.
       let mut exp : String := ""
       for i in (PastaLean.pyRange (PastaLean.pyLen operator))do
         -- Bounded-index invariant to prove memory safety of accesses inside the loop.
-        let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i) && decide (i ≤ PastaLean.pyLen operator))
+        let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i))
+        let _ := Libraries.passta.pyPassInvariant (decide (i ≤ PastaLean.pyLen operator))
+        -- The point of the loop: `exp` is exactly the interleaving of the first `i` operands
+        -- with the first `i` operators, in order.
+        let _ :=
+          Libraries.passta.pyPassInvariant
+            (exp ==
+              PastaLean.pyStringJoin "" ((PastaLean.pyRange i).map fun j => PastaLean.pyStr operand⦋j⦌ +ₚ operator⦋j⦌))
         exp := exp +ₚ (PastaLean.pyStr operand⦋i⦌ +ₚ operator⦋i⦌)
       exp := exp +ₚ PastaLean.pyStr operand⦋(-1 : Int)⦌
-      -- An `Ensures` contract on the result is not possible because `eval` is opaque
-      -- to the verifier. The preconditions are the most meaningful contracts here,
-      -- as they guarantee the safe execution of the function.
+      -- The full infix expression, one step from the postconditions above.
+      let _ :=
+        Libraries.passta.pyPassAssert
+          (exp ==
+            PastaLean.pyStringJoin ""
+                ((PastaLean.pyRange (PastaLean.pyLen operator)).map fun j =>
+                  PastaLean.pyStr operand⦋j⦌ +ₚ operator⦋j⦌) +ₚ
+              PastaLean.pyStr operand⦋PastaLean.pyLen operand -ₚ (1 : Int)⦌)
       let __py_ret_1 := eval exp
       return __py_ret_1)
 

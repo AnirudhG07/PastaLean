@@ -32,29 +32,41 @@ def skjkasdkd(lst):
     For lst = [0,81,12,3,1,21] the output should be 3
     For lst = [0,8,1,2,1,7] the output should be 7
     """
-    Requires(all(isinstance(x, int) for x in lst))
-    Ensures(Result() is None or Result() > 0)
+    # Without a prime in the list the loop falls through and the function returns nothing,
+    # so there is no answer to specify.
+    Requires(any(y >= 2 and all(y % d != 0 for d in range(2, y)) for y in lst))
+    # THE POINT: the result is the decimal digit sum of a prime member of the list that
+    # dominates every prime member of the list — i.e. of the largest prime in the list.
+    # Primality is trial division: z >= 2 with no divisor in [2, z).
+    Ensures(any(
+        y >= 2
+        and sum([int(ch) for ch in str(y)]) == Result()
+        and all(y % d != 0 for d in range(2, y))
+        and all(z <= y or z < 2 or any(z % d == 0 for d in range(2, z)) for z in lst)
+        for y in lst))
 
     def is_prime(a):
-        Requires(isinstance(a, int))
-        Ensures(not Result() or a >= 2)
+        # No contract here: it is an inner helper whose specification is the primality
+        # predicate spelled out at the call site below.
         return not (a < 2 or any(a % x == 0 for x in range(2, int(a ** 0.5) + 1)))
     sorted_list = sorted(lst)[::-1]
     for x in sorted_list:
         if is_prime(x):
-            # THE POINT: `x` is prime, and it's the largest one in the input list `lst`.
-            # This is true because we iterate a descending-sorted list and this is the first prime we found.
-            Assert(is_prime(x) and all(not is_prime(y) or y <= x for y in lst))
+            # x really is prime (the sqrt-bounded test above agrees with full trial division) ...
+            Assert(x >= 2 and all(x % d != 0 for d in range(2, x)))
+            # ... and it is the largest prime in lst: scanning descending order, everything
+            # strictly above x was rejected, so no z > x in lst is prime.
+            Assert(all(z <= x or z < 2 or any(z % d == 0 for d in range(2, z)) for z in lst))
             return sum(map(lambda ch: int(ch), str(x)))
-    
-    # If the loop completes, no prime was found in the list.
-    Assert(all(not is_prime(y) for y in lst))
-    # Implicit `return None` follows.
+
+    # Unreachable under the precondition.
 -/
 
 namespace PastaBench.humaneval.Skjkasdkd
 
 private noncomputable def _skjkasdkd'is_prime := fun (a : Int) ↦
+  -- No contract here: it is an inner helper whose specification is the primality
+  -- predicate spelled out at the call site below.
   !if PastaLean.pyTruthy (decide (a < (2 : Int))) then decide (a < (2 : Int))
     else
       PastaLean.pyStdAny
@@ -63,60 +75,75 @@ private noncomputable def _skjkasdkd'is_prime := fun (a : Int) ↦
 
 attribute [simp] _skjkasdkd'is_prime
 
-@[taste_ingr]
-theorem _skjkasdkd'is_prime_spec :
-    ∀ (a : Int), isinstance a int → ¬PastaLean.pyTruthy (_skjkasdkd'is_prime a) = true ∨ a ≥ (2 : Int) := by sorry
-
-def skjkasdkd := fun lst ↦
+def skjkasdkd := fun (lst : List Int) ↦
   (do
-    let mut sorted_list := PastaLean.pySlice (PastaLean.pySort lst) none none (some (-(1 : Int)))
+    let mut sorted_list : List Int := PastaLean.pySlice (PastaLean.pySort lst) none none (some (-(1 : Int)))
     for x in (PastaLean.pyIter sorted_list)do
       if h_1 : PastaLean.pyTruthy (_skjkasdkd'is_prime x) then 
-        -- THE POINT: `x` is prime, and it's the largest one in the input list `lst`.
-        -- This is true because we iterate a descending-sorted list and this is the first prime we found.
+        -- x really is prime (the sqrt-bounded test above agrees with full trial division) ...
         let _ :=
           Libraries.passta.pyPassAssert
-            (if PastaLean.pyTruthy (_skjkasdkd'is_prime x) then
-              PastaLean.pyAll
-                ((PastaLean.pyIter lst).map fun y => !PastaLean.pyTruthy (_skjkasdkd'is_prime y) || decide (y ≤ x))
-            else _skjkasdkd'is_prime x)
+            (if PastaLean.pyTruthy (decide (x ≥ (2 : Int))) then
+              PastaLean.pyAll ((PastaLean.pyRange x (2 : Int)).map fun d => x %ₚ d != (0 : Int))
+            else decide (x ≥ (2 : Int)))
+        -- ... and it is the largest prime in lst: scanning descending order, everything
+        -- strictly above x was rejected, so no z > x in lst is prime.
+        let _ :=
+          Libraries.passta.pyPassAssert
+            (PastaLean.pyAll
+              ((PastaLean.pyIter lst).map fun z =>
+                decide (z ≤ x) || decide (z < (2 : Int)) ||
+                  PastaLean.pyTruthy
+                    (PastaLean.pyStdAny ((PastaLean.pyRange z (2 : Int)).map fun d => z %ₚ d == (0 : Int)))))
         let __py_ret_1 := PastaLean.pySum (PastaLean.pyMap (fun ch ↦ PastaLean.pyInt ch) (PastaLean.pyStr x))
         return __py_ret_1
       else
         let _ := ()
-    let _ :=
-      Libraries.passta.pyPassAssert
-        (PastaLean.pyAll ((PastaLean.pyIter lst).map fun y => !PastaLean.pyTruthy (_skjkasdkd'is_prime y)))
     return default : Id _)
 
 @[spec]
 theorem skjkasdkd_spec :
-    ⦃⌜PastaLean.pyAll ((PastaLean.pyIter lst).map fun x => isinstance x int)⌝⦄ skjkasdkd lst ⦃⇓result =>
-      ⌜PastaLean.pyIsNone result ∨ result > (0 : Int)⌝⦄ :=
+    ⦃⌜∃ y ∈ PastaLean.pyIter lst,
+          y ≥ (2 : Int) ∧ ∀ d ∈ PastaLean.pyIter (PastaLean.pyRange y (2 : Int)), y %ₚ d ≠ (0 : Int)⌝⦄
+      skjkasdkd lst ⦃⇓result =>
+      ⌜∃ y ∈ PastaLean.pyIter lst,
+          ((y ≥ (2 : Int) ∧
+                PastaLean.pySum ((PastaLean.pyIter (PastaLean.pyStr y)).map fun ch => PastaLean.pyInt ch) = result) ∧
+              ∀ d ∈ PastaLean.pyIter (PastaLean.pyRange y (2 : Int)), y %ₚ d ≠ (0 : Int)) ∧
+            ∀ z ∈ PastaLean.pyIter lst,
+              (z ≤ y ∨ z < (2 : Int)) ∨ ∃ d ∈ PastaLean.pyIter (PastaLean.pyRange z (2 : Int)), z %ₚ d = (0 : Int)⌝⦄ :=
   by
   try
     mvcgen [skjkasdkd, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · Invariant.withEarlyReturn (onReturn := fun _ _ => ⌜True⌝) (onContinue := fun _ _ => ⌜True⌝)
-  sorry
+  taste?
   all_goals sorry
 
 theorem skjkasdkd_correct :
-    ∀ lst,
-      PastaLean.pyAll ((PastaLean.pyIter lst).map fun x => isinstance x int) →
+    ∀ (lst : List Int),
+      (∃ y ∈ PastaLean.pyIter lst,
+          y ≥ (2 : Int) ∧ ∀ d ∈ PastaLean.pyIter (PastaLean.pyRange y (2 : Int)), y %ₚ d ≠ (0 : Int)) →
         let result := (skjkasdkd lst).run;
-        PastaLean.pyIsNone result ∨ result > (0 : Int) :=
+        ∃ y ∈ PastaLean.pyIter lst,
+          ((y ≥ (2 : Int) ∧
+                PastaLean.pySum ((PastaLean.pyIter (PastaLean.pyStr y)).map fun ch => PastaLean.pyInt ch) = result) ∧
+              ∀ d ∈ PastaLean.pyIter (PastaLean.pyRange y (2 : Int)), y %ₚ d ≠ (0 : Int)) ∧
+            ∀ z ∈ PastaLean.pyIter lst,
+              (z ≤ y ∨ z < (2 : Int)) ∨ ∃ d ∈ PastaLean.pyIter (PastaLean.pyRange z (2 : Int)), z %ₚ d = (0 : Int) :=
   by
   intro lst hpre
   exact skjkasdkd_spec hpre
 
 private def _skjkasdkd'is_prime'rn := fun (a : Int) ↦
+  -- No contract here: it is an inner helper whose specification is the primality
+  -- predicate spelled out at the call site below.
   !if PastaLean.pyTruthy (decide (a < (2 : Int))) then decide (a < (2 : Int))
     else
       PastaLean.pyStdAny
         ((PastaLean.pyRange (PastaLean.pyInt (a ^ₚ (0.5 : Float)) +ₚ (1 : Int)) (2 : Int)).map fun x =>
           a %ₚ x == (0 : Int))
 
-def skjkasdkd'rn := fun lst ↦
+def skjkasdkd'rn := fun (lst : List Int) ↦
   Id.run
     (do
       /-
@@ -132,27 +159,40 @@ def skjkasdkd'rn := fun lst ↦
           For lst = [0,8,1,2,1,7] the output should be 7
           
       -/
-      let _ := Libraries.passta.pyPassRequires (PastaLean.pyAll ((PastaLean.pyIter lst).map fun x => isinstance x int))
-      let mut sorted_list := PastaLean.pySlice (PastaLean.pySort lst) none none (some (-(1 : Int)))
+      -- Without a prime in the list the loop falls through and the function returns nothing,
+      -- so there is no answer to specify.
+      let _ :=
+        Libraries.passta.pyPassRequires
+          (PastaLean.pyStdAny
+            ((PastaLean.pyIter lst).map fun y =>
+              decide (y ≥ (2 : Int)) &&
+                PastaLean.pyTruthy
+                  (PastaLean.pyAll ((PastaLean.pyRange y (2 : Int)).map fun d => y %ₚ d != (0 : Int)))))
+      -- THE POINT: the result is the decimal digit sum of a prime member of the list that
+      -- dominates every prime member of the list — i.e. of the largest prime in the list.
+      -- Primality is trial division: z >= 2 with no divisor in [2, z).
+      let mut sorted_list : List Int := PastaLean.pySlice (PastaLean.pySort lst) none none (some (-(1 : Int)))
       for x in (PastaLean.pyIter sorted_list)do
         if h_1 : PastaLean.pyTruthy (_skjkasdkd'is_prime'rn x) then 
-          -- THE POINT: `x` is prime, and it's the largest one in the input list `lst`.
-          -- This is true because we iterate a descending-sorted list and this is the first prime we found.
+          -- x really is prime (the sqrt-bounded test above agrees with full trial division) ...
           let _ :=
             Libraries.passta.pyPassAssert
-              (if PastaLean.pyTruthy (_skjkasdkd'is_prime'rn x) then
-                PastaLean.pyAll
-                  ((PastaLean.pyIter lst).map fun y =>
-                    !PastaLean.pyTruthy (_skjkasdkd'is_prime'rn y) || decide (y ≤ x))
-              else _skjkasdkd'is_prime'rn x)
+              (if PastaLean.pyTruthy (decide (x ≥ (2 : Int))) then
+                PastaLean.pyAll ((PastaLean.pyRange x (2 : Int)).map fun d => x %ₚ d != (0 : Int))
+              else decide (x ≥ (2 : Int)))
+          -- ... and it is the largest prime in lst: scanning descending order, everything
+          -- strictly above x was rejected, so no z > x in lst is prime.
+          let _ :=
+            Libraries.passta.pyPassAssert
+              (PastaLean.pyAll
+                ((PastaLean.pyIter lst).map fun z =>
+                  decide (z ≤ x) || decide (z < (2 : Int)) ||
+                    PastaLean.pyTruthy
+                      (PastaLean.pyStdAny ((PastaLean.pyRange z (2 : Int)).map fun d => z %ₚ d == (0 : Int)))))
           let __py_ret_1 := PastaLean.pySum (PastaLean.pyMap (fun ch ↦ PastaLean.pyInt ch) (PastaLean.pyStr x))
           return __py_ret_1
         else
           let _ := ()
-      -- If the loop completes, no prime was found in the list.
-      let _ :=
-        Libraries.passta.pyPassAssert
-          (PastaLean.pyAll ((PastaLean.pyIter lst).map fun y => !PastaLean.pyTruthy (_skjkasdkd'is_prime'rn y)))
       return default)
 
 end PastaBench.humaneval.Skjkasdkd

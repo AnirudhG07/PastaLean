@@ -24,7 +24,10 @@ def encode_cyclic(s: str):
     """
     returns encoded string by cycling groups of three characters.
     """
+    # Regrouping into blocks of three and rotating within each block is a permutation of
+    # the characters: same length, same multiset.
     Ensures(len(Result()) == len(s))
+    Ensures(sorted(Result()) == sorted(s))
     # split string to groups. Each of length 3.
     groups = [s[(3 * i):min((3 * i + 3), len(s))] for i in range((len(s) + 2) // 3)]
     # cycle elements in each group. Unless group has fewer elements than 3.
@@ -36,7 +39,12 @@ def decode_cyclic(s: str):
     """
     takes as input string encoded with encode_cyclic function. Returns decoded string.
     """
+    # THE POINT: decode is the two-sided inverse of encode. `encode_cyclic` rotates each
+    # 3-block left, `decode_cyclic` rotates it right, so composing them is the identity on
+    # every string -- this is strictly stronger than any length/multiset statement.
+    Ensures(encode_cyclic(Result()) == s)
     Ensures(len(Result()) == len(s))
+    Ensures(sorted(Result()) == sorted(s))
     groups = [s[(3 * i):min((3 * i + 3), len(s))] for i in range((len(s) + 2) // 3)]
     groups = [(group[2] + group[:2]) if len(group) == 3 else group for group in groups]
     return "".join(groups)
@@ -59,16 +67,18 @@ def encode_cyclic := fun (s : String) ↦
     return __py_ret_1 : Id _)
 
 @[spec]
-theorem encode_cyclic_spec : ⦃⌜True⌝⦄ encode_cyclic s ⦃⇓result => ⌜PastaLean.pyLen result = PastaLean.pyLen s⌝⦄ :=
+theorem encode_cyclic_spec :
+    ⦃⌜True⌝⦄ encode_cyclic s ⦃⇓result =>
+      ⌜PastaLean.pyLen result = PastaLean.pyLen s ∧ PastaLean.pySort result = PastaLean.pySort s⌝⦄ :=
   by
   mvcgen [encode_cyclic, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  sorry
+  taste?
   all_goals sorry
 
 theorem encode_cyclic_correct :
     ∀ (s : String),
       let result := (encode_cyclic s).run;
-      PastaLean.pyLen result = PastaLean.pyLen s :=
+      PastaLean.pyLen result = PastaLean.pyLen s ∧ PastaLean.pySort result = PastaLean.pySort s :=
   by
   intro s
   exact encode_cyclic_spec True.intro
@@ -79,6 +89,8 @@ def encode_cyclic'rn := fun (s : String) ↦
       returns encoded string by cycling groups of three characters.
       
   -/
+  -- Regrouping into blocks of three and rotating within each block is a permutation of
+  -- the characters: same length, same multiset.
   -- split string to groups. Each of length 3.
   let groups :=
     ((PastaLean.pyRange (PastaLean.pyFloorDiv (PastaLean.pyLen s +ₚ (2 : Int)) (3 : Int))).map fun i =>
@@ -109,16 +121,20 @@ def decode_cyclic := fun (s : String) ↦
     return __py_ret_1 : Id _)
 
 @[spec]
-theorem decode_cyclic_spec : ⦃⌜True⌝⦄ decode_cyclic s ⦃⇓result => ⌜PastaLean.pyLen result = PastaLean.pyLen s⌝⦄ :=
+theorem decode_cyclic_spec :
+    ⦃⌜True⌝⦄ decode_cyclic s ⦃⇓result =>
+      ⌜(encode_cyclic result = s ∧ PastaLean.pyLen result = PastaLean.pyLen s) ∧
+          PastaLean.pySort result = PastaLean.pySort s⌝⦄ :=
   by
   mvcgen [decode_cyclic, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  sorry
+  taste?
   all_goals sorry
 
 theorem decode_cyclic_correct :
     ∀ (s : String),
       let result := (decode_cyclic s).run;
-      PastaLean.pyLen result = PastaLean.pyLen s :=
+      (encode_cyclic result = s ∧ PastaLean.pyLen result = PastaLean.pyLen s) ∧
+        PastaLean.pySort result = PastaLean.pySort s :=
   by
   intro s
   exact decode_cyclic_spec True.intro
@@ -129,6 +145,9 @@ def decode_cyclic'rn := fun (s : String) ↦
       takes as input string encoded with encode_cyclic function. Returns decoded string.
       
   -/
+  -- THE POINT: decode is the two-sided inverse of encode. `encode_cyclic` rotates each
+  -- 3-block left, `decode_cyclic` rotates it right, so composing them is the identity on
+  -- every string -- this is strictly stronger than any length/multiset statement.
   let groups :=
     ((PastaLean.pyRange (PastaLean.pyFloorDiv (PastaLean.pyLen s +ₚ (2 : Int)) (3 : Int))).map fun i =>
         PastaLean.pySlice s (some ((3 : Int) *ₚ i))

@@ -83,8 +83,7 @@ def maxTotalReward := fun (rewardValues : List Int) ↦
 
 @[spec]
 theorem maxTotalReward_spec :
-    ⦃⌜PastaLean.pyLen rewardValues ≥ (1 : Int) ∧
-          PastaLean.pyAll ((PastaLean.pyIter rewardValues).map fun v => decide (v ≥ (1 : Int)))⌝⦄
+    ⦃⌜PastaLean.pyLen rewardValues ≥ (1 : Int) ∧ ∀ v ∈ PastaLean.pyIter rewardValues, v ≥ (1 : Int)⌝⦄
       maxTotalReward rewardValues ⦃⇓result =>
       ⌜result ≥ (0 : Int) ∧ result < (2 : Int) *ₚ PastaLean.pyMax rewardValues⌝⦄ :=
   by
@@ -96,8 +95,7 @@ theorem maxTotalReward_spec :
 
 theorem maxTotalReward_correct :
     ∀ (rewardValues : List Int),
-      PastaLean.pyLen rewardValues ≥ (1 : Int) ∧
-          PastaLean.pyAll ((PastaLean.pyIter rewardValues).map fun v => decide (v ≥ (1 : Int))) →
+      (PastaLean.pyLen rewardValues ≥ (1 : Int) ∧ ∀ v ∈ PastaLean.pyIter rewardValues, v ≥ (1 : Int)) →
         let result := (maxTotalReward rewardValues).run;
         result ≥ (0 : Int) ∧ result < (2 : Int) *ₚ PastaLean.pyMax rewardValues :=
   by

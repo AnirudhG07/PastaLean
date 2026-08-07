@@ -80,6 +80,7 @@ def pythonMethodMap? (attr : String) : Option Lean.Name :=
   -- Common
   | "clear"      => some ``pyClear
   | "update"     => some ``pyUpdate
+  | "encode" | "decode" => some ``pyStringEncodeDummy
   | "pop"        => some ``pyPop
   | "count"      => some ``pyCount
   | "find"        => some ``pyStringFind

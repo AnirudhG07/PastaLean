@@ -52,9 +52,9 @@ def sort_even(l: list):
 
 namespace PastaBench.humaneval.SortEven
 
-def sort_even := fun l ↦
+def sort_even := fun (l : List PyAny) ↦
   (do
-    let mut even :=
+    let mut even : List PyAny :=
       (List.filter (fun i => i %ₚ (2 : Int) = (0 : Int)) (PastaLean.pyRange (PastaLean.pyLen l))).map fun i => l⦋i⦌
     even := PastaLean.pySort even
     let _ :=
@@ -72,9 +72,8 @@ def sort_even := fun l ↦
 theorem sort_even_spec :
     ⦃⌜True⌝⦄ sort_even l ⦃⇓result =>
       ⌜(PastaLean.pyLen result = PastaLean.pyLen l ∧
-            PastaLean.pyAll
-              ((List.filter (fun i => i %ₚ (2 : Int) ≠ (0 : Int)) (PastaLean.pyRange (PastaLean.pyLen l))).map fun i =>
-                result⦋i⦌ == l⦋i⦌)) ∧
+            ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen l)),
+              i %ₚ (2 : Int) ≠ (0 : Int) → result⦋i⦌ = l⦋i⦌) ∧
           ((List.filter (fun i => i %ₚ (2 : Int) = (0 : Int)) (PastaLean.pyRange (PastaLean.pyLen l))).map fun i =>
               result⦋i⦌) =
             PastaLean.pySort
@@ -82,16 +81,15 @@ theorem sort_even_spec :
                 l⦋i⦌)⌝⦄ :=
   by
   mvcgen [sort_even, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  sorry
+  taste?
   all_goals sorry
 
 theorem sort_even_correct :
-    ∀ l,
+    ∀ (l : List PyAny),
       let result := (sort_even l).run;
       (PastaLean.pyLen result = PastaLean.pyLen l ∧
-          PastaLean.pyAll
-            ((List.filter (fun i => i %ₚ (2 : Int) ≠ (0 : Int)) (PastaLean.pyRange (PastaLean.pyLen l))).map fun i =>
-              result⦋i⦌ == l⦋i⦌)) ∧
+          ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen l)),
+            i %ₚ (2 : Int) ≠ (0 : Int) → result⦋i⦌ = l⦋i⦌) ∧
         ((List.filter (fun i => i %ₚ (2 : Int) = (0 : Int)) (PastaLean.pyRange (PastaLean.pyLen l))).map fun i =>
             result⦋i⦌) =
           PastaLean.pySort
@@ -101,7 +99,7 @@ theorem sort_even_correct :
   intro l
   exact sort_even_spec True.intro
 
-def sort_even'rn := fun l ↦
+def sort_even'rn := fun (l : List PyAny) ↦
   Id.run
     (do
       /-
@@ -117,7 +115,7 @@ def sort_even'rn := fun l ↦
       -- The elements at odd indices are unchanged.
       -- The elements at even indices are the sorted version of the original even-indexed elements.
       -- This single postcondition captures both the sorting and the multiset-preservation properties.
-      let mut even :=
+      let mut even : List PyAny :=
         (List.filter (fun i => i %ₚ (2 : Int) == (0 : Int)) (PastaLean.pyRange (PastaLean.pyLen l))).map fun i => l⦋i⦌
       even := PastaLean.pySort even
       -- Bridge assertion: after the in-place sort, `even` now holds the sorted

@@ -10,10 +10,11 @@ def count_nums(arr):
     >>> count_nums([-1, 11, -11]) == 1
     >>> count_nums([1, 1, 2]) == 3
     """
-    Ensures(0 <= Result() <= len(arr))
+    # The point: the result counts elements, so it is a genuine count bounded by the array size.
+    Ensures(0 <= Result())
+    Ensures(Result() <= len(arr))
 
     def judge(x: int) -> int:
-        Ensures(0 <= Result() <= 1)
         l = list(str(x))
         if l[0] == "-":
             l = l[1:]

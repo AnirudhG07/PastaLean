@@ -105,8 +105,7 @@ def countExcellentPairs := fun (nums : List Int) ↦ fun (k : Int) ↦
 
 @[spec]
 theorem countExcellentPairs_spec :
-    ⦃⌜PastaLean.pyAll ((PastaLean.pyIter nums).map fun x => decide (x ≥ (0 : Int))) ∧ k ≥ (0 : Int)⌝⦄
-      countExcellentPairs nums k ⦃⇓ans =>
+    ⦃⌜(∀ x ∈ PastaLean.pyIter nums, x ≥ (0 : Int)) ∧ k ≥ (0 : Int)⌝⦄ countExcellentPairs nums k ⦃⇓ans =>
       ⌜ans =
           PastaLean.pySum
             ((PastaLean.pyIter (PastaLean.pySet nums)).flatMap fun v1 =>
@@ -124,7 +123,7 @@ theorem countExcellentPairs_spec :
 theorem countExcellentPairs_correct :
     ∀ (nums : List Int),
       ∀ (k : Int),
-        PastaLean.pyAll ((PastaLean.pyIter nums).map fun x => decide (x ≥ (0 : Int))) ∧ k ≥ (0 : Int) →
+        (∀ x ∈ PastaLean.pyIter nums, x ≥ (0 : Int)) ∧ k ≥ (0 : Int) →
           let ans := (countExcellentPairs nums k).run;
           ans =
             PastaLean.pySum

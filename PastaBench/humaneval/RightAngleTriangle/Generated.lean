@@ -62,7 +62,7 @@ theorem right_angle_triangle_correct :
               c > (0 : Int) →
                 right_angle_triangle a b c =
                   ((a *ₚ a +ₚ b *ₚ b = c *ₚ c ∨ a *ₚ a +ₚ c *ₚ c = b *ₚ b) ∨ b *ₚ b +ₚ c *ₚ c = a *ₚ a) :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals
+  by taste?
 
 def right_angle_triangle'rn := fun (a : Int) ↦ fun (b : Int) ↦ fun (c : Int) ↦
   if PastaLean.pyTruthy (a ^ₚ (2 : Int) +ₚ b ^ₚ (2 : Int) == c ^ₚ (2 : Int)) then

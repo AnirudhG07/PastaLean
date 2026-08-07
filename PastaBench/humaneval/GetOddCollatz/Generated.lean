@@ -39,8 +39,16 @@ def get_odd_collatz(n):
     """
     Requires(n > 0)
     Ensures(1 in Result())
-    Ensures(all(x % 2 == 1 for x in Result()))
+    # `v`, not `x`: `x` is a local the loop mutates, and a comprehension binder sharing that
+    # name is a trap on the Lean side.
+    Ensures(all(v % 2 == 1 for v in Result()))
+    Ensures(all(v >= 1 for v in Result()))
     Ensures(all(Result()[i] <= Result()[i + 1] for i in range(len(Result()) - 1)))
+    # 1 is in the list, everything is >= 1 and the list is sorted, so 1 is the head.
+    Ensures(len(Result()) >= 1 and Result()[0] == 1)
+    # The trajectory starts at n, so an odd input is itself a member — the only entry point
+    # into the sequence that can be named without unrolling it.
+    Ensures(n % 2 == 0 or n in Result())
 
     ans, x = [], n
     # Termination is equivalent to the Collatz conjecture, an open problem.
@@ -49,6 +57,9 @@ def get_odd_collatz(n):
     while x != 1:
         Invariant(x > 0)
         Invariant(all(y % 2 == 1 for y in ans))
+        Invariant(all(y >= 1 for y in ans))
+        # An odd `n` is recorded on the very first pass; before that pass `x` is still `n`.
+        Invariant(n % 2 == 0 or x == n or n in ans)
         if x % 2 == 1: ans.append(x)
         x = x // 2 if x % 2 == 0 else x * 3 + 1
     
@@ -74,6 +85,10 @@ def get_odd_collatz := fun (n : Int) ↦
       let _ :=
         Libraries.passta.pyPassInvariant
           (PastaLean.pyAll ((PastaLean.pyIter ans).map fun y => y %ₚ (2 : Int) == (1 : Int)))
+      let _ :=
+        Libraries.passta.pyPassInvariant (PastaLean.pyAll ((PastaLean.pyIter ans).map fun y => decide (y ≥ (1 : Int))))
+      -- An odd `n` is recorded on the very first pass; before that pass `x` is still `n`.
+      let _ := Libraries.passta.pyPassInvariant (n %ₚ (2 : Int) == (0 : Int) || x == n || PastaLean.pyContains ans n)
       if h_1 : x %ₚ (2 : Int) = (1 : Int) then 
         ans := PastaLean.pyAppend ans x
       else
@@ -90,25 +105,27 @@ def get_odd_collatz := fun (n : Int) ↦
 @[spec]
 theorem get_odd_collatz_spec :
     ⦃⌜n > (0 : Int)⌝⦄ get_odd_collatz n ⦃⇓result =>
-      ⌜(PastaLean.pyContains result (1 : Int) ∧
-            PastaLean.pyAll ((PastaLean.pyIter result).map fun x => x %ₚ (2 : Int) == (1 : Int))) ∧
-          PastaLean.pyAll
-            ((PastaLean.pyRange (PastaLean.pyLen result -ₚ (1 : Int))).map fun i =>
-              decide (result⦋i⦌ ≤ result⦋i +ₚ (1 : Int)⦌))⌝⦄ :=
+      ⌜((((PastaLean.pyContains result (1 : Int) ∧ ∀ v ∈ PastaLean.pyIter result, v %ₚ (2 : Int) = (1 : Int)) ∧
+                ∀ v ∈ PastaLean.pyIter result, v ≥ (1 : Int)) ∧
+              ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen result -ₚ (1 : Int))),
+                result⦋i⦌ ≤ result⦋i +ₚ (1 : Int)⦌) ∧
+            PastaLean.pyLen result ≥ (1 : Int) ∧ result⦋(0 : Int)⦌ = (1 : Int)) ∧
+          (n %ₚ (2 : Int) = (0 : Int) ∨ PastaLean.pyContains result n)⌝⦄ :=
   by
   mvcgen [get_odd_collatz, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  taste?
   all_goals sorry
 
 theorem get_odd_collatz_correct :
     ∀ (n : Int),
       n > (0 : Int) →
         let result := (get_odd_collatz n).run;
-        (PastaLean.pyContains result (1 : Int) ∧
-            PastaLean.pyAll ((PastaLean.pyIter result).map fun x => x %ₚ (2 : Int) == (1 : Int))) ∧
-          PastaLean.pyAll
-            ((PastaLean.pyRange (PastaLean.pyLen result -ₚ (1 : Int))).map fun i =>
-              decide (result⦋i⦌ ≤ result⦋i +ₚ (1 : Int)⦌)) :=
+        ((((PastaLean.pyContains result (1 : Int) ∧ ∀ v ∈ PastaLean.pyIter result, v %ₚ (2 : Int) = (1 : Int)) ∧
+                ∀ v ∈ PastaLean.pyIter result, v ≥ (1 : Int)) ∧
+              ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen result -ₚ (1 : Int))),
+                result⦋i⦌ ≤ result⦋i +ₚ (1 : Int)⦌) ∧
+            PastaLean.pyLen result ≥ (1 : Int) ∧ result⦋(0 : Int)⦌ = (1 : Int)) ∧
+          (n %ₚ (2 : Int) = (0 : Int) ∨ PastaLean.pyContains result n) :=
   by
   intro n hpre
   exact get_odd_collatz_spec hpre
@@ -135,6 +152,11 @@ def get_odd_collatz'rn := fun (n : Int) ↦
           
       -/
       let _ := Libraries.passta.pyPassRequires (decide (n > (0 : Int)))
+      -- `v`, not `x`: `x` is a local the loop mutates, and a comprehension binder sharing that
+      -- name is a trap on the Lean side.
+      -- 1 is in the list, everything is >= 1 and the list is sorted, so 1 is the head.
+      -- The trajectory starts at n, so an odd input is itself a member — the only entry point
+      -- into the sequence that can be named without unrolling it.
       let __unpack_value_1 := ([], n)
       let __unpack_pair_1 := __unpack_value_1
       let mut ans : List Int := Prod.fst __unpack_pair_1
@@ -147,6 +169,11 @@ def get_odd_collatz'rn := fun (n : Int) ↦
         let _ :=
           Libraries.passta.pyPassInvariant
             (PastaLean.pyAll ((PastaLean.pyIter ans).map fun y => y %ₚ (2 : Int) == (1 : Int)))
+        let _ :=
+          Libraries.passta.pyPassInvariant
+            (PastaLean.pyAll ((PastaLean.pyIter ans).map fun y => decide (y ≥ (1 : Int))))
+        -- An odd `n` is recorded on the very first pass; before that pass `x` is still `n`.
+        let _ := Libraries.passta.pyPassInvariant (n %ₚ (2 : Int) == (0 : Int) || x == n || PastaLean.pyContains ans n)
         if h_1 : x %ₚ (2 : Int) == (1 : Int) then 
           ans := PastaLean.pyAppend ans x
         else

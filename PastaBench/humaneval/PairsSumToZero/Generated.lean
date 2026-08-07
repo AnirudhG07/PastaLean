@@ -36,14 +36,30 @@ def pairs_sum_to_zero(l):
     >>> pairs_sum_to_zero([1])
     False
     """
+    # THE POINT: an exact iff with "two DISTINCT positions sum to zero". The distinctness is the
+    # whole content — a lone 0 must NOT count, while [0, 0] must.
     Ensures(Result() == any(
-        i != j and l[i] + l[j] == 0
+        any(i != j and l[i] + l[j] == 0 for j in range(len(l)))
         for i in range(len(l))
-        for j in range(len(l))
     ))
+    # Same property phrased over values instead of index pairs: some element's negation occurs
+    # somewhere else in the list. Equivalent only because the index exclusion is done correctly.
+    Ensures(Result() == any(-l[i] in l[:i] + l[i + 1:] for i in range(len(l))))
+    # A witness needs two positions, so a list shorter than 2 can never answer True.
+    Ensures(len(l) >= 2 or Result() == False)
 
     for i in range(len(l)):
+        # No pair drawn entirely from the first `i` outer positions summed to zero, else we returned.
+        Invariant(0 <= i)
+        Invariant(i <= len(l))
+        Invariant(not any(
+            any(a != b and l[a] + l[b] == 0 for b in range(len(l)))
+            for a in range(i)
+        ))
         for j in range(len(l)):
+            Invariant(0 <= j)
+            Invariant(j <= len(l))
+            Invariant(not any(i != b and l[i] + l[b] == 0 for b in range(j)))
             if i != j and l[i] + l[j] == 0:
                 return True
     return False
@@ -54,7 +70,23 @@ namespace PastaBench.humaneval.PairsSumToZero
 def pairs_sum_to_zero := fun (l : PyAny) ↦
   (do
     for i in (PastaLean.pyRange (PastaLean.pyLen l))do
+      -- No pair drawn entirely from the first `i` outer positions summed to zero, else we returned.
+      let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i))
+      let _ := Libraries.passta.pyPassInvariant (decide (i ≤ PastaLean.pyLen l))
+      let _ :=
+        Libraries.passta.pyPassInvariant
+          !PastaLean.pyTruthy
+              (PastaLean.pyStdAny
+                ((PastaLean.pyRange i).map fun a =>
+                  PastaLean.pyStdAny
+                    ((PastaLean.pyRange (PastaLean.pyLen l)).map fun b => a != b && l⦋a⦌ +ₚ l⦋b⦌ == (0 : Int))))
       for j in (PastaLean.pyRange (PastaLean.pyLen l))do
+        let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ j))
+        let _ := Libraries.passta.pyPassInvariant (decide (j ≤ PastaLean.pyLen l))
+        let _ :=
+          Libraries.passta.pyPassInvariant
+            !PastaLean.pyTruthy
+                (PastaLean.pyStdAny ((PastaLean.pyRange j).map fun b => i != b && l⦋i⦌ +ₚ l⦋b⦌ == (0 : Int)))
         if h_1 : i ≠ j ∧ l⦋i⦌ +ₚ l⦋j⦌ = (0 : Int) then 
           return Bool.true
         else
@@ -64,24 +96,39 @@ def pairs_sum_to_zero := fun (l : PyAny) ↦
 @[spec]
 theorem pairs_sum_to_zero_spec :
     ⦃⌜True⌝⦄ pairs_sum_to_zero l ⦃⇓result =>
-      ⌜result =
-          PastaLean.pyStdAny
-            ((PastaLean.pyRange (PastaLean.pyLen l)).flatMap fun i =>
-              (PastaLean.pyRange (PastaLean.pyLen l)).map fun j => i != j && l⦋i⦌ +ₚ l⦋j⦌ == (0 : Int))⌝⦄ :=
+      ⌜((result =
+              ∃ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen l)),
+                ∃ j ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen l)), i ≠ j ∧ l⦋i⦌ +ₚ l⦋j⦌ = (0 : Int)) ∧
+            result =
+              ∃ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen l)),
+                PastaLean.pyContains
+                  (PastaLean.pySlice l none (some i) none +ₚ
+                    PastaLean.pySlice l (some (i +ₚ (1 : Int))) none none)
+                  (-l⦋i⦌)) ∧
+          (PastaLean.pyLen l ≥ (2 : Int) ∨ result = Bool.false)⌝⦄ :=
   by
   try
     mvcgen [pairs_sum_to_zero, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓cur => ⌜True⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+    · ⇓cur =>
+      ⌜let i := (cur.prefix.length : Int);
+        ((0 : Int) ≤ i ∧ i ≤ PastaLean.pyLen l) ∧
+          ¬∃ a ∈ PastaLean.pyIter (PastaLean.pyRange i),
+              ∃ b ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen l)), a ≠ b ∧ l⦋a⦌ +ₚ l⦋b⦌ = (0 : Int)⌝
+  taste?
   all_goals sorry
 
 theorem pairs_sum_to_zero_correct :
     ∀ (l : PyAny),
       let result := (pairs_sum_to_zero l).run;
-      result =
-        PastaLean.pyStdAny
-          ((PastaLean.pyRange (PastaLean.pyLen l)).flatMap fun i =>
-            (PastaLean.pyRange (PastaLean.pyLen l)).map fun j => i != j && l⦋i⦌ +ₚ l⦋j⦌ == (0 : Int)) :=
+      ((result =
+            ∃ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen l)),
+              ∃ j ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen l)), i ≠ j ∧ l⦋i⦌ +ₚ l⦋j⦌ = (0 : Int)) ∧
+          result =
+            ∃ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen l)),
+              PastaLean.pyContains
+                (PastaLean.pySlice l none (some i) none +ₚ PastaLean.pySlice l (some (i +ₚ (1 : Int))) none none)
+                (-l⦋i⦌)) ∧
+        (PastaLean.pyLen l ≥ (2 : Int) ∨ result = Bool.false) :=
   by
   intro l
   exact pairs_sum_to_zero_spec True.intro
@@ -106,8 +153,29 @@ def pairs_sum_to_zero'rn := fun (l : PyAny) ↦
           False
           
       -/
+      -- THE POINT: an exact iff with "two DISTINCT positions sum to zero". The distinctness is the
+      -- whole content — a lone 0 must NOT count, while [0, 0] must.
+      -- Same property phrased over values instead of index pairs: some element's negation occurs
+      -- somewhere else in the list. Equivalent only because the index exclusion is done correctly.
+      -- A witness needs two positions, so a list shorter than 2 can never answer True.
       for i in (PastaLean.pyRange (PastaLean.pyLen l))do
+        -- No pair drawn entirely from the first `i` outer positions summed to zero, else we returned.
+        let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i))
+        let _ := Libraries.passta.pyPassInvariant (decide (i ≤ PastaLean.pyLen l))
+        let _ :=
+          Libraries.passta.pyPassInvariant
+            !PastaLean.pyTruthy
+                (PastaLean.pyStdAny
+                  ((PastaLean.pyRange i).map fun a =>
+                    PastaLean.pyStdAny
+                      ((PastaLean.pyRange (PastaLean.pyLen l)).map fun b => a != b && l⦋a⦌ +ₚ l⦋b⦌ == (0 : Int))))
         for j in (PastaLean.pyRange (PastaLean.pyLen l))do
+          let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ j))
+          let _ := Libraries.passta.pyPassInvariant (decide (j ≤ PastaLean.pyLen l))
+          let _ :=
+            Libraries.passta.pyPassInvariant
+              !PastaLean.pyTruthy
+                  (PastaLean.pyStdAny ((PastaLean.pyRange j).map fun b => i != b && l⦋i⦌ +ₚ l⦋b⦌ == (0 : Int)))
           if h_1 : i != j && l⦋i⦌ +ₚ l⦋j⦌ == (0 : Int) then 
             return Bool.true
           else

@@ -17,6 +17,11 @@ def longest(strings: List[str]) -> Optional[str]:
     # A non-None result is one of the input strings, and it is of maximal length.
     Ensures(Result() is None or Result() in strings)
     Ensures(Result() is None or all(len(s) <= len(Result()) for s in strings))
+    # The tie-break, and the real content: everything before the returned string is STRICTLY
+    # shorter, so it is the FIRST string of maximal length, not merely one of them.
+    Ensures(len(strings) == 0 or all(
+        len(strings[j]) < len(Result()) for j in range(strings.index(Result()))
+    ))
 
     if not strings:
         return None

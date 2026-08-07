@@ -457,6 +457,34 @@ def conditionIsBoolean (json : Json) : Bool :=
       | _ => false
   | _ => false
 
+/-- `all`/`any` over a single-generator, `Name`-target comprehension, which `quantifiedAllAnyProp?`
+lowers to a `∀`/`∃` in a Prop context. Lives here so the truthiness-coercion sites can consult the
+same predicate — coercing an already-`Prop` operand with `pyTruthy` is a type error. -/
+def isQuantifiedAllAnyJson (json : Json) : Bool :=
+  json.getObjValAs? String "node_type" == .ok "Call" &&
+    (match (json.getObjVal? "func").toOption with
+     | some func =>
+         func.getObjValAs? String "node_type" == .ok "Name" &&
+           (match func.getObjValAs? String "id" with
+            | .ok name => name == "all" || name == "any"
+            | _ => false)
+     | none => false) &&
+    (match json.getObjValAs? (Array Json) "args" with
+     | .ok args =>
+         args.size == 1 &&
+           (match args[0]!.getObjValAs? String "node_type" with
+            | .ok argType =>
+                (argType == "GeneratorExp" || argType == "ListComp") &&
+                  (match args[0]!.getObjValAs? (Array Json) "generators" with
+                   | .ok gens =>
+                       gens.size == 1 &&
+                         (match (gens[0]!.getObjVal? "target").toOption with
+                          | some target => target.getObjValAs? String "node_type" == .ok "Name"
+                          | none => false)
+                   | _ => false)
+            | _ => false)
+     | _ => false)
+
 /-- Lower a condition expression, applying Python truthiness (`pyTruthy`) unless it already
 produces a `Bool`. Used by `if`/`while`/`if`-expression lowering. -/
 def truthyConditionTerm (json : Json) (code : TSyntax `term) : PygenM (TSyntax `term) := do
@@ -581,6 +609,7 @@ def unaryOpSyntax : (kind : SyntaxNodeKind) → Json →
       -- `not x` is a truthiness context too: a bare non-boolean operand needs `pyTruthy`
       -- (same missing coercion as `if x:` / bool operands), else `¬`/`!` gets a raw value.
       let b ← if conditionIsBoolean operandJson then pure operandCode
+              else if propNot && isQuantifiedAllAnyJson operandJson then pure operandCode
               else if propNot then `($(mkIdent ``PastaLean.pyTruthy) $operandCode = true)
                    else `($(mkIdent ``PastaLean.pyTruthy) $operandCode)
       if propNot then `(¬ $b) else `(! $b)
@@ -652,6 +681,9 @@ def boolOpSyntax : (kind : SyntaxNodeKind) → Json →
     let lowerOperand (valueJson : Json) : PygenM (TSyntax `term) := do
       let code ← withTruthinessContext true (withPropCondition opProp (getCode valueJson `term))
       if conditionIsBoolean valueJson then pure code
+      -- An `all`/`any` operand of a contract's `and`/`or` is already a `Prop` (a quantifier), so
+      -- coercing it would be a type error.
+      else if opProp && isQuantifiedAllAnyJson valueJson then pure code
       else if opProp then `($(mkIdent ``PastaLean.pyTruthy) $code = true)
       else `($(mkIdent ``PastaLean.pyTruthy) $code)
     let valuesCodes ← match valuesJson with

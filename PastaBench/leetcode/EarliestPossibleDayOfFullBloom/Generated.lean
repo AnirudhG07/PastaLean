@@ -79,9 +79,8 @@ def earliestFullBloom := fun (plantTime : List Int) ↦ fun (growTime : List Int
 
 @[spec]
 theorem earliestFullBloom_spec :
-    ⦃⌜(PastaLean.pyLen plantTime = PastaLean.pyLen growTime ∧
-            PastaLean.pyAll ((PastaLean.pyIter plantTime).map fun t => decide (t ≥ (0 : Int)))) ∧
-          PastaLean.pyAll ((PastaLean.pyIter growTime).map fun t => decide (t ≥ (0 : Int)))⌝⦄
+    ⦃⌜(PastaLean.pyLen plantTime = PastaLean.pyLen growTime ∧ ∀ t ∈ PastaLean.pyIter plantTime, t ≥ (0 : Int)) ∧
+          ∀ t ∈ PastaLean.pyIter growTime, t ≥ (0 : Int)⌝⦄
       earliestFullBloom plantTime growTime ⦃⇓ans => ⌜ans ≥ (0 : Int) ∧ ans ≥ PastaLean.pySum plantTime⌝⦄ :=
   by
   mvcgen [earliestFullBloom, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
@@ -91,9 +90,8 @@ theorem earliestFullBloom_spec :
 theorem earliestFullBloom_correct :
     ∀ (plantTime : List Int),
       ∀ (growTime : List Int),
-        (PastaLean.pyLen plantTime = PastaLean.pyLen growTime ∧
-              PastaLean.pyAll ((PastaLean.pyIter plantTime).map fun t => decide (t ≥ (0 : Int)))) ∧
-            PastaLean.pyAll ((PastaLean.pyIter growTime).map fun t => decide (t ≥ (0 : Int))) →
+        ((PastaLean.pyLen plantTime = PastaLean.pyLen growTime ∧ ∀ t ∈ PastaLean.pyIter plantTime, t ≥ (0 : Int)) ∧
+            ∀ t ∈ PastaLean.pyIter growTime, t ≥ (0 : Int)) →
           let ans := (earliestFullBloom plantTime growTime).run;
           ans ≥ (0 : Int) ∧ ans ≥ PastaLean.pySum plantTime :=
   by

@@ -46,7 +46,7 @@ attribute [simp] is_palindrome
 @[taste_ingr]
 theorem is_palindrome_correct :
     ∀ (text : String), is_palindrome text = (text = PastaLean.pySlice text none none (some (-(1 : Int)))) := by
-  intros; simp_all (config := { zetaDelta := true }) [taste_ingr]
+  taste?
 
 def is_palindrome'rn := fun (text : String) ↦ text == PastaLean.pySlice text none none (some (-(1 : Int)))
 

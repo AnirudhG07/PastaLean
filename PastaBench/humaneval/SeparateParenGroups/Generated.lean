@@ -106,7 +106,7 @@ def separate_paren_groups := fun (paren_string : String) ↦
 theorem separate_paren_groups_spec :
     ⦃⌜PastaLean.pyCount paren_string "(" = PastaLean.pyCount paren_string ")"⌝⦄
       separate_paren_groups paren_string ⦃⇓results =>
-      ⌜PastaLean.pyAll ((PastaLean.pyIter results).map fun s => PastaLean.pyCount s "(" == PastaLean.pyCount s ")") ∧
+      ⌜(∀ s ∈ PastaLean.pyIter results, PastaLean.pyCount s "(" = PastaLean.pyCount s ")") ∧
           PastaLean.pyStringJoin "" results = PastaLean.pyStringReplace paren_string " " ""⌝⦄ :=
   by
   try
@@ -115,15 +115,15 @@ theorem separate_paren_groups_spec :
       ⌜(PastaLean.pyStringStartswith (PastaLean.pyStringReplace paren_string " " "")
               (PastaLean.pyStringJoin "" results +ₚ group) ∧
             cnt = PastaLean.pyCount group "(" -ₚ PastaLean.pyCount group ")") ∧
-          PastaLean.pyAll ((PastaLean.pyIter results).map fun s => PastaLean.pyCount s "(" == PastaLean.pyCount s ")")⌝
-  sorry
+          ∀ s ∈ PastaLean.pyIter results, PastaLean.pyCount s "(" = PastaLean.pyCount s ")"⌝
+  taste?
   all_goals sorry
 
 theorem separate_paren_groups_correct :
     ∀ (paren_string : String),
       PastaLean.pyCount paren_string "(" = PastaLean.pyCount paren_string ")" →
         let results := (separate_paren_groups paren_string).run;
-        PastaLean.pyAll ((PastaLean.pyIter results).map fun s => PastaLean.pyCount s "(" == PastaLean.pyCount s ")") ∧
+        (∀ s ∈ PastaLean.pyIter results, PastaLean.pyCount s "(" = PastaLean.pyCount s ")") ∧
           PastaLean.pyStringJoin "" results = PastaLean.pyStringReplace paren_string " " "" :=
   by
   intro paren_string hpre

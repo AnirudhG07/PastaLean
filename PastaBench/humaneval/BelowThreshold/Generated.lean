@@ -33,15 +33,16 @@ def below_threshold(l: list, t: int):
 
 namespace PastaBench.humaneval.BelowThreshold
 
-def below_threshold := fun l ↦ fun (t : Int) ↦ PastaLean.pyAll ((PastaLean.pyIter l).map fun x => decide (x < t))
+def below_threshold := fun (l : List PyAny) ↦ fun (t : Int) ↦
+  PastaLean.pyAll ((PastaLean.pyIter l).map fun x => decide (x < t))
 
 attribute [simp] below_threshold
 
 @[taste_ingr]
 theorem below_threshold_correct :
-    ∀ l, ∀ (t : Int), below_threshold l t = PastaLean.pyAll ((PastaLean.pyIter l).map fun x => decide (x < t)) := by
-  intros; sorry
+    ∀ (l : List PyAny), ∀ (t : Int), below_threshold l t = ∀ x ∈ PastaLean.pyIter l, x < t := by taste?
 
-def below_threshold'rn := fun l ↦ fun (t : Int) ↦ PastaLean.pyAll ((PastaLean.pyIter l).map fun x => decide (x < t))
+def below_threshold'rn := fun (l : List PyAny) ↦ fun (t : Int) ↦
+  PastaLean.pyAll ((PastaLean.pyIter l).map fun x => decide (x < t))
 
 end PastaBench.humaneval.BelowThreshold

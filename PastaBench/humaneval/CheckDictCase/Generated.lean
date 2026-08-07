@@ -121,21 +121,16 @@ theorem check_dict_case_spec :
     ⦃⌜True⌝⦄ check_dict_case dict ⦃⇓result =>
       ⌜result =
           (PastaLean.pyLen dict > (0 : Int) ∧
-            (PastaLean.pyTruthy
-                  (PastaLean.pyAll
-                    ((PastaLean.pyIter (PastaLean.pyKeys dict)).map fun k =>
-                      PastaLean.pyTruthy (isinstance k str) && PastaLean.pyTruthy (PastaLean.pyIsLower k))) =
-                true ∨
-              PastaLean.pyTruthy
-                  (PastaLean.pyAll
-                    ((PastaLean.pyIter (PastaLean.pyKeys dict)).map fun k =>
-                      PastaLean.pyTruthy (isinstance k str) && PastaLean.pyTruthy (PastaLean.pyIsUpper k))) =
-                true))⌝⦄ :=
+            ((∀ k ∈ PastaLean.pyIter (PastaLean.pyKeys dict),
+                PastaLean.pyTruthy (isinstance k str) = true ∧ PastaLean.pyTruthy (PastaLean.pyIsLower k) = true) ∨
+              ∀ k ∈ PastaLean.pyIter (PastaLean.pyKeys dict),
+                PastaLean.pyTruthy (isinstance k str) = true ∧
+                  PastaLean.pyTruthy (PastaLean.pyIsUpper k) = true))⌝⦄ :=
   by
   try
     mvcgen [check_dict_case, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · Invariant.withEarlyReturn (onReturn := fun _ _ => ⌜True⌝) (onContinue := fun _ _ => ⌜True⌝)
-  sorry
+  taste?
   all_goals sorry
 
 theorem check_dict_case_correct :
@@ -143,16 +138,10 @@ theorem check_dict_case_correct :
       let result := (check_dict_case dict).run;
       result =
         (PastaLean.pyLen dict > (0 : Int) ∧
-          (PastaLean.pyTruthy
-                (PastaLean.pyAll
-                  ((PastaLean.pyIter (PastaLean.pyKeys dict)).map fun k =>
-                    PastaLean.pyTruthy (isinstance k str) && PastaLean.pyTruthy (PastaLean.pyIsLower k))) =
-              true ∨
-            PastaLean.pyTruthy
-                (PastaLean.pyAll
-                  ((PastaLean.pyIter (PastaLean.pyKeys dict)).map fun k =>
-                    PastaLean.pyTruthy (isinstance k str) && PastaLean.pyTruthy (PastaLean.pyIsUpper k))) =
-              true)) :=
+          ((∀ k ∈ PastaLean.pyIter (PastaLean.pyKeys dict),
+              PastaLean.pyTruthy (isinstance k str) = true ∧ PastaLean.pyTruthy (PastaLean.pyIsLower k) = true) ∨
+            ∀ k ∈ PastaLean.pyIter (PastaLean.pyKeys dict),
+              PastaLean.pyTruthy (isinstance k str) = true ∧ PastaLean.pyTruthy (PastaLean.pyIsUpper k) = true)) :=
   by
   intro dict
   exact check_dict_case_spec True.intro

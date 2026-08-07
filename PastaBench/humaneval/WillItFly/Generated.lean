@@ -37,16 +37,17 @@ def will_it_fly(q,w):
     will_it_fly([3], 5) ➞ True
     # 3 is less than the maximum possible weight, and it's balanced.
     '''
-    Requires(all(x >= 0 for x in q))
-    Requires(w >= 0)
-    Ensures(Result() == (q == q[::-1] and sum(q) <= w))
+    # The point: "flies" == palindromic AND within the weight budget. Stated index-wise so the
+    # palindrome condition is a real quantified property rather than a reversal of the list.
+    # (No sign restriction on q: the recorded inputs include negative elements.)
+    Ensures(Result() == (all(q[i] == q[len(q) - 1 - i] for i in range(len(q))) and sum(q) <= w))
 
     return q == q[::-1] and sum(q) <= w
 -/
 
 namespace PastaBench.humaneval.WillItFly
 
-def will_it_fly := fun (q : List Int) ↦ fun (w : Int) ↦
+def will_it_fly := fun (q : PyAny) ↦ fun w ↦
   if PastaLean.pyTruthy (q == PastaLean.pySlice q none none (some (-(1 : Int)))) then decide (PastaLean.pySum q ≤ w)
   else q == PastaLean.pySlice q none none (some (-(1 : Int)))
 
@@ -54,14 +55,15 @@ attribute [simp] will_it_fly
 
 @[taste_ingr]
 theorem will_it_fly_correct :
-    ∀ (q : List Int),
-      ∀ (w : Int),
-        PastaLean.pyAll ((PastaLean.pyIter q).map fun x => decide (x ≥ (0 : Int))) →
-          w ≥ (0 : Int) →
-            will_it_fly q w = (q = PastaLean.pySlice q none none (some (-(1 : Int))) ∧ PastaLean.pySum q ≤ w) :=
-  by sorry
+    ∀ (q : PyAny),
+      ∀ w,
+        will_it_fly q w =
+          ((∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen q)),
+              q⦋i⦌ = q⦋PastaLean.pyLen q -ₚ (1 : Int) -ₚ i⦌) ∧
+            PastaLean.pySum q ≤ w) :=
+  by taste?
 
-def will_it_fly'rn := fun (q : List Int) ↦ fun (w : Int) ↦
+def will_it_fly'rn := fun (q : PyAny) ↦ fun w ↦
   if PastaLean.pyTruthy (q == PastaLean.pySlice q none none (some (-(1 : Int)))) then decide (PastaLean.pySum q ≤ w)
   else q == PastaLean.pySlice q none none (some (-(1 : Int)))
 

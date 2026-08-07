@@ -85,7 +85,7 @@ theorem fix_spaces_spec :
       ⌜let i := (cur.prefix.length : Int);
         (((2 : Int) < i ∧ i ≤ PastaLean.pyLen text) ∧ PastaLean.pyLen ans ≤ PastaLean.pyLen text) ∧
           !(PastaLean.pyContains ans (" " *ₚ (i +ₚ (1 : Int))))⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem fix_spaces_correct :

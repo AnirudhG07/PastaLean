@@ -44,7 +44,7 @@ attribute [simp] multiply
 @[taste_ingr]
 theorem multiply_correct :
     ∀ (a : Int), ∀ (b : Int), multiply a b = PastaLean.pyAbs a %ₚ (10 : Int) *ₚ (PastaLean.pyAbs b %ₚ (10 : Int)) := by
-  intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
 
 def multiply'rn := fun (a : Int) ↦ fun (b : Int) ↦
   PastaLean.pyInt (PastaLean.pyStr a)⦋(-1 : Int)⦌ *ₚ PastaLean.pyInt (PastaLean.pyStr b)⦋(-1 : Int)⦌

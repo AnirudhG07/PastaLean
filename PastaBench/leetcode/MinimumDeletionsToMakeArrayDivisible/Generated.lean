@@ -98,9 +98,8 @@ def minOperations := fun (nums : List Int) ↦ fun (numsDivide : List Int) ↦
 
 @[spec]
 theorem minOperations_spec :
-    ⦃⌜(PastaLean.pyLen numsDivide > (0 : Int) ∧
-            PastaLean.pyAll ((PastaLean.pyIter numsDivide).map fun v => decide (v > (0 : Int)))) ∧
-          PastaLean.pyAll ((PastaLean.pyIter nums).map fun v => decide (v > (0 : Int)))⌝⦄
+    ⦃⌜(PastaLean.pyLen numsDivide > (0 : Int) ∧ ∀ v ∈ PastaLean.pyIter numsDivide, v > (0 : Int)) ∧
+          ∀ v ∈ PastaLean.pyIter nums, v > (0 : Int)⌝⦄
       minOperations nums numsDivide ⦃⇓result =>
       ⌜result = -(1 : Int) ∨ (0 : Int) ≤ result ∧ result < PastaLean.pyLen nums⌝⦄ :=
   by
@@ -113,9 +112,8 @@ theorem minOperations_spec :
 theorem minOperations_correct :
     ∀ (nums : List Int),
       ∀ (numsDivide : List Int),
-        (PastaLean.pyLen numsDivide > (0 : Int) ∧
-              PastaLean.pyAll ((PastaLean.pyIter numsDivide).map fun v => decide (v > (0 : Int)))) ∧
-            PastaLean.pyAll ((PastaLean.pyIter nums).map fun v => decide (v > (0 : Int))) →
+        ((PastaLean.pyLen numsDivide > (0 : Int) ∧ ∀ v ∈ PastaLean.pyIter numsDivide, v > (0 : Int)) ∧
+            ∀ v ∈ PastaLean.pyIter nums, v > (0 : Int)) →
           let result := (minOperations nums numsDivide).run;
           result = -(1 : Int) ∨ (0 : Int) ≤ result ∧ result < PastaLean.pyLen nums :=
   by

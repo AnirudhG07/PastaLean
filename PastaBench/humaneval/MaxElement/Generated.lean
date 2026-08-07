@@ -37,19 +37,17 @@ def max_element(l: list):
 
 namespace PastaBench.humaneval.MaxElement
 
-def max_element := fun l ↦ PastaLean.pyMax l
+def max_element := fun (l : List PyAny) ↦ PastaLean.pyMax l
 
 attribute [simp] max_element
 
 @[taste_ingr]
 theorem max_element_correct :
-    ∀ l,
+    ∀ (l : List PyAny),
       PastaLean.pyLen l > (0 : Int) →
-        PastaLean.pyContains l (max_element l) ∧
-          PastaLean.pyTruthy (PastaLean.pyAll ((PastaLean.pyIter l).map fun x => decide (x ≤ max_element l))) =
-            true :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+        PastaLean.pyContains l (max_element l) ∧ ∀ x ∈ PastaLean.pyIter l, x ≤ max_element l :=
+  by taste?
 
-def max_element'rn := fun l ↦ PastaLean.pyMax l
+def max_element'rn := fun (l : List PyAny) ↦ PastaLean.pyMax l
 
 end PastaBench.humaneval.MaxElement

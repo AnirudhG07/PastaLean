@@ -21,6 +21,24 @@ from typing import List
 from contracts import *
 
 
+def count_depth(s: str) -> int:
+    Requires(all(c == '(' or c == ')' for c in s))
+    # The point: the returned number IS the maximum nesting depth of s — it dominates the depth
+    # of every prefix, and some prefix actually attains it. (Upper bound + attained = maximum.)
+    Ensures(all(s[:k].count('(') - s[:k].count(')') <= Result() for k in range(len(s) + 1)))
+    Ensures(any(s[:k].count('(') - s[:k].count(')') == Result() for k in range(len(s) + 1)))
+    max_depth, cnt = 0, 0
+    for ch in s:
+        # max_depth is the running maximum of the prefix depths, so it dominates cnt and, since
+        # it starts at the depth of the empty prefix, is never negative.
+        Invariant(max_depth >= 0)
+        Invariant(cnt <= max_depth)
+        if ch == "(": cnt += 1
+        if ch == ")": cnt -= 1
+        max_depth = max(max_depth, cnt)
+    return max_depth
+
+
 def parse_nested_parens(paren_string: str) -> List[int]:
     """ Input to this function is a string represented multiple groups for nested parentheses separated by spaces.
     For each of the group, output the deepest level of nesting of parentheses.
@@ -29,32 +47,32 @@ def parse_nested_parens(paren_string: str) -> List[int]:
     >>> parse_nested_parens('(()()) ((())) () ((())()())')
     [2, 3, 1, 3]
     """
-    Ensures(all(x >= 0 for x in Result()))
+    Requires(all(c == '(' or c == ')' or c == ' ' for c in paren_string))
+    # One entry per non-empty space-separated group, in order.
+    Ensures(len(Result()) == len([g for g in paren_string.split(" ") if g != ""]))
+    # Every group opens at least once, so its deepest level is at least 1.
+    Ensures(all(x >= 1 for x in Result()))
+    # The point: entry i is the maximum nesting depth of group i — the largest bracket depth
+    # (#'(' minus #')') reached by any prefix of that group.
+    Ensures(Result() == [max([g[:k].count('(') - g[:k].count(')') for k in range(len(g) + 1)])
+                         for g in paren_string.split(" ") if g != ""])
 
-    
-    def count_depth(s: str) -> int:
-        Ensures(Result() >= 0)
-        max_depth, cnt = 0, 0
-        for ch in s:
-            Invariant(max_depth >= 0)
-            if ch == "(": cnt += 1
-            if ch == ")": cnt -= 1
-            max_depth = max(max_depth, cnt)
-        return max_depth
-    
     return [count_depth(s) for s in paren_string.split(" ") if s != ""]
 -/
 
 namespace PastaBench.humaneval.ParseNestedParens
 
-private def _parse_nested_parens'count_depth := fun (s : String) ↦
+def count_depth := fun (s : String) ↦
   (do
     let __unpack_value_1 := ((0 : Int), (0 : Int))
     let __unpack_pair_1 := __unpack_value_1
     let mut max_depth : Int := Prod.fst __unpack_pair_1
     let mut cnt : Int := Prod.snd __unpack_pair_1
     for ch in (PastaLean.pyIter s)do
+      -- max_depth is the running maximum of the prefix depths, so it dominates cnt and, since
+      -- it starts at the depth of the empty prefix, is never negative.
       let _ := Libraries.passta.pyPassInvariant (decide (max_depth ≥ (0 : Int)))
+      let _ := Libraries.passta.pyPassInvariant (decide (cnt ≤ max_depth))
       if h_1 : ch = "(" then 
         cnt := cnt +ₚ (1 : Int)
       else
@@ -67,36 +85,55 @@ private def _parse_nested_parens'count_depth := fun (s : String) ↦
     return max_depth : Id _)
 
 @[spec]
-theorem _parse_nested_parens'count_depth_spec :
-    ⦃⌜True⌝⦄ _parse_nested_parens'count_depth s ⦃⇓max_depth => ⌜max_depth ≥ (0 : Int)⌝⦄ :=
+theorem count_depth_spec :
+    ⦃⌜∀ c ∈ PastaLean.pyIter s, c = "(" ∨ c = ")"⌝⦄ count_depth s ⦃⇓max_depth =>
+      ⌜(∀ k ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen s +ₚ (1 : Int))),
+            PastaLean.pyCount (PastaLean.pySlice s none (some k) none) "(" -ₚ
+                PastaLean.pyCount (PastaLean.pySlice s none (some k) none) ")" ≤
+              max_depth) ∧
+          ∃ k ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen s +ₚ (1 : Int))),
+            PastaLean.pyCount (PastaLean.pySlice s none (some k) none) "(" -ₚ
+                PastaLean.pyCount (PastaLean.pySlice s none (some k) none) ")" =
+              max_depth⌝⦄ :=
   by
   try
-    mvcgen [_parse_nested_parens'count_depth, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓⟨cur, max_depth, cnt⟩ => ⌜max_depth ≥ (0 : Int)⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+    mvcgen [count_depth, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · ⇓⟨cur, max_depth, cnt⟩ => ⌜max_depth ≥ (0 : Int) ∧ cnt ≤ max_depth⌝
+  taste?
   all_goals sorry
 
-def parse_nested_parens := fun (paren_string : String) ↦
-  (List.filter (fun s => s ≠ "") (PastaLean.pyIter (PastaLean.pyStringSplit paren_string " "))).map fun s =>
-    _parse_nested_parens'count_depth s
+theorem count_depth_correct :
+    ∀ (s : String),
+      (∀ c ∈ PastaLean.pyIter s, c = "(" ∨ c = ")") →
+        let max_depth := (count_depth s).run;
+        (∀ k ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen s +ₚ (1 : Int))),
+            PastaLean.pyCount (PastaLean.pySlice s none (some k) none) "(" -ₚ
+                PastaLean.pyCount (PastaLean.pySlice s none (some k) none) ")" ≤
+              max_depth) ∧
+          ∃ k ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen s +ₚ (1 : Int))),
+            PastaLean.pyCount (PastaLean.pySlice s none (some k) none) "(" -ₚ
+                PastaLean.pyCount (PastaLean.pySlice s none (some k) none) ")" =
+              max_depth :=
+  by
+  intro s hpre
+  exact count_depth_spec hpre
 
-attribute [simp] parse_nested_parens
-
-@[taste_ingr]
-theorem parse_nested_parens_correct :
-    ∀ (paren_string : String),
-      PastaLean.pyAll ((PastaLean.pyIter (parse_nested_parens paren_string)).map fun x => decide (x ≥ (0 : Int))) :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
-
-private def _parse_nested_parens'count_depth'rn := fun (s : String) ↦
+def count_depth'rn := fun (s : String) ↦
   Id.run
     (do
+      let _ :=
+        Libraries.passta.pyPassRequires (PastaLean.pyAll ((PastaLean.pyIter s).map fun c => c == "(" || c == ")"))
+      -- The point: the returned number IS the maximum nesting depth of s — it dominates the depth
+      -- of every prefix, and some prefix actually attains it. (Upper bound + attained = maximum.)
       let __unpack_value_1 := ((0 : Int), (0 : Int))
       let __unpack_pair_1 := __unpack_value_1
       let mut max_depth : Int := Prod.fst __unpack_pair_1
       let mut cnt : Int := Prod.snd __unpack_pair_1
       for ch in (PastaLean.pyIter s)do
+        -- max_depth is the running maximum of the prefix depths, so it dominates cnt and, since
+        -- it starts at the depth of the empty prefix, is never negative.
         let _ := Libraries.passta.pyPassInvariant (decide (max_depth ≥ (0 : Int)))
+        let _ := Libraries.passta.pyPassInvariant (decide (cnt ≤ max_depth))
         if h_1 : ch == "(" then 
           cnt := cnt +ₚ (1 : Int)
         else
@@ -108,8 +145,31 @@ private def _parse_nested_parens'count_depth'rn := fun (s : String) ↦
         max_depth := PastaLean.pyMax [max_depth, cnt]
       return max_depth)
 
+def parse_nested_parens := fun (paren_string : String) ↦
+  (List.filter (fun s => s ≠ "") (PastaLean.pyIter (PastaLean.pyStringSplit paren_string " "))).map fun s =>
+    count_depth s
+
+attribute [simp] parse_nested_parens
+
+@[taste_ingr]
+theorem parse_nested_parens_correct :
+    ∀ (paren_string : String),
+      (∀ c ∈ PastaLean.pyIter paren_string, (c = "(" ∨ c = ")") ∨ c = " ") →
+        (PastaLean.pyLen (parse_nested_parens paren_string) =
+              PastaLean.pyLen
+                ((List.filter (fun g => g ≠ "") (PastaLean.pyIter (PastaLean.pyStringSplit paren_string " "))).map
+                  fun g => g) ∧
+            ∀ x ∈ PastaLean.pyIter (parse_nested_parens paren_string), x ≥ (1 : Int)) ∧
+          parse_nested_parens paren_string =
+            (List.filter (fun g => g ≠ "") (PastaLean.pyIter (PastaLean.pyStringSplit paren_string " "))).map fun g =>
+              PastaLean.pyMax
+                ((PastaLean.pyRange (PastaLean.pyLen g +ₚ (1 : Int))).map fun k =>
+                  PastaLean.pyCount (PastaLean.pySlice g none (some k) none) "(" -ₚ
+                    PastaLean.pyCount (PastaLean.pySlice g none (some k) none) ")") :=
+  by taste?
+
 def parse_nested_parens'rn := fun (paren_string : String) ↦
   (List.filter (fun s => s != "") (PastaLean.pyIter (PastaLean.pyStringSplit paren_string " "))).map fun s =>
-    _parse_nested_parens'count_depth'rn s
+    count_depth'rn s
 
 end PastaBench.humaneval.ParseNestedParens

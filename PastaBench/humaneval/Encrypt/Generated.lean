@@ -31,7 +31,16 @@ def encrypt(s: str) -> str:
     encrypt('gf') returns 'kj'
     encrypt('et') returns 'ix'
     """
+    # The map is char-for-char, so the length is preserved.
     Ensures(len(Result()) == len(s))
+    # THE POINT: on the lowercase alphabet this is the rotation by 2*2 = 4, stated
+    # modularly (so the wrap-around from 'w'..'z' is covered by the same clause) and
+    # closed on 'a'..'z'; every other character is left alone.
+    Ensures(all("a" <= Result()[i] <= "z" for i in range(len(s)) if "a" <= s[i] <= "z"))
+    Ensures(all(Result()[i] == "abcdefghijklmnopqrstuvwxyz"[(ord(s[i]) - ord("a") + 4) % 26]
+                for i in range(len(s)) if "a" <= s[i] <= "z"))
+    Ensures(all(Result()[i] == s[i]
+                for i in range(len(s)) if not ("a" <= s[i] <= "z")))
     d = 'abcdefghijklmnopqrstuvwxyz'
     return "".join(map(lambda ch: chr((ord(ch) - ord("a") + 4) % 26 + ord("a")) if ch in d else ch, s))
 -/
@@ -55,8 +64,17 @@ attribute [simp] encrypt
 theorem encrypt_correct :
     ∀ (s : String),
       let d := "abcdefghijklmnopqrstuvwxyz"
-      PastaLean.pyLen (encrypt s) = PastaLean.pyLen s :=
-  by sorry
+      ((PastaLean.pyLen (encrypt s) = PastaLean.pyLen s ∧
+            ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen s)),
+              "a" ≤ s⦋i⦌ ∧ s⦋i⦌ ≤ "z" → "a" ≤ (encrypt s)⦋i⦌ ∧ (encrypt s)⦋i⦌ ≤ "z") ∧
+          ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen s)),
+            "a" ≤ s⦋i⦌ ∧ s⦋i⦌ ≤ "z" →
+              (encrypt s)⦋i⦌ =
+                PastaLean.pyStringGetItemStr "abcdefghijklmnopqrstuvwxyz"
+                  ((PastaLean.pyOrd s⦋i⦌ -ₚ PastaLean.pyOrd "a" +ₚ (4 : Int)) %ₚ (26 : Int))) ∧
+        ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen s)),
+          ¬("a" ≤ s⦋i⦌ ∧ s⦋i⦌ ≤ "z") → (encrypt s)⦋i⦌ = s⦋i⦌ :=
+  by taste?
 
 def encrypt'rn := fun (s : String) ↦
   let d := ("abcdefghijklmnopqrstuvwxyz" : String)

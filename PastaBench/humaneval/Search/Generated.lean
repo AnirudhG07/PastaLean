@@ -115,47 +115,28 @@ def search := fun (lst : List Int) ↦
 
 @[spec]
 theorem search_spec :
-    ⦃⌜PastaLean.pyLen lst > (0 : Int) ∧ PastaLean.pyAll ((PastaLean.pyIter lst).map fun x => decide (x > (0 : Int)))⌝⦄
-      search lst ⦃⇓ans =>
+    ⦃⌜PastaLean.pyLen lst > (0 : Int) ∧ ∀ x ∈ PastaLean.pyIter lst, x > (0 : Int)⌝⦄ search lst ⦃⇓ans =>
       ⌜(ans ≥ -(1 : Int) ∧
             (ans ≤ -(1 : Int) ∨
               (PastaLean.pyContains lst ans ∧ PastaLean.pyCount lst ans ≥ ans) ∧
-                PastaLean.pyTruthy
-                    (PastaLean.pyAll
-                      ((List.filter (fun y => y > (0 : Int) ∧ PastaLean.pyCount lst y ≥ y) (PastaLean.pyIter lst)).map
-                        fun y => decide (y ≤ ans))) =
-                  true)) ∧
-          (ans > -(1 : Int) ∨
-            PastaLean.pyTruthy
-                (PastaLean.pyAll
-                  ((List.filter (fun y => y > (0 : Int)) (PastaLean.pyIter lst)).map fun y =>
-                    decide (PastaLean.pyCount lst y < y))) =
-              true)⌝⦄ :=
+                ∀ y ∈ PastaLean.pyIter lst, y > (0 : Int) ∧ PastaLean.pyCount lst y ≥ y → y ≤ ans)) ∧
+          (ans > -(1 : Int) ∨ ∀ y ∈ PastaLean.pyIter lst, y > (0 : Int) → PastaLean.pyCount lst y < y)⌝⦄ :=
   by
   try
     mvcgen [search, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓cur => ⌜True⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem search_correct :
     ∀ (lst : List Int),
-      PastaLean.pyLen lst > (0 : Int) ∧ PastaLean.pyAll ((PastaLean.pyIter lst).map fun x => decide (x > (0 : Int))) →
+      (PastaLean.pyLen lst > (0 : Int) ∧ ∀ x ∈ PastaLean.pyIter lst, x > (0 : Int)) →
         let ans := (search lst).run;
         (ans ≥ -(1 : Int) ∧
             (ans ≤ -(1 : Int) ∨
               (PastaLean.pyContains lst ans ∧ PastaLean.pyCount lst ans ≥ ans) ∧
-                PastaLean.pyTruthy
-                    (PastaLean.pyAll
-                      ((List.filter (fun y => y > (0 : Int) ∧ PastaLean.pyCount lst y ≥ y) (PastaLean.pyIter lst)).map
-                        fun y => decide (y ≤ ans))) =
-                  true)) ∧
-          (ans > -(1 : Int) ∨
-            PastaLean.pyTruthy
-                (PastaLean.pyAll
-                  ((List.filter (fun y => y > (0 : Int)) (PastaLean.pyIter lst)).map fun y =>
-                    decide (PastaLean.pyCount lst y < y))) =
-              true) :=
+                ∀ y ∈ PastaLean.pyIter lst, y > (0 : Int) ∧ PastaLean.pyCount lst y ≥ y → y ≤ ans)) ∧
+          (ans > -(1 : Int) ∨ ∀ y ∈ PastaLean.pyIter lst, y > (0 : Int) → PastaLean.pyCount lst y < y) :=
   by
   intro lst hpre
   exact search_spec hpre

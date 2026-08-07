@@ -20,98 +20,109 @@ set_option maxHeartbeats 800000
 from contracts import *
 
 
+# Hoisted to module scope: an `Ensures` inside a nested helper is attributed to the enclosing
+# entry point and evaluated in its scope, where `score` does not exist.
+def to_letter_grade(score: float) -> str:
+    Requires(score >= 0.0 and score <= 4.0)
+    Ensures((score == 4.0 and Result() == "A+") or
+            (score > 3.7 and score < 4.0 and Result() == "A") or
+            (score > 3.3 and score <= 3.7 and Result() == "A-") or
+            (score > 3.0 and score <= 3.3 and Result() == "B+") or
+            (score > 2.7 and score <= 3.0 and Result() == "B") or
+            (score > 2.3 and score <= 2.7 and Result() == "B-") or
+            (score > 2.0 and score <= 2.3 and Result() == "C+") or
+            (score > 1.7 and score <= 2.0 and Result() == "C") or
+            (score > 1.3 and score <= 1.7 and Result() == "C-") or
+            (score > 1.0 and score <= 1.3 and Result() == "D+") or
+            (score > 0.7 and score <= 1.0 and Result() == "D") or
+            (score > 0.0 and score <= 0.7 and Result() == "D-") or
+            (score == 0.0 and Result() == "E"))
+    if score == 4.0:
+      return "A+"
+    elif score > 3.7:
+      return "A"
+    elif score > 3.3:
+      return "A-"
+    elif score > 3.0:
+      return "B+"
+    elif score > 2.7:
+      return "B"
+    elif score > 2.3:
+      return "B-"
+    elif score > 2.0:
+      return "C+"
+    elif score > 1.7:
+      return "C"
+    elif score > 1.3:
+      return "C-"
+    elif score > 1.0:
+      return "D+"
+    elif score > 0.7:
+      return "D"
+    elif score > 0.0:
+      return "D-"
+    else:
+      return "E"
+
+
 def numerical_letter_grade(grades: list[float]) -> list[str]:
     """It is the last week of the semester and the teacher has to give the grades
     to students. The teacher has been making her own algorithm for grading.
     The only problem is, she has lost the code she used for grading.
-    She has given you a list of GPAs for some students and you have to write 
+    She has given you a list of GPAs for some students and you have to write
     a function that can output a list of letter grades using the following table:
              GPA       |    Letter grade
               4.0                A+
-            > 3.7                A 
-            > 3.3                A- 
+            > 3.7                A
+            > 3.3                A-
             > 3.0                B+
-            > 2.7                B 
+            > 2.7                B
             > 2.3                B-
             > 2.0                C+
             > 1.7                C
             > 1.3                C-
-            > 1.0                D+ 
-            > 0.7                D 
+            > 1.0                D+
+            > 0.7                D
             > 0.0                D-
               0.0                E
-    
+
 
     Example:
     grade_equation([4.0, 3, 1.7, 2, 3.5]) ==> ['A+', 'B', 'C-', 'C', 'A-']
     """
-    Requires(all(0.0 <= g <= 4.0 for g in grades))
+    Requires(all(g >= 0.0 and g <= 4.0 for g in grades))
     Ensures(len(Result()) == len(grades))
+    # The point: elementwise, output letter i is the band the i'th GPA falls in.
     Ensures(all(
         ((grades[i] == 4.0 and Result()[i] == "A+") or
-         (3.7 < grades[i] < 4.0 and Result()[i] == "A") or
-         (3.3 < grades[i] <= 3.7 and Result()[i] == "A-") or
-         (3.0 < grades[i] <= 3.3 and Result()[i] == "B+") or
-         (2.7 < grades[i] <= 3.0 and Result()[i] == "B") or
-         (2.3 < grades[i] <= 2.7 and Result()[i] == "B-") or
-         (2.0 < grades[i] <= 2.3 and Result()[i] == "C+") or
-         (1.7 < grades[i] <= 2.0 and Result()[i] == "C") or
-         (1.3 < grades[i] <= 1.7 and Result()[i] == "C-") or
-         (1.0 < grades[i] <= 1.3 and Result()[i] == "D+") or
-         (0.7 < grades[i] <= 1.0 and Result()[i] == "D") or
-         (0.0 < grades[i] <= 0.7 and Result()[i] == "D-") or
+         (grades[i] > 3.7 and grades[i] < 4.0 and Result()[i] == "A") or
+         (grades[i] > 3.3 and grades[i] <= 3.7 and Result()[i] == "A-") or
+         (grades[i] > 3.0 and grades[i] <= 3.3 and Result()[i] == "B+") or
+         (grades[i] > 2.7 and grades[i] <= 3.0 and Result()[i] == "B") or
+         (grades[i] > 2.3 and grades[i] <= 2.7 and Result()[i] == "B-") or
+         (grades[i] > 2.0 and grades[i] <= 2.3 and Result()[i] == "C+") or
+         (grades[i] > 1.7 and grades[i] <= 2.0 and Result()[i] == "C") or
+         (grades[i] > 1.3 and grades[i] <= 1.7 and Result()[i] == "C-") or
+         (grades[i] > 1.0 and grades[i] <= 1.3 and Result()[i] == "D+") or
+         (grades[i] > 0.7 and grades[i] <= 1.0 and Result()[i] == "D") or
+         (grades[i] > 0.0 and grades[i] <= 0.7 and Result()[i] == "D-") or
          (grades[i] == 0.0 and Result()[i] == "E"))
         for i in range(len(grades))
     ))
+    # Equal GPAs always get the same letter (the banding is a function of the score alone).
+    Ensures(all(
+        grades[i] != grades[0] or Result()[i] == Result()[0]
+        for i in range(len(grades))
+    ))
 
-    def to_letter_grade(score: float) -> str:
-      Requires(0.0 <= score <= 4.0)
-      Ensures((score == 4.0 and Result() == "A+") or
-              (3.7 < score < 4.0 and Result() == "A") or
-              (3.3 < score <= 3.7 and Result() == "A-") or
-              (3.0 < score <= 3.3 and Result() == "B+") or
-              (2.7 < score <= 3.0 and Result() == "B") or
-              (2.3 < score <= 2.7 and Result() == "B-") or
-              (2.0 < score <= 2.3 and Result() == "C+") or
-              (1.7 < score <= 2.0 and Result() == "C") or
-              (1.3 < score <= 1.7 and Result() == "C-") or
-              (1.0 < score <= 1.3 and Result() == "D+") or
-              (0.7 < score <= 1.0 and Result() == "D") or
-              (0.0 < score <= 0.7 and Result() == "D-") or
-              (score == 0.0 and Result() == "E"))
-      if score == 4.0:
-        return "A+"
-      elif score > 3.7:
-        return "A"
-      elif score > 3.3:
-        return "A-"
-      elif score > 3.0:
-        return "B+"
-      elif score > 2.7:
-        return "B"
-      elif score > 2.3:
-        return "B-"
-      elif score > 2.0:
-        return "C+"
-      elif score > 1.7:
-        return "C"
-      elif score > 1.3:
-        return "C-"
-      elif score > 1.0:
-        return "D+"
-      elif score > 0.7:
-        return "D"
-      elif score > 0.0:
-        return "D-"
-      else:
-        return "E"
-    
     return [to_letter_grade(x) for x in grades]
 -/
 
 namespace PastaBench.humaneval.NumericalLetterGrade
 
-private def _numerical_letter_grade'to_letter_grade := fun (score : Rat) ↦
+-- Hoisted to module scope: an `Ensures` inside a nested helper is attributed to the enclosing
+-- entry point and evaluated in its scope, where `score` does not exist.
+def to_letter_grade := fun (score : Rat) ↦
   if score = (4.0 : Rat) then "A+"
   else
     if score > (3.7 : Rat) then "A"
@@ -133,74 +144,28 @@ private def _numerical_letter_grade'to_letter_grade := fun (score : Rat) ↦
                     if score > (1.0 : Rat) then "D+"
                     else if score > (0.7 : Rat) then "D" else if score > (0.0 : Rat) then "D-" else "E"
 
-attribute [simp] _numerical_letter_grade'to_letter_grade
+attribute [simp] to_letter_grade
 
 @[taste_ingr]
-theorem _numerical_letter_grade'to_letter_grade_spec :
+theorem to_letter_grade_correct :
     ∀ (score : Rat),
-      (0.0 : Rat) ≤ score ∧ score ≤ (4.0 : Rat) →
-        (((((((((((score = (4.0 : Rat) ∧ _numerical_letter_grade'to_letter_grade score = "A+" ∨
-                                ((3.7 : Rat) < score ∧ score < (4.0 : Rat)) ∧
-                                  _numerical_letter_grade'to_letter_grade score = "A") ∨
-                              ((3.3 : Rat) < score ∧ score ≤ (3.7 : Rat)) ∧
-                                _numerical_letter_grade'to_letter_grade score = "A-") ∨
-                            ((3.0 : Rat) < score ∧ score ≤ (3.3 : Rat)) ∧
-                              _numerical_letter_grade'to_letter_grade score = "B+") ∨
-                          ((2.7 : Rat) < score ∧ score ≤ (3.0 : Rat)) ∧
-                            _numerical_letter_grade'to_letter_grade score = "B") ∨
-                        ((2.3 : Rat) < score ∧ score ≤ (2.7 : Rat)) ∧
-                          _numerical_letter_grade'to_letter_grade score = "B-") ∨
-                      ((2.0 : Rat) < score ∧ score ≤ (2.3 : Rat)) ∧
-                        _numerical_letter_grade'to_letter_grade score = "C+") ∨
-                    ((1.7 : Rat) < score ∧ score ≤ (2.0 : Rat)) ∧ _numerical_letter_grade'to_letter_grade score = "C") ∨
-                  ((1.3 : Rat) < score ∧ score ≤ (1.7 : Rat)) ∧ _numerical_letter_grade'to_letter_grade score = "C-") ∨
-                ((1.0 : Rat) < score ∧ score ≤ (1.3 : Rat)) ∧ _numerical_letter_grade'to_letter_grade score = "D+") ∨
-              ((0.7 : Rat) < score ∧ score ≤ (1.0 : Rat)) ∧ _numerical_letter_grade'to_letter_grade score = "D") ∨
-            ((0.0 : Rat) < score ∧ score ≤ (0.7 : Rat)) ∧ _numerical_letter_grade'to_letter_grade score = "D-") ∨
-          score = (0.0 : Rat) ∧ _numerical_letter_grade'to_letter_grade score = "E" :=
-  by intros; sorry
+      score ≥ (0.0 : Rat) ∧ score ≤ (4.0 : Rat) →
+        (((((((((((score = (4.0 : Rat) ∧ to_letter_grade score = "A+" ∨
+                                (score > (3.7 : Rat) ∧ score < (4.0 : Rat)) ∧ to_letter_grade score = "A") ∨
+                              (score > (3.3 : Rat) ∧ score ≤ (3.7 : Rat)) ∧ to_letter_grade score = "A-") ∨
+                            (score > (3.0 : Rat) ∧ score ≤ (3.3 : Rat)) ∧ to_letter_grade score = "B+") ∨
+                          (score > (2.7 : Rat) ∧ score ≤ (3.0 : Rat)) ∧ to_letter_grade score = "B") ∨
+                        (score > (2.3 : Rat) ∧ score ≤ (2.7 : Rat)) ∧ to_letter_grade score = "B-") ∨
+                      (score > (2.0 : Rat) ∧ score ≤ (2.3 : Rat)) ∧ to_letter_grade score = "C+") ∨
+                    (score > (1.7 : Rat) ∧ score ≤ (2.0 : Rat)) ∧ to_letter_grade score = "C") ∨
+                  (score > (1.3 : Rat) ∧ score ≤ (1.7 : Rat)) ∧ to_letter_grade score = "C-") ∨
+                (score > (1.0 : Rat) ∧ score ≤ (1.3 : Rat)) ∧ to_letter_grade score = "D+") ∨
+              (score > (0.7 : Rat) ∧ score ≤ (1.0 : Rat)) ∧ to_letter_grade score = "D") ∨
+            (score > (0.0 : Rat) ∧ score ≤ (0.7 : Rat)) ∧ to_letter_grade score = "D-") ∨
+          score = (0.0 : Rat) ∧ to_letter_grade score = "E" :=
+  by taste?
 
-def numerical_letter_grade := fun (grades : List Rat) ↦
-  (PastaLean.pyIter grades).map fun x => _numerical_letter_grade'to_letter_grade x
-
-attribute [simp] numerical_letter_grade
-
-@[taste_ingr]
-theorem numerical_letter_grade_correct :
-    ∀ (grades : List Rat),
-      PastaLean.pyAll ((PastaLean.pyIter grades).map fun g => decide ((0.0 : Rat) ≤ g) && decide (g ≤ (4.0 : Rat))) →
-        PastaLean.pyLen (numerical_letter_grade grades) = PastaLean.pyLen grades ∧
-          PastaLean.pyTruthy
-              (PastaLean.pyAll
-                ((PastaLean.pyRange (PastaLean.pyLen grades)).map fun i =>
-                  grades⦋i⦌ == (4.0 : Rat) && (numerical_letter_grade grades)⦋i⦌ == "A+" ||
-                                          decide ((3.7 : Rat) < grades⦋i⦌) && decide (grades⦋i⦌ < (4.0 : Rat)) &&
-                                            (numerical_letter_grade grades)⦋i⦌ == "A" ||
-                                        decide ((3.3 : Rat) < grades⦋i⦌) && decide (grades⦋i⦌ ≤ (3.7 : Rat)) &&
-                                          (numerical_letter_grade grades)⦋i⦌ == "A-" ||
-                                      decide ((3.0 : Rat) < grades⦋i⦌) && decide (grades⦋i⦌ ≤ (3.3 : Rat)) &&
-                                        (numerical_letter_grade grades)⦋i⦌ == "B+" ||
-                                    decide ((2.7 : Rat) < grades⦋i⦌) && decide (grades⦋i⦌ ≤ (3.0 : Rat)) &&
-                                      (numerical_letter_grade grades)⦋i⦌ == "B" ||
-                                  decide ((2.3 : Rat) < grades⦋i⦌) && decide (grades⦋i⦌ ≤ (2.7 : Rat)) &&
-                                    (numerical_letter_grade grades)⦋i⦌ == "B-" ||
-                                decide ((2.0 : Rat) < grades⦋i⦌) && decide (grades⦋i⦌ ≤ (2.3 : Rat)) &&
-                                  (numerical_letter_grade grades)⦋i⦌ == "C+" ||
-                              decide ((1.7 : Rat) < grades⦋i⦌) && decide (grades⦋i⦌ ≤ (2.0 : Rat)) &&
-                                (numerical_letter_grade grades)⦋i⦌ == "C" ||
-                            decide ((1.3 : Rat) < grades⦋i⦌) && decide (grades⦋i⦌ ≤ (1.7 : Rat)) &&
-                              (numerical_letter_grade grades)⦋i⦌ == "C-" ||
-                          decide ((1.0 : Rat) < grades⦋i⦌) && decide (grades⦋i⦌ ≤ (1.3 : Rat)) &&
-                            (numerical_letter_grade grades)⦋i⦌ == "D+" ||
-                        decide ((0.7 : Rat) < grades⦋i⦌) && decide (grades⦋i⦌ ≤ (1.0 : Rat)) &&
-                          (numerical_letter_grade grades)⦋i⦌ == "D" ||
-                      decide ((0.0 : Rat) < grades⦋i⦌) && decide (grades⦋i⦌ ≤ (0.7 : Rat)) &&
-                        (numerical_letter_grade grades)⦋i⦌ == "D-" ||
-                    grades⦋i⦌ == (0.0 : Rat) && (numerical_letter_grade grades)⦋i⦌ == "E")) =
-            true :=
-  by intros; sorry
-
-private def _numerical_letter_grade'to_letter_grade'rn := fun (score : Float) ↦
+def to_letter_grade'rn := fun (score : Float) ↦
   if score == (4.0 : Float) then "A+"
   else
     if score > (3.7 : Float) then "A"
@@ -222,7 +187,43 @@ private def _numerical_letter_grade'to_letter_grade'rn := fun (score : Float) �
                     if score > (1.0 : Float) then "D+"
                     else if score > (0.7 : Float) then "D" else if score > (0.0 : Float) then "D-" else "E"
 
+def numerical_letter_grade := fun (grades : List Rat) ↦ (PastaLean.pyIter grades).map fun x => to_letter_grade x
+
+attribute [simp] numerical_letter_grade
+
+@[taste_ingr]
+theorem numerical_letter_grade_correct :
+    ∀ (grades : List Rat),
+      (∀ g ∈ PastaLean.pyIter grades, g ≥ (0.0 : Rat) ∧ g ≤ (4.0 : Rat)) →
+        (PastaLean.pyLen (numerical_letter_grade grades) = PastaLean.pyLen grades ∧
+            ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen grades)),
+              (((((((((((grades⦋i⦌ = (4.0 : Rat) ∧ (numerical_letter_grade grades)⦋i⦌ = "A+" ∨
+                                      (grades⦋i⦌ > (3.7 : Rat) ∧ grades⦋i⦌ < (4.0 : Rat)) ∧
+                                        (numerical_letter_grade grades)⦋i⦌ = "A") ∨
+                                    (grades⦋i⦌ > (3.3 : Rat) ∧ grades⦋i⦌ ≤ (3.7 : Rat)) ∧
+                                      (numerical_letter_grade grades)⦋i⦌ = "A-") ∨
+                                  (grades⦋i⦌ > (3.0 : Rat) ∧ grades⦋i⦌ ≤ (3.3 : Rat)) ∧
+                                    (numerical_letter_grade grades)⦋i⦌ = "B+") ∨
+                                (grades⦋i⦌ > (2.7 : Rat) ∧ grades⦋i⦌ ≤ (3.0 : Rat)) ∧
+                                  (numerical_letter_grade grades)⦋i⦌ = "B") ∨
+                              (grades⦋i⦌ > (2.3 : Rat) ∧ grades⦋i⦌ ≤ (2.7 : Rat)) ∧
+                                (numerical_letter_grade grades)⦋i⦌ = "B-") ∨
+                            (grades⦋i⦌ > (2.0 : Rat) ∧ grades⦋i⦌ ≤ (2.3 : Rat)) ∧
+                              (numerical_letter_grade grades)⦋i⦌ = "C+") ∨
+                          (grades⦋i⦌ > (1.7 : Rat) ∧ grades⦋i⦌ ≤ (2.0 : Rat)) ∧
+                            (numerical_letter_grade grades)⦋i⦌ = "C") ∨
+                        (grades⦋i⦌ > (1.3 : Rat) ∧ grades⦋i⦌ ≤ (1.7 : Rat)) ∧
+                          (numerical_letter_grade grades)⦋i⦌ = "C-") ∨
+                      (grades⦋i⦌ > (1.0 : Rat) ∧ grades⦋i⦌ ≤ (1.3 : Rat)) ∧ (numerical_letter_grade grades)⦋i⦌ = "D+") ∨
+                    (grades⦋i⦌ > (0.7 : Rat) ∧ grades⦋i⦌ ≤ (1.0 : Rat)) ∧ (numerical_letter_grade grades)⦋i⦌ = "D") ∨
+                  (grades⦋i⦌ > (0.0 : Rat) ∧ grades⦋i⦌ ≤ (0.7 : Rat)) ∧ (numerical_letter_grade grades)⦋i⦌ = "D-") ∨
+                grades⦋i⦌ = (0.0 : Rat) ∧ (numerical_letter_grade grades)⦋i⦌ = "E") ∧
+          ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen grades)),
+            grades⦋i⦌ ≠ grades⦋(0 : Int)⦌ ∨
+              (numerical_letter_grade grades)⦋i⦌ = (numerical_letter_grade grades)⦋(0 : Int)⦌ :=
+  by taste?
+
 def numerical_letter_grade'rn := fun (grades : List Float) ↦
-  (PastaLean.pyIter grades).map fun x => _numerical_letter_grade'to_letter_grade'rn x
+  (PastaLean.pyIter grades).map fun x => to_letter_grade'rn x
 
 end PastaBench.humaneval.NumericalLetterGrade

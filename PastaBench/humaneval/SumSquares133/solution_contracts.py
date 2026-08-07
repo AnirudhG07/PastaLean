@@ -1,4 +1,5 @@
 from contracts import *
+import math
 
 
 def sum_squares(lst):
@@ -14,8 +15,13 @@ def sum_squares(lst):
     
 
     """
+    import math
+    # The exact fold: ceiling first, then square, then total.
+    Ensures(Result() == sum(math.ceil(v) ** 2 for v in lst))
+    # Every summand is a square, hence non-negative, so the total dominates each of them
+    # individually and is itself non-negative (empty list => 0).
+    Ensures(all(Result() >= math.ceil(v) ** 2 for v in lst))
     Ensures(Result() >= 0)
     Ensures(len(lst) > 0 or Result() == 0)
 
-    import math
     return sum(map(lambda x: math.ceil(x) ** 2, lst))

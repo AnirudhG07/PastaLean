@@ -13,32 +13,32 @@ def change_base(x: int, base: int):
     '111'
     """
     Requires(x >= 0)
-    # The algorithm using str() is only correct for bases where digits are single characters.
-    # The docstring and implementation imply a base between 2 and 9.
-    Requires(2 <= base < 10)
+    # `str(x % base)` is a single character only while the base has one-character digits.
+    Requires(2 <= base)
+    Requires(base < 10)
 
-    # The postcondition captures the two main behaviors of the function:
-    # 1. If the input is 0, the output is "0".
-    # 2. If the input is positive, the output is a non-empty string.
-    # This assumes `x` in `Ensures` refers to the initial value of the parameter.
-    Ensures((x == 0 and Result() == "0") or (x > 0 and Result() != ""))
+    # THE POINT: the answer really is a base-`base` numeral. Every character it contains is a
+    # legal digit of that base — which is true only because each character came from `x % base`,
+    # and it is never the empty string. (Deliberately phrased without mentioning `x`: the loop
+    # destroys `x`, so a postcondition about `x` would be read against the *final* x = 0.)
+    Ensures(len(Result()) >= 1)
+    Ensures(all(0 <= int(c) and int(c) < base for c in Result()))
 
     if x == 0:
         return "0"
 
-    # After the guard, we know x is not 0. Given the precondition x >= 0, x must be positive.
+    # Falls through the guard with x != 0, and x >= 0 by the precondition.
     Assert(x > 0)
     ret = ""
     while x != 0:
-        # The loop condition `x != 0` and prior state `x >= 0` ensure `x > 0` on entry.
         Invariant(x > 0)
-        # Since base >= 2, integer division of a positive x strictly decreases x
-        # while keeping it non-negative, ensuring termination.
+        # Every character accumulated so far is a remainder mod `base`, hence a legal digit.
+        Invariant(all(0 <= int(c) and int(c) < base for c in ret))
         Decreases(x)
         ret = str(x % base) + ret
         x //= base
-    
-    # Because the initial x was > 0, the loop must have run at least once.
-    # Therefore, 'ret' cannot be empty. This is the key fact to prove the postcondition.
-    Assert(ret != "")
+
+    # x started strictly positive, so the body ran at least once and prepended a digit.
+    Assert(len(ret) >= 1)
+    Assert(all(0 <= int(c) and int(c) < base for c in ret))
     return ret

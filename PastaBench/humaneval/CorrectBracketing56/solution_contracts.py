@@ -15,14 +15,19 @@ def correct_bracketing(brackets: str):
     False
     """
     Requires(all(c == '<' or c == '>' for c in brackets))
-    # If the function returns True, the total number of opening and closing brackets must be equal.
-    Ensures((not Result()) or (brackets.count('<') == brackets.count('>')))
+    # The point: "balanced" is exactly the running-depth condition the scan checks — the depth
+    # of every prefix (#'<' minus #'>') stays non-negative, and the depth of the whole string
+    # is zero. Both halves are needed: '><<>' has total depth 0 but a negative prefix, and
+    # '<<' never dips but ends above zero.
+    Ensures(Result() == (
+        brackets.count('<') == brackets.count('>')
+        and all(brackets[:k].count('<') >= brackets[:k].count('>')
+                for k in range(len(brackets) + 1))))
 
     cnt = 0
     for x in brackets:
-        # The running count of open brackets must never be negative. This captures the
-        # core property that for any prefix, the number of '<' is not less than
-        # the number of '>'.
+        # The scan bails out the instant the depth would go negative, so on every iteration
+        # reached the depth so far is still non-negative.
         Invariant(cnt >= 0)
 
         if x == "<":
@@ -32,7 +37,6 @@ def correct_bracketing(brackets: str):
         if cnt < 0:
             return False
 
-    # After the loop, the counter `cnt` reflects the total balance of the entire string.
-    # This assertion bridges the loop's result to a property of the input.
+    # Falling out of the loop means no prefix went negative, and cnt is the whole-string depth.
     Assert(cnt == brackets.count('<') - brackets.count('>'))
     return cnt == 0

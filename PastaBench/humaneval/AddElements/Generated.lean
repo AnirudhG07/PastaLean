@@ -33,19 +33,35 @@ def add_elements(arr, k):
         1. 1 <= len(arr) <= 100
         2. 1 <= k <= len(arr)
     """
-    Requires(1 <= len(arr) <= 100)
-    Requires(1 <= k <= len(arr))
-    # The result is bounded by k times the maximum absolute value of a 2-digit number.
-    Ensures(-99 * k <= Result() <= 99 * k)
-
+    Requires(1 <= len(arr))
+    Requires(len(arr) <= 100)
+    Requires(1 <= k)
+    Requires(k <= len(arr))
+    # THE POINT: "at most two digits" is an arithmetic window, -99 <= x <= 99, and at most k
+    # elements are ever summed. So the answer is confined to [-99*k, 99*k] — a bound tied to the
+    # number of terms, which only follows from decoding the digit test into that window.
+    Ensures(-99 * k <= Result())
+    Ensures(Result() <= 99 * k)
 
     def digits(x: int) -> int:
-        # This contract provides the crucial arithmetic meaning of "at most two digits".
-        # It's the lemma that allows proving the Ensures of the parent function.
-        Ensures((Result() <= 2) == (-99 <= x <= 99))
         s = str(x)
         return len(s) - 1 if s[0] == "-" else len(s)
-    return sum(filter(lambda x: digits(x) <= 2, arr[:k]))
+
+    total = 0
+    for i in range(k):
+        Invariant(0 <= i)
+        Invariant(i <= k)
+        # Index-style: after i steps at most i terms have been added, each within [-99, 99].
+        Invariant(-99 * i <= total)
+        Invariant(total <= 99 * i)
+        if digits(arr[i]) <= 2:
+            # The bridge the bound rests on: `digits(x) <= 2` spelled arithmetically.
+            Assert(-99 <= arr[i])
+            Assert(arr[i] <= 99)
+            total += arr[i]
+    Assert(-99 * k <= total)
+    Assert(total <= 99 * k)
+    return total
 -/
 
 namespace PastaBench.humaneval.AddElements
@@ -54,38 +70,98 @@ private def _add_elements'digits := fun (x : Int) ↦
   let s := (PastaLean.pyStr x : String)
   if s⦋(0 : Int)⦌ = "-" then PastaLean.pyLen s -ₚ (1 : Int) else PastaLean.pyLen s
 
-attribute [simp] _add_elements'digits
+attribute [simp, taste_ingr] _add_elements'digits
 
-@[taste_ingr]
-theorem _add_elements'digits_spec :
-    ∀ (x : Int),
-      let s := PastaLean.pyStr x
-      (_add_elements'digits x ≤ (2 : Int)) = (-(99 : Int) ≤ x ∧ x ≤ (99 : Int)) :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+def add_elements := fun (arr : List Int) ↦ fun (k : Int) ↦
+  (do
+    let mut total : Int := (0 : Int)
+    for i in (PastaLean.pyRange k)do
+      let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i))
+      let _ := Libraries.passta.pyPassInvariant (decide (i ≤ k))
+      -- Index-style: after i steps at most i terms have been added, each within [-99, 99].
+      let _ := Libraries.passta.pyPassInvariant (decide (-(99 : Int) *ₚ i ≤ total))
+      let _ := Libraries.passta.pyPassInvariant (decide (total ≤ (99 : Int) *ₚ i))
+      if h_1 : _add_elements'digits arr⦋i⦌ ≤ (2 : Int) then 
+        -- The bridge the bound rests on: `digits(x) <= 2` spelled arithmetically.
+        let _ := Libraries.passta.pyPassAssert (decide (-(99 : Int) ≤ arr⦋i⦌))
+        let _ := Libraries.passta.pyPassAssert (decide (arr⦋i⦌ ≤ (99 : Int)))
+        total := total +ₚ arr⦋i⦌
+      else
+        let _ := ()
+    let _ := Libraries.passta.pyPassAssert (decide (-(99 : Int) *ₚ k ≤ total))
+    let _ := Libraries.passta.pyPassAssert (decide (total ≤ (99 : Int) *ₚ k))
+    return total : Id _)
 
-def add_elements := fun (arr : PyAny) ↦ fun (k : Int) ↦
-  PastaLean.pySum
-    (PastaLean.pyFilter (fun x ↦ decide (_add_elements'digits x ≤ (2 : Int)))
-      (PastaLean.pySlice arr none (some k) none))
+@[spec]
+theorem add_elements_spec :
+    ⦃⌜(((1 : Int) ≤ PastaLean.pyLen arr ∧ PastaLean.pyLen arr ≤ (100 : Int)) ∧ (1 : Int) ≤ k) ∧
+          k ≤ PastaLean.pyLen arr⌝⦄
+      add_elements arr k ⦃⇓total => ⌜-(99 : Int) *ₚ k ≤ total ∧ total ≤ (99 : Int) *ₚ k⌝⦄ :=
+  by
+  try
+    mvcgen [add_elements, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · ⇓⟨cur, total⟩ =>
+      ⌜let i := (cur.prefix.length : Int);
+        (((0 : Int) ≤ i ∧ i ≤ k) ∧ -(99 : Int) *ₚ i ≤ total) ∧ total ≤ (99 : Int) *ₚ i⌝
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry; pyany_cases <;> grind +locals; pyany_cases <;> grind +locals; pyany_cases <;> grind +locals
+  all_goals sorry
 
-attribute [simp] add_elements
-
-@[taste_ingr]
 theorem add_elements_correct :
-    ∀ (arr : PyAny),
+    ∀ (arr : List Int),
       ∀ (k : Int),
-        (1 : Int) ≤ PastaLean.pyLen arr ∧ PastaLean.pyLen arr ≤ (100 : Int) →
-          (1 : Int) ≤ k ∧ k ≤ PastaLean.pyLen arr →
-            -(99 : Int) *ₚ k ≤ add_elements arr k ∧ add_elements arr k ≤ (99 : Int) *ₚ k :=
-  by intros; sorry
+        (((1 : Int) ≤ PastaLean.pyLen arr ∧ PastaLean.pyLen arr ≤ (100 : Int)) ∧ (1 : Int) ≤ k) ∧
+            k ≤ PastaLean.pyLen arr →
+          let total := (add_elements arr k).run;
+          -(99 : Int) *ₚ k ≤ total ∧ total ≤ (99 : Int) *ₚ k :=
+  by
+  intro arr k hpre
+  exact add_elements_spec hpre
 
 private def _add_elements'digits'rn := fun (x : Int) ↦
   let s := (PastaLean.pyStr x : String)
   if s⦋(0 : Int)⦌ == "-" then PastaLean.pyLen s -ₚ (1 : Int) else PastaLean.pyLen s
 
-def add_elements'rn := fun (arr : PyAny) ↦ fun (k : Int) ↦
-  PastaLean.pySum
-    (PastaLean.pyFilter (fun x ↦ decide (_add_elements'digits'rn x ≤ (2 : Int)))
-      (PastaLean.pySlice arr none (some k) none))
+def add_elements'rn := fun (arr : List Int) ↦ fun (k : Int) ↦
+  Id.run
+    (do
+      /-
+      
+          Given a non-empty array of integers arr and an integer k, return
+          the sum of the elements with at most two digits from the first k elements of arr.
+      
+          Example:
+      
+              Input: arr = [111,21,3,4000,5,6,7,8,9], k = 4
+              Output: 24 # sum of 21 + 3
+      
+          Constraints:
+              1. 1 <= len(arr) <= 100
+              2. 1 <= k <= len(arr)
+          
+      -/
+      let _ := Libraries.passta.pyPassRequires (decide ((1 : Int) ≤ PastaLean.pyLen arr))
+      let _ := Libraries.passta.pyPassRequires (decide (PastaLean.pyLen arr ≤ (100 : Int)))
+      let _ := Libraries.passta.pyPassRequires (decide ((1 : Int) ≤ k))
+      let _ := Libraries.passta.pyPassRequires (decide (k ≤ PastaLean.pyLen arr))
+      -- THE POINT: "at most two digits" is an arithmetic window, -99 <= x <= 99, and at most k
+      -- elements are ever summed. So the answer is confined to [-99*k, 99*k] — a bound tied to the
+      -- number of terms, which only follows from decoding the digit test into that window.
+      let mut total : Int := (0 : Int)
+      for i in (PastaLean.pyRange k)do
+        let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i))
+        let _ := Libraries.passta.pyPassInvariant (decide (i ≤ k))
+        -- Index-style: after i steps at most i terms have been added, each within [-99, 99].
+        let _ := Libraries.passta.pyPassInvariant (decide (-(99 : Int) *ₚ i ≤ total))
+        let _ := Libraries.passta.pyPassInvariant (decide (total ≤ (99 : Int) *ₚ i))
+        if h_1 : _add_elements'digits'rn arr⦋i⦌ ≤ (2 : Int) then 
+          -- The bridge the bound rests on: `digits(x) <= 2` spelled arithmetically.
+          let _ := Libraries.passta.pyPassAssert (decide (-(99 : Int) ≤ arr⦋i⦌))
+          let _ := Libraries.passta.pyPassAssert (decide (arr⦋i⦌ ≤ (99 : Int)))
+          total := total +ₚ arr⦋i⦌
+        else
+          let _ := ()
+      let _ := Libraries.passta.pyPassAssert (decide (-(99 : Int) *ₚ k ≤ total))
+      let _ := Libraries.passta.pyPassAssert (decide (total ≤ (99 : Int) *ₚ k))
+      return total)
 
 end PastaBench.humaneval.AddElements

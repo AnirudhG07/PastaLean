@@ -14,12 +14,15 @@ def total_match(lst1, lst2):
     total_match(['hi', 'admin'], ['hI', 'hi', 'hi']) ➞ ['hI', 'hi', 'hi']
     total_match(['4'], ['1', '2', '3', '4', '5']) ➞ ['4']
     '''
-    Ensures(
-        (sum([len(s) for s in lst1]) <= sum([len(s) for s in lst2]) and Result() is lst1) or
-        (sum([len(s) for s in lst1]) > sum([len(s) for s in lst2]) and Result() is lst2)
-    )
+    # 1. The result is one of the two inputs verbatim — nothing is built or reordered.
+    Ensures(Result() == lst1 or Result() == lst2)
+    # 2. It is the one with the *smaller* total character count: its own total is <= both.
+    Ensures(sum([len(s) for s in Result()]) <= sum([len(s) for s in lst1]))
+    Ensures(sum([len(s) for s in Result()]) <= sum([len(s) for s in lst2]))
+    # 3. The stated tie-break: on a tie (indeed whenever lst1 is no longer) it is lst1.
+    Ensures(sum([len(s) for s in lst1]) > sum([len(s) for s in lst2]) or Result() == lst1)
 
-    c1, c2 = sum(map(lambda s: len(s), lst1)), sum(map(lambda s: len(s), lst2))
+    c1, c2 =sum(map(lambda s: len(s), lst1)), sum(map(lambda s: len(s), lst2))
     
     Assert(c1 == sum([len(s) for s in lst1]))
     Assert(c2 == sum([len(s) for s in lst2]))

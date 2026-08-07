@@ -86,7 +86,7 @@ def vowels_count := fun (s : String) ↦
 theorem vowels_count_spec : ⦃⌜True⌝⦄ vowels_count s ⦃⇓cnt => ⌜(0 : Int) ≤ cnt ∧ cnt ≤ PastaLean.pyLen s⌝⦄ :=
   by
   mvcgen [vowels_count, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  taste?
   all_goals sorry
 
 theorem vowels_count_correct :

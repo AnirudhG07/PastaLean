@@ -13,11 +13,14 @@ def generate_integers(a, b):
     """
     Requires(a > 0)
     Requires(b > 0)
-    Ensures(forall(Result(), lambda x: x % 2 == 0))
-    Ensures(forall(Result(), lambda x: x < 10))
-    Ensures(forall(Result(), lambda x: min(a, b) <= x <= max(a, b)))
-    Ensures(forall(range(len(Result()) - 1), lambda i: Result()[i] < Result()[i+1]))
-
+    # Soundness: every element is an even single digit inside the (unordered) range.
+    Ensures(all(x % 2 == 0 for x in Result()))
+    Ensures(all(0 <= x < 10 for x in Result()))
+    Ensures(all(min(a, b) <= x <= max(a, b) for x in Result()))
+    # Strictly ascending, and complete — together these pin the answer to exactly one list.
+    Ensures(all(Result()[i] < Result()[i + 1] for i in range(len(Result()) - 1)))
+    Ensures(len(Result())
+            == len([i for i in range(min(a, b), min(max(a, b) + 1, 10)) if i % 2 == 0]))
 
     if a > b: a, b = b, a
     return [i for i in range(a, min(b + 1, 10)) if i % 2 == 0]

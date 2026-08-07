@@ -36,6 +36,7 @@ def max_fill(grid, capacity):
         * 1 <= capacity <= 10
     """
     Requires(capacity >= 1)
+    Requires(len(grid) >= 1)
     Requires(all(all(x == 0 or x == 1 for x in l) for l in grid))
 
     # The point of the function is to compute the total number of bucket trips, which is
@@ -43,10 +44,21 @@ def max_fill(grid, capacity):
     # ceiling of its water units divided by the bucket capacity.
     Ensures(Result() == sum(math.ceil(sum(l) / capacity) for l in grid))
 
-    ans = 0    
+    # The same statement, division-free: `capacity * Result()` brackets the total water from
+    # above, and overshoots by strictly less than one bucket per well. This is what "ceiling,
+    # summed per row" actually means, and it is stated without a single division.
+    Ensures(capacity * Result() >= sum(sum(l) for l in grid))
+    Ensures(capacity * Result() < sum(sum(l) for l in grid) + capacity * len(grid))
+    # No trip is wasted: with capacity >= 1 you never need more trips than units of water.
+    Ensures(Result() >= 0)
+    Ensures(Result() <= sum(sum(l) for l in grid))
+
+    ans = 0
     for l in grid:
         # The running total is always non-negative, as each term added is non-negative.
         Invariant(ans >= 0)
+        # Accumulator form of the upper bound, over the wells emptied so far.
+        Invariant(ans <= sum(sum(r) for r in grid))
         ans += math.ceil(sum(l) / capacity)
 
     # After the loop, `ans` holds the final sum, which is exactly the property

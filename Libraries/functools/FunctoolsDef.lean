@@ -27,4 +27,9 @@ ST/IO.Ref cache (never a state monad on the prove twin, which would cost provabi
 shows heavy-DP solutions timing out without it. -/
 def pyCacheNoop : Unit := ()
 
+/-- `functools.cmp_to_key(f)`. Python wraps `f` in a key object; there is no such object here — the
+sort paths detect `key=cmp_to_key(f)` and use the comparator directly — so this is the identity,
+present only so a bare reference to the name still resolves. -/
+def pyCmpToKey {β : Type} (f : β → β → Int) : β → β → Int := f
+
 end Libraries.functools

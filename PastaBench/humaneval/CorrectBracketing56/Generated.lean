@@ -34,14 +34,19 @@ def correct_bracketing(brackets: str):
     False
     """
     Requires(all(c == '<' or c == '>' for c in brackets))
-    # If the function returns True, the total number of opening and closing brackets must be equal.
-    Ensures((not Result()) or (brackets.count('<') == brackets.count('>')))
+    # The point: "balanced" is exactly the running-depth condition the scan checks — the depth
+    # of every prefix (#'<' minus #'>') stays non-negative, and the depth of the whole string
+    # is zero. Both halves are needed: '><<>' has total depth 0 but a negative prefix, and
+    # '<<' never dips but ends above zero.
+    Ensures(Result() == (
+        brackets.count('<') == brackets.count('>')
+        and all(brackets[:k].count('<') >= brackets[:k].count('>')
+                for k in range(len(brackets) + 1))))
 
     cnt = 0
     for x in brackets:
-        # The running count of open brackets must never be negative. This captures the
-        # core property that for any prefix, the number of '<' is not less than
-        # the number of '>'.
+        # The scan bails out the instant the depth would go negative, so on every iteration
+        # reached the depth so far is still non-negative.
         Invariant(cnt >= 0)
 
         if x == "<":
@@ -51,8 +56,7 @@ def correct_bracketing(brackets: str):
         if cnt < 0:
             return False
 
-    # After the loop, the counter `cnt` reflects the total balance of the entire string.
-    # This assertion bridges the loop's result to a property of the input.
+    # Falling out of the loop means no prefix went negative, and cnt is the whole-string depth.
     Assert(cnt == brackets.count('<') - brackets.count('>'))
     return cnt == 0
 -/
@@ -63,9 +67,8 @@ def correct_bracketing := fun (brackets : String) ↦
   (do
     let mut cnt : Int := (0 : Int)
     for x in (PastaLean.pyIter brackets)do
-      -- The running count of open brackets must never be negative. This captures the
-      -- core property that for any prefix, the number of '<' is not less than
-      -- the number of '>'.
+      -- The scan bails out the instant the depth would go negative, so on every iteration
+      -- reached the depth so far is still non-negative.
       let _ := Libraries.passta.pyPassInvariant (decide (cnt ≥ (0 : Int)))
       if h_1 : x = "<" then 
         cnt := cnt +ₚ (1 : Int)
@@ -85,21 +88,28 @@ def correct_bracketing := fun (brackets : String) ↦
 
 @[spec]
 theorem correct_bracketing_spec :
-    ⦃⌜PastaLean.pyAll ((PastaLean.pyIter brackets).map fun c => c == "<" || c == ">")⌝⦄
-      correct_bracketing brackets ⦃⇓result =>
-      ⌜¬PastaLean.pyTruthy result = true ∨ PastaLean.pyCount brackets "<" = PastaLean.pyCount brackets ">"⌝⦄ :=
+    ⦃⌜∀ c ∈ PastaLean.pyIter brackets, c = "<" ∨ c = ">"⌝⦄ correct_bracketing brackets ⦃⇓result =>
+      ⌜result =
+          (PastaLean.pyCount brackets "<" = PastaLean.pyCount brackets ">" ∧
+            ∀ k ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen brackets +ₚ (1 : Int))),
+              PastaLean.pyCount (PastaLean.pySlice brackets none (some k) none) "<" ≥
+                PastaLean.pyCount (PastaLean.pySlice brackets none (some k) none) ">")⌝⦄ :=
   by
   try
     mvcgen [correct_bracketing, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · Invariant.withEarlyReturn (onReturn := fun _ _ => ⌜True⌝) (onContinue := fun _ _ => ⌜True⌝)
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  taste?
   all_goals sorry
 
 theorem correct_bracketing_correct :
     ∀ (brackets : String),
-      PastaLean.pyAll ((PastaLean.pyIter brackets).map fun c => c == "<" || c == ">") →
+      (∀ c ∈ PastaLean.pyIter brackets, c = "<" ∨ c = ">") →
         let result := (correct_bracketing brackets).run;
-        ¬PastaLean.pyTruthy result = true ∨ PastaLean.pyCount brackets "<" = PastaLean.pyCount brackets ">" :=
+        result =
+          (PastaLean.pyCount brackets "<" = PastaLean.pyCount brackets ">" ∧
+            ∀ k ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen brackets +ₚ (1 : Int))),
+              PastaLean.pyCount (PastaLean.pySlice brackets none (some k) none) "<" ≥
+                PastaLean.pyCount (PastaLean.pySlice brackets none (some k) none) ">") :=
   by
   intro brackets hpre
   exact correct_bracketing_spec hpre
@@ -124,12 +134,14 @@ def correct_bracketing'rn := fun (brackets : String) ↦
       let _ :=
         Libraries.passta.pyPassRequires
           (PastaLean.pyAll ((PastaLean.pyIter brackets).map fun c => c == "<" || c == ">"))
-      -- If the function returns True, the total number of opening and closing brackets must be equal.
+      -- The point: "balanced" is exactly the running-depth condition the scan checks — the depth
+      -- of every prefix (#'<' minus #'>') stays non-negative, and the depth of the whole string
+      -- is zero. Both halves are needed: '><<>' has total depth 0 but a negative prefix, and
+      -- '<<' never dips but ends above zero.
       let mut cnt : Int := (0 : Int)
       for x in (PastaLean.pyIter brackets)do
-        -- The running count of open brackets must never be negative. This captures the
-        -- core property that for any prefix, the number of '<' is not less than
-        -- the number of '>'.
+        -- The scan bails out the instant the depth would go negative, so on every iteration
+        -- reached the depth so far is still non-negative.
         let _ := Libraries.passta.pyPassInvariant (decide (cnt ≥ (0 : Int)))
         if h_1 : x == "<" then 
           cnt := cnt +ₚ (1 : Int)
@@ -143,8 +155,7 @@ def correct_bracketing'rn := fun (brackets : String) ↦
           return Bool.false
         else
           let _ := ()
-      -- After the loop, the counter `cnt` reflects the total balance of the entire string.
-      -- This assertion bridges the loop's result to a property of the input.
+      -- Falling out of the loop means no prefix went negative, and cnt is the whole-string depth.
       let _ := Libraries.passta.pyPassAssert (cnt == PastaLean.pyCount brackets "<" -ₚ PastaLean.pyCount brackets ">")
       let __py_ret_1 := cnt == (0 : Int)
       return __py_ret_1)

@@ -57,6 +57,30 @@ with the element `start + index` in the body, so mvcgen knows `i ≥ start`. -/
       = forIn (List.range (stop - start).toNat) init (fun (k : Nat) => f (start + Int.ofNat k)) := by
   rw [pyRange_eq_start, List.forIn_map]
 
+/-! ### Membership reductions for quantified contracts
+A contract `all`/`any` lowers to `∀`/`∃ x ∈ pyIter it`; these reduce that membership hypothesis to
+plain index arithmetic. -/
+
+/-- `pyIter` on a list is the list itself, so `∀ x ∈ pyIter l, …` is ordinary list membership. -/
+@[simp, taste_ingr] theorem pyIter_list {α : Type} (l : List α) : pyIter l = l := rfl
+
+/-- Membership in `range(n)`: the workhorse for a quantified contract over indices. -/
+@[simp, taste_ingr] theorem pyRange_mem {n x : Int} : x ∈ pyRange n ↔ 0 ≤ x ∧ x < n := by
+  rw [pyRange_eq_ofNat]
+  simp only [List.mem_map, List.mem_range, Int.ofNat_eq_natCast]
+  constructor
+  · rintro ⟨k, hk, rfl⟩; omega
+  · intro ⟨h0, hn⟩; exact ⟨x.toNat, by omega, by omega⟩
+
+/-- Membership in `range(start, stop)`. -/
+@[simp, taste_ingr] theorem pyRange_mem_start {stop start x : Int} :
+    x ∈ pyRange stop start ↔ start ≤ x ∧ x < stop := by
+  rw [pyRange_eq_start]
+  simp only [List.mem_map, List.mem_range, Int.ofNat_eq_natCast]
+  constructor
+  · rintro ⟨k, hk, rfl⟩; omega
+  · intro ⟨h0, hn⟩; exact ⟨(x - start).toNat, by omega, by omega⟩
+
 /-- Python `x ** 2` lowers to `x ^ₚ (2 : Int)` (the `PyHPow Int Int Int` instance). `taste?`'s
 closers (`positivity`/`nlinarith`) don't see through the `^ₚ` notation, so normalise it to the plain
 `x ^ 2` monoid power — then `positivity` recognises the even power as nonnegative. Squares dominate

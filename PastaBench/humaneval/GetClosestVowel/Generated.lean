@@ -35,10 +35,27 @@ def get_closest_vowel(word):
     get_closest_vowel("quick") ==> ""
     get_closest_vowel("ab") ==> ""
     """
-    # THE POINT: The result, if not empty, is a single vowel character from the input word.
-    # While we can't easily express the "surrounded by consonants" or "rightmost" properties
-    # without quantifiers, we can state these essential properties of the value returned.
+    # Shape of the answer: either empty or a single vowel taken from the word.
     Ensures(Result() == "" or (len(Result()) == 1 and Result() in "aeiouAEIOU" and Result() in word))
+    # THE POINT (a): "" is returned exactly when NO interior position is a vowel flanked by
+    # two consonants -- i.e. the search really was exhaustive over 1 .. len(word)-2.
+    Ensures(Result() != "" or all(
+        not (word[i] in "aeiouAEIOU"
+             and word[i - 1] not in "aeiouAEIOU"
+             and word[i + 1] not in "aeiouAEIOU")
+        for i in range(1, len(word) - 1)))
+    # THE POINT (b): a non-empty answer is the RIGHTMOST such position -- it qualifies, and
+    # no position strictly to its right qualifies.
+    Ensures(Result() == "" or any(
+        word[i] == Result()
+        and word[i] in "aeiouAEIOU"
+        and word[i - 1] not in "aeiouAEIOU"
+        and word[i + 1] not in "aeiouAEIOU"
+        and all(not (word[j] in "aeiouAEIOU"
+                     and word[j - 1] not in "aeiouAEIOU"
+                     and word[j + 1] not in "aeiouAEIOU")
+                for j in range(i + 1, len(word) - 1))
+        for i in range(1, len(word) - 1)))
 
 
     def is_vowel(ch: str) -> bool:
@@ -80,22 +97,50 @@ def get_closest_vowel := fun (word : PyAny) ↦
 @[spec]
 theorem get_closest_vowel_spec :
     ⦃⌜True⌝⦄ get_closest_vowel word ⦃⇓result =>
-      ⌜result = "" ∨
-          (PastaLean.pyLen result = (1 : Int) ∧ PastaLean.pyContains "aeiouAEIOU" result) ∧
-            PastaLean.pyContains word result⌝⦄ :=
+      ⌜((result = "" ∨
+              (PastaLean.pyLen result = (1 : Int) ∧ PastaLean.pyContains "aeiouAEIOU" result) ∧
+                PastaLean.pyContains word result) ∧
+            (result ≠ "" ∨
+              ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen word -ₚ (1 : Int)) (1 : Int)),
+                ¬((PastaLean.pyContains "aeiouAEIOU" word⦋i⦌ ∧
+                      !(PastaLean.pyContains "aeiouAEIOU" word⦋i -ₚ (1 : Int)⦌)) ∧
+                    !(PastaLean.pyContains "aeiouAEIOU" word⦋i +ₚ (1 : Int)⦌)))) ∧
+          (result = "" ∨
+            ∃ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen word -ₚ (1 : Int)) (1 : Int)),
+              (((word⦋i⦌ = result ∧ PastaLean.pyContains "aeiouAEIOU" word⦋i⦌) ∧
+                    !(PastaLean.pyContains "aeiouAEIOU" word⦋i -ₚ (1 : Int)⦌)) ∧
+                  !(PastaLean.pyContains "aeiouAEIOU" word⦋i +ₚ (1 : Int)⦌)) ∧
+                ∀ j ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen word -ₚ (1 : Int)) (i +ₚ (1 : Int))),
+                  ¬((PastaLean.pyContains "aeiouAEIOU" word⦋j⦌ ∧
+                        !(PastaLean.pyContains "aeiouAEIOU" word⦋j -ₚ (1 : Int)⦌)) ∧
+                      !(PastaLean.pyContains "aeiouAEIOU" word⦋j +ₚ (1 : Int)⦌)))⌝⦄ :=
   by
   try
     mvcgen [get_closest_vowel, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · Invariant.withEarlyReturn (onReturn := fun _ _ => ⌜True⌝) (onContinue := fun _ _ => ⌜True⌝)
-  push_cast at *; pyany_cases <;> grind +locals; pyany_cases <;> grind +locals; pyany_cases <;> grind +locals; grind; sorry
+  taste?
   all_goals sorry
 
 theorem get_closest_vowel_correct :
     ∀ (word : PyAny),
       let result := (get_closest_vowel word).run;
-      result = "" ∨
-        (PastaLean.pyLen result = (1 : Int) ∧ PastaLean.pyContains "aeiouAEIOU" result) ∧
-          PastaLean.pyContains word result :=
+      ((result = "" ∨
+            (PastaLean.pyLen result = (1 : Int) ∧ PastaLean.pyContains "aeiouAEIOU" result) ∧
+              PastaLean.pyContains word result) ∧
+          (result ≠ "" ∨
+            ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen word -ₚ (1 : Int)) (1 : Int)),
+              ¬((PastaLean.pyContains "aeiouAEIOU" word⦋i⦌ ∧
+                    !(PastaLean.pyContains "aeiouAEIOU" word⦋i -ₚ (1 : Int)⦌)) ∧
+                  !(PastaLean.pyContains "aeiouAEIOU" word⦋i +ₚ (1 : Int)⦌)))) ∧
+        (result = "" ∨
+          ∃ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen word -ₚ (1 : Int)) (1 : Int)),
+            (((word⦋i⦌ = result ∧ PastaLean.pyContains "aeiouAEIOU" word⦋i⦌) ∧
+                  !(PastaLean.pyContains "aeiouAEIOU" word⦋i -ₚ (1 : Int)⦌)) ∧
+                !(PastaLean.pyContains "aeiouAEIOU" word⦋i +ₚ (1 : Int)⦌)) ∧
+              ∀ j ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen word -ₚ (1 : Int)) (i +ₚ (1 : Int))),
+                ¬((PastaLean.pyContains "aeiouAEIOU" word⦋j⦌ ∧
+                      !(PastaLean.pyContains "aeiouAEIOU" word⦋j -ₚ (1 : Int)⦌)) ∧
+                    !(PastaLean.pyContains "aeiouAEIOU" word⦋j +ₚ (1 : Int)⦌))) :=
   by
   intro word
   exact get_closest_vowel_spec True.intro
@@ -103,41 +148,44 @@ theorem get_closest_vowel_correct :
 private def _get_closest_vowel'is_vowel'rn := fun (ch : String) ↦ PastaLean.pyContains "aeiouAEIOU" ch
 
 def get_closest_vowel'rn := fun (word : PyAny) ↦
-  Id.run
-    (do
-      /-
-      You are given a word. Your task is to find the closest vowel that stands between 
-          two consonants from the right side of the word (case sensitive).
-          
-          Vowels in the beginning and ending doesn't count. Return empty string if you didn't
-          find any vowel met the above condition. 
-      
-          You may assume that the given string contains English letter only.
-      
-          Example:
-          get_closest_vowel("yogurt") ==> "u"
-          get_closest_vowel("FULL") ==> "U"
-          get_closest_vowel("quick") ==> ""
-          get_closest_vowel("ab") ==> ""
-          
-      -/
-      -- THE POINT: The result, if not empty, is a single vowel character from the input word.
-      -- While we can't easily express the "surrounded by consonants" or "rightmost" properties
-      -- without quantifiers, we can state these essential properties of the value returned.
-      for i in (PastaLean.pyRange (0 : Int) (PastaLean.pyLen word -ₚ (2 : Int)) (-(1 : Int)))do
-        -- These invariants establish that the indices i, i-1, and i+1 are always valid,
-        -- which is crucial for proving memory safety of the lookups.
-        let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) < i))
-        let _ := Libraries.passta.pyPassInvariant (decide (i < PastaLean.pyLen word -ₚ (1 : Int)))
-        if h_1 :
-            PastaLean.pyTruthy (_get_closest_vowel'is_vowel'rn word⦋i⦌) &&
-                !PastaLean.pyTruthy (_get_closest_vowel'is_vowel'rn word⦋i -ₚ (1 : Int)⦌) &&
-              !PastaLean.pyTruthy (_get_closest_vowel'is_vowel'rn word⦋i +ₚ (1 : Int)⦌) then
-          
-          let __py_ret_1 := word⦋i⦌
-          return __py_ret_1
-        else
-          let _ := ()
-      return "")
+  (show PastaLean.PyAny from
+    Id.run
+      (do
+        /-
+        You are given a word. Your task is to find the closest vowel that stands between 
+            two consonants from the right side of the word (case sensitive).
+            
+            Vowels in the beginning and ending doesn't count. Return empty string if you didn't
+            find any vowel met the above condition. 
+        
+            You may assume that the given string contains English letter only.
+        
+            Example:
+            get_closest_vowel("yogurt") ==> "u"
+            get_closest_vowel("FULL") ==> "U"
+            get_closest_vowel("quick") ==> ""
+            get_closest_vowel("ab") ==> ""
+            
+        -/
+        -- Shape of the answer: either empty or a single vowel taken from the word.
+        -- THE POINT (a): "" is returned exactly when NO interior position is a vowel flanked by
+        -- two consonants -- i.e. the search really was exhaustive over 1 .. len(word)-2.
+        -- THE POINT (b): a non-empty answer is the RIGHTMOST such position -- it qualifies, and
+        -- no position strictly to its right qualifies.
+        for i in (PastaLean.pyRange (0 : Int) (PastaLean.pyLen word -ₚ (2 : Int)) (-(1 : Int)))do
+          -- These invariants establish that the indices i, i-1, and i+1 are always valid,
+          -- which is crucial for proving memory safety of the lookups.
+          let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) < i))
+          let _ := Libraries.passta.pyPassInvariant (decide (i < PastaLean.pyLen word -ₚ (1 : Int)))
+          if h_1 :
+              PastaLean.pyTruthy (_get_closest_vowel'is_vowel'rn word⦋i⦌) &&
+                  !PastaLean.pyTruthy (_get_closest_vowel'is_vowel'rn word⦋i -ₚ (1 : Int)⦌) &&
+                !PastaLean.pyTruthy (_get_closest_vowel'is_vowel'rn word⦋i +ₚ (1 : Int)⦌) then
+            
+            let __py_ret_1 := (word⦋i⦌ : PastaLean.PyAny)
+            return __py_ret_1
+          else
+            let _ := ()
+        return ("" : PastaLean.PyAny)))
 
 end PastaBench.humaneval.GetClosestVowel

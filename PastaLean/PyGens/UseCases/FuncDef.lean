@@ -1091,7 +1091,7 @@ def funcDefSyntax : (kind : SyntaxNodeKind) → Json →
         let paramNames := (← functionArgInfos json).map (fun (id, _) => id.getId.toString)
         if let some (letJsons, hypJsons, conclJson) := theoremShape? paramNames bodyArr substantive then
           if (← getNumericMode) == .approx then return ⟨mkNullNode #[]⟩
-          let thmCmd ← buildSpecTheorem nameIdent (← functionArgInfos json) letJsons hypJsons conclJson
+          let thmCmd ← buildSpecTheorem nameIdent (← functionArgInfos json) letJsons hypJsons #[conclJson]
           return ⟨mkNullNode #[thmCmd.raw]⟩
         -- Track P: a pure, straight-line contracted function (`Requires`/`Ensures` + `let`s +
         -- `return`) emits its ordinary runnable `def` (contracts stripped) plus a `<fn>_correct` theorem.
@@ -1099,7 +1099,7 @@ def funcDefSyntax : (kind : SyntaxNodeKind) → Json →
         -- Reference the function by name in its `_spec`/`_correct` UNLESS the name is a Python builtin
         -- (`sum`, `max`, …), where a `Call` would dispatch to the builtin, not the user def — inline there.
         let refFn := (← builtinMappedName? name).isNone
-        if let some (cleanBody, letJsons, hypJsons, conclJson) := contractShape? name refFn paramNames bodyArr substantive then
+        if let some (cleanBody, letJsons, hypJsons, conclJsons) := contractShape? name refFn paramNames bodyArr substantive then
           let argInfos ← functionArgInfos json
           -- A `float`-annotated contracted body whose `return` mixes `int` and true-division
           -- (`median`) needs its result ascribed to `ℚ`/`Float` so the `int` branch coerces — same
@@ -1124,7 +1124,7 @@ def funcDefSyntax : (kind : SyntaxNodeKind) → Json →
           -- e.g. a closure-converted nested def) is a supporting `_spec`.
           let suffix := if pythonNameIsPrivate name then "_spec" else "_correct"
           let thmName := mkIdent (name ++ suffix).toName
-          let thmCmd ← buildSpecTheorem thmName argInfos letJsons hypJsons conclJson
+          let thmCmd ← buildSpecTheorem thmName argInfos letJsons hypJsons conclJsons
           let attrCmd ← `(command| attribute [simp] $nameIdent)
           return ⟨mkNullNode #[finalDef.raw, attrCmd.raw, thmCmd.raw]⟩
         -- Track W: a `while`-loop contracted function (single straight-line `while` with `Invariant`

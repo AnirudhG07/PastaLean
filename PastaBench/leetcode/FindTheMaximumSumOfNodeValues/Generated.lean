@@ -108,7 +108,7 @@ def maximumValueSum := fun (nums : List Int) ↦ fun (k : Int) ↦ fun (edges : 
 @[spec]
 theorem maximumValueSum_spec :
     ⦃⌜((PastaLean.pyLen nums ≥ (2 : Int) ∧ PastaLean.pyLen edges = PastaLean.pyLen nums -ₚ (1 : Int)) ∧ k ≥ (1 : Int)) ∧
-          PastaLean.pyAll ((PastaLean.pyIter nums).map fun x => decide (x ≥ (0 : Int)))⌝⦄
+          ∀ x ∈ PastaLean.pyIter nums, x ≥ (0 : Int)⌝⦄
       maximumValueSum nums k edges ⦃⇓f0 => ⌜f0 ≥ PastaLean.pySum nums⌝⦄ :=
   by
   try
@@ -121,9 +121,9 @@ theorem maximumValueSum_correct :
     ∀ (nums : List Int),
       ∀ (k : Int),
         ∀ (edges : List (List Int)),
-          ((PastaLean.pyLen nums ≥ (2 : Int) ∧ PastaLean.pyLen edges = PastaLean.pyLen nums -ₚ (1 : Int)) ∧
+          (((PastaLean.pyLen nums ≥ (2 : Int) ∧ PastaLean.pyLen edges = PastaLean.pyLen nums -ₚ (1 : Int)) ∧
                 k ≥ (1 : Int)) ∧
-              PastaLean.pyAll ((PastaLean.pyIter nums).map fun x => decide (x ≥ (0 : Int))) →
+              ∀ x ∈ PastaLean.pyIter nums, x ≥ (0 : Int)) →
             let f0 := (maximumValueSum nums k edges).run;
             f0 ≥ PastaLean.pySum nums :=
   by

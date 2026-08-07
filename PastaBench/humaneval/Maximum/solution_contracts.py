@@ -43,5 +43,10 @@ def maximum(arr, k):
     # if the result is non-empty and `k <= len(arr)`. Our Requires covers this.
     Ensures(k == 0 or all(x >= sorted(arr)[len(arr) - k] for x in Result()))
 
+    # THE POINT, and what makes the spec complete: every element left OUT is <= every element kept.
+    # An element of `arr` is left out when the result keeps fewer copies of it than `arr` has.
+    # Result() is sorted, so Result()[0] is the smallest kept element. Together with the three
+    # facts above (length k, sorted, sub-multiset) this pins the answer down uniquely.
+    Ensures(k == 0 or all(x <= Result()[0] for x in arr if arr.count(x) > Result().count(x)))
 
     return sorted(sorted(arr)[::-1][:k])

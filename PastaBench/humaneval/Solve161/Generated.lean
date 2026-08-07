@@ -22,7 +22,7 @@ from contracts import *
 
 def solve(s: str):
     """You are given a string s.
-    if s[i] is a letter, reverse its case from lower to upper or vise versa, 
+    if s[i] is a letter, reverse its case from lower to upper or vise versa,
     otherwise keep it as it is.
     If the string contains no letters, reverse the string.
     The function should return the resulted string.
@@ -33,22 +33,14 @@ def solve(s: str):
     """
 
     Ensures(len(Result()) == len(s))
-    # If s contains a letter, the result is s with letter cases swapped.
-    Ensures(
-        not (any(c.isalpha() for c in s)) or
-        (ForAll(
-            range(len(s)),
-            lambda i: Result()[i] == (s[i].swapcase() if s[i].isalpha() else s[i])
-        ))
-    )
-    # If s contains no letters, the result is the reverse of s.
-    Ensures(
-        any(c.isalpha() for c in s) or
-        (ForAll(
-            range(len(s)),
-            lambda i: Result()[i] == s[len(s) - 1 - i]
-        ))
-    )
+    # With a letter present: every position is case-swapped if alphabetic, else copied.
+    Ensures(not any(c.isalpha() for c in s)
+            or all(not s[i].isalpha() or Result()[i] == s[i].swapcase() for i in range(len(s))))
+    Ensures(not any(c.isalpha() for c in s)
+            or all(s[i].isalpha() or Result()[i] == s[i] for i in range(len(s))))
+    # With no letter at all, the result is the reversal.
+    Ensures(any(c.isalpha() for c in s)
+            or all(Result()[i] == s[len(s) - 1 - i] for i in range(len(s))))
 
     ans, has_letter = "", False
     for ch in s:
@@ -56,12 +48,8 @@ def solve(s: str):
         # `has_letter` tracks if any character in the prefix s[0:len(ans)] is a letter.
         Invariant(has_letter == any(c.isalpha() for c in s[0:len(ans)]))
         # `ans` is the case-swapped version of the prefix s[0:len(ans)].
-        Invariant(
-            ForAll(
-                range(len(ans)),
-                lambda i: ans[i] == (s[i].swapcase() if s[i].isalpha() else s[i])
-            )
-        )
+        Invariant(all(not s[i].isalpha() or ans[i] == s[i].swapcase() for i in range(len(ans))))
+        Invariant(all(s[i].isalpha() or ans[i] == s[i] for i in range(len(ans))))
         Decreases(len(s) - len(ans))
 
         if ch.isalpha():
@@ -69,17 +57,13 @@ def solve(s: str):
             ans += ch.swapcase()
         else:
             ans += ch
-            
+
     # At loop exit, the invariants hold for the entire string.
     Assert(len(ans) == len(s))
     Assert(has_letter == any(c.isalpha() for c in s))
-    Assert(
-        ForAll(
-            range(len(s)),
-            lambda i: ans[i] == (s[i].swapcase() if s[i].isalpha() else s[i])
-        )
-    )
-    
+    Assert(all(not s[i].isalpha() or ans[i] == s[i].swapcase() for i in range(len(s))))
+    Assert(all(s[i].isalpha() or ans[i] == s[i] for i in range(len(s))))
+
     return ans if has_letter else s[::-1]
 -/
 
@@ -105,8 +89,14 @@ def solve := fun (s : String) ↦
       -- `ans` is the case-swapped version of the prefix s[0:len(ans)].
       let _ :=
         Libraries.passta.pyPassInvariant
-          (ForAll (PastaLean.pyRange (PastaLean.pyLen ans)) fun i ↦
-            ans⦋i⦌ == if PastaLean.pyTruthy (PastaLean.pyIsAlpha s⦋i⦌) then PastaLean.pyStringSwapcase s⦋i⦌ else s⦋i⦌)
+          (PastaLean.pyAll
+            ((PastaLean.pyRange (PastaLean.pyLen ans)).map fun i =>
+              !PastaLean.pyTruthy (PastaLean.pyIsAlpha s⦋i⦌) || ans⦋i⦌ == PastaLean.pyStringSwapcase s⦋i⦌))
+      let _ :=
+        Libraries.passta.pyPassInvariant
+          (PastaLean.pyAll
+            ((PastaLean.pyRange (PastaLean.pyLen ans)).map fun i =>
+              PastaLean.pyTruthy (PastaLean.pyIsAlpha s⦋i⦌) || ans⦋i⦌ == s⦋i⦌))
       let _ := Libraries.passta.pyPassDecreases (PastaLean.pyLen s -ₚ PastaLean.pyLen ans)
       if h_1 : PastaLean.pyTruthy (PastaLean.pyIsAlpha ch) then 
         has_letter := Bool.true
@@ -119,8 +109,14 @@ def solve := fun (s : String) ↦
         (has_letter == PastaLean.pyStdAny ((PastaLean.pyIter s).map fun c => PastaLean.pyIsAlpha c))
     let _ :=
       Libraries.passta.pyPassAssert
-        (ForAll (PastaLean.pyRange (PastaLean.pyLen s)) fun i ↦
-          ans⦋i⦌ == if PastaLean.pyTruthy (PastaLean.pyIsAlpha s⦋i⦌) then PastaLean.pyStringSwapcase s⦋i⦌ else s⦋i⦌)
+        (PastaLean.pyAll
+          ((PastaLean.pyRange (PastaLean.pyLen s)).map fun i =>
+            !PastaLean.pyTruthy (PastaLean.pyIsAlpha s⦋i⦌) || ans⦋i⦌ == PastaLean.pyStringSwapcase s⦋i⦌))
+    let _ :=
+      Libraries.passta.pyPassAssert
+        (PastaLean.pyAll
+          ((PastaLean.pyRange (PastaLean.pyLen s)).map fun i =>
+            PastaLean.pyTruthy (PastaLean.pyIsAlpha s⦋i⦌) || ans⦋i⦌ == s⦋i⦌))
     let __py_ret_1 :=
       if PastaLean.pyTruthy has_letter then ans else PastaLean.pySlice s none none (some (-(1 : Int)))
     return __py_ret_1 : Id _)
@@ -128,48 +124,45 @@ def solve := fun (s : String) ↦
 @[spec]
 theorem solve_spec :
     ⦃⌜True⌝⦄ solve s ⦃⇓result =>
-      ⌜(PastaLean.pyLen result = PastaLean.pyLen s ∧
-            (¬PastaLean.pyTruthy (PastaLean.pyStdAny ((PastaLean.pyIter s).map fun c => PastaLean.pyIsAlpha c)) =
-                  true ∨
-              PastaLean.pyTruthy
-                  (ForAll (PastaLean.pyRange (PastaLean.pyLen s)) fun i ↦
-                    result⦋i⦌ =
-                      if PastaLean.pyTruthy (PastaLean.pyIsAlpha s⦋i⦌) then PastaLean.pyStringSwapcase s⦋i⦌ else s⦋i⦌) =
-                true)) ∧
-          (PastaLean.pyTruthy (PastaLean.pyStdAny ((PastaLean.pyIter s).map fun c => PastaLean.pyIsAlpha c)) = true ∨
-            PastaLean.pyTruthy
-                (ForAll (PastaLean.pyRange (PastaLean.pyLen s)) fun i ↦
-                  result⦋i⦌ = s⦋PastaLean.pyLen s -ₚ (1 : Int) -ₚ i⦌) =
-              true)⌝⦄ :=
+      ⌜((PastaLean.pyLen result = PastaLean.pyLen s ∧
+              ((¬∃ c ∈ PastaLean.pyIter s, PastaLean.pyIsAlpha c) ∨
+                ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen s)),
+                  ¬PastaLean.pyTruthy (PastaLean.pyIsAlpha s⦋i⦌) = true ∨
+                    result⦋i⦌ = PastaLean.pyStringSwapcase s⦋i⦌)) ∧
+            ((¬∃ c ∈ PastaLean.pyIter s, PastaLean.pyIsAlpha c) ∨
+              ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen s)),
+                PastaLean.pyTruthy (PastaLean.pyIsAlpha s⦋i⦌) = true ∨ result⦋i⦌ = s⦋i⦌)) ∧
+          ((∃ c ∈ PastaLean.pyIter s, PastaLean.pyIsAlpha c) ∨
+            ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen s)),
+              result⦋i⦌ = s⦋PastaLean.pyLen s -ₚ (1 : Int) -ₚ i⦌)⌝⦄ :=
   by
   try
     mvcgen [solve, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓⟨cur, ans, has_letter⟩ =>
-      ⌜(((0 : Int) ≤ PastaLean.pyLen ans ∧ PastaLean.pyLen ans ≤ PastaLean.pyLen s) ∧
-            has_letter =
-              PastaLean.pyStdAny
-                ((PastaLean.pyIter (PastaLean.pySlice s (some (0 : Int)) (some (PastaLean.pyLen ans)) none)).map
-                  fun c => PastaLean.pyIsAlpha c)) ∧
-          ForAll (PastaLean.pyRange (PastaLean.pyLen ans)) fun i ↦
-            ans⦋i⦌ = if PastaLean.pyTruthy (PastaLean.pyIsAlpha s⦋i⦌) then PastaLean.pyStringSwapcase s⦋i⦌ else s⦋i⦌⌝
-  sorry
+      ⌜((((0 : Int) ≤ PastaLean.pyLen ans ∧ PastaLean.pyLen ans ≤ PastaLean.pyLen s) ∧
+              has_letter =
+                ∃ c ∈ PastaLean.pyIter (PastaLean.pySlice s (some (0 : Int)) (some (PastaLean.pyLen ans)) none),
+                  PastaLean.pyIsAlpha c) ∧
+            ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen ans)),
+              ¬PastaLean.pyTruthy (PastaLean.pyIsAlpha s⦋i⦌) = true ∨ ans⦋i⦌ = PastaLean.pyStringSwapcase s⦋i⦌) ∧
+          ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen ans)),
+            PastaLean.pyTruthy (PastaLean.pyIsAlpha s⦋i⦌) = true ∨ ans⦋i⦌ = s⦋i⦌⌝
+  taste?
   all_goals sorry
 
 theorem solve_correct :
     ∀ (s : String),
       let result := (solve s).run;
-      (PastaLean.pyLen result = PastaLean.pyLen s ∧
-          (¬PastaLean.pyTruthy (PastaLean.pyStdAny ((PastaLean.pyIter s).map fun c => PastaLean.pyIsAlpha c)) = true ∨
-            PastaLean.pyTruthy
-                (ForAll (PastaLean.pyRange (PastaLean.pyLen s)) fun i ↦
-                  result⦋i⦌ =
-                    if PastaLean.pyTruthy (PastaLean.pyIsAlpha s⦋i⦌) then PastaLean.pyStringSwapcase s⦋i⦌ else s⦋i⦌) =
-              true)) ∧
-        (PastaLean.pyTruthy (PastaLean.pyStdAny ((PastaLean.pyIter s).map fun c => PastaLean.pyIsAlpha c)) = true ∨
-          PastaLean.pyTruthy
-              (ForAll (PastaLean.pyRange (PastaLean.pyLen s)) fun i ↦
-                result⦋i⦌ = s⦋PastaLean.pyLen s -ₚ (1 : Int) -ₚ i⦌) =
-            true) :=
+      ((PastaLean.pyLen result = PastaLean.pyLen s ∧
+            ((¬∃ c ∈ PastaLean.pyIter s, PastaLean.pyIsAlpha c) ∨
+              ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen s)),
+                ¬PastaLean.pyTruthy (PastaLean.pyIsAlpha s⦋i⦌) = true ∨ result⦋i⦌ = PastaLean.pyStringSwapcase s⦋i⦌)) ∧
+          ((¬∃ c ∈ PastaLean.pyIter s, PastaLean.pyIsAlpha c) ∨
+            ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen s)),
+              PastaLean.pyTruthy (PastaLean.pyIsAlpha s⦋i⦌) = true ∨ result⦋i⦌ = s⦋i⦌)) ∧
+        ((∃ c ∈ PastaLean.pyIter s, PastaLean.pyIsAlpha c) ∨
+          ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen s)),
+            result⦋i⦌ = s⦋PastaLean.pyLen s -ₚ (1 : Int) -ₚ i⦌) :=
   by
   intro s
   exact solve_spec True.intro
@@ -179,7 +172,7 @@ def solve'rn := fun (s : String) ↦
     (do
       /-
       You are given a string s.
-          if s[i] is a letter, reverse its case from lower to upper or vise versa, 
+          if s[i] is a letter, reverse its case from lower to upper or vise versa,
           otherwise keep it as it is.
           If the string contains no letters, reverse the string.
           The function should return the resulted string.
@@ -189,8 +182,8 @@ def solve'rn := fun (s : String) ↦
           solve("#a@C") = "#A@c"
           
       -/
-      -- If s contains a letter, the result is s with letter cases swapped.
-      -- If s contains no letters, the result is the reverse of s.
+      -- With a letter present: every position is case-swapped if alphabetic, else copied.
+      -- With no letter at all, the result is the reversal.
       let __unpack_value_1 := ("", Bool.false)
       let __unpack_pair_1 := __unpack_value_1
       let mut ans : String := Prod.fst __unpack_pair_1
@@ -209,8 +202,14 @@ def solve'rn := fun (s : String) ↦
         -- `ans` is the case-swapped version of the prefix s[0:len(ans)].
         let _ :=
           Libraries.passta.pyPassInvariant
-            (ForAll (PastaLean.pyRange (PastaLean.pyLen ans)) fun i ↦
-              ans⦋i⦌ == if PastaLean.pyTruthy (PastaLean.pyIsAlpha s⦋i⦌) then PastaLean.pyStringSwapcase s⦋i⦌ else s⦋i⦌)
+            (PastaLean.pyAll
+              ((PastaLean.pyRange (PastaLean.pyLen ans)).map fun i =>
+                !PastaLean.pyTruthy (PastaLean.pyIsAlpha s⦋i⦌) || ans⦋i⦌ == PastaLean.pyStringSwapcase s⦋i⦌))
+        let _ :=
+          Libraries.passta.pyPassInvariant
+            (PastaLean.pyAll
+              ((PastaLean.pyRange (PastaLean.pyLen ans)).map fun i =>
+                PastaLean.pyTruthy (PastaLean.pyIsAlpha s⦋i⦌) || ans⦋i⦌ == s⦋i⦌))
         let _ := Libraries.passta.pyPassDecreases (PastaLean.pyLen s -ₚ PastaLean.pyLen ans)
         if h_1 : PastaLean.pyTruthy (PastaLean.pyIsAlpha ch) then 
           has_letter := Bool.true
@@ -224,8 +223,14 @@ def solve'rn := fun (s : String) ↦
           (has_letter == PastaLean.pyStdAny ((PastaLean.pyIter s).map fun c => PastaLean.pyIsAlpha c))
       let _ :=
         Libraries.passta.pyPassAssert
-          (ForAll (PastaLean.pyRange (PastaLean.pyLen s)) fun i ↦
-            ans⦋i⦌ == if PastaLean.pyTruthy (PastaLean.pyIsAlpha s⦋i⦌) then PastaLean.pyStringSwapcase s⦋i⦌ else s⦋i⦌)
+          (PastaLean.pyAll
+            ((PastaLean.pyRange (PastaLean.pyLen s)).map fun i =>
+              !PastaLean.pyTruthy (PastaLean.pyIsAlpha s⦋i⦌) || ans⦋i⦌ == PastaLean.pyStringSwapcase s⦋i⦌))
+      let _ :=
+        Libraries.passta.pyPassAssert
+          (PastaLean.pyAll
+            ((PastaLean.pyRange (PastaLean.pyLen s)).map fun i =>
+              PastaLean.pyTruthy (PastaLean.pyIsAlpha s⦋i⦌) || ans⦋i⦌ == s⦋i⦌))
       let __py_ret_1 :=
         if PastaLean.pyTruthy has_letter then ans else PastaLean.pySlice s none none (some (-(1 : Int)))
       return __py_ret_1)

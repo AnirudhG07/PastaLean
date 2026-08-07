@@ -11,16 +11,23 @@ def below_zero(operations: List[int]) -> bool:
     >>> below_zero([1, 2, -4, 5])
     True
     """
+    # The point: the answer is exactly "some prefix sum is negative".
     Ensures(
         Result() == any(sum(operations[: k + 1]) < 0 for k in range(len(operations)))
+    )
+    # Contrapositive form, so the False case carries content too: on a False answer every
+    # prefix balance stayed non-negative.
+    Ensures(
+        Result() or all(sum(operations[: k + 1]) >= 0 for k in range(len(operations)))
     )
 
     account = 0
     for operation in operations:
-        # The invariant is that the account balance, which represents the sum
-        # of the operations processed so far, must be non-negative for the
-        # loop to continue.
+        # Reaching the top of the body means no prefix has gone negative yet — the balance
+        # here IS the running prefix sum, so this is the loop's half of the postcondition.
         Invariant(account >= 0)
+        # A prefix sum can never exceed the total of the deposits.
+        Invariant(account <= sum(x for x in operations if x > 0))
         account += operation
         if account < 0:
             return True

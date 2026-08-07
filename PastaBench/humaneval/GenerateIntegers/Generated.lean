@@ -32,11 +32,14 @@ def generate_integers(a, b):
     """
     Requires(a > 0)
     Requires(b > 0)
-    Ensures(forall(Result(), lambda x: x % 2 == 0))
-    Ensures(forall(Result(), lambda x: x < 10))
-    Ensures(forall(Result(), lambda x: min(a, b) <= x <= max(a, b)))
-    Ensures(forall(range(len(Result()) - 1), lambda i: Result()[i] < Result()[i+1]))
-
+    # Soundness: every element is an even single digit inside the (unordered) range.
+    Ensures(all(x % 2 == 0 for x in Result()))
+    Ensures(all(0 <= x < 10 for x in Result()))
+    Ensures(all(min(a, b) <= x <= max(a, b) for x in Result()))
+    # Strictly ascending, and complete — together these pin the answer to exactly one list.
+    Ensures(all(Result()[i] < Result()[i + 1] for i in range(len(Result()) - 1)))
+    Ensures(len(Result())
+            == len([i for i in range(min(a, b), min(max(a, b) + 1, 10)) if i % 2 == 0]))
 
     if a > b: a, b = b, a
     return [i for i in range(a, min(b + 1, 10)) if i % 2 == 0]
@@ -64,13 +67,20 @@ def generate_integers := fun (a : Int) ↦ fun (b : Int) ↦
 @[spec]
 theorem generate_integers_spec :
     ⦃⌜a > (0 : Int) ∧ b > (0 : Int)⌝⦄ generate_integers a b ⦃⇓result =>
-      ⌜(((«forall» result fun x ↦ x %ₚ (2 : Int) = (0 : Int)) ∧ «forall» result fun x ↦ x < (10 : Int)) ∧
-            «forall» result fun x ↦ PastaLean.pyMin [a, b] ≤ x ∧ x ≤ PastaLean.pyMax [a, b]) ∧
-          «forall» (PastaLean.pyRange (PastaLean.pyLen result -ₚ (1 : Int))) fun i ↦
-            result⦋i⦌ < result⦋i +ₚ (1 : Int)⦌⌝⦄ :=
+      ⌜((((∀ x ∈ PastaLean.pyIter result, x %ₚ (2 : Int) = (0 : Int)) ∧
+                ∀ x ∈ PastaLean.pyIter result, (0 : Int) ≤ x ∧ x < (10 : Int)) ∧
+              ∀ x ∈ PastaLean.pyIter result, PastaLean.pyMin [a, b] ≤ x ∧ x ≤ PastaLean.pyMax [a, b]) ∧
+            ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen result -ₚ (1 : Int))),
+              result⦋i⦌ < result⦋i +ₚ (1 : Int)⦌) ∧
+          PastaLean.pyLen result =
+            PastaLean.pyLen
+              ((List.filter (fun i => i %ₚ (2 : Int) = (0 : Int))
+                    (PastaLean.pyRange (PastaLean.pyMin [PastaLean.pyMax [a, b] +ₚ (1 : Int), (10 : Int)])
+                      (PastaLean.pyMin [a, b]))).map
+                fun i => i)⌝⦄ :=
   by
   mvcgen [generate_integers, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  all_goals sorry
+  taste?
   all_goals sorry
 
 theorem generate_integers_correct :
@@ -78,10 +88,17 @@ theorem generate_integers_correct :
       ∀ (b : Int),
         a > (0 : Int) ∧ b > (0 : Int) →
           let result := (generate_integers a b).run;
-          (((«forall» result fun x ↦ x %ₚ (2 : Int) = (0 : Int)) ∧ «forall» result fun x ↦ x < (10 : Int)) ∧
-              «forall» result fun x ↦ PastaLean.pyMin [a, b] ≤ x ∧ x ≤ PastaLean.pyMax [a, b]) ∧
-            «forall» (PastaLean.pyRange (PastaLean.pyLen result -ₚ (1 : Int))) fun i ↦
-              result⦋i⦌ < result⦋i +ₚ (1 : Int)⦌ :=
+          ((((∀ x ∈ PastaLean.pyIter result, x %ₚ (2 : Int) = (0 : Int)) ∧
+                  ∀ x ∈ PastaLean.pyIter result, (0 : Int) ≤ x ∧ x < (10 : Int)) ∧
+                ∀ x ∈ PastaLean.pyIter result, PastaLean.pyMin [a, b] ≤ x ∧ x ≤ PastaLean.pyMax [a, b]) ∧
+              ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen result -ₚ (1 : Int))),
+                result⦋i⦌ < result⦋i +ₚ (1 : Int)⦌) ∧
+            PastaLean.pyLen result =
+              PastaLean.pyLen
+                ((List.filter (fun i => i %ₚ (2 : Int) = (0 : Int))
+                      (PastaLean.pyRange (PastaLean.pyMin [PastaLean.pyMax [a, b] +ₚ (1 : Int), (10 : Int)])
+                        (PastaLean.pyMin [a, b]))).map
+                  fun i => i) :=
   by
   intro a b hpre
   exact generate_integers_spec hpre
@@ -104,6 +121,8 @@ def generate_integers'rn := fun (a : Int) ↦ fun (b : Int) ↦
       -/
       let _ := Libraries.passta.pyPassRequires (decide (a > (0 : Int)))
       let _ := Libraries.passta.pyPassRequires (decide (b > (0 : Int)))
+      -- Soundness: every element is an even single digit inside the (unordered) range.
+      -- Strictly ascending, and complete — together these pin the answer to exactly one list.
       if h_1 : a > b then 
         let __unpack_value_1 := (b, a)
         let __unpack_pair_1 := __unpack_value_1

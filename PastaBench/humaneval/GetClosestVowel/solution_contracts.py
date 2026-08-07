@@ -16,10 +16,27 @@ def get_closest_vowel(word):
     get_closest_vowel("quick") ==> ""
     get_closest_vowel("ab") ==> ""
     """
-    # THE POINT: The result, if not empty, is a single vowel character from the input word.
-    # While we can't easily express the "surrounded by consonants" or "rightmost" properties
-    # without quantifiers, we can state these essential properties of the value returned.
+    # Shape of the answer: either empty or a single vowel taken from the word.
     Ensures(Result() == "" or (len(Result()) == 1 and Result() in "aeiouAEIOU" and Result() in word))
+    # THE POINT (a): "" is returned exactly when NO interior position is a vowel flanked by
+    # two consonants -- i.e. the search really was exhaustive over 1 .. len(word)-2.
+    Ensures(Result() != "" or all(
+        not (word[i] in "aeiouAEIOU"
+             and word[i - 1] not in "aeiouAEIOU"
+             and word[i + 1] not in "aeiouAEIOU")
+        for i in range(1, len(word) - 1)))
+    # THE POINT (b): a non-empty answer is the RIGHTMOST such position -- it qualifies, and
+    # no position strictly to its right qualifies.
+    Ensures(Result() == "" or any(
+        word[i] == Result()
+        and word[i] in "aeiouAEIOU"
+        and word[i - 1] not in "aeiouAEIOU"
+        and word[i + 1] not in "aeiouAEIOU"
+        and all(not (word[j] in "aeiouAEIOU"
+                     and word[j - 1] not in "aeiouAEIOU"
+                     and word[j + 1] not in "aeiouAEIOU")
+                for j in range(i + 1, len(word) - 1))
+        for i in range(1, len(word) - 1)))
 
 
     def is_vowel(ch: str) -> bool:

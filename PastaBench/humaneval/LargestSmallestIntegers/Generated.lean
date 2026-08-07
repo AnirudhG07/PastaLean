@@ -68,10 +68,10 @@ theorem largest_smallest_integers_correct :
     ∀ (lst : List Int),
       let neg := PastaLean.pyList (PastaLean.pyFilter (fun x ↦ decide (x < (0 : Int))) lst)
       let pos := PastaLean.pyList (PastaLean.pyFilter (fun x ↦ decide (x > (0 : Int))) lst)
-      (((((!PastaLean.pyIsNone (largest_smallest_integers lst)⦋(0 : Int)⦌) =
-                  PastaLean.pyStdAny ((PastaLean.pyIter lst).map fun x => decide (x < (0 : Int))) ∧
+      ((((((!PastaLean.pyIsNone (largest_smallest_integers lst)⦋(0 : Int)⦌) =
+                  ∃ x ∈ PastaLean.pyIter lst, x < (0 : Int)) ∧
                 (!PastaLean.pyIsNone (largest_smallest_integers lst)⦋(1 : Int)⦌) =
-                  PastaLean.pyStdAny ((PastaLean.pyIter lst).map fun x => decide (x > (0 : Int)))) ∧
+                  ∃ x ∈ PastaLean.pyIter lst, x > (0 : Int)) ∧
               (PastaLean.pyIsNone (largest_smallest_integers lst)⦋(0 : Int)⦌ ∨
                 (largest_smallest_integers lst)⦋(0 : Int)⦌ < (0 : Int) ∧
                   PastaLean.pyContains lst (largest_smallest_integers lst)⦋(0 : Int)⦌)) ∧
@@ -79,18 +79,10 @@ theorem largest_smallest_integers_correct :
               (largest_smallest_integers lst)⦋(1 : Int)⦌ > (0 : Int) ∧
                 PastaLean.pyContains lst (largest_smallest_integers lst)⦋(1 : Int)⦌)) ∧
           (PastaLean.pyIsNone (largest_smallest_integers lst)⦋(0 : Int)⦌ ∨
-            PastaLean.pyTruthy
-                (PastaLean.pyAll
-                  ((List.filter (fun x => x < (0 : Int)) (PastaLean.pyIter lst)).map fun x =>
-                    decide (x ≤ (largest_smallest_integers lst)⦋(0 : Int)⦌))) =
-              true)) ∧
+            ∀ x ∈ PastaLean.pyIter lst, x < (0 : Int) → x ≤ (largest_smallest_integers lst)⦋(0 : Int)⦌)) ∧
         (PastaLean.pyIsNone (largest_smallest_integers lst)⦋(1 : Int)⦌ ∨
-          PastaLean.pyTruthy
-              (PastaLean.pyAll
-                ((List.filter (fun x => x > (0 : Int)) (PastaLean.pyIter lst)).map fun x =>
-                  decide (x ≥ (largest_smallest_integers lst)⦋(1 : Int)⦌))) =
-            true) :=
-  by intros; sorry
+          ∀ x ∈ PastaLean.pyIter lst, x > (0 : Int) → x ≥ (largest_smallest_integers lst)⦋(1 : Int)⦌) :=
+  by taste?
 
 def largest_smallest_integers'rn := fun (lst : List Int) ↦
   let neg := PastaLean.pyList (PastaLean.pyFilter (fun x ↦ decide (x < (0 : Int))) lst)

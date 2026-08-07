@@ -31,12 +31,14 @@ def double_the_difference(lst):
    
     If the input list is empty, return 0.
     '''
-    # The implementation's check for non-integers (`"." not in str(num)`) is
-    # not amenable to formal proof. We formalize the docstring's intent
-    # "ignore numbers that are ... not integers" by requiring the input list
-    # to contain only integers. This allows the verifier to reason about
-    # the arithmetic properties of the elements.
-    Requires(all(isinstance(x, int) for x in lst))
+    # No precondition: the recorded inputs deliberately mix ints, floats and negatives, so any
+    # `Requires` restricting the element type would be false.
+    #
+    # The point: the result is the sum of squares over exactly the positive odd integers of `lst`
+    # (floats and non-positives contribute nothing), hence it is a sum of odd squares.
+    Ensures(Result() == sum([v * v for v in lst if v % 2 == 1 and v > 0 and "." not in str(v)]))
+    # An odd square is odd, so the parity of the answer is the parity of the number of contributors.
+    Ensures(Result() % 2 == len([v for v in lst if v % 2 == 1 and v > 0 and "." not in str(v)]) % 2)
     Ensures(Result() >= 0)
 
     ans = 0
@@ -44,7 +46,7 @@ def double_the_difference(lst):
         Invariant(ans >= 0)
         if num % 2 == 1 and num > 0 and "." not in str(num):
             ans += num ** 2
-    
+
     Assert(ans >= 0)
     return ans
 -/
@@ -68,23 +70,56 @@ def double_the_difference := fun (lst : List Int) ↦
 
 @[spec]
 theorem double_the_difference_spec :
-    ⦃⌜PastaLean.pyAll ((PastaLean.pyIter lst).map fun x => isinstance x int)⌝⦄ double_the_difference lst ⦃⇓ans =>
-      ⌜ans ≥ (0 : Int)⌝⦄ :=
+    ⦃⌜True⌝⦄ double_the_difference lst ⦃⇓ans =>
+      ⌜(ans =
+              PastaLean.pySum
+                ((List.filter
+                      (fun v =>
+                        (v %ₚ (2 : Int) = (1 : Int) ∧ v > (0 : Int)) ∧
+                          !(PastaLean.pyStrContainsSubstr (PastaLean.pyStr v) "."))
+                      (PastaLean.pyIter lst)).map
+                  fun v => v *ₚ v) ∧
+            ans %ₚ (2 : Int) =
+              PastaLean.pyLen
+                  ((List.filter
+                        (fun v =>
+                          (v %ₚ (2 : Int) = (1 : Int) ∧ v > (0 : Int)) ∧
+                            !(PastaLean.pyStrContainsSubstr (PastaLean.pyStr v) "."))
+                        (PastaLean.pyIter lst)).map
+                    fun v => v) %ₚ
+                (2 : Int)) ∧
+          ans ≥ (0 : Int)⌝⦄ :=
   by
   try
     mvcgen [double_the_difference, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓⟨cur, ans⟩ => ⌜ans ≥ (0 : Int)⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem double_the_difference_correct :
     ∀ (lst : List Int),
-      PastaLean.pyAll ((PastaLean.pyIter lst).map fun x => isinstance x int) →
-        let ans := (double_the_difference lst).run;
+      let ans := (double_the_difference lst).run;
+      (ans =
+            PastaLean.pySum
+              ((List.filter
+                    (fun v =>
+                      (v %ₚ (2 : Int) = (1 : Int) ∧ v > (0 : Int)) ∧
+                        !(PastaLean.pyStrContainsSubstr (PastaLean.pyStr v) "."))
+                    (PastaLean.pyIter lst)).map
+                fun v => v *ₚ v) ∧
+          ans %ₚ (2 : Int) =
+            PastaLean.pyLen
+                ((List.filter
+                      (fun v =>
+                        (v %ₚ (2 : Int) = (1 : Int) ∧ v > (0 : Int)) ∧
+                          !(PastaLean.pyStrContainsSubstr (PastaLean.pyStr v) "."))
+                      (PastaLean.pyIter lst)).map
+                  fun v => v) %ₚ
+              (2 : Int)) ∧
         ans ≥ (0 : Int) :=
   by
-  intro lst hpre
-  exact double_the_difference_spec hpre
+  intro lst
+  exact double_the_difference_spec True.intro
 
 def double_the_difference'rn := fun (lst : List Int) ↦
   Id.run
@@ -102,12 +137,12 @@ def double_the_difference'rn := fun (lst : List Int) ↦
           If the input list is empty, return 0.
           
       -/
-      -- The implementation's check for non-integers (`"." not in str(num)`) is
-      -- not amenable to formal proof. We formalize the docstring's intent
-      -- "ignore numbers that are ... not integers" by requiring the input list
-      -- to contain only integers. This allows the verifier to reason about
-      -- the arithmetic properties of the elements.
-      let _ := Libraries.passta.pyPassRequires (PastaLean.pyAll ((PastaLean.pyIter lst).map fun x => isinstance x int))
+      -- No precondition: the recorded inputs deliberately mix ints, floats and negatives, so any
+      -- `Requires` restricting the element type would be false.
+      --
+      -- The point: the result is the sum of squares over exactly the positive odd integers of `lst`
+      -- (floats and non-positives contribute nothing), hence it is a sum of odd squares.
+      -- An odd square is odd, so the parity of the answer is the parity of the number of contributors.
       let mut ans : Int := (0 : Int)
       for num in (PastaLean.pyIter lst)do
         let _ := Libraries.passta.pyPassInvariant (decide (ans ≥ (0 : Int)))

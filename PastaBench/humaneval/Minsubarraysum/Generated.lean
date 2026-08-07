@@ -29,6 +29,18 @@ def minSubArraySum(nums):
     minSubArraySum([-1, -2, -3]) == -6
     """
     Requires(len(nums) > 0)
+    # THE POINT, both directions. Lower bound: the answer is <= the sum of EVERY non-empty
+    # contiguous sub-array nums[i:j].
+    Ensures(all(
+        all(Result() <= sum(nums[i:j]) for j in range(i + 1, len(nums) + 1))
+        for i in range(len(nums))
+    ))
+    # Tightness: the answer is actually attained by some non-empty contiguous sub-array, so it is
+    # the minimum and not merely a lower bound.
+    Ensures(any(
+        any(Result() == sum(nums[i:j]) for j in range(i + 1, len(nums) + 1))
+        for i in range(len(nums))
+    ))
     # If all numbers are non-negative, the minimum sum is just the smallest element.
     Ensures(not all(x >= 0 for x in nums) or (Result() == min(nums)))
     # If there is at least one negative number, the minimum sum must be negative.
@@ -45,6 +57,8 @@ def minSubArraySum(nums):
         Invariant(s <= 0)
         # The overall minimum found so far `ans` is always non-positive.
         Invariant(ans <= 0)
+        # `ans` never exceeds the running suffix sum, so the candidate `s` is always already covered.
+        Invariant(ans <= s)
 
         s += x
         ans = min(ans, s)
@@ -61,7 +75,7 @@ namespace PastaBench.humaneval.Minsubarraysum
 
 def minSubArraySum := fun (nums : List Int) ↦
   (do
-    if h_1 : PastaLean.pyTruthy (PastaLean.pyAll ((PastaLean.pyIter nums).map fun x => decide (x ≥ (0 : Int)))) then 
+    if h_1 : PastaLean.pyTruthy (∀ x ∈ PastaLean.pyIter nums, x ≥ (0 : Int)) then 
       let __py_ret_1 := PastaLean.pyMin nums
       return __py_ret_1
     else
@@ -77,6 +91,8 @@ def minSubArraySum := fun (nums : List Int) ↦
       let _ := Libraries.passta.pyPassInvariant (decide (s ≤ (0 : Int)))
       -- The overall minimum found so far `ans` is always non-positive.
       let _ := Libraries.passta.pyPassInvariant (decide (ans ≤ (0 : Int)))
+      -- `ans` never exceeds the running suffix sum, so the candidate `s` is always already covered.
+      let _ := Libraries.passta.pyPassInvariant (decide (ans ≤ s))
       s := s +ₚ x
       ans := PastaLean.pyMin [ans, s]
       if h_2 : s ≥ (0 : Int) then 
@@ -89,25 +105,33 @@ def minSubArraySum := fun (nums : List Int) ↦
 @[spec]
 theorem minSubArraySum_spec :
     ⦃⌜PastaLean.pyLen nums > (0 : Int)⌝⦄ minSubArraySum nums ⦃⇓ans =>
-      ⌜(¬PastaLean.pyTruthy (PastaLean.pyAll ((PastaLean.pyIter nums).map fun x => decide (x ≥ (0 : Int)))) = true ∨
-            ans = PastaLean.pyMin nums) ∧
-          (PastaLean.pyTruthy (PastaLean.pyAll ((PastaLean.pyIter nums).map fun x => decide (x ≥ (0 : Int)))) = true ∨
-            ans < (0 : Int))⌝⦄ :=
+      ⌜(((∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen nums)),
+                ∀ j ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen nums +ₚ (1 : Int)) (i +ₚ (1 : Int))),
+                  ans ≤ PastaLean.pySum (PastaLean.pySlice nums (some i) (some j) none)) ∧
+              ∃ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen nums)),
+                ∃ j ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen nums +ₚ (1 : Int)) (i +ₚ (1 : Int))),
+                  ans = PastaLean.pySum (PastaLean.pySlice nums (some i) (some j) none)) ∧
+            ((¬∀ x ∈ PastaLean.pyIter nums, x ≥ (0 : Int)) ∨ ans = PastaLean.pyMin nums)) ∧
+          ((∀ x ∈ PastaLean.pyIter nums, x ≥ (0 : Int)) ∨ ans < (0 : Int))⌝⦄ :=
   by
   try
     mvcgen [minSubArraySum, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓⟨cur, s, ans⟩ => ⌜s ≤ (0 : Int) ∧ ans ≤ (0 : Int)⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals; sorry
+    · ⇓⟨cur, s, ans⟩ => ⌜(s ≤ (0 : Int) ∧ ans ≤ (0 : Int)) ∧ ans ≤ s⌝
+  taste?
   all_goals sorry
 
 theorem minSubArraySum_correct :
     ∀ (nums : List Int),
       PastaLean.pyLen nums > (0 : Int) →
         let ans := (minSubArraySum nums).run;
-        (¬PastaLean.pyTruthy (PastaLean.pyAll ((PastaLean.pyIter nums).map fun x => decide (x ≥ (0 : Int)))) = true ∨
-            ans = PastaLean.pyMin nums) ∧
-          (PastaLean.pyTruthy (PastaLean.pyAll ((PastaLean.pyIter nums).map fun x => decide (x ≥ (0 : Int)))) = true ∨
-            ans < (0 : Int)) :=
+        (((∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen nums)),
+                ∀ j ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen nums +ₚ (1 : Int)) (i +ₚ (1 : Int))),
+                  ans ≤ PastaLean.pySum (PastaLean.pySlice nums (some i) (some j) none)) ∧
+              ∃ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen nums)),
+                ∃ j ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen nums +ₚ (1 : Int)) (i +ₚ (1 : Int))),
+                  ans = PastaLean.pySum (PastaLean.pySlice nums (some i) (some j) none)) ∧
+            ((¬∀ x ∈ PastaLean.pyIter nums, x ≥ (0 : Int)) ∨ ans = PastaLean.pyMin nums)) ∧
+          ((∀ x ∈ PastaLean.pyIter nums, x ≥ (0 : Int)) ∨ ans < (0 : Int)) :=
   by
   intro nums hpre
   exact minSubArraySum_spec hpre
@@ -125,9 +149,13 @@ def minSubArraySum'rn := fun (nums : List Int) ↦
           
       -/
       let _ := Libraries.passta.pyPassRequires (decide (PastaLean.pyLen nums > (0 : Int)))
+      -- THE POINT, both directions. Lower bound: the answer is <= the sum of EVERY non-empty
+      -- contiguous sub-array nums[i:j].
+      -- Tightness: the answer is actually attained by some non-empty contiguous sub-array, so it is
+      -- the minimum and not merely a lower bound.
       -- If all numbers are non-negative, the minimum sum is just the smallest element.
       -- If there is at least one negative number, the minimum sum must be negative.
-      if h_1 : PastaLean.pyTruthy (PastaLean.pyAll ((PastaLean.pyIter nums).map fun x => decide (x ≥ (0 : Int)))) then 
+      if h_1 : PastaLean.pyTruthy (∀ x ∈ PastaLean.pyIter nums, x ≥ (0 : Int)) then 
         let __py_ret_1 := PastaLean.pyMin nums
         return __py_ret_1
       else
@@ -145,6 +173,8 @@ def minSubArraySum'rn := fun (nums : List Int) ↦
         let _ := Libraries.passta.pyPassInvariant (decide (s ≤ (0 : Int)))
         -- The overall minimum found so far `ans` is always non-positive.
         let _ := Libraries.passta.pyPassInvariant (decide (ans ≤ (0 : Int)))
+        -- `ans` never exceeds the running suffix sum, so the candidate `s` is always already covered.
+        let _ := Libraries.passta.pyPassInvariant (decide (ans ≤ s))
         s := s +ₚ x
         ans := PastaLean.pyMin [ans, s]
         if h_2 : s ≥ (0 : Int) then 

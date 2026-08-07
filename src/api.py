@@ -100,6 +100,9 @@ class Session:
     def start(self) -> "Session":
         """Boot the backend now (imports Mathlib) rather than on the first translation."""
         self.client.start()
+        # Pull library facts (e.g. which libraries are IO-effectful) from the Lean registry before
+        # the first translation — the effect annotation runs before any per-statement backend call.
+        driver.refresh_library_info(self.client)
         return self
 
     def close(self) -> None:

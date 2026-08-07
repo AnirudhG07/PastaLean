@@ -21,6 +21,14 @@ from typing import *
 from contracts import *
 
 
+def is_prime(a):
+    Requires(a >= 0)
+    # Primality in full: a > 1 and no candidate divisor in range(2, a) divides it. Stating it
+    # over the whole range rather than up to sqrt(a) is what makes this a real obligation.
+    Ensures(Result() == (a > 1 and all(a % d != 0 for d in range(2, a))))
+    return not (a < 2 or any(a % x == 0 for x in range(2, int(a ** 0.5) + 1)))
+
+
 def words_in_sentence(sentence: str):
     """
     You are given a string representing a sentence,
@@ -41,114 +49,80 @@ def words_in_sentence(sentence: str):
         * 1 <= len(sentence) <= 100
         * sentence contains only letters
     """
-    Requires(1 <= len(sentence) <= 100)
+    Requires(len(sentence) >= 1)
+    Requires(len(sentence) <= 100)
+    # The point: exactly the words whose length is prime, in their original order — primality
+    # spelled out as trial division over range(2, n), not delegated to the sqrt-bounded helper.
+    Ensures(Result() == " ".join([w for w in sentence.split(" ")
+                                  if len(w) > 1 and all(len(w) % d != 0
+                                                        for d in range(2, len(w)))]))
+    # Consequences worth naming: every word that comes out has prime length, and comes from the
+    # input (nothing is invented or reshaped).
+    Ensures(all(len(w) > 1 and all(len(w) % d != 0 for d in range(2, len(w)))
+                for w in Result().split(" ") if w != ""))
+    Ensures(all(w in sentence.split(" ") for w in Result().split(" ") if w != ""))
 
-    def is_prime(a):
-        Requires(a >= 0)
-        # The contract for this helper function captures its mathematical intent:
-        # determining if a number is prime. A number 'a' is prime if and only if
-        # it is greater than 1 and not divisible by any integer from 2 to a-1.
-        Ensures(Result() == (a > 1 and all(a % d != 0 for d in range(2, a))))
-        return not (a < 2 or any(a % x == 0 for x in range(2, int(a ** 0.5) + 1)))
     return " ".join(list(filter(lambda word: is_prime(len(word)), sentence.split(" "))))
 -/
 
 namespace PastaBench.humaneval.WordsInSentence
 
-private noncomputable def _words_in_sentence'is_prime := fun (a : Int) ↦
+noncomputable def is_prime := fun (a : Int) ↦
   !if PastaLean.pyTruthy (decide (a < (2 : Int))) then decide (a < (2 : Int))
     else
       PastaLean.pyStdAny
         ((PastaLean.pyRange (PastaLean.pyInt (a ^ₚ (0.5 : Rat)) +ₚ (1 : Int)) (2 : Int)).map fun x =>
           a %ₚ x == (0 : Int))
 
-attribute [simp] _words_in_sentence'is_prime
+attribute [simp] is_prime
 
 @[taste_ingr]
-theorem _words_in_sentence'is_prime_spec :
+theorem is_prime_correct :
     ∀ (a : Int),
       a ≥ (0 : Int) →
-        _words_in_sentence'is_prime a =
-          (a > (1 : Int) ∧
-            PastaLean.pyTruthy (PastaLean.pyAll ((PastaLean.pyRange a (2 : Int)).map fun d => a %ₚ d != (0 : Int))) =
-              true) :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; intros; sorry
+        is_prime a = (a > (1 : Int) ∧ ∀ d ∈ PastaLean.pyIter (PastaLean.pyRange a (2 : Int)), a %ₚ d ≠ (0 : Int)) :=
+  by taste?
 
-def words_in_sentence := fun (sentence : String) ↦
-  Id.run
-    (do
-      /-
-      
-          You are given a string representing a sentence,
-          the sentence contains some words separated by a space,
-          and you have to return a string that contains the words from the original sentence,
-          whose lengths are prime numbers,
-          the order of the words in the new string should be the same as the original one.
-      
-          Example 1:
-              Input: sentence = "This is a test"
-              Output: "is"
-      
-          Example 2:
-              Input: sentence = "lets go for swimming"
-              Output: "go for"
-      
-          Constraints:
-              * 1 <= len(sentence) <= 100
-              * sentence contains only letters
-          
-      -/
-      let _ :=
-        Libraries.passta.pyPassRequires
-          (decide ((1 : Int) ≤ PastaLean.pyLen sentence) && decide (PastaLean.pyLen sentence ≤ (100 : Int)))
-      let __py_ret_1 :=
-        PastaLean.pyStringJoin " "
-          (PastaLean.pyList
-            (PastaLean.pyFilter (fun word ↦ _words_in_sentence'is_prime (PastaLean.pyLen word))
-              (PastaLean.pyStringSplit sentence " ")))
-      return __py_ret_1)
-
-attribute [simp, taste_ingr] words_in_sentence
-
-private def _words_in_sentence'is_prime'rn := fun (a : Int) ↦
+def is_prime'rn := fun (a : Int) ↦
   !if PastaLean.pyTruthy (decide (a < (2 : Int))) then decide (a < (2 : Int))
     else
       PastaLean.pyStdAny
         ((PastaLean.pyRange (PastaLean.pyInt (a ^ₚ (0.5 : Float)) +ₚ (1 : Int)) (2 : Int)).map fun x =>
           a %ₚ x == (0 : Int))
 
+def words_in_sentence := fun (sentence : String) ↦
+  PastaLean.pyStringJoin " "
+    (PastaLean.pyList
+      (PastaLean.pyFilter (fun word ↦ is_prime (PastaLean.pyLen word)) (PastaLean.pyStringSplit sentence " ")))
+
+attribute [simp] words_in_sentence
+
+@[taste_ingr]
+theorem words_in_sentence_correct :
+    ∀ (sentence : String),
+      PastaLean.pyLen sentence ≥ (1 : Int) →
+        PastaLean.pyLen sentence ≤ (100 : Int) →
+          (words_in_sentence sentence =
+                PastaLean.pyStringJoin " "
+                  ((List.filter
+                        (fun w =>
+                          PastaLean.pyLen w > (1 : Int) ∧
+                            ∀ d ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen w) (2 : Int)),
+                              PastaLean.pyLen w %ₚ d ≠ (0 : Int))
+                        (PastaLean.pyIter (PastaLean.pyStringSplit sentence " "))).map
+                    fun w => w) ∧
+              ∀ w ∈ PastaLean.pyIter (PastaLean.pyStringSplit (words_in_sentence sentence) " "),
+                w ≠ "" →
+                  PastaLean.pyLen w > (1 : Int) ∧
+                    ∀ d ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen w) (2 : Int)),
+                      PastaLean.pyLen w %ₚ d ≠ (0 : Int)) ∧
+            ∀ w ∈ PastaLean.pyIter (PastaLean.pyStringSplit (words_in_sentence sentence) " "),
+              w ≠ "" → PastaLean.pyContains (PastaLean.pyStringSplit sentence " ") w :=
+  by taste?
+
 def words_in_sentence'rn := fun (sentence : String) ↦
-  Id.run
-    (do
-      /-
-      
-          You are given a string representing a sentence,
-          the sentence contains some words separated by a space,
-          and you have to return a string that contains the words from the original sentence,
-          whose lengths are prime numbers,
-          the order of the words in the new string should be the same as the original one.
-      
-          Example 1:
-              Input: sentence = "This is a test"
-              Output: "is"
-      
-          Example 2:
-              Input: sentence = "lets go for swimming"
-              Output: "go for"
-      
-          Constraints:
-              * 1 <= len(sentence) <= 100
-              * sentence contains only letters
-          
-      -/
-      let _ :=
-        Libraries.passta.pyPassRequires
-          (decide ((1 : Int) ≤ PastaLean.pyLen sentence) && decide (PastaLean.pyLen sentence ≤ (100 : Int)))
-      let __py_ret_1 :=
-        PastaLean.pyStringJoin " "
-          (PastaLean.pyList
-            (PastaLean.pyFilter (fun word ↦ _words_in_sentence'is_prime'rn (PastaLean.pyLen word))
-              (PastaLean.pyStringSplit sentence " ")))
-      return __py_ret_1)
+  PastaLean.pyStringJoin " "
+    (PastaLean.pyList
+      (PastaLean.pyFilter (fun word ↦ is_prime'rn (PastaLean.pyLen word)) (PastaLean.pyStringSplit sentence " ")))
 
 end PastaBench.humaneval.WordsInSentence

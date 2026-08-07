@@ -10,9 +10,10 @@ def string_sequence(n: int) -> str:
     """
 
     Requires(n >= 0)
-    # The point of the function is to generate a sequence of n+1 numbers.
-    # This is captured by asserting that if we split the resulting string by spaces,
-    # we get a list of n+1 elements.
+    # THE POINT: the result splits into exactly n+1 space-delimited fields, and field i is
+    # the decimal rendering of i. Together these pin the string completely (the join has no
+    # separator ambiguity because no field contains a space).
     Ensures(len(Result().split(' ')) == n + 1)
+    Ensures(Result().split(' ') == [str(i) for i in range(n + 1)])
 
     return " ".join(map(str, range(n + 1)))

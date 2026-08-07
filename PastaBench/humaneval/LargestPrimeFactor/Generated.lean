@@ -28,13 +28,15 @@ def largest_prime_factor(n: int):
     2
     """
     Requires(n > 1)
-    # This implementation is correct only if n is a composite number.
-    # If n is prime, it returns 1, which is not a prime factor.
-    # The docstring correctly states this assumption. A formal contract
-    # for "n is composite" is difficult to express and prove.
+    # The docstring's "and is not a prime" assumption, stated formally: n has a proper divisor.
+    # Without it the final loop falls through and the function returns nothing.
+    Requires(any(n % d == 0 for d in range(2, n)))
 
+    # THE POINT: the result is a prime divisor of n.
+    Ensures(Result() > 1)
     Ensures(n % Result() == 0)
-    Ensures(Result() < n)
+    # Primality by trial division (the guard is the implication `Result() > 1 -> ...`).
+    Ensures(Result() <= 1 or all(Result() % d != 0 for d in range(2, Result())))
 
     isprime = [True] * (n + 1)
     Assert(len(isprime) == n + 1)
@@ -49,7 +51,6 @@ def largest_prime_factor(n: int):
             for j in range(i + i, n, i):
                 Invariant(i >= 2)
                 Invariant(len(isprime) == n + 1)
-                # Invariants establishing the bounds and properties of the inner loop counter.
                 Invariant(j >= i + i)
                 Invariant(j < n)
                 Invariant(j % i == 0)
@@ -57,20 +58,17 @@ def largest_prime_factor(n: int):
                 Assert(0 <= j < len(isprime))
                 isprime[j] = False
 
-    # Find the largest factor of n that is marked as prime by the sieve.
+    # Scan downwards, so the first sieve-prime divisor found is the largest one.
     for i in range(n - 1, 0, -1):
-        # The loop iterates from n-1 down to 1.
         Invariant(0 < i < n)
         Invariant(len(isprime) == n + 1)
+        Decreases(i)
 
         Assert(0 <= i < len(isprime))
         if isprime[i] and n % i == 0:
             return i
 
-    # This part of the code is unreachable if n is a composite number > 1,
-    # as such a number always has a prime factor p with 1 < p < n, which the
-    # sieve would find. If n is prime, the loop finishes and the function
-    # implicitly returns None, failing to satisfy the Ensures contracts.
+    # Unreachable under the precondition: a composite n > 1 always has a prime factor p < n.
 -/
 
 namespace PastaBench.humaneval.LargestPrimeFactor
@@ -87,7 +85,6 @@ def largest_prime_factor := fun (n : Int) ↦
         for j in (PastaLean.pyRange n (i +ₚ i) i)do
           let _ := Libraries.passta.pyPassInvariant (decide (i ≥ (2 : Int)))
           let _ := Libraries.passta.pyPassInvariant (PastaLean.pyLen isprime == n +ₚ (1 : Int))
-          -- Invariants establishing the bounds and properties of the inner loop counter.
           let _ := Libraries.passta.pyPassInvariant (decide (j ≥ i +ₚ i))
           let _ := Libraries.passta.pyPassInvariant (decide (j < n))
           let _ := Libraries.passta.pyPassInvariant (j %ₚ i == (0 : Int))
@@ -96,9 +93,9 @@ def largest_prime_factor := fun (n : Int) ↦
       else
         let _ := ()
     for i in (PastaLean.pyRange (0 : Int) (n -ₚ (1 : Int)) (-(1 : Int)))do
-      -- The loop iterates from n-1 down to 1.
       let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) < i) && decide (i < n))
       let _ := Libraries.passta.pyPassInvariant (PastaLean.pyLen isprime == n +ₚ (1 : Int))
+      let _ := Libraries.passta.pyPassDecreases i
       let _ := Libraries.passta.pyPassAssert (decide ((0 : Int) ≤ i) && decide (i < PastaLean.pyLen isprime))
       if h_1 : PastaLean.pyTruthy isprime⦋i⦌ = true ∧ n %ₚ i = (0 : Int) then 
         return i
@@ -108,7 +105,11 @@ def largest_prime_factor := fun (n : Int) ↦
 
 @[spec]
 theorem largest_prime_factor_spec :
-    ⦃⌜n > (1 : Int)⌝⦄ largest_prime_factor n ⦃⇓result => ⌜n %ₚ result = (0 : Int) ∧ result < n⌝⦄ :=
+    ⦃⌜n > (1 : Int) ∧ ∃ d ∈ PastaLean.pyIter (PastaLean.pyRange n (2 : Int)), n %ₚ d = (0 : Int)⌝⦄
+      largest_prime_factor n ⦃⇓result =>
+      ⌜(result > (1 : Int) ∧ n %ₚ result = (0 : Int)) ∧
+          (result ≤ (1 : Int) ∨
+            ∀ d ∈ PastaLean.pyIter (PastaLean.pyRange result (2 : Int)), result %ₚ d ≠ (0 : Int))⌝⦄ :=
   by
   try
     mvcgen [largest_prime_factor, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
@@ -116,14 +117,15 @@ theorem largest_prime_factor_spec :
       ⌜let i := (cur.prefix.length : Int);
         ((2 : Int) ≤ i ∧ i ≤ n +ₚ (1 : Int)) ∧ PastaLean.pyLen isprime = n +ₚ (1 : Int)⌝
     · Invariant.withEarlyReturn (onReturn := fun _ _ => ⌜True⌝) (onContinue := fun _ _ => ⌜True⌝)
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem largest_prime_factor_correct :
     ∀ (n : Int),
-      n > (1 : Int) →
+      (n > (1 : Int) ∧ ∃ d ∈ PastaLean.pyIter (PastaLean.pyRange n (2 : Int)), n %ₚ d = (0 : Int)) →
         let result := (largest_prime_factor n).run;
-        n %ₚ result = (0 : Int) ∧ result < n :=
+        (result > (1 : Int) ∧ n %ₚ result = (0 : Int)) ∧
+          (result ≤ (1 : Int) ∨ ∀ d ∈ PastaLean.pyIter (PastaLean.pyRange result (2 : Int)), result %ₚ d ≠ (0 : Int)) :=
   by
   intro n hpre
   exact largest_prime_factor_spec hpre
@@ -140,10 +142,13 @@ def largest_prime_factor'rn := fun (n : Int) ↦
           
       -/
       let _ := Libraries.passta.pyPassRequires (decide (n > (1 : Int)))
-      -- This implementation is correct only if n is a composite number.
-      -- If n is prime, it returns 1, which is not a prime factor.
-      -- The docstring correctly states this assumption. A formal contract
-      -- for "n is composite" is difficult to express and prove.
+      -- The docstring's "and is not a prime" assumption, stated formally: n has a proper divisor.
+      -- Without it the final loop falls through and the function returns nothing.
+      let _ :=
+        Libraries.passta.pyPassRequires
+          (PastaLean.pyStdAny ((PastaLean.pyRange n (2 : Int)).map fun d => n %ₚ d == (0 : Int)))
+      -- THE POINT: the result is a prime divisor of n.
+      -- Primality by trial division (the guard is the implication `Result() > 1 -> ...`).
       let mut isprime : Array Bool := PastaLean.pyArrayRepeat #[Bool.true] (n +ₚ (1 : Int))
       let _ := Libraries.passta.pyPassAssert (PastaLean.pyLen isprime == n +ₚ (1 : Int))
       -- Sieve of Eratosthenes to find all primes up to n.
@@ -155,7 +160,6 @@ def largest_prime_factor'rn := fun (n : Int) ↦
           for j in (PastaLean.pyRange n (i +ₚ i) i)do
             let _ := Libraries.passta.pyPassInvariant (decide (i ≥ (2 : Int)))
             let _ := Libraries.passta.pyPassInvariant (PastaLean.pyLen isprime == n +ₚ (1 : Int))
-            -- Invariants establishing the bounds and properties of the inner loop counter.
             let _ := Libraries.passta.pyPassInvariant (decide (j ≥ i +ₚ i))
             let _ := Libraries.passta.pyPassInvariant (decide (j < n))
             let _ := Libraries.passta.pyPassInvariant (j %ₚ i == (0 : Int))
@@ -163,11 +167,11 @@ def largest_prime_factor'rn := fun (n : Int) ↦
             isprime := PastaLean.pySetItem isprime j Bool.false
         else
           let _ := ()
-      -- Find the largest factor of n that is marked as prime by the sieve.
+      -- Scan downwards, so the first sieve-prime divisor found is the largest one.
       for i in (PastaLean.pyRange (0 : Int) (n -ₚ (1 : Int)) (-(1 : Int)))do
-        -- The loop iterates from n-1 down to 1.
         let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) < i) && decide (i < n))
         let _ := Libraries.passta.pyPassInvariant (PastaLean.pyLen isprime == n +ₚ (1 : Int))
+        let _ := Libraries.passta.pyPassDecreases i
         let _ := Libraries.passta.pyPassAssert (decide ((0 : Int) ≤ i) && decide (i < PastaLean.pyLen isprime))
         if h_1 : PastaLean.pyTruthy isprime⦋i⦌ && n %ₚ i == (0 : Int) then 
           return i

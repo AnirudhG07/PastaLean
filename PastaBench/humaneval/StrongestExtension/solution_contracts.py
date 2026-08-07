@@ -1,6 +1,17 @@
 from contracts import *
 
 
+def strength(s: str) -> int:
+    CAP, SM = 0, 0
+    for ch in s:
+        Invariant(CAP >= 0)
+        Invariant(SM >= 0)
+        Invariant(CAP + SM <= len(s))
+        if ch.isupper(): CAP += 1
+        if ch.islower(): SM += 1
+    return CAP - SM
+
+
 def Strongest_Extension(class_name, extensions):
     """You will be given the name of a class (a string) and a list of extensions.
     The extensions are to be used to load additional classes to the class. The
@@ -20,21 +31,16 @@ def Strongest_Extension(class_name, extensions):
     """
     Requires(len(extensions) > 0)
 
-    # The point of the function is that the extension part of the result string
-    # is a member of the input list and has a strength equal to the maximum
-    # strength found in that list. The tie-breaking rule (first wins) is
-    # ensured by the sequential search logic of the `for` loop.
-    Ensures(Result().split('.')[-1] in extensions)
-    Ensures(strength(Result().split('.')[-1]) == max(map(strength, extensions)))
-
-    def strength(s: str) -> int:
-        CAP, SM = 0, 0
-        for ch in s:
-            Invariant(CAP >= 0)
-            Invariant(SM >= 0)
-            if ch.isupper(): CAP += 1
-            if ch.islower(): SM += 1
-        return CAP - SM
+    # The chosen extension is everything after the first `len(class_name) + 1` characters --
+    # splitting on '.' would be wrong, since an extension may itself contain a dot.
+    Ensures(Result().startswith(class_name + "."))
+    Ensures(Result()[len(class_name) + 1:] in extensions)
+    # THE POINT (a): it attains the maximum CAP - SM strength over the whole list.
+    Ensures(strength(Result()[len(class_name) + 1:]) == max([strength(e) for e in extensions]))
+    # THE POINT (b): the documented tie-break -- every extension before the chosen one is
+    # strictly weaker, so the FIRST maximiser is the one returned.
+    Ensures(all(strength(extensions[j]) < strength(Result()[len(class_name) + 1:])
+                for j in range(extensions.index(Result()[len(class_name) + 1:]))))
 
     max_strength = max(map(strength, extensions))
     for e in extensions:

@@ -119,8 +119,7 @@ theorem maximumNumberOfOnes_spec :
     mvcgen [maximumNumberOfOnes, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓cur =>
       ⌜let i := (cur.prefix.length : Int);
-        ((((0 : Int) ≤ i ∧ i ≤ width) ∧ PastaLean.pyLen cnt = x *ₚ x) ∧
-            PastaLean.pyAll ((PastaLean.pyIter cnt).map fun c => decide (c ≥ (0 : Int)))) ∧
+        ((((0 : Int) ≤ i ∧ i ≤ width) ∧ PastaLean.pyLen cnt = x *ₚ x) ∧ ∀ c ∈ PastaLean.pyIter cnt, c ≥ (0 : Int)) ∧
           PastaLean.pySum cnt = i *ₚ height⌝
   simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry

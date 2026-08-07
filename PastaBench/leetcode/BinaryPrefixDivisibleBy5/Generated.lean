@@ -64,18 +64,18 @@ def prefixesDivBy5 := fun (nums : List Int) ↦
 
 @[spec]
 theorem prefixesDivBy5_spec :
-    ⦃⌜PastaLean.pyAll ((PastaLean.pyIter nums).map fun v => v == (0 : Int) || v == (1 : Int))⌝⦄
-      prefixesDivBy5 nums ⦃⇓ans => ⌜PastaLean.pyLen ans = PastaLean.pyLen nums⌝⦄ :=
+    ⦃⌜∀ v ∈ PastaLean.pyIter nums, v = (0 : Int) ∨ v = (1 : Int)⌝⦄ prefixesDivBy5 nums ⦃⇓ans =>
+      ⌜PastaLean.pyLen ans = PastaLean.pyLen nums⌝⦄ :=
   by
   try
     mvcgen [prefixesDivBy5, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓⟨cur, x⟩ => ⌜(0 : Int) ≤ x ∧ x < (5 : Int)⌝
-  sorry
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
 theorem prefixesDivBy5_correct :
     ∀ (nums : List Int),
-      PastaLean.pyAll ((PastaLean.pyIter nums).map fun v => v == (0 : Int) || v == (1 : Int)) →
+      (∀ v ∈ PastaLean.pyIter nums, v = (0 : Int) ∨ v = (1 : Int)) →
         let ans := (prefixesDivBy5 nums).run;
         PastaLean.pyLen ans = PastaLean.pyLen nums :=
   by

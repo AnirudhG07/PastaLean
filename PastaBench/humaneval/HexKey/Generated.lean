@@ -53,7 +53,7 @@ def hex_key := fun (num : PyAny) ↦
 attribute [simp] hex_key
 
 @[taste_ingr]
-theorem hex_key_correct : ∀ (num : PyAny), (0 : Int) ≤ hex_key num ∧ hex_key num ≤ PastaLean.pyLen num := by intros; sorry
+theorem hex_key_correct : ∀ (num : PyAny), (0 : Int) ≤ hex_key num ∧ hex_key num ≤ PastaLean.pyLen num := by taste?
 
 def hex_key'rn := fun (num : PyAny) ↦
   PastaLean.pyLen (PastaLean.pyList (PastaLean.pyFilter (fun x ↦ PastaLean.pyContains "2357BD" x) num))

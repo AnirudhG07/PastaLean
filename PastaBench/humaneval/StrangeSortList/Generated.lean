@@ -30,8 +30,15 @@ def strange_sort_list(lst):
     strange_sort_list([5, 5, 5, 5]) == [5, 5, 5, 5]
     strange_sort_list([]) == []
     '''
+    # 1-2. The result is a permutation of the input (same length, same multiset).
     Ensures(len(Result()) == len(lst))
     Ensures(sorted(Result()) == sorted(lst))
+    # 3-4. The interleaving itself: even slots take the k-th smallest, odd slots the k-th largest.
+    #      Together with (1-2) this pins the result down to exactly one list.
+    Ensures(all(Result()[2 * k] == sorted(lst)[k] for k in range(len(lst) // 2)))
+    Ensures(all(Result()[2 * k + 1] == sorted(lst)[len(lst) - 1 - k] for k in range(len(lst) // 2)))
+    # 5. An odd-length input leaves its median in the final slot.
+    Ensures(len(lst) % 2 == 0 or Result()[len(lst) - 1] == sorted(lst)[len(lst) // 2])
 
     sorted_list = sorted(lst)
     Assert(sorted(lst) == sorted_list)
@@ -52,6 +59,10 @@ def strange_sort_list(lst):
         # 5. The core permutation property: elements already in `ans` plus the
         #    unprocessed elements between `i` and `j` constitute the original sorted list.
         Invariant(sorted(ans + sorted_list[i : j + 1]) == sorted_list)
+        # 6. The index-style invariant that turns into Ensures 3-4 at loop exit: the first `i`
+        #    pairs already placed are the i smallest / i largest, in alternating slots.
+        Invariant(all(ans[2 * k] == sorted_list[k] for k in range(i)))
+        Invariant(all(ans[2 * k + 1] == sorted_list[len(sorted_list) - 1 - k] for k in range(i)))
         # Termination: the gap between `i` and `j` shrinks.
         Decreases(j - i)
 
@@ -101,6 +112,16 @@ def strange_sort_list := fun (lst : PyAny) ↦
         Libraries.passta.pyPassInvariant
           (PastaLean.pySort (ans +ₚ PastaLean.pySlice sorted_list (some i) (some (j +ₚ (1 : Int))) none) ==
             sorted_list)
+      -- 6. The index-style invariant that turns into Ensures 3-4 at loop exit: the first `i`
+      -- pairs already placed are the i smallest / i largest, in alternating slots.
+      let _ :=
+        Libraries.passta.pyPassInvariant
+          (PastaLean.pyAll ((PastaLean.pyRange i).map fun k => ans⦋(2 : Int) *ₚ k⦌ == sorted_list⦋k⦌))
+      let _ :=
+        Libraries.passta.pyPassInvariant
+          (PastaLean.pyAll
+            ((PastaLean.pyRange i).map fun k =>
+              ans⦋(2 : Int) *ₚ k +ₚ (1 : Int)⦌ == sorted_list⦋PastaLean.pyLen sorted_list -ₚ (1 : Int) -ₚ k⦌))
       -- Termination: the gap between `i` and `j` shrinks.
       let _ := Libraries.passta.pyPassDecreases (j -ₚ i)
       ans := PastaLean.pyAppend ans sorted_list⦋i⦌
@@ -118,7 +139,14 @@ def strange_sort_list := fun (lst : PyAny) ↦
 @[spec]
 theorem strange_sort_list_spec :
     ⦃⌜True⌝⦄ strange_sort_list lst ⦃⇓ans =>
-      ⌜PastaLean.pyLen ans = PastaLean.pyLen lst ∧ PastaLean.pySort ans = PastaLean.pySort lst⌝⦄ :=
+      ⌜(((PastaLean.pyLen ans = PastaLean.pyLen lst ∧ PastaLean.pySort ans = PastaLean.pySort lst) ∧
+              ∀ k ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyFloorDiv (PastaLean.pyLen lst) (2 : Int))),
+                ans⦋(2 : Int) *ₚ k⦌ = (PastaLean.pySort lst)⦋k⦌) ∧
+            ∀ k ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyFloorDiv (PastaLean.pyLen lst) (2 : Int))),
+              ans⦋(2 : Int) *ₚ k +ₚ (1 : Int)⦌ = (PastaLean.pySort lst)⦋PastaLean.pyLen lst -ₚ (1 : Int) -ₚ k⦌) ∧
+          (PastaLean.pyLen lst %ₚ (2 : Int) = (0 : Int) ∨
+            ans⦋PastaLean.pyLen lst -ₚ (1 : Int)⦌ =
+              (PastaLean.pySort lst)⦋PastaLean.pyFloorDiv (PastaLean.pyLen lst) (2 : Int)⦌)⌝⦄ :=
   by
   try
     mvcgen [strange_sort_list, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
@@ -131,19 +159,29 @@ theorem strange_sort_list_spec :
           (fun st =>
             let j := st |>.snd;
             let i := st |>.fst;
-            (((((0 : Int) ≤ i ∧ j < PastaLean.pyLen sorted_list) ∧ i ≤ j +ₚ (1 : Int)) ∧
-                  i +ₚ j = PastaLean.pyLen sorted_list -ₚ (1 : Int)) ∧
-                PastaLean.pyLen ans = (2 : Int) *ₚ i) ∧
-              PastaLean.pySort (ans +ₚ PastaLean.pySlice sorted_list (some i) (some (j +ₚ (1 : Int))) none) =
-                sorted_list)
+            (((((((0 : Int) ≤ i ∧ j < PastaLean.pyLen sorted_list) ∧ i ≤ j +ₚ (1 : Int)) ∧
+                      i +ₚ j = PastaLean.pyLen sorted_list -ₚ (1 : Int)) ∧
+                    PastaLean.pyLen ans = (2 : Int) *ₚ i) ∧
+                  PastaLean.pySort (ans +ₚ PastaLean.pySlice sorted_list (some i) (some (j +ₚ (1 : Int))) none) =
+                    sorted_list) ∧
+                ∀ k ∈ PastaLean.pyIter (PastaLean.pyRange i), ans⦋(2 : Int) *ₚ k⦌ = sorted_list⦋k⦌) ∧
+              ∀ k ∈ PastaLean.pyIter (PastaLean.pyRange i),
+                ans⦋(2 : Int) *ₚ k +ₚ (1 : Int)⦌ = sorted_list⦋PastaLean.pyLen sorted_list -ₚ (1 : Int) -ₚ k⦌)
           (fun _ => True) s⌝
-  sorry
+  taste?
   all_goals sorry
 
 theorem strange_sort_list_correct :
     ∀ (lst : PyAny),
       let ans := (strange_sort_list lst).run;
-      PastaLean.pyLen ans = PastaLean.pyLen lst ∧ PastaLean.pySort ans = PastaLean.pySort lst :=
+      (((PastaLean.pyLen ans = PastaLean.pyLen lst ∧ PastaLean.pySort ans = PastaLean.pySort lst) ∧
+            ∀ k ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyFloorDiv (PastaLean.pyLen lst) (2 : Int))),
+              ans⦋(2 : Int) *ₚ k⦌ = (PastaLean.pySort lst)⦋k⦌) ∧
+          ∀ k ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyFloorDiv (PastaLean.pyLen lst) (2 : Int))),
+            ans⦋(2 : Int) *ₚ k +ₚ (1 : Int)⦌ = (PastaLean.pySort lst)⦋PastaLean.pyLen lst -ₚ (1 : Int) -ₚ k⦌) ∧
+        (PastaLean.pyLen lst %ₚ (2 : Int) = (0 : Int) ∨
+          ans⦋PastaLean.pyLen lst -ₚ (1 : Int)⦌ =
+            (PastaLean.pySort lst)⦋PastaLean.pyFloorDiv (PastaLean.pyLen lst) (2 : Int)⦌) :=
   by
   intro lst
   exact strange_sort_list_spec True.intro
@@ -163,6 +201,10 @@ def strange_sort_list'rn := fun (lst : PyAny) ↦
           strange_sort_list([]) == []
           
       -/
+      -- 1-2. The result is a permutation of the input (same length, same multiset).
+      -- 3-4. The interleaving itself: even slots take the k-th smallest, odd slots the k-th largest.
+      -- Together with (1-2) this pins the result down to exactly one list.
+      -- 5. An odd-length input leaves its median in the final slot.
       let mut sorted_list : List PyAny := PastaLean.pySort lst
       let _ := Libraries.passta.pyPassAssert (PastaLean.pySort lst == sorted_list)
       let _ := Libraries.passta.pyPassAssert (PastaLean.pyLen sorted_list == PastaLean.pyLen lst)
@@ -188,6 +230,16 @@ def strange_sort_list'rn := fun (lst : PyAny) ↦
           Libraries.passta.pyPassInvariant
             (PastaLean.pySort (ans +ₚ PastaLean.pySlice sorted_list (some i) (some (j +ₚ (1 : Int))) none) ==
               sorted_list)
+        -- 6. The index-style invariant that turns into Ensures 3-4 at loop exit: the first `i`
+        -- pairs already placed are the i smallest / i largest, in alternating slots.
+        let _ :=
+          Libraries.passta.pyPassInvariant
+            (PastaLean.pyAll ((PastaLean.pyRange i).map fun k => ans⦋(2 : Int) *ₚ k⦌ == sorted_list⦋k⦌))
+        let _ :=
+          Libraries.passta.pyPassInvariant
+            (PastaLean.pyAll
+              ((PastaLean.pyRange i).map fun k =>
+                ans⦋(2 : Int) *ₚ k +ₚ (1 : Int)⦌ == sorted_list⦋PastaLean.pyLen sorted_list -ₚ (1 : Int) -ₚ k⦌))
         -- Termination: the gap between `i` and `j` shrinks.
         let _ := Libraries.passta.pyPassDecreases (j -ₚ i)
         ans := PastaLean.pyAppend ans sorted_list⦋i⦌

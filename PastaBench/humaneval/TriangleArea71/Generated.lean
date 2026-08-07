@@ -22,9 +22,9 @@ from contracts import *
 def triangle_area(a, b, c):
     '''
     Given the lengths of the three sides of a triangle. Return the area of
-    the triangle rounded to 2 decimal points if the three sides form a valid triangle. 
+    the triangle rounded to 2 decimal points if the three sides form a valid triangle.
     Otherwise return -1
-    Three sides make a valid triangle when the sum of any two sides is greater 
+    Three sides make a valid triangle when the sum of any two sides is greater
     than the third side.
     Example:
     triangle_area(3, 4, 5) == 6.00
@@ -33,16 +33,19 @@ def triangle_area(a, b, c):
     Requires(a > 0)
     Requires(b > 0)
     Requires(c > 0)
-    # The postcondition captures the two outcomes:
-    # - If the sides don't form a triangle, the result is -1.
-    # - If they do, the result is a non-negative area.
-    # Stating the exact rounded value is brittle and complex; this captures the essential logic.
-    Ensures(((a + b <= c or a + c <= b or b + c <= a) and Result() == -1) or
-            ((a + b > c and a + c > b and b + c > a) and Result() >= 0))
+    # -1 comes out exactly when the triangle inequality fails.
+    Ensures((a + b <= c or a + c <= b or b + c <= a) == (Result() == -1))
+    Ensures(Result() == -1 or Result() >= 0)
+    # THE POINT: otherwise the result satisfies Heron's relation, 16 * area^2 =
+    # (a+b+c)(b+c-a)(a+c-b)(a+b-c), stated division-free and slackened by the rounding
+    # to 2 decimals: |R - area| <= 0.005 gives |16R^2 - P| <= 0.16 * R + 0.0004.
+    Ensures(Result() == -1 or
+            abs(16 * Result() ** 2 - (a + b + c) * (b + c - a) * (a + c - b) * (a + b - c))
+            <= 0.17 * Result() + 0.01)
 
     if a + b <= c or a + c <= b or b + c <= a:
         return -1
-    
+
     # Having passed the check, we can now assert the triangle inequality holds.
     # This is the key fact that makes the subsequent math valid.
     Assert(a + b > c and a + c > b and b + c > a)
@@ -51,7 +54,7 @@ def triangle_area(a, b, c):
     # This assertion follows from the triangle inequality and ensures that the
     # term under the square root (Heron's formula) is non-negative.
     Assert(p * (p - a) * (p - b) * (p - c) >= 0)
-    
+
     return round((p * (p - a) * (p - b) * (p - c)) ** 0.5, 2)
 -/
 
@@ -73,11 +76,15 @@ noncomputable def triangle_area := fun (a : Int) ↦ fun (b : Int) ↦ fun (c : 
 @[spec]
 theorem triangle_area_spec :
     ⦃⌜(a > (0 : Int) ∧ b > (0 : Int)) ∧ c > (0 : Int)⌝⦄ triangle_area a b c ⦃⇓result =>
-      ⌜((a +ₚ b ≤ c ∨ a +ₚ c ≤ b) ∨ b +ₚ c ≤ a) ∧ result = -(1 : Int) ∨
-          ((a +ₚ b > c ∧ a +ₚ c > b) ∧ b +ₚ c > a) ∧ result ≥ (0 : Int)⌝⦄ :=
+      ⌜(((a +ₚ b ≤ c ∨ a +ₚ c ≤ b) ∨ b +ₚ c ≤ a) = (result = -(1 : Int)) ∧ (result = -(1 : Int) ∨ result ≥ (0 : Int))) ∧
+          (result = -(1 : Int) ∨
+            PastaLean.pyAbs
+                ((16 : Int) *ₚ result ^ₚ (2 : Int) -ₚ
+                  (a +ₚ b +ₚ c) *ₚ (b +ₚ c -ₚ a) *ₚ (a +ₚ c -ₚ b) *ₚ (a +ₚ b -ₚ c)) ≤
+              (0.17 : Rat) *ₚ result +ₚ (0.01 : Rat))⌝⦄ :=
   by
   mvcgen [triangle_area, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem triangle_area_correct :
@@ -86,8 +93,13 @@ theorem triangle_area_correct :
         ∀ (c : Int),
           (a > (0 : Int) ∧ b > (0 : Int)) ∧ c > (0 : Int) →
             let result := (triangle_area a b c).run;
-            ((a +ₚ b ≤ c ∨ a +ₚ c ≤ b) ∨ b +ₚ c ≤ a) ∧ result = -(1 : Int) ∨
-              ((a +ₚ b > c ∧ a +ₚ c > b) ∧ b +ₚ c > a) ∧ result ≥ (0 : Int) :=
+            (((a +ₚ b ≤ c ∨ a +ₚ c ≤ b) ∨ b +ₚ c ≤ a) = (result = -(1 : Int)) ∧
+                (result = -(1 : Int) ∨ result ≥ (0 : Int))) ∧
+              (result = -(1 : Int) ∨
+                PastaLean.pyAbs
+                    ((16 : Int) *ₚ result ^ₚ (2 : Int) -ₚ
+                      (a +ₚ b +ₚ c) *ₚ (b +ₚ c -ₚ a) *ₚ (a +ₚ c -ₚ b) *ₚ (a +ₚ b -ₚ c)) ≤
+                  (0.17 : Rat) *ₚ result +ₚ (0.01 : Rat)) :=
   by
   intro a b c hpre
   exact triangle_area_spec hpre
@@ -98,9 +110,9 @@ def triangle_area'rn := fun (a : Int) ↦ fun (b : Int) ↦ fun (c : Int) ↦
       /-
       
           Given the lengths of the three sides of a triangle. Return the area of
-          the triangle rounded to 2 decimal points if the three sides form a valid triangle. 
+          the triangle rounded to 2 decimal points if the three sides form a valid triangle.
           Otherwise return -1
-          Three sides make a valid triangle when the sum of any two sides is greater 
+          Three sides make a valid triangle when the sum of any two sides is greater
           than the third side.
           Example:
           triangle_area(3, 4, 5) == 6.00
@@ -110,10 +122,10 @@ def triangle_area'rn := fun (a : Int) ↦ fun (b : Int) ↦ fun (c : Int) ↦
       let _ := Libraries.passta.pyPassRequires (decide (a > (0 : Int)))
       let _ := Libraries.passta.pyPassRequires (decide (b > (0 : Int)))
       let _ := Libraries.passta.pyPassRequires (decide (c > (0 : Int)))
-      -- The postcondition captures the two outcomes:
-      -- - If the sides don't form a triangle, the result is -1.
-      -- - If they do, the result is a non-negative area.
-      -- Stating the exact rounded value is brittle and complex; this captures the essential logic.
+      -- -1 comes out exactly when the triangle inequality fails.
+      -- THE POINT: otherwise the result satisfies Heron's relation, 16 * area^2 =
+      -- (a+b+c)(b+c-a)(a+c-b)(a+b-c), stated division-free and slackened by the rounding
+      -- to 2 decimals: |R - area| <= 0.005 gives |16R^2 - P| <= 0.16 * R + 0.0004.
       if h_1 : decide (a +ₚ b ≤ c) || decide (a +ₚ c ≤ b) || decide (b +ₚ c ≤ a) then 
         let __py_ret_1 := -(1 : Int)
         return __py_ret_1

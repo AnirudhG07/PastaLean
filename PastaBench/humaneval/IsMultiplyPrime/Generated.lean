@@ -22,12 +22,24 @@ from contracts import *
 def is_multiply_prime(a):
     """Write a function that returns true if the given number is the multiplication of 3 prime numbers
     and false otherwise.
-    Knowing that (a) is less then 100. 
+    Knowing that (a) is less then 100.
     Example:
     is_multiply_prime(30) == True
     30 = 2 * 3 * 5
     """
-    Requires(0 <= a < 100)
+    Requires(a < 100)
+    # THE POINT: the answer is exactly "a factors as p * q * r with p, q, r all prime".
+    # Written as: some prime p divides a, some prime q divides a // p, and the remaining
+    # cofactor a // p // q is prime too. Primality is trial division, `z >= 2 and no
+    # divisor in [2, z)`.
+    Ensures(Result() == any(
+        a % p == 0 and all(p % d != 0 for d in range(2, p)) and any(
+            (a // p) % q == 0
+            and all(q % d != 0 for d in range(2, q))
+            and a // p // q >= 2
+            and all((a // p // q) % d != 0 for d in range(2, a // p // q))
+            for q in range(2, a + 1))
+        for p in range(2, a + 1)))
 
     if a <= 1: return False
     Assert(2 <= a < 100)
@@ -55,7 +67,7 @@ def is_multiply_prime(a):
             Decreases(tmp)
             Invariant(tmp >= 1)
             Invariant(cnt >= 0)
-            
+
             tmp //= i
             cnt += 1
 
@@ -108,8 +120,52 @@ def is_multiply_prime := fun (a : Int) ↦
     let __py_ret_1 := cnt == (3 : Int)
     return __py_ret_1 : Id _)
 
-theorem is_multiply_prime_spec : ⦃⌜(0 : Int) ≤ a ∧ a < (100 : Int)⌝⦄ is_multiply_prime a ⦃⇓_ => ⌜True⌝⦄ := by
-  apply Std.Do.Triple.of_entails_wp; intro _; exact True.intro
+@[spec]
+theorem is_multiply_prime_spec :
+    ⦃⌜a < (100 : Int)⌝⦄ is_multiply_prime a ⦃⇓result =>
+      ⌜result =
+          ∃ p ∈ PastaLean.pyIter (PastaLean.pyRange (a +ₚ (1 : Int)) (2 : Int)),
+            (a %ₚ p = (0 : Int) ∧ ∀ d ∈ PastaLean.pyIter (PastaLean.pyRange p (2 : Int)), p %ₚ d ≠ (0 : Int)) ∧
+              ∃ q ∈ PastaLean.pyIter (PastaLean.pyRange (a +ₚ (1 : Int)) (2 : Int)),
+                ((PastaLean.pyFloorDiv a p %ₚ q = (0 : Int) ∧
+                      ∀ d ∈ PastaLean.pyIter (PastaLean.pyRange q (2 : Int)), q %ₚ d ≠ (0 : Int)) ∧
+                    PastaLean.pyFloorDiv (PastaLean.pyFloorDiv a p) q ≥ (2 : Int)) ∧
+                  ∀
+                    d ∈
+                      PastaLean.pyIter
+                        (PastaLean.pyRange (PastaLean.pyFloorDiv (PastaLean.pyFloorDiv a p) q) (2 : Int)),
+                    PastaLean.pyFloorDiv (PastaLean.pyFloorDiv a p) q %ₚ d ≠ (0 : Int)⌝⦄ :=
+  by
+  try
+    mvcgen [is_multiply_prime, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · ⇓cur =>
+      ⌜let i := (cur.prefix.length : Int);
+        (2 : Int) ≤ i ∧ i ≤ a +ₚ (1 : Int)⌝
+    · ⇓⟨cur, cnt, tmp⟩ =>
+      ⌜let i := (cur.prefix.length : Int);
+        (((2 : Int) ≤ i ∧ i ≤ a +ₚ (1 : Int)) ∧ cnt ≥ (0 : Int)) ∧ (1 : Int) ≤ tmp ∧ tmp ≤ a⌝
+  taste?
+  all_goals sorry
+
+theorem is_multiply_prime_correct :
+    ∀ (a : Int),
+      a < (100 : Int) →
+        let result := (is_multiply_prime a).run;
+        result =
+          ∃ p ∈ PastaLean.pyIter (PastaLean.pyRange (a +ₚ (1 : Int)) (2 : Int)),
+            (a %ₚ p = (0 : Int) ∧ ∀ d ∈ PastaLean.pyIter (PastaLean.pyRange p (2 : Int)), p %ₚ d ≠ (0 : Int)) ∧
+              ∃ q ∈ PastaLean.pyIter (PastaLean.pyRange (a +ₚ (1 : Int)) (2 : Int)),
+                ((PastaLean.pyFloorDiv a p %ₚ q = (0 : Int) ∧
+                      ∀ d ∈ PastaLean.pyIter (PastaLean.pyRange q (2 : Int)), q %ₚ d ≠ (0 : Int)) ∧
+                    PastaLean.pyFloorDiv (PastaLean.pyFloorDiv a p) q ≥ (2 : Int)) ∧
+                  ∀
+                    d ∈
+                      PastaLean.pyIter
+                        (PastaLean.pyRange (PastaLean.pyFloorDiv (PastaLean.pyFloorDiv a p) q) (2 : Int)),
+                    PastaLean.pyFloorDiv (PastaLean.pyFloorDiv a p) q %ₚ d ≠ (0 : Int) :=
+  by
+  intro a hpre
+  exact is_multiply_prime_spec hpre
 
 def is_multiply_prime'rn := fun (a : Int) ↦
   Id.run
@@ -117,13 +173,17 @@ def is_multiply_prime'rn := fun (a : Int) ↦
       /-
       Write a function that returns true if the given number is the multiplication of 3 prime numbers
           and false otherwise.
-          Knowing that (a) is less then 100. 
+          Knowing that (a) is less then 100.
           Example:
           is_multiply_prime(30) == True
           30 = 2 * 3 * 5
           
       -/
-      let _ := Libraries.passta.pyPassRequires (decide ((0 : Int) ≤ a) && decide (a < (100 : Int)))
+      let _ := Libraries.passta.pyPassRequires (decide (a < (100 : Int)))
+      -- THE POINT: the answer is exactly "a factors as p * q * r with p, q, r all prime".
+      -- Written as: some prime p divides a, some prime q divides a // p, and the remaining
+      -- cofactor a // p // q is prime too. Primality is trial division, `z >= 2 and no
+      -- divisor in [2, z)`.
       if h_1 : a ≤ (1 : Int) then 
         return Bool.false
       else

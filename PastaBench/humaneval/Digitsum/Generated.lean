@@ -32,14 +32,24 @@ def digitSum(s: str):
         digitSum("woArBld") => 131
         digitSum("aAaaaXa") => 153
     """
-    # A sum of ASCII codes (all non-negative) is non-negative. Written as an explicit
-    # accumulating loop so the invariant `total >= 0` carries the proof.
-    Ensures(Result() >= 0)
+    # The 65..90 window below is the ASCII uppercase range, so the input must be ASCII.
+    Requires(all(ord(c) < 128 for c in s))
+    # THE POINT: the answer is a sum of codes of uppercase letters, each of which lies in [65, 90].
+    # Hence a *nonzero* answer is at least 65 (something uppercase must have contributed), and no
+    # character can contribute more than 90. Neither fact is visible from the signature — both come
+    # out of the accumulator, which is why the loop is written explicitly.
+    Ensures(Result() == 0 or Result() >= 65)
+    Ensures(Result() <= 90 * len(s))
     total = 0
-    for ch in s:
-        Invariant(total >= 0)
+    for i in range(len(s)):
+        Invariant(0 <= i)
+        Invariant(i <= len(s))
+        Invariant(total == 0 or total >= 65)
+        Invariant(total <= 90 * i)
+        ch = s[i]
         if ch.isupper():
             total += ord(ch)
+    Assert(total <= 90 * len(s))
     return total
 -/
 
@@ -48,30 +58,40 @@ namespace PastaBench.humaneval.Digitsum
 def digitSum := fun (s : String) ↦
   (do
     let mut total : Int := (0 : Int)
-    for ch in (PastaLean.pyIter s)do
-      let _ := Libraries.passta.pyPassInvariant (decide (total ≥ (0 : Int)))
+    for i in (PastaLean.pyRange (PastaLean.pyLen s))do
+      let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i))
+      let _ := Libraries.passta.pyPassInvariant (decide (i ≤ PastaLean.pyLen s))
+      let _ := Libraries.passta.pyPassInvariant (total == (0 : Int) || decide (total ≥ (65 : Int)))
+      let _ := Libraries.passta.pyPassInvariant (decide (total ≤ (90 : Int) *ₚ i))
+      let mut ch : String := s⦋i⦌
       if h_1 : PastaLean.pyTruthy (PastaLean.pyIsUpper ch) then 
         total := total +ₚ PastaLean.pyOrd ch
       else
         let _ := ()
+    let _ := Libraries.passta.pyPassAssert (decide (total ≤ (90 : Int) *ₚ PastaLean.pyLen s))
     return total : Id _)
 
 @[spec]
-theorem digitSum_spec : ⦃⌜True⌝⦄ digitSum s ⦃⇓total => ⌜total ≥ (0 : Int)⌝⦄ :=
+theorem digitSum_spec :
+    ⦃⌜∀ c ∈ PastaLean.pyIter s, PastaLean.pyOrd c < (128 : Int)⌝⦄ digitSum s ⦃⇓total =>
+      ⌜(total = (0 : Int) ∨ total ≥ (65 : Int)) ∧ total ≤ (90 : Int) *ₚ PastaLean.pyLen s⌝⦄ :=
   by
   try
     mvcgen [digitSum, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓⟨cur, total⟩ => ⌜total ≥ (0 : Int)⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+    · ⇓⟨cur, total⟩ =>
+      ⌜let i := (cur.prefix.length : Int);
+        (((0 : Int) ≤ i ∧ i ≤ PastaLean.pyLen s) ∧ (total = (0 : Int) ∨ total ≥ (65 : Int))) ∧ total ≤ (90 : Int) *ₚ i⌝
+  taste?
   all_goals sorry
 
 theorem digitSum_correct :
     ∀ (s : String),
-      let total := (digitSum s).run;
-      total ≥ (0 : Int) :=
+      (∀ c ∈ PastaLean.pyIter s, PastaLean.pyOrd c < (128 : Int)) →
+        let total := (digitSum s).run;
+        (total = (0 : Int) ∨ total ≥ (65 : Int)) ∧ total ≤ (90 : Int) *ₚ PastaLean.pyLen s :=
   by
-  intro s
-  exact digitSum_spec True.intro
+  intro s hpre
+  exact digitSum_spec hpre
 
 def digitSum'rn := fun (s : String) ↦
   Id.run
@@ -90,15 +110,26 @@ def digitSum'rn := fun (s : String) ↦
               digitSum("aAaaaXa") => 153
           
       -/
-      -- A sum of ASCII codes (all non-negative) is non-negative. Written as an explicit
-      -- accumulating loop so the invariant `total >= 0` carries the proof.
+      -- The 65..90 window below is the ASCII uppercase range, so the input must be ASCII.
+      let _ :=
+        Libraries.passta.pyPassRequires
+          (PastaLean.pyAll ((PastaLean.pyIter s).map fun c => decide (PastaLean.pyOrd c < (128 : Int))))
+      -- THE POINT: the answer is a sum of codes of uppercase letters, each of which lies in [65, 90].
+      -- Hence a *nonzero* answer is at least 65 (something uppercase must have contributed), and no
+      -- character can contribute more than 90. Neither fact is visible from the signature — both come
+      -- out of the accumulator, which is why the loop is written explicitly.
       let mut total : Int := (0 : Int)
-      for ch in (PastaLean.pyIter s)do
-        let _ := Libraries.passta.pyPassInvariant (decide (total ≥ (0 : Int)))
+      for i in (PastaLean.pyRange (PastaLean.pyLen s))do
+        let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i))
+        let _ := Libraries.passta.pyPassInvariant (decide (i ≤ PastaLean.pyLen s))
+        let _ := Libraries.passta.pyPassInvariant (total == (0 : Int) || decide (total ≥ (65 : Int)))
+        let _ := Libraries.passta.pyPassInvariant (decide (total ≤ (90 : Int) *ₚ i))
+        let mut ch : String := s⦋i⦌
         if h_1 : PastaLean.pyTruthy (PastaLean.pyIsUpper ch) then 
           total := total +ₚ PastaLean.pyOrd ch
         else
           let _ := ()
+      let _ := Libraries.passta.pyPassAssert (decide (total ≤ (90 : Int) *ₚ PastaLean.pyLen s))
       return total)
 
 end PastaBench.humaneval.Digitsum
