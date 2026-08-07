@@ -620,7 +620,14 @@ def whileSyntax : (kind : SyntaxNodeKind) → Json →
     | `doElem, json => do
         let .ok test := json.getObjVal? "test" | throwError
           s!"While node does not have a 'test' field or it is not a JSON value: {json}"
-        let testStx ← truthyConditionTerm test (← withPropCondition true (getCode test `term))
+        -- An effectful loop condition is lowered through the effect-inlining path, so its awaits (`←`)
+        -- are emitted inline and re-run by the `do`-`while` each iteration (matching Python, which
+        -- re-evaluates the test every pass); a pure condition keeps its provable `Prop` form.
+        let testStx ←
+          if jsonUsesMonadicEffect test then
+            truthyConditionTerm test (← inlineEffectfulTerm test)
+          else
+            truthyConditionTerm test (← withPropCondition true (getCode test `term))
         let .ok bodyElems := json.getObjValAs? (Array Json) "body" | throwError
           s!"While node does not have a 'body' field or it is not a JSON array: {json}"
         let .ok orelseElems := json.getObjValAs? (Array Json) "orelse" | throwError
@@ -802,7 +809,14 @@ def ifSyntax : (kind : SyntaxNodeKind) → Json →
           s!"If node does not have an 'orelse' field or it is not a JSON array: {json}"
         -- Lower the test in condition position so a direct comparison may be a provable `Prop`
         -- (paired with the `if h : …` hypothesis below); `and`/`or`/`not` reset this to `Bool`.
-        let testStx ← truthyConditionTerm testJson (← withPropCondition true (getCode testJson `term))
+        -- A test that carries a monadic effect is lowered through the effect-inlining path, which
+        -- emits the awaits (`← …`) inline; the surrounding `do` sequences them before the branch, so
+        -- the condition sees the pure result rather than the raw action (works for any effect monad).
+        let testStx ←
+          if jsonUsesMonadicEffect testJson then
+            truthyConditionTerm testJson (← inlineEffectfulTerm testJson)
+          else
+            truthyConditionTerm testJson (← withPropCondition true (getCode testJson `term))
         -- Hoist names first bound inside a branch but escaping the `if` (read after it, or in the
         -- other branch). Each branch lowers to its own `do` block, so a `let mut` there is invisible
         -- outside it; pre-declaring one enclosing `let mut name : T := default` turns the branch
@@ -891,7 +905,8 @@ def ifSyntax : (kind : SyntaxNodeKind) → Json →
               let inputLines := String.splitOn inputText "\n"
               let inputStream : PastaLean.ProofMode.IOStream :=
                 ⟨0, fun i => PastaLean.ProofMode.IOResult.success (List.getD inputLines i "")⟩
-              let initState : PastaLean.HeapIOState $valId := ⟨PastaLean.emptyHeap, ⟨inputStream, []⟩⟩
+              let initState : PastaLean.HeapIOState $valId :=
+                ⟨PastaLean.emptyHeap, { input := inputStream, output := [] }⟩
               let (result, finalState) := PastaLean.PyHeapProofM.runProgram (V := $valId) (do
                   $[$bodyStxArray:doElem]*
                   pure ()) initState
@@ -936,7 +951,9 @@ def ifSyntax : (kind : SyntaxNodeKind) → Json →
             let inputText ← IO.getStdin >>= fun h => h.readToEnd
             let inputLines := String.splitOn inputText "\n"
             let inputStream : $ioStreamIdent := ⟨0, fun i => $ioResultSuccessIdent (List.getD inputLines i "")⟩
-            let initState : $ioStateIdent := ⟨inputStream, []⟩
+            -- Structure syntax (not `⟨…⟩`) so defaulted fields (e.g. the PRNG seed) fill in and a
+            -- later field addition never breaks this emitted initializer.
+            let initState : $ioStateIdent := { input := inputStream, output := [] }
             -- Run the PyProofM computation
             let (result, finalState) := (((do
                 $[$bodyStxArray:doElem]*

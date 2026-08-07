@@ -636,7 +636,7 @@ def assignSyntax : (kind : SyntaxNodeKind) → Json →
               -- `x = a or b` binds the deciding *value*, not a `Bool` (`x = s or '0'` → the string).
               if jsonNodeType? value == some "BoolOp" then boolOpValueTerm value
               else if jsonUsesIOEffect value then
-                inlineIOTerm value
+                inlineEffectfulTerm value
               else
                 let valueStx ← getCode value `term
                 if jsonUsesMonadicEffect value then
@@ -829,7 +829,7 @@ def returnSyntax : (kind : SyntaxNodeKind) → Json →
               else if let some (valueTerm, _) ← mutatingCallRhsLowering? value then
                 pure valueTerm
               else if jsonUsesIOEffect value then
-                inlineIOTerm value
+                inlineEffectfulTerm value
               else
                 let s ← getCode value `term
                 if jsonUsesMonadicEffect value then `((← $s:term)) else pure s

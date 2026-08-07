@@ -45,6 +45,15 @@ def pythonLibraryMap? (moduleName member : String) : Option Lean.Name :=
   | "sortedcontainers" => sortedcontainers.pythonSortedcontainersMemberMap? member
   | _ => none
 
+/-- Proof-mode (`PyProofM`) registry: the `IO`-effectful library members whose pure, state-threaded
+twins run in the proof monad. Codegen consults this FIRST when `shouldUseProofMonad` (exact mode), so
+`random.randint(...)` lowers to `pyRandomRandintProof` (a `PyProofM Int`) instead of the `IO` version,
+which cannot be `←`-bound in the pure proof monad. A miss falls through to the regular map. -/
+def pythonLibraryMapProof? (moduleName member : String) : Option Lean.Name :=
+  match moduleName with
+  | "random" => random.pythonRandomMemberMapProof? member
+  | _ => none
+
 /--
 Exact-mode (`ℝ`, `noncomputable`) registry for transcendental library members.
 

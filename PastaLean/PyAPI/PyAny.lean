@@ -400,7 +400,7 @@ instance : PyIntCast PyAny where
     | .int n => n
     | .bool b => if b then 1 else 0
     | .float q => q.num.tdiv (q.den : Int)
-    | .str s => (s.trim.toInt?).getD 0
+    | .str s => (s.trimAscii.toInt?).getD 0
     | _ => 0
 
 /-- `needle in x` on a boxed container: list membership (element equality) or substring test.

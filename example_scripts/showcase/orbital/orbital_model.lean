@@ -163,7 +163,7 @@ theorem dot_commutes :
     ∀ (ax : Rat),
       ∀ (ay : Rat),
         ∀ (az : Rat), ∀ (bx : Rat), ∀ («by» : Rat), ∀ (bz : Rat), dot ax ay az bx «by» bz = dot bx «by» bz ax ay az :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; ring
 
 @[taste_ingr]
 theorem dot_additive :
@@ -178,7 +178,7 @@ theorem dot_additive :
                     ∀ (bz : Rat),
                       dot (ax +ₚ cx) (ay +ₚ cy) (az +ₚ cz) bx «by» bz =
                         dot ax ay az bx «by» bz +ₚ dot cx cy cz bx «by» bz :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; ring
 
 @[taste_ingr]
 theorem dot_homogeneous :
@@ -189,7 +189,7 @@ theorem dot_homogeneous :
             ∀ (bx : Rat),
               ∀ («by» : Rat),
                 ∀ (bz : Rat), dot (s *ₚ ax) (s *ₚ ay) (s *ₚ az) bx «by» bz = s *ₚ dot ax ay az bx «by» bz :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; ring
 
 @[taste_ingr]
 theorem cross_antisymmetric :
@@ -197,10 +197,10 @@ theorem cross_antisymmetric :
       ∀ (ay : Rat),
         ∀ (az : Rat),
           ∀ (bx : Rat), ∀ («by» : Rat), ∀ (bz : Rat), cross_x ax ay az bx «by» bz = -cross_x bx «by» bz ax ay az :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; ring
 
 @[taste_ingr]
-theorem cross_self_zero : ∀ (ax : Rat), ∀ (ay : Rat), ∀ (az : Rat), cross_x ax ay az ax ay az = (0 : Int) := by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals
+theorem cross_self_zero : ∀ (ax : Rat), ∀ (ay : Rat), ∀ (az : Rat), cross_x ax ay az ax ay az = (0 : Int) := by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; ring
 
 @[taste_ingr]
 theorem cross_perp_first :
@@ -212,7 +212,7 @@ theorem cross_perp_first :
               ∀ (bz : Rat),
                 dot ax ay az (cross_x ax ay az bx «by» bz) (cross_y ax ay az bx «by» bz) (cross_z ax ay az bx «by» bz) =
                   (0 : Int) :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; ring
 
 @[taste_ingr]
 theorem cross_perp_second :
@@ -225,7 +225,7 @@ theorem cross_perp_second :
                 dot bx «by» bz (cross_x ax ay az bx «by» bz) (cross_y ax ay az bx «by» bz)
                     (cross_z ax ay az bx «by» bz) =
                   (0 : Int) :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; ring
 
 @[taste_ingr]
 theorem lagrange_identity :
@@ -238,7 +238,7 @@ theorem lagrange_identity :
                 norm_sq (cross_x ax ay az bx «by» bz) (cross_y ax ay az bx «by» bz) (cross_z ax ay az bx «by» bz) +ₚ
                     dot ax ay az bx «by» bz *ₚ dot ax ay az bx «by» bz =
                   norm_sq ax ay az *ₚ norm_sq bx «by» bz :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; ring
 
 @[taste_ingr]
 theorem parallelogram_identity :
@@ -250,7 +250,7 @@ theorem parallelogram_identity :
               ∀ (bz : Rat),
                 norm_sq (ax +ₚ bx) (ay +ₚ «by») (az +ₚ bz) +ₚ norm_sq (ax -ₚ bx) (ay -ₚ «by») (az -ₚ bz) =
                   (2.0 : Rat) *ₚ norm_sq ax ay az +ₚ (2.0 : Rat) *ₚ norm_sq bx «by» bz :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; linarith
 
 @[taste_ingr]
 theorem polarization_identity :
@@ -262,7 +262,7 @@ theorem polarization_identity :
               ∀ (bz : Rat),
                 (2.0 : Rat) *ₚ dot ax ay az bx «by» bz =
                   norm_sq (ax +ₚ bx) (ay +ₚ «by») (az +ₚ bz) -ₚ norm_sq ax ay az -ₚ norm_sq bx «by» bz :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; linarith
 
 @[taste_ingr]
 theorem bac_cab_rule :
@@ -278,7 +278,7 @@ theorem bac_cab_rule :
                       cross_x ax ay az (cross_x bx «by» bz cx cy cz) (cross_y bx «by» bz cx cy cz)
                           (cross_z bx «by» bz cx cy cz) =
                         bx *ₚ dot ax ay az cx cy cz -ₚ cx *ₚ dot ax ay az bx «by» bz :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; ring
 
 -- ----------------------------------------------------------------------------------------------
 -- Provable invariants: non-negativity & bounds  (`if`-guard -> hypotheses; nlinarith / positivity)
@@ -308,11 +308,11 @@ def cauchy_schwarz := fun (ax : Rat) ↦ fun (ay : Rat) ↦ fun (az : Rat) ↦ f
     norm_sq (cross_x ax ay az bx «by» bz) (cross_y ax ay az bx «by» bz) (cross_z ax ay az bx «by» bz) +ₚ
         dot ax ay az bx «by» bz *ₚ dot ax ay az bx «by» bz =
       norm_sq ax ay az *ₚ norm_sq bx «by» bz :=
-    by simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals
+    by simp_all (config := { zetaDelta := true }) [taste_ingr]; ring
   have ht_2 :
     norm_sq (cross_x ax ay az bx «by» bz) (cross_y ax ay az bx «by» bz) (cross_z ax ay az bx «by» bz) ≥ (0 : Int) := by
     simp_all (config := { zetaDelta := true }) [taste_ingr]; nlinarith
-  have ht_3 : dot ax ay az bx «by» bz *ₚ dot ax ay az bx «by» bz ≤ norm_sq ax ay az *ₚ norm_sq bx «by» bz := by simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals
+  have ht_3 : dot ax ay az bx «by» bz *ₚ dot ax ay az bx «by» bz ≤ norm_sq ax ay az *ₚ norm_sq bx «by» bz := by simp_all (config := { zetaDelta := true }) [taste_ingr]; linarith
   ()
 
 attribute [simp] cauchy_schwarz
@@ -335,7 +335,7 @@ def cauchy_schwarz'rn := fun (ax : Float) ↦ fun (ay : Float) ↦ fun (az : Flo
 theorem central_force_no_torque :
     ∀ (rx : Rat),
       ∀ (ry : Rat), ∀ (rz : Rat), ∀ (lam : Rat), cross_x rx ry rz (lam *ₚ rx) (lam *ₚ ry) (lam *ₚ rz) = (0 : Int) :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; ring
 
 @[taste_ingr]
 theorem momentum_conserved :
@@ -352,13 +352,13 @@ theorem angular_momentum_is_moment :
             ∀ (vx : Rat),
               ∀ (vy : Rat),
                 ∀ (vz : Rat), cross_x rx ry rz (m *ₚ vx) (m *ₚ vy) (m *ₚ vz) = m *ₚ cross_x rx ry rz vx vy vz :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; ring
 
 @[taste_ingr]
 theorem spring_force_is_central :
     ∀ (k : Rat),
       ∀ (dx : Rat), ∀ (dy : Rat), ∀ (dz : Rat), cross_x dx dy dz (-k *ₚ dx) (-k *ₚ dy) (-k *ₚ dz) = (0 : Int) :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; ring
 
 -- ----------------------------------------------------------------------------------------------
 -- EDGE: main -- the single monadic island (reads input, integrates, prints; NOT proved)
@@ -492,7 +492,7 @@ def main : IO Unit := do
   let inputLines := String.splitOn inputText "\n"
   let inputStream : PastaLean.ProofMode.IOStream :=
     ⟨0, fun i => PastaLean.ProofMode.IOResult.success (List.getD inputLines i "")⟩
-  let initState : PastaLean.ProofMode.IOState := ⟨inputStream, []⟩
+  let initState : PastaLean.ProofMode.IOState := { input := inputStream, output := [] }
   let (result, finalState) :=
     (((do
           let _ ← main'

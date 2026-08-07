@@ -88,7 +88,7 @@ def assignSyntax : (kind : SyntaxNodeKind) → Json →
             let nameIdent ← getCode target `ident
             let rhs ←
               if jsonUsesIOEffect value then
-                inlineIOTerm value
+                inlineEffectfulTerm value
               else
                 let valueStx ← getCode value `term
                 if jsonUsesMonadicEffect value then
@@ -139,7 +139,7 @@ def returnSyntax : (kind : SyntaxNodeKind) → Json →
             `(doElem| return (()))
         | _ =>
             if jsonUsesIOEffect value then
-              let valueStx ← inlineIOTerm value
+              let valueStx ← inlineEffectfulTerm value
               if shouldParenthesizeReturnValue value then
                 `(doElem| return ($valueStx))
               else

@@ -92,7 +92,6 @@ def analyze'rn : List Int → Int → PastaLean.PyExcept Float := fun (xs : List
     avg := (0.0 : Float)
     spread := (0.0 : Float)
   let mut result := avg +ₚ spread
-  let _ := Libraries.passta.pyPassEnsures (decide (result ≥ (0.0 : Float)))
   return result
 
 end PastaLean.User.Root

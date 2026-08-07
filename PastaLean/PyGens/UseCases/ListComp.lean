@@ -144,7 +144,7 @@ def lowerComprehensionClauses (eltJson : Json) (generators : List Json) :
           match ← heapContainerDeref? iterJson with
           | some deref => pure deref
           | none =>
-            if jsonUsesIOEffect iterJson then inlineIOTerm iterJson
+            if jsonUsesIOEffect iterJson then inlineEffectfulTerm iterJson
             else getCode iterJson `term
         let filtered ← comprehensionFilterOver compJson baseIter
         -- Emit dot-form `iterable.map (fun x => …)` so the iterable (whose element type is known,

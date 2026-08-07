@@ -32,7 +32,7 @@ theorem running_max_spec : ⦃⌜PastaLean.pyLen xs > (0 : Int)⌝⦄ running_ma
   try
     mvcgen [running_max, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓⟨cur, m⟩ => ⌜m ≥ xs⦋(0 : Int)⦌⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; omega
   all_goals sorry
 
 theorem running_max_correct :

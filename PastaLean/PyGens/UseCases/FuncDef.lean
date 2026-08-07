@@ -305,6 +305,20 @@ def functionReturnTypeSyntax? (json : Json) : PygenM (Option (TSyntax `term)) :=
         functionArgTypeSyntax? returnJson
   | none => pure none
 
+/-- The `Option X` codomain ascription for a function whose inferred/annotated return is `Optional[X]`
+(`return None` in one branch, `return <x>` in another — e.g. `string_to_md5` returns `None` for the
+empty string, else the digest `str`). Pins the monadic/`Id.run` (or pure `if`) codomain to the CONCRETE
+`Option X` so the `None` branch and the bare-`x` branch (which Lean coerces to `some x`) unify, instead
+of the first `return None` fixing the codomain to `Option ?α`. A `.opt .unknown` return (the value
+branch's element type is not inferred) yields `none` — the coercion needs a concrete target, so an
+`Option _` hole would not fire. Complements `returnClassName?` (the `Optional[C]` *class* case). -/
+def optionalReturnAscription? (json : Json) : PygenM (Option (TSyntax `term)) := do
+  match (jsonFieldOption json "returns").orElse (fun _ => jsonFieldOption json "_ret_ty") with
+  | some r => match TypeInfer.ofAnnotation r with
+      | .opt _ => functionReturnTypeSyntax? json
+      | _ => pure none
+  | none => pure none
+
 /-- The user-class name a node-returning function's annotation names (`TreeNode` or
 `Optional[TreeNode]`), if any. Such a function mixes bare `return TreeNode(...)`, a nullable cursor
 `return slow`, and `return None` base cases — all `Optional[C]` in Python — so its non-recursive def
@@ -472,8 +486,14 @@ of a variable that was never declared `let mut`. -/
 def functionValueSyntax (argInfos : Array (TSyntax `ident × Option (TSyntax `term))) (bodyElems : Array Json)
     (boxReturn : Bool := false) (retFloat : Bool := false) (optMutParams : Array (String × String) := #[])
     (heapCellParams : Array (Name × Bool) := #[])
-    (heapRefParams : Array (Name × Option String) := #[]) :
+    (heapRefParams : Array (Name × Option String) := #[])
+    (retAscription : Option (TSyntax `term) := none) :
     PygenM (TSyntax `term) := withFreshVariables do
+  -- Postcondition markers (`Ensures`, `Result()`-bearing `Assert`) are verification-only and have no
+  -- runtime lowering, so they must never reach the emitted body — the spec theorem is built
+  -- separately from the unstripped source. Strip here so EVERY monad path (pure or effectful) is
+  -- covered uniformly; without it an effectful body leaks `Result()` as an unsupported member.
+  let bodyElems := stripResultMarkers bodyElems
   -- Closure-promoted cell params (`--heap`): register so body reads/mutations deref them (one
   -- `readRefM`) and container cells feed `heapContainerRef?`. Function-scoped via `withFreshVariables`.
   for (nm, isContainer) in heapCellParams do
@@ -512,7 +532,12 @@ def functionValueSyntax (argInfos : Array (TSyntax `ident × Option (TSyntax `te
   -- The monad codomain: `PyAny` when the returns disagree (`_box_return`), else a hole for Lean to
   -- infer. Without this an effectful boxed function would keep `_`, and Lean would fix the monad's
   -- type from the first `return` — forcing e.g. `Float`, so a later `return 0` (`ℤ`) fails to match.
-  let effCodomain : TSyntax `term ← if boxReturn then `(PastaLean.PyAny) else `(_)
+  -- `retAscription` pins the codomain when the returns need a common type Lean can't infer from the
+  -- first `return` — notably an `Optional[X]` return (`return None` in one branch, `return x` in
+  -- another): ascribe `Option X` so the `None` branch and the bare-`x` branch (via `Coe X (Option X)`)
+  -- unify instead of the first `return None` fixing the monad to `Option ?α`.
+  let effCodomain : TSyntax `term ← if boxReturn then `(PastaLean.PyAny)
+    else match retAscription with | some t => pure t | none => `(_)
   -- Heap tier (`--heap`): a body that touches the heap runs in `HeapM Val` (or, with IO, the
   -- `PyHeapIO`/`PyHeapProofM` stack). Takes precedence — `HeapM`'s error dimension is `PyException`,
   -- so it already subsumes exceptions. Codomain is ascribed to the body so a `_` return can infer.
@@ -586,7 +611,11 @@ def functionValueSyntax (argInfos : Array (TSyntax `ident × Option (TSyntax `te
     -- ("expected ';' or line break"); `show … from` takes the whole `let`-expression as its argument.
     let ascribeResult (body : TSyntax `term) : PygenM (TSyntax `term) :=
       if boxReturn then `((show $boxTy from $body))
-      else match floatTy? with | some t => `((show $t from $body)) | none => pure body
+      else match floatTy? with
+        | some t => `((show $t from $body))
+        | none => match retAscription with
+          | some t => `((show $t from $body))
+          | none => pure body
     try
       let bodyStx ← ascribeResult (← pureFunctionBodySyntax bodyElems)
       if argInfos.isEmpty then
@@ -661,7 +690,10 @@ def functionCommandWithEffectSignature? (nameIdent : TSyntax `ident)
     (argInfos : Array (TSyntax `ident × Option (TSyntax `term))) (json : Json)
     (noncomp : Bool := false) :
     PygenM (Option (TSyntax `command)) := do
-  let bodyElems ← functionBodyElems json
+  -- Strip verification-only postcondition markers: `Result()` has no runtime lowering, so an
+  -- effectful body (this path handles the IO/exception twins) would otherwise leak it as an
+  -- unsupported member. The spec theorem is built from the unstripped source elsewhere.
+  let bodyElems := stripResultMarkers (← functionBodyElems json)
   -- Heap functions run in `HeapM Val` with the codomain ascribed to the body (a `_` return type in
   -- an explicit `def` header can't be inferred); let `functionValueSyntax`'s heap tier build them.
   -- A function heap-tier ONLY via a container/object ref param carries no body heap marker, so also
@@ -1138,7 +1170,11 @@ def funcDefSyntax : (kind : SyntaxNodeKind) → Json →
         -- function `Id`-typed (so `mvcgen` sees the `do`) with `Requires`/`Assume` stripped to the
         -- precondition, plus a `<fn>_spec` Hoare-triple theorem driven by `mvcgen … with taste?`.
         -- Exact mode only; the runnable `'rn` twin (approx) falls through to normal emission.
-        if (← getNumericMode) == .exact then
+        -- An IO-effectful body (e.g. one drawing from `random`) runs in the state+exception proof
+        -- monad, which this `Id`-typed mvcgen track cannot host — its awaited sub-actions would not
+        -- sequence. Skip the strict spec for it and fall through to the generic emitter, which emits a
+        -- compiling monadic `def` (contracts kept as runtime checkpoints) for hand-written proofs.
+        if (← getNumericMode) == .exact && !(bodyNeedsIOMonad substantive) then
           if let some info := monadicContractInfo? substantive then
             let argInfos ← functionArgInfos json
             -- Pick the monad mvcgen sees. A `try`/`raise` body needs a *pure* exception monad with
@@ -1229,6 +1265,7 @@ def funcDefSyntax : (kind : SyntaxNodeKind) → Json →
               | some binders =>
                   let body ← functionValueSyntax #[] bodyElems boxReturn retFloat
                     (heapRefParams := heapRefParams)
+                    (retAscription := ← optionalReturnAscription? json)
                   let rt? ← if isRecursive then recursiveReturnTypeSyntax? json else pure none
                   match isRecursive, nc, rt? with
                   | true, true, some rt => `(noncomputable partial def $nameIdent $binders* : $rt := $body)
@@ -1241,6 +1278,7 @@ def funcDefSyntax : (kind : SyntaxNodeKind) → Json →
               let valueStx ← functionValueSyntax argInfos bodyElems boxReturn retFloat
                 (optMutParams := optMutParamsOf json)
                 (heapCellParams := ← functionHeapCellParams json) (heapRefParams := heapRefParams)
+                (retAscription := ← optionalReturnAscription? json)
               -- take care of recursion function Type
               if isRecursive then
                 -- A recursive heap-tier function (touches the heap or takes a ref param) runs in
@@ -1293,6 +1331,7 @@ def funcDefSyntax : (kind : SyntaxNodeKind) → Json →
         functionValueSyntax argInfos bodyElems
           (heapCellParams := ← functionHeapCellParams json)
           (heapRefParams := ← functionHeapRefParams json)
+          (retAscription := ← optionalReturnAscription? json)
     | `doElem, json => do
         let .ok name := json.getObjValAs? String "name" | throwError
           s!"FuncDef node does not have a 'name' field or it is not a string: {json}"
@@ -1302,6 +1341,7 @@ def funcDefSyntax : (kind : SyntaxNodeKind) → Json →
         let valueStx ← functionValueSyntax argInfos bodyElems
           (heapCellParams := ← functionHeapCellParams json)
           (heapRefParams := ← functionHeapRefParams json)
+          (retAscription := ← optionalReturnAscription? json)
         `(doElem| let $nameIdent := $valueStx)
     | kind, _ => throwError s!"Unsupported syntax category `{kind}` for FuncDef node"
 
@@ -1422,6 +1462,7 @@ def functionDefHeadSyntax : (kind : SyntaxNodeKind) → Json →
           s!"FuncDef node does not have a 'rest' field or it is not a JSON value: {json}"
         let valueStx ← functionValueSyntax argInfos bodyElems
           (heapRefParams := ← functionHeapRefParams json)
+          (retAscription := ← optionalReturnAscription? json)
         let splitRest ← splitList rest
         let tailCode ← withoutCheck do
           getCode splitRest `term

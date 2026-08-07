@@ -35,10 +35,7 @@ def count_distinct_characters(string: str) -> int:
 namespace PastaBench.humaneval.CountDistinctCharacters
 
 def count_distinct_characters := fun (string : String) ↦
-  Id.run do
-    let _ :=
-      PastaLean.pyUnsupported
-        "degraded Return: Error in code generation function PastaLean.returnSyntax for key 'Return' and syntax category 'doEle"
+  PastaLean.pyLen (PastaLean.pySet (PastaLean.pyStringLower string))
 
 attribute [simp] count_distinct_characters
 
@@ -46,12 +43,9 @@ attribute [simp] count_distinct_characters
 theorem count_distinct_characters_correct :
     ∀ (string : String),
       (0 : Int) ≤ count_distinct_characters string ∧ count_distinct_characters string ≤ PastaLean.pyLen string :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
 
 def count_distinct_characters'rn := fun (string : String) ↦
-  Id.run do
-    let _ :=
-      PastaLean.pyUnsupported
-        "degraded Return: Error in code generation function PastaLean.returnSyntax for key 'Return' and syntax category 'doEle"
+  PastaLean.pyLen (PastaLean.pySet (PastaLean.pyStringLower string))
 
 end PastaBench.humaneval.CountDistinctCharacters

@@ -152,6 +152,12 @@ def constantSyntax : (kind : SyntaxNodeKind) → Json →
 def jsonLibraryMappedName? (json : Json) : PygenM (Option Lean.Name) := do
   match json.getObjValAs? String "library_module", json.getObjValAs? String "library_member" with
   | .ok moduleName, .ok memberName =>
+      -- Proof mode (`PyProofM`) needs the pure, state-threaded twin of an IO-effectful library member
+      -- (`random.*`): the `IO` version cannot be `←`-bound in the pure proof monad. Consulted first so
+      -- it wins over the regular map; a miss (every non-IO member) falls through unchanged.
+      if (← getNumericMode) == .exact then
+        if let some proofName := Libraries.pythonLibraryMapProof? moduleName memberName then
+          return some proofName
       -- Exact mode prefers provable `ℝ`/`noncomputable` mappings for transcendentals; otherwise
       -- use the regular mapping (`--mode run` always does). Example: `math.pow` → rational in the
       -- exact map, else the regular (often `Float`) mapping.
@@ -409,7 +415,7 @@ def isNoneConstantJson (json : Json) : Bool :=
   | _, _ => false
 
 /-- Apply a Python binary operator to already-lowered operand terms. Shared by `binOpSyntax`
-and `inlineIOTerm` so IO-bearing operands can be hoisted without duplicating the op table. -/
+and `inlineEffectfulTerm` so IO-bearing operands can be hoisted without duplicating the op table. -/
 def binOpApplyTerm (op : String) (leftCode rightCode : TSyntax `term) :
     PygenM (TSyntax `term) := do
   match op with

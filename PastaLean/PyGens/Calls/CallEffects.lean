@@ -99,14 +99,18 @@ def basicJsonUsesMonadicEffect (json : Json) : Bool :=
   basicJsonUsesExceptionEffect json || basicJsonUsesIOEffect json
 
 /--
-Inline simple translated `IO` expressions directly as terms that contain local `←` binds.
+Lower an expression that carries a monadic effect into a term whose effectful sub-actions are
+awaited inline (`← …`). Used inside surrounding `do` notation: the do-elaborator hoists each inline
+`←` to a bind before the enclosing statement, so a pure operation wrapping an effectful sub-call
+sees the sequenced result rather than the raw action — e.g. a builtin applied to a read effect
+becomes `builtin (← readAction)` with no nested monadic wrapper.
 
-This is used in surrounding `do` notation so code like `b = int(input())` can become
-`let mut b := PastaLean.pyInt (← PastaLean.pyInputIO "")` instead of an extra nested
-`do ... : IO _` wrapper.
+Effect-agnostic: the surrounding monad may be `IO`, the proof-mode state monad, or the exception
+monad; the awaits and the do-sequencing are identical, so this is the single place where an action
+in a value position becomes a value. A sub-expression with no effect falls through to plain codegen.
 -/
-partial def inlineIOTerm (json : Json) : PygenM (TSyntax `term) := do
-  if !basicJsonUsesIOEffect json then
+partial def inlineEffectfulTerm (json : Json) : PygenM (TSyntax `term) := do
+  if !basicJsonUsesMonadicEffect json then
     return ← getCode json `term
   let some nodeType := json.getObjValAs? String "node_type" |>.toOption
     | return ← getCode json `term
@@ -137,7 +141,7 @@ partial def inlineIOTerm (json : Json) : PygenM (TSyntax `term) := do
           match argsArray.size with
           | 0 => `((← $inputIdent ""))
           | 1 =>
-              let arg0 ← inlineIOTerm argsArray[0]!
+              let arg0 ← inlineEffectfulTerm argsArray[0]!
               `((← $inputIdent $arg0))
           | _ => throwError "input() expects zero or one positional argument."
       | .ok "Name", .ok "int" => do
@@ -145,16 +149,16 @@ partial def inlineIOTerm (json : Json) : PygenM (TSyntax `term) := do
             throwError "int() keyword arguments are not supported yet."
           unless argsArray.size == 1 || argsArray.size == 2 do
             throwError "int() expects one or two positional arguments."
-          let arg0 ← inlineIOTerm argsArray[0]!
+          let arg0 ← inlineEffectfulTerm argsArray[0]!
           if argsArray.size == 2 then
-            `($(mkIdent ``pyIntBase) $arg0 $(← inlineIOTerm argsArray[1]!))
+            `($(mkIdent ``pyIntBase) $arg0 $(← inlineEffectfulTerm argsArray[1]!))
           else
             `($(mkIdent ``pyInt) $arg0)
       | _, _ =>
           let mut inlineArgs : Array (TSyntax `term) := #[]
           for argJson in argsArray do
-            if basicJsonUsesIOEffect argJson then
-              inlineArgs := inlineArgs.push (← inlineIOTerm argJson)
+            if basicJsonUsesMonadicEffect argJson then
+              inlineArgs := inlineArgs.push (← inlineEffectfulTerm argJson)
             else
               match argJson.getObjValAs? String "node_type", argJson.getObjValAs? String "id" with
               | .ok "Name", .ok funcName =>
@@ -173,13 +177,20 @@ partial def inlineIOTerm (json : Json) : PygenM (TSyntax `term) := do
           -- below would emit the raw class/function name (`Box (…)` instead of `(← Box.new …)`).
           let mut heapAwait := false
           if funcJson.getObjValAs? String "node_type" == .ok "Attribute" then
+            match ← jsonLibraryMappedName? funcJson with
+            | some leanName =>
+              -- A qualified library member resolved to a runtime name; the raw `x.attr` fallback below
+              -- would otherwise emit an unbound qualified identifier. Whether it needs an `←` is
+              -- decided uniformly by the effect stamp at the end, like every other action.
+              funcTerm := mkIdent leanName
+            | none =>
             let .ok valueJson := funcJson.getObjValAs? Json "value" | throwError
               s!"Attribute node missing 'value' field: {funcJson}"
             let .ok attr := funcJson.getObjValAs? String "attr" | throwError
               s!"Attribute node missing 'attr' field: {funcJson}"
             let receiverTerm ←
-              if basicJsonUsesIOEffect valueJson then
-                inlineIOTerm valueJson
+              if basicJsonUsesMonadicEffect valueJson then
+                inlineEffectfulTerm valueJson
               else
                 getCode valueJson `term
             match (if heap then (json.getObjValAs? String "_receiver_class").toOption else none) with
@@ -213,7 +224,10 @@ partial def inlineIOTerm (json : Json) : PygenM (TSyntax `term) := do
                     match ← builtinMappedName? funcName with
                     | some mappedName => funcTerm := (mkIdent mappedName : TSyntax `term)
                     | none =>
-                        let mappedName ← leanName funcName.toName
+                        -- A user-function call: apply the run-twin suffix (`suffixIfUserName`) exactly
+                        -- as the non-inline call path does, so an effectful call awaited here still
+                        -- resolves to the current twin's definition rather than the other twin's.
+                        let mappedName ← leanName (← suffixIfUserName funcName).toName
                         funcTerm := (mkIdent mappedName : TSyntax `term)
                     -- A heap-effectful user free function returns a `HeapM` action; await it inline.
                     if heap && json.getObjValAs? Bool "_heap_call" == .ok true then
@@ -223,17 +237,22 @@ partial def inlineIOTerm (json : Json) : PygenM (TSyntax `term) := do
           let mut t ← `($funcTerm $inlineArgs*)
           for (kwName, kwValueJson) in keyWordsMap.toList do
             let kwValueCode ←
-              if basicJsonUsesIOEffect kwValueJson then
-                inlineIOTerm kwValueJson
+              if basicJsonUsesMonadicEffect kwValueJson then
+                inlineEffectfulTerm kwValueJson
               else
                 getCode kwValueJson `term
             let kwId := mkIdent kwName.toName
             t ← `($t ($kwId:ident := $kwValueCode))
-          if heapAwait then return ← `((← $t)) else return t
+          -- Await when this call is itself an effectful action: a `_heap_call`/ctor/method (flagged
+          -- above) OR any call the effect analysis stamped (`effect_mode` set to whichever monad it
+          -- runs in). The `←` is emitted inline; the enclosing `do` sequences it. This is the single,
+          -- monad-agnostic point where an action becomes a value — no effect needs its own await site.
+          let selfIsAction := (json.getObjValAs? String "effect_mode").toOption.isSome
+          if heapAwait || selfIsAction then return ← `((← $t)) else return t
   | "FormattedValue" => do
       let .ok valueJson := json.getObjValAs? Json "value" | throwError
         s!"FormattedValue node does not have a 'value' field or it is not a JSON value: {json}"
-      let valueCode ← inlineIOTerm valueJson
+      let valueCode ← inlineEffectfulTerm valueJson
       let toStringIdent := mkIdent ``toString
       `($toStringIdent $valueCode)
   | "JoinedStr" => do
@@ -245,7 +264,7 @@ partial def inlineIOTerm (json : Json) : PygenM (TSyntax `term) := do
       let appendIdent := mkIdent ``String.append
       let mut res : TSyntax `term ← `("")
       for valueJson in valuesArray do
-        let valueCode ← inlineIOTerm valueJson
+        let valueCode ← inlineEffectfulTerm valueJson
         res ← `($appendIdent $res $valueCode)
       pure res
   | "BinOp" => do
@@ -254,26 +273,26 @@ partial def inlineIOTerm (json : Json) : PygenM (TSyntax `term) := do
       let .ok op := json.getObjValAs? String "op" | throwError s!"BinOp node missing 'op': {json}"
       let .ok leftJson := json.getObjValAs? Json "left" | throwError s!"BinOp node missing 'left': {json}"
       let .ok rightJson := json.getObjValAs? Json "right" | throwError s!"BinOp node missing 'right': {json}"
-      let leftCode ← inlineIOTerm leftJson
-      let rightCode ← inlineIOTerm rightJson
+      let leftCode ← inlineEffectfulTerm leftJson
+      let rightCode ← inlineEffectfulTerm rightJson
       binOpApplyTerm op leftCode rightCode
   | "UnaryOp" => do
       let .ok op := json.getObjValAs? String "op" | throwError s!"UnaryOp node missing 'op': {json}"
       let .ok operandJson := json.getObjValAs? Json "operand" | throwError s!"UnaryOp node missing 'operand': {json}"
-      let operandCode ← inlineIOTerm operandJson
+      let operandCode ← inlineEffectfulTerm operandJson
       unaryOpApplyTerm op operandCode
   | "Compare" => do
       let .ok op := json.getObjValAs? String "op" | throwError s!"Compare node missing 'op': {json}"
       let .ok leftJson := json.getObjValAs? Json "left" | throwError s!"Compare node missing 'left': {json}"
       let .ok rightJson := json.getObjValAs? Json "right" | throwError s!"Compare node missing 'right': {json}"
-      let leftCode ← inlineIOTerm leftJson
-      let rightCode ← inlineIOTerm rightJson
+      let leftCode ← inlineEffectfulTerm leftJson
+      let rightCode ← inlineEffectfulTerm rightJson
       compareApplyTerm op leftJson leftCode rightCode (rightJson := some rightJson)
   | "BoolOp" => do
       let .ok op := json.getObjValAs? String "op" | throwError s!"BoolOp node missing 'op': {json}"
       let .ok valuesJson := json.getObjValAs? Json "values" | throwError s!"BoolOp node missing 'values': {json}"
       let valuesArray ← match valuesJson with
-        | .arr arr => arr.mapM inlineIOTerm
+        | .arr arr => arr.mapM inlineEffectfulTerm
         | _ => throwError s!"BoolOp node 'values' field is not an array: {valuesJson}"
       if valuesArray.isEmpty then throwError s!"BoolOp node 'values' array is empty: {valuesJson}"
       match op with
@@ -297,7 +316,7 @@ partial def inlineIOTerm (json : Json) : PygenM (TSyntax `term) := do
         s!"Subscript node does not have a 'value' field: {json}"
       let .ok sliceJson := json.getObjValAs? Json "slice" | throwError
         s!"Subscript node does not have a 'slice' field: {json}"
-      let valueCode ← inlineIOTerm valueJson
+      let valueCode ← inlineEffectfulTerm valueJson
       subscriptTermFromValue valueJson sliceJson valueCode
   | _ =>
       return ← getCode json `term

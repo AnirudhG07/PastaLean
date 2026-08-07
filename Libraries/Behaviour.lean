@@ -165,7 +165,8 @@ def methodBehaviour? (method : String) : Option Behaviour :=
   if ["split", "rsplit", "splitlines"].contains method then some (const (.list .str))
   else if ["join", "strip", "lstrip", "rstrip", "lower", "upper", "replace", "format", "title",
            "swapcase", "casefold", "center", "removeprefix", "removesuffix",
-           "rjust", "ljust"].contains method then some (const .str)
+           "rjust", "ljust", "encode", "decode", "hexdigest", "zfill", "expandtabs"].contains method
+           then some (const .str)
   else if ["count", "find", "rfind", "index"].contains method then some (const .int)
   else if ["startswith", "endswith", "isdigit", "isalpha"].contains method then some (const .bool)
   else match method with

@@ -59,9 +59,11 @@ def _add_translation_flags(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--prove-asserts",
         action=argparse.BooleanOptionalAction,
-        default=True,
+        default=False,
         help="Search for a proof of each assert and splice the winning tactic over ':= by taste?'. "
-             "Default: on.",
+             "Default: OFF — the code is emitted fast with `:= by taste?` left in place, so your "
+             "editor's Lean server runs the search interactively when you open the file. Pass "
+             "--prove-asserts to pre-solve the proofs during translation instead.",
     )
     parser.add_argument(
         "--heap",
@@ -76,7 +78,7 @@ def _session_from(args, **overrides) -> Session:
         target=getattr(args, "target", "command"),
         mode=getattr(args, "mode", "both"),
         best_effort=not getattr(args, "strict", False),
-        prove_asserts=getattr(args, "prove_asserts", True),
+        prove_asserts=getattr(args, "prove_asserts", False),
         heap=getattr(args, "heap", False),
         **overrides,
     )
@@ -133,16 +135,20 @@ def cmd_translate(args) -> int:
     _emit(result.lean_code, args.output)
     if not args.check:
         return 0
-    # `--no-prove-asserts` leaves `taste?` (an interactive proof-SEARCH tactic) in the output.
-    # Compile-checking that re-runs the search — i.e. proves the very obligations you asked to leave
-    # unproven — which is what makes the process appear to "hang" for up to `--timeout` seconds after
-    # the code has already printed. Skip the check in that case (the default, proving path pre-solves
-    # `taste?` and splices a concrete tactic, so its check stays fast).
-    if not getattr(args, "prove_asserts", True) and "taste?" in (result.lean_code or ""):
-        print("note: skipped compile-check — output contains unsolved `taste?` (from "
-              "--no-prove-asserts); checking it would re-run proof search. Drop --no-prove-asserts "
-              "to compile-check with proofs.", file=sys.stderr)
-        return 0
+    # Default (no-prove) path leaves `taste?` (an interactive proof-SEARCH tactic) in the output so
+    # the editor's Lean server can run the search when the file is opened. Compile-checking the code
+    # verbatim would re-run that search here — i.e. prove the very obligations left for the editor —
+    # which is what makes the process appear to "hang" for up to `--timeout` seconds after the code
+    # has already printed. Instead compile-check a `sorry`-substituted copy: `sorry` is a warning (not
+    # an error), so genuine elaboration errors in the *rest* of the program are still caught, while
+    # the proof search is skipped and the check stays fast. (--prove-asserts pre-solves `taste?` and
+    # splices a concrete tactic, so its check runs the real proofs.)
+    if not getattr(args, "prove_asserts", False) and "taste?" in (result.lean_code or ""):
+        check_code = (result.lean_code or "").replace("by taste?", "by sorry")
+        print("note: proofs left as `:= by taste?` for interactive solving in your editor; "
+              "compile-checked with `sorry` in their place (fast). Pass --prove-asserts to search "
+              "and splice concrete proofs now.", file=sys.stderr)
+        return _report_compile(args.file, check_code, args.timeout)
     return _report_compile(args.file, result.lean_code, args.timeout)
 
 

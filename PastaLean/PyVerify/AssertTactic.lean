@@ -31,23 +31,29 @@ def tasteProfile : Profile where
     ← `(tactic| simp_all (config := { zetaDelta := true }) [taste_ingr]),
     ← `(tactic| push_cast at *)
   ]
+  -- Fail-fast portfolio: cheap decision procedures that either close instantly or bail cheaply come
+  -- first; the expensive searchers (grind-family, PyAny case-split, aesop) are last resorts. Each
+  -- candidate gets a FRESH heartbeat budget and first-to-close wins, so this ordering changes only
+  -- how fast a goal closes, never *whether* it does — a goal only the last closer can prove is still
+  -- reached. Previously `pyany_cases <;> grind +locals` was first, forcing a full `grind` on every
+  -- goal (even a trivial `0 ≤ pyLen …`) before `omega` was ever tried.
   closers := do return #[
-    -- Split a boxed `PyAny` goal into one goal per relevant runtime type, then close each (no-op with no `PyAny`).
-    ← `(tactic| pyany_cases <;> grind +locals),
-    -- A per-goal `simp_all [taste_ingr]` closer (the simplifier runs once up front; some VCs only
-    -- surface after mvcgen splits, and a lone `0 ≤ pyLen …`/operator identity closes by simp alone).
-    ← `(tactic| simp_all (config := { zetaDelta := true }) [taste_ingr]),
     ← `(tactic| omega),
-    ← `(tactic| grind),
-    ← `(tactic| decide),
+    -- Operator identities / `0 ≤ pyLen …` often close by simp alone; some VCs only surface after an
+    -- mvcgen split, so this per-goal `simp_all` closer complements the up-front simplifier.
+    ← `(tactic| simp_all (config := { zetaDelta := true }) [taste_ingr]),
     ← `(tactic| norm_num),
+    ← `(tactic| decide),
     -- `if`-laden goals (e.g. floored `pyMod`/`pyFloorDiv` after unfolding) split then close arithmetically.
     ← `(tactic| split_ifs <;> omega),
-    ← `(tactic| split_ifs <;> grind),
     ← `(tactic| ring),
     ← `(tactic| positivity),
     ← `(tactic| linarith),
+    ← `(tactic| grind),
+    ← `(tactic| split_ifs <;> grind),
     ← `(tactic| nlinarith),
+    -- Split a boxed `PyAny` goal into one goal per relevant runtime type, then close each (no-op with no `PyAny`).
+    ← `(tactic| pyany_cases <;> grind +locals),
     ← `(tactic| grind +locals +suggestions),
     ← `(tactic| aesop)
   ]

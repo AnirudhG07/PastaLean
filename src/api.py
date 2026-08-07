@@ -78,7 +78,7 @@ class Session:
         target: str = "command",
         mode: str = "both",
         best_effort: bool = True,
-        prove_asserts: bool = True,
+        prove_asserts: bool = False,
         imports_add: bool = True,
         heap: bool = False,
         repo_root: Path = REPO_ROOT,

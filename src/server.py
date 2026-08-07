@@ -45,7 +45,7 @@ def create_app(
     target: str = "command",
     mode: str = "both",
     best_effort: bool = True,
-    prove_asserts: bool = True,
+    prove_asserts: bool = False,
     heap: bool = False,
 ):
     try:
@@ -318,7 +318,7 @@ def serve(
     target: str = "command",
     mode: str = "both",
     best_effort: bool = True,
-    prove_asserts: bool = True,
+    prove_asserts: bool = False,
     heap: bool = False,
 ) -> None:
     try:

@@ -31,7 +31,7 @@ theorem sum_to_n_spec : ⦃⌜n ≥ (0 : Int)⌝⦄ sum_to_n n ⦃⇓total => �
     · ⇓⟨cur, total⟩ =>
       ⌜let i := (cur.prefix.length : Int);
         (2 : Int) *ₚ total = i *ₚ (i -ₚ (1 : Int))⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals; pyany_cases <;> grind +locals
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; grind; grind
   all_goals sorry
 
 theorem sum_to_n_correct :

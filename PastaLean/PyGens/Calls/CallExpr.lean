@@ -538,11 +538,11 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
           if heap then
             -- Inline any IO await in the receiver/args (`recv.m(int(input()))`) so it lifts into the
             -- enclosing do-block rather than being spliced as a raw `IO _` action into a value position.
-            let recvCode ← inlineIOTerm valueJson
-            let inlineArgs ← argsArray.mapM inlineIOTerm
+            let recvCode ← inlineEffectfulTerm valueJson
+            let inlineArgs ← argsArray.mapM inlineEffectfulTerm
             let mut t ← `($methodIdent $recvCode $inlineArgs*)
             for (kwName, kwValueJson) in keyWordsMap.toList do
-              let kwValueCode ← inlineIOTerm kwValueJson
+              let kwValueCode ← inlineEffectfulTerm kwValueJson
               t ← `($t ($(mkIdent kwName.toName):ident := $kwValueCode))
             return ← `((← $t))
           if allJsons.toList.any basicJsonUsesIOEffect then
@@ -797,10 +797,10 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
               if ← getHeapMode then
                 -- Inline any IO await in an argument (`C(int(input()))`) so it lifts into the enclosing
                 -- do-block rather than being spliced as a raw `IO _` action into a value position.
-                let inlineArgs ← argsArray.mapM inlineIOTerm
+                let inlineArgs ← argsArray.mapM inlineEffectfulTerm
                 let mut t ← `($ctorId $inlineArgs*)
                 for (kwName, kwValueJson) in keyWordsMap.toList do
-                  let kwValueCode ← inlineIOTerm kwValueJson
+                  let kwValueCode ← inlineEffectfulTerm kwValueJson
                   t ← `($t ($(mkIdent kwName.toName):ident := $kwValueCode))
                 return ← `((← $t))
               funcIdent := ctorId
@@ -962,11 +962,11 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
           if ← getHeapMode then
             -- Inline any IO await in the receiver/args (`recv.m(int(input()))`) so it lifts into the
             -- enclosing do-block rather than being spliced as a raw `IO _` action into a value position.
-            let valCode ← inlineIOTerm valueJson
-            let inlineArgs ← argsArray.mapM inlineIOTerm
+            let valCode ← inlineEffectfulTerm valueJson
+            let inlineArgs ← argsArray.mapM inlineEffectfulTerm
             let mut t ← `($methodIdent $valCode $inlineArgs*)
             for (kwName, kwValueJson) in keyWordsMap.toList do
-              let kwValueCode ← inlineIOTerm kwValueJson
+              let kwValueCode ← inlineEffectfulTerm kwValueJson
               t ← `($t ($(mkIdent kwName.toName):ident := $kwValueCode))
             return ← `(doElem| let _ ← $t:term)
           if (json.getObjValAs? Bool "_is_value_mutator").toOption.getD false then
@@ -1252,10 +1252,10 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
               if ← getHeapMode then
                 -- Inline any IO await in an argument (`C(int(input()))`) so it lifts into the enclosing
                 -- do-block rather than being spliced as a raw `IO _` action into a value position.
-                let inlineArgs ← argsArray.mapM inlineIOTerm
+                let inlineArgs ← argsArray.mapM inlineEffectfulTerm
                 let mut t ← `($ctorId $inlineArgs*)
                 for (kwName, kwValueJson) in keyWordsMap.toList do
-                  let kwValueCode ← inlineIOTerm kwValueJson
+                  let kwValueCode ← inlineEffectfulTerm kwValueJson
                   t ← `($t ($(mkIdent kwName.toName):ident := $kwValueCode))
                 return ← `(doElem| let _ ← $t:term)
               funcIdent := ctorId

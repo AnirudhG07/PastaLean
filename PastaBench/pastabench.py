@@ -249,8 +249,11 @@ def namespaced(lean_src: str, module: str, prefix: str = LEAN_NAMESPACE,
         "",
     ]
     if py_source is not None:
-        # `-/` inside the source would close the Lean block comment early; neutralise it.
-        safe = py_source.replace("-/", "- /").rstrip()
+        # Lean block comments NEST, so a `/-` in the source opens a nested comment that swallows the
+        # real closing `-/` (leaving the banner unterminated), and a bare `-/` closes it early.
+        # Neutralise both delimiters (opener first) so any `/-`/`-/` in the source — e.g. a `+/-1`
+        # in a docstring — stays inert text.
+        safe = py_source.replace("/-", "/ -").replace("-/", "- /").rstrip()
         banner += ["/- Python source converted to produce the Lean below "
                    "(the exact input to PastaLean):", ""] \
             + safe.splitlines() + ["-/", ""]

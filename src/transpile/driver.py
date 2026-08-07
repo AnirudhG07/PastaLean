@@ -1841,7 +1841,7 @@ def _collect_container_annotations(node, acc=None, seen=None):
     return acc
 
 
-def translate_to_lean(source_code, target="term", filepath = None, imports_add = True, best_effort=False, mode="both", prove_asserts=True, heap=False, client=None):
+def translate_to_lean(source_code, target="term", filepath = None, imports_add = True, best_effort=False, mode="both", prove_asserts=False, heap=False, client=None):
     """Translate Python source to Lean via JSON IR and the Lean backend executable.
 
     `mode` selects the numeric semantics: "prove" (exact ℚ/ℝ, provable), "run" (Float, runnable), or

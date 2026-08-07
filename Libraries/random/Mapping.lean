@@ -1,4 +1,5 @@
 import Libraries.random.RandomDef
+import Libraries.random.RandomProof
 
 namespace Libraries.random
 
@@ -15,6 +16,20 @@ def pythonRandomMemberMap? (member : String) : Option Lean.Name :=
   | "shuffle"   => some ``Libraries.random.pyRandomShuffle
   | "sample"    => some ``Libraries.random.pyRandomSample
   | "uniform"   => some ``Libraries.random.pyRandomUniform
+  | _ => none
+
+/-- Proof-mode (`PyProofM`) twins of the `random` members, selected in exact mode (see
+`pythonLibraryMapProof?`). Keep in lockstep with `pythonRandomMemberMap?`. -/
+def pythonRandomMemberMapProof? (member : String) : Option Lean.Name :=
+  match member with
+  | "seed"      => some ``Libraries.random.pyRandomSeedProof
+  | "random"    => some ``Libraries.random.pyRandomRandomProof
+  | "randint"   => some ``Libraries.random.pyRandomRandintProof
+  | "randrange" => some ``Libraries.random.pyRandomRandrangeProof
+  | "choice"    => some ``Libraries.random.pyRandomChoiceProof
+  | "shuffle"   => some ``Libraries.random.pyRandomShuffleProof
+  | "sample"    => some ``Libraries.random.pyRandomSampleProof
+  | "uniform"   => some ``Libraries.random.pyRandomUniformProof
   | _ => none
 
 end Libraries.random
