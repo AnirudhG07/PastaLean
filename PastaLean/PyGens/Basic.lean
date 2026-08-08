@@ -1,4 +1,4 @@
-import Mathlib
+import PastaLean.Imports
 import Libraries.Registry
 import PastaLean.Codegen
 import PastaLean.PyAPI

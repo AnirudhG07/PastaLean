@@ -1,5 +1,5 @@
 import TypeInfer.PyType
-import Mathlib
+import PastaLean.Imports
 import Libraries.numpy.Statistics
 import Libraries.numpy.LinearAlgebra
 import Libraries.numpy.Creation

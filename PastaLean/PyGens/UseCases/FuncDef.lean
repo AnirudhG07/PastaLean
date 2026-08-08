@@ -1,4 +1,4 @@
-import Mathlib
+import PastaLean.Imports
 import PastaLean.Codegen
 import PastaLean.PyGens.Basic
 import PastaLean.PyGens.Core.Utils
@@ -475,6 +475,22 @@ def mutatedParamPrelude (argInfos : Array (TSyntax `ident × Option (TSyntax `te
           paramPrelude := paramPrelude.push (← `(doElem| let mut $argIdent:ident := $argIdent))
   return paramPrelude
 
+/-- Wrap a function body as `((do <prelude> <body>) : <monad> <codomain>)`, lambda-abstracting the
+params unless the function is nullary. Shared by every effectful monad (`PyProofM`/`PyExcept`/`IO`/
+heap) — they differ only in the monad term. -/
+def emitMonadicFunctionDef (monad effCodomain : TSyntax `term) (paramPrelude : Array (TSyntax `doElem))
+    (bodyElems : Array Json) (argInfos : Array (TSyntax `ident × Option (TSyntax `term))) :
+    PygenM (TSyntax `term) := do
+  let bodyStxArray ← monadicFunctionBodySyntax bodyElems
+  let mut body ← `(((do
+        $[$paramPrelude:doElem]*
+        $[$bodyStxArray:doElem]*) : $monad $effCodomain))
+  for (argIdent, ty?) in argInfos.toList.reverse do
+    body ← match ty? with
+      | some ty => `(fun ($argIdent : $ty) ↦ $body)
+      | none => `(fun $argIdent ↦ $body)
+  pure body
+
 /-- Build the Lean value for a Python function body, using a pure term when possible and
 falling back to `do` notation for effectful bodies. This helper is reused for top-level
 definitions, nested local functions, and `Head_FunctionDef` threading.
@@ -546,57 +562,22 @@ def functionValueSyntax (argInfos : Array (TSyntax `ident × Option (TSyntax `te
   -- or reference params.
   if (← needsHeapMonad bodyElems) ||
       ((← getHeapMode) && (heapCellParams.size > 0 || heapRefParams.size > 0)) then
-    let bodyStxArray ← monadicFunctionBodySyntax bodyElems
     let heapVal := mkIdent `Val
     let monad ← if usesRealIO then
         if useProofMonad then `($(mkIdent ``PastaLean.PyHeapProofM) $heapVal)
         else `($(mkIdent ``PastaLean.PyHeapIO) $heapVal)
       else `($(mkIdent ``PastaLean.HeapM) $heapVal)
-    let heapBody ← `(((do
-          $[$paramPrelude:doElem]*
-          $[$bodyStxArray:doElem]*) : $monad $effCodomain))
-    if argInfos.isEmpty then return heapBody else return ← mkLambda heapBody
+    return ← emitMonadicFunctionDef monad effCodomain paramPrelude bodyElems argInfos
+  -- Proof mode → `PyProofM`; exact-mode pure exceptions → `PyExceptId`; exceptions (+IO) → `PyExcept`;
+  -- plain IO → `IO`. All four wrap the body identically save the monad, so share `emitMonadicFunctionDef`.
   if usesProofExceptions || usesProofIO then
-    -- Proof mode: use PyProofM (state monad with Python exceptions)
-    let bodyStxArray ← monadicFunctionBodySyntax bodyElems
-    let proofMonadIdent := mkIdent ``PastaLean.ProofMode.PyProofM
-    let proofBody ← `(((do
-          $[$paramPrelude:doElem]*
-          $[$bodyStxArray:doElem]*) : $proofMonadIdent $effCodomain))
-    if argInfos.isEmpty then
-      pure proofBody
-    else
-      mkLambda proofBody
+    emitMonadicFunctionDef (mkIdent ``PastaLean.ProofMode.PyProofM) effCodomain paramPrelude bodyElems argInfos
   else if usesPureExceptions then
-    let bodyStxArray ← monadicFunctionBodySyntax bodyElems
-    let exceptIdIdent := mkIdent ``PastaLean.PyExceptId
-    let exceptIdBody ← `(((do
-          $[$paramPrelude:doElem]*
-          $[$bodyStxArray:doElem]*) : $exceptIdIdent $effCodomain))
-    if argInfos.isEmpty then
-      pure exceptIdBody
-    else
-      mkLambda exceptIdBody
+    emitMonadicFunctionDef (mkIdent ``PastaLean.PyExceptId) effCodomain paramPrelude bodyElems argInfos
   else if usesExceptions then
-    let bodyStxArray ← monadicFunctionBodySyntax bodyElems
-    let exceptIdent := mkIdent ``PastaLean.PyExcept
-    let exceptBody ← `(((do
-          $[$paramPrelude:doElem]*
-          $[$bodyStxArray:doElem]*) : $exceptIdent $effCodomain))
-    if argInfos.isEmpty then
-      pure exceptBody
-    else
-      mkLambda exceptBody
+    emitMonadicFunctionDef (mkIdent ``PastaLean.PyExcept) effCodomain paramPrelude bodyElems argInfos
   else if usesRealIO then
-    let bodyStxArray ← monadicFunctionBodySyntax bodyElems
-    let ioIdent := mkIdent ``IO
-    let ioBody ← `(((do
-          $[$paramPrelude:doElem]*
-          $[$bodyStxArray:doElem]*) : $ioIdent $effCodomain))
-    if argInfos.isEmpty then
-      pure ioBody
-    else
-      mkLambda ioBody
+    emitMonadicFunctionDef (mkIdent ``IO) effCodomain paramPrelude bodyElems argInfos
   else
     -- A boxed function's returns disagree in type, so ascribe the result to `PyAny`; each branch
     -- then coerces (`return 1` / `return "neg"` both become `PyAny`). A `retFloat` (float-returning,

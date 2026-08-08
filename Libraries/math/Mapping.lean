@@ -1,5 +1,5 @@
 import TypeInfer.PyType
-import Mathlib
+import PastaLean.Imports
 import Libraries.math.MathDef
 import Libraries.Behaviour
 

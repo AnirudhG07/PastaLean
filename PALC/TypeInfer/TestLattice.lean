@@ -1,4 +1,7 @@
 import TypeInfer
+-- The lattice-law verification (model `Ty` + its universal proofs) is kept off the `lake build`/
+-- py2lean path (see `TypeInfer.lean`); import it here so `lake test` still checks it.
+import TypeInfer.Lattice
 
 /-! Unit checks for the type lattice. Each `#guard` fails the build if it is false. -/
 
@@ -63,6 +66,22 @@ private def sample : List PyType :=
 #guard consistent (.opt .int) .none
 #guard consistent (.opt .int) .int
 #guard !consistent (.list .int) (.list .str)
+
+-- The gradual guarantee: `unknown` (no info yet) is consistent with every concrete type.
+#guard [PyType.int, .str, .float, .list .int, .dict .str .int, .none].all fun t => consistent .unknown t
+
+/-! ### `reconcile` — the coercion a value needs to fit an expected slot
+
+Checks on the real `PyType.reconcile` (were `native_decide` theorems in `Lattice.lean`'s `Production`
+block; `#guard` evaluates them directly, no `native_decide` needed). -/
+
+open TypeInfer.PyType (reconcile) in
+section
+#guard reconcile .int .bool == .boolToInt
+#guard reconcile (.cls "TreeNode") (.opt (.cls "TreeNode")) == .unwrapOpt
+#guard reconcile .int .str == .box
+#guard reconcile (.list .int) (.list .int) == .exact
+end
 
 /-! ### `elemType` — what an iterable yields -/
 

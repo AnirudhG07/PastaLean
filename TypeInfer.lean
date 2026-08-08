@@ -4,7 +4,6 @@ import TypeInfer.Value
 import TypeInfer.Emit
 import TypeInfer.Rules
 import TypeInfer.Solve
-import TypeInfer.Lattice
 
 /-!
 # TypeInfer — what type is this Python value?

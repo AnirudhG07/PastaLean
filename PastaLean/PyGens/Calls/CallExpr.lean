@@ -1,4 +1,4 @@
-import Mathlib
+import PastaLean.Imports
 import PastaLean.Codegen
 import PastaLean.PyGens.Basic
 import PastaLean.PyGens.Attributes
@@ -463,10 +463,8 @@ def quantifiedAllAnyProp? (funcName : String) (callJson : Json) :
     else
       return some (← `(∃ $targetIdent:ident ∈ $iterList, $body))
 
-@[pygen "Call"]
-def callSyntax : (kind : SyntaxNodeKind) → Json →
-    PygenM (TSyntax kind)
-  | `term, json => do
+
+def callSyntaxTerm (json : Json) : PygenM (TSyntax `term) := do
     let .ok funcJson := json.getObjValAs? Json "func" | throwError
       s!"Call node does not have a 'func' field or it is not a JSON value: {json}"
     let .ok argsJson := json.getObjValAs? Json "args" | throwError
@@ -899,7 +897,8 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
     -- A call to a heap-effectful user function returns a `HeapM` action; await it inline.
     if json.getObjValAs? Bool "_heap_call" == .ok true then return ← `((← $applied))
     return applied
-  | `doElem, json => do
+
+def callSyntaxDoElem (json : Json) : PygenM (TSyntax `doElem) := do
     let .ok funcJson := json.getObjValAs? Json "func" | throwError
       s!"Call node does not have a 'func' field or it is not a JSON value: {json}"
     let .ok argsJson := json.getObjValAs? Json "args" | throwError
@@ -1337,6 +1336,11 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
         `(doElem| let _ ← $t:term)
       else
         `(doElem| let _ := $t)
+
+@[pygen "Call"]
+def callSyntax : (kind : SyntaxNodeKind) → Json → PygenM (TSyntax kind)
+  | `term, json => callSyntaxTerm json
+  | `doElem, json => callSyntaxDoElem json
   | _, _ => throwError s!"Unsupported syntax category for Call node"
 
 @[pygen "Attribute"]

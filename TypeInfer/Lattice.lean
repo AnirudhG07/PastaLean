@@ -1,4 +1,4 @@
-import Mathlib
+import PastaLean.Imports
 import TypeInfer.PyType
 
 set_option linter.unnecessarySeqFocus false
@@ -21,25 +21,32 @@ The inference engine's correctness rests on two mathematical facts:
   interchangeable.
 
 The production `join`/`consistent` (`PyType.lean`) recurse over the nested `tuple (List PyType)`
-with two-argument recursion, which Lean cannot prove terminating structurally, so they are
-`partial def` — and a `partial def` has no equations to reason about. We therefore verify the laws
-**universally** on `Ty`, a faithful model of the lattice (every constructor except the nested-list
-`tuple`, whose join is a routine elementwise extension), and pin the production functions to the
-model with **concrete** `native_decide` theorems (`Production` below), including non-transitivity on
-the real `consistent`.
+with argument-swapping two-argument recursion (`.opt a, b | b, .opt a`), which is well-founded but
+not structural, so the kernel does not reduce them cheaply. We therefore verify the laws
+**universally** on `Ty`, a MINIMAL model of the lattice that keeps one representative of each
+distinct join/reconcile behaviour: `⊥`/`⊤` (`unknown`/`any`), the numeric rung (`int`/`bool`) and
+`float` (its coercions), one plain scalar (`scalar`, standing for every nullary type — `str`, `none`,
+… — which all join by equality), one unary container (`list`, standing for `list`/`set`) and the
+binary `dict`, and the string-parametrised `cls`. Collapsing the behaviourally-identical constructors
+keeps the case analysis (cubic in the constructor count for associativity) small, and the recursion
+is structural — so the equation lemmas reduce cheaply. The production functions are pinned to the
+model by `#guard` evaluation checks in `PALC/TypeInfer/TestLattice.lean`, including non-transitivity
+on the real `consistent`.
 -/
 
 namespace TypeInfer.Lattice
 
-/-- A model of `PyType` carrying the full lattice structure: every constructor except the nested
-`tuple (List PyType)`, so all recursion is on a single subterm and the laws are provable. -/
+/-- A minimal model of `PyType`: one representative per distinct join/reconcile behaviour (see the
+module doc). `scalar` stands for every nullary plain type, `list` for `list`/`set`. Recursion is on a
+single subterm, so `join`/`consistent` are structural and their equations reduce cheaply. -/
 inductive Ty where
-  | unknown | any | int | bool | str | float | none
-  | list (e : Ty) | set (e : Ty) | dict (k v : Ty) | cls (n : String)
+  | unknown | any | int | bool | float | scalar
+  | list (e : Ty) | dict (k v : Ty) | cls (n : String)
   deriving DecidableEq, Repr
 
 /-- Least upper bound. `unknown` yields to anything; genuinely different types go to `any`; Python's
-`bool <: int`; containers combine elementwise. Mirrors `PyType.join`. -/
+`bool <: int`; containers combine elementwise. Mirrors `PyType.join`. Structural on the first
+argument (every recursive call decreases it), so no `termination_by` is needed. -/
 def join (x y : Ty) : Ty := match x, y with
   | .unknown, t => t
   | t, .unknown => t
@@ -48,11 +55,8 @@ def join (x y : Ty) : Ty := match x, y with
   | .int, .bool => .int
   | .bool, .int => .int
   | .list a, .list b => .list (join a b)
-  | .set a, .set b => .set (join a b)
   | .dict k₁ v₁, .dict k₂ v₂ => .dict (join k₁ k₂) (join v₁ v₂)
   | a, b => if a = b then a else .any
-  termination_by sizeOf x + sizeOf y
-  decreasing_by all_goals (simp_wf; try omega)
 
 /-! ### `join` is a commutative, associative, idempotent semilattice with ⊥ and ⊤ -/
 
@@ -62,7 +66,6 @@ theorem join_idem (a : Ty) : join a a = a := by induction a <;> simp_all [join]
 theorem join_comm (a b : Ty) : join a b = join b a := by
   induction a generalizing b <;> cases b <;> simp_all [join] <;> split_ifs <;> simp_all [eq_comm]
 
-set_option maxHeartbeats 2000000 in
 theorem join_assoc (a b c : Ty) : join (join a b) c = join a (join b c) := by
   induction a generalizing b c <;> cases b <;> cases c <;>
     simp_all [join] <;> (try split_ifs) <;> simp_all [join, eq_comm]
@@ -103,11 +106,8 @@ def consistent (x y : Ty) : Bool := match x, y with
   | .int, .bool => true
   | .bool, .int => true
   | .list a, .list b => consistent a b
-  | .set a, .set b => consistent a b
   | .dict k₁ v₁, .dict k₂ v₂ => consistent k₁ k₂ && consistent v₁ v₂
   | a, b => a = b
-  termination_by sizeOf x + sizeOf y
-  decreasing_by all_goals (simp_wf; try omega)
 
 theorem consistent_refl (a : Ty) : consistent a a := by induction a <;> simp_all [consistent]
 theorem consistent_symm (a b : Ty) : consistent a b = consistent b a := by
@@ -117,12 +117,13 @@ whose type we could not determine may flow anywhere. -/
 theorem consistent_unknown (a : Ty) : consistent .unknown a := by simp [consistent]
 
 /-- Consistency is **not transitive** — the property that separates gradual typing from subtyping.
-`int ~ any` and `any ~ str`, yet `int ≁ str`: boxing lets a value flow anywhere, but does not make
-two unrelated concrete types interchangeable. -/
+`int ~ any` and `any ~ scalar`, yet `int ≁ scalar`: boxing lets a value flow anywhere, but does not
+make two unrelated concrete types interchangeable. -/
 theorem consistent_not_trans :
     ¬ (∀ a b c : Ty, consistent a b → consistent b c → consistent a c) := by
   intro h
-  have hbad : consistent .int .str := h .int .any .str (by simp [consistent]) (by simp [consistent])
+  have hbad : consistent .int .scalar :=
+    h .int .any .scalar (by simp [consistent]) (by simp [consistent])
   simp [consistent] at hbad
 
 /-! ### Coercions (`reconcile`) -/
@@ -149,35 +150,7 @@ theorem reconcile_total (e a : Ty) :
   · exact .inl rfl
   · split <;> simp <;> split <;> simp
 
-/-! ### The same properties, checked on the *actual* production functions
-
-The universal proofs above are about the model `Ty`; these pin the real `PyType.join` /
-`PyType.consistent` (partial defs, evaluated natively) to the same behaviour on concrete inputs. -/
-
-namespace Production
-open TypeInfer (PyType)
-
-/-- Non-transitivity of consistency on the REAL engine, not the model. -/
-theorem consistent_not_trans :
-    PyType.consistent .int .any = true ∧ PyType.consistent .any .str = true
-      ∧ PyType.consistent .int .str = false := by native_decide
-
-/-- The gradual guarantee on the real engine, sampled over several types. -/
-theorem gradual_guarantee :
-    ∀ t ∈ [PyType.int, .str, .float, .list .int, .dict .str .int, .none],
-      PyType.consistent .unknown t = true := by native_decide
-
-theorem join_bool_int : (PyType.join .bool .int == .int) = true := by native_decide
-theorem join_conflict : (PyType.join .int .str == .any) = true := by native_decide
-theorem join_none_optional : (PyType.join (.cls "TreeNode") .none == .opt (.cls "TreeNode")) = true := by
-  native_decide
-
--- The production `reconcile` picks the right coercion on concrete inputs.
-theorem reconcile_bool_int : PyType.reconcile .int .bool = .boolToInt := by native_decide
-theorem reconcile_unwrap : PyType.reconcile (.cls "TreeNode") (.opt (.cls "TreeNode")) = .unwrapOpt := by
-  native_decide
-theorem reconcile_box : PyType.reconcile .int .str = .box := by native_decide
-theorem reconcile_same : PyType.reconcile (.list .int) (.list .int) = .exact := by native_decide
-
-end Production
+-- The same properties on the *actual* production functions (`PyType.join`/`consistent`/`reconcile`
+-- on concrete inputs) are checked by `#guard` in `PALC/TypeInfer/TestLattice.lean` — `#guard`
+-- evaluates the function directly, so those checks need no `native_decide`.
 end TypeInfer.Lattice
