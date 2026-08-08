@@ -104,7 +104,11 @@ theorem is_sorted_spec :
   by
   try
     mvcgen [is_sorted, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · Invariant.withEarlyReturn (onReturn := fun _ _ => ⌜True⌝) (onContinue := fun _ _ => ⌜True⌝)
+    ·
+      Invariant.withEarlyReturn (onContinue := fun cur b =>
+        ⌜(∀ c ∈ PastaLean.pyIter (PastaLean.pyAnys count), c ≤ (2 : Int)) ∧
+            ∀ k ∈ PastaLean.pyIter (PastaLean.pyKeys count), k ≥ (0 : Int)⌝)
+        (onReturn := fun _ _ => ⌜True⌝)
   taste?
   all_goals sorry
 

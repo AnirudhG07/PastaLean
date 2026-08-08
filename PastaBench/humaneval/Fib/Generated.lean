@@ -71,10 +71,8 @@ def fib := fun (n : Int) ↦
     else
       let _ := ()
     let _ := Libraries.passta.pyPassAssert (decide (n > (2 : Int)))
-    let __unpack_value_1 := ((1 : Int), (1 : Int))
-    let __unpack_pair_1 := __unpack_value_1
-    let mut a : Int := Prod.fst __unpack_pair_1
-    let mut b : Int := Prod.snd __unpack_pair_1
+    let mut a : Int := (1 : Int)
+    let mut b : Int := (1 : Int)
     for i in (PastaLean.pyRange (n +ₚ (1 : Int)) (3 : Int))do
       let _ := Libraries.passta.pyPassInvariant (decide ((3 : Int) ≤ i))
       let _ := Libraries.passta.pyPassInvariant (decide (i ≤ n +ₚ (1 : Int)))
@@ -83,10 +81,10 @@ def fib := fun (n : Int) ↦
       let _ := Libraries.passta.pyPassInvariant (decide (b ≥ a))
       -- ... so the leading entry gains at least 1 per step: index-style, this is the Ensures.
       let _ := Libraries.passta.pyPassInvariant (decide (b ≥ i -ₚ (2 : Int)))
-      let __unpack_value_2 := (b, a +ₚ b)
-      let __unpack_pair_2 := __unpack_value_2
-      a := Prod.fst __unpack_pair_2
-      b := Prod.snd __unpack_pair_2
+      let __unpack_value_1 := (b, a +ₚ b)
+      let __unpack_pair_1 := __unpack_value_1
+      a := Prod.fst __unpack_pair_1
+      b := Prod.snd __unpack_pair_1
     let _ := Libraries.passta.pyPassAssert (decide (b ≥ n -ₚ (1 : Int)))
     let _ := Libraries.passta.pyPassAssert (decide (b ≥ (1 : Int)))
     return b : Id _)
@@ -96,7 +94,7 @@ theorem fib_spec : ⦃⌜n ≥ (0 : Int)⌝⦄ fib n ⦃⇓b => ⌜b ≥ n -ₚ 
   by
   try
     mvcgen [fib, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓cur =>
+    · ⇓⟨cur, a, b⟩ =>
       ⌜let i := (cur.prefix.length : Int);
         ((((3 : Int) ≤ i ∧ i ≤ n +ₚ (1 : Int)) ∧ a ≥ (1 : Int)) ∧ b ≥ a) ∧ b ≥ i -ₚ (2 : Int)⌝
   taste?
@@ -138,10 +136,8 @@ def fib'rn := fun (n : Int) ↦
       else
         let _ := ()
       let _ := Libraries.passta.pyPassAssert (decide (n > (2 : Int)))
-      let __unpack_value_1 := ((1 : Int), (1 : Int))
-      let __unpack_pair_1 := __unpack_value_1
-      let mut a : Int := Prod.fst __unpack_pair_1
-      let mut b : Int := Prod.snd __unpack_pair_1
+      let mut a : Int := (1 : Int)
+      let mut b : Int := (1 : Int)
       for i in (PastaLean.pyRange (n +ₚ (1 : Int)) (3 : Int))do
         let _ := Libraries.passta.pyPassInvariant (decide ((3 : Int) ≤ i))
         let _ := Libraries.passta.pyPassInvariant (decide (i ≤ n +ₚ (1 : Int)))
@@ -150,10 +146,10 @@ def fib'rn := fun (n : Int) ↦
         let _ := Libraries.passta.pyPassInvariant (decide (b ≥ a))
         -- ... so the leading entry gains at least 1 per step: index-style, this is the Ensures.
         let _ := Libraries.passta.pyPassInvariant (decide (b ≥ i -ₚ (2 : Int)))
-        let __unpack_value_2 := (b, a +ₚ b)
-        let __unpack_pair_2 := __unpack_value_2
-        a := Prod.fst __unpack_pair_2
-        b := Prod.snd __unpack_pair_2
+        let __unpack_value_1 := (b, a +ₚ b)
+        let __unpack_pair_1 := __unpack_value_1
+        a := Prod.fst __unpack_pair_1
+        b := Prod.snd __unpack_pair_1
       -- At exit i = n + 1, so the invariant reads b >= n - 1: one step from the postcondition.
       let _ := Libraries.passta.pyPassAssert (decide (b ≥ n -ₚ (1 : Int)))
       let _ := Libraries.passta.pyPassAssert (decide (b ≥ (1 : Int)))

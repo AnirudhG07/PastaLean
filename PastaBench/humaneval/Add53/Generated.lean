@@ -38,7 +38,7 @@ def add := fun (x : Int) ↦ fun (y : Int) ↦ x +ₚ y
 attribute [simp] add
 
 @[taste_ingr]
-theorem add_correct : ∀ (x : Int), ∀ (y : Int), add x y = x +ₚ y := by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]
+theorem add_correct : ∀ (x : Int), ∀ (y : Int), add x y = x +ₚ y := by taste?
 
 def add'rn := fun (x : Int) ↦ fun (y : Int) ↦ x +ₚ y
 

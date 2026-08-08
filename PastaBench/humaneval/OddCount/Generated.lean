@@ -80,10 +80,8 @@ namespace PastaBench.humaneval.OddCount
 
 def odd_count := fun (lst : PyAny) ↦
   (do
-    let __unpack_value_1 := ([], "the number of odd elements in the string i of the input.")
-    let __unpack_pair_1 := __unpack_value_1
-    let mut ans : List String := Prod.fst __unpack_pair_1
-    let mut template : String := Prod.snd __unpack_pair_1
+    let mut ans : List String := []
+    let mut template : String := "the number of odd elements in the string i of the input."
     for s in (PastaLean.pyIter lst)do
       let _ := Libraries.passta.pyPassInvariant (decide (PastaLean.pyLen ans < PastaLean.pyLen lst))
       let _ := Libraries.passta.pyPassInvariant (s == lst⦋PastaLean.pyLen ans⦌)
@@ -181,10 +179,8 @@ def odd_count'rn := fun (lst : PyAny) ↦
         Libraries.passta.pyPassRequires
           (PastaLean.pyAll
             ((PastaLean.pyIter lst).flatMap fun s => (PastaLean.pyIter s).map fun c => PastaLean.pyIsDecimal c))
-      let __unpack_value_1 := ([], "the number of odd elements in the string i of the input.")
-      let __unpack_pair_1 := __unpack_value_1
-      let mut ans : List String := Prod.fst __unpack_pair_1
-      let mut template : String := Prod.snd __unpack_pair_1
+      let mut ans : List String := []
+      let mut template : String := "the number of odd elements in the string i of the input."
       for s in (PastaLean.pyIter lst)do
         let _ := Libraries.passta.pyPassInvariant (decide (PastaLean.pyLen ans < PastaLean.pyLen lst))
         let _ := Libraries.passta.pyPassInvariant (s == lst⦋PastaLean.pyLen ans⦌)

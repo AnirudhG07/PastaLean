@@ -192,16 +192,14 @@ def fib := fun (n : Int) ↦
     (do
       let mut __gen'acc : List Int := []
       -- Stateful generator: the `a, b = b, a + b` swap threads through the materialised loop.
-      let __unpack_value_1 := ((0 : Int), (1 : Int))
-      let __unpack_pair_1 := __unpack_value_1
-      let mut a : Int := Prod.fst __unpack_pair_1
-      let mut b : Int := Prod.snd __unpack_pair_1
+      let mut a : Int := (0 : Int)
+      let mut b : Int := (1 : Int)
       for _ in (PastaLean.pyRange n)do
         __gen'acc := PastaLean.pyAppend __gen'acc a
-        let __unpack_value_2 := (b, a +ₚ b)
-        let __unpack_pair_2 := __unpack_value_2
-        a := Prod.fst __unpack_pair_2
-        b := Prod.snd __unpack_pair_2
+        let __unpack_value_1 := (b, a +ₚ b)
+        let __unpack_pair_1 := __unpack_value_1
+        a := Prod.fst __unpack_pair_1
+        b := Prod.snd __unpack_pair_1
       return __gen'acc)
 
 attribute [simp, taste_ingr] fib
@@ -211,16 +209,14 @@ def fib'rn := fun (n : Int) ↦
     (do
       let mut __gen'acc : List Int := []
       -- Stateful generator: the `a, b = b, a + b` swap threads through the materialised loop.
-      let __unpack_value_1 := ((0 : Int), (1 : Int))
-      let __unpack_pair_1 := __unpack_value_1
-      let mut a : Int := Prod.fst __unpack_pair_1
-      let mut b : Int := Prod.snd __unpack_pair_1
+      let mut a : Int := (0 : Int)
+      let mut b : Int := (1 : Int)
       for _ in (PastaLean.pyRange n)do
         __gen'acc := PastaLean.pyAppend __gen'acc a
-        let __unpack_value_2 := (b, a +ₚ b)
-        let __unpack_pair_2 := __unpack_value_2
-        a := Prod.fst __unpack_pair_2
-        b := Prod.snd __unpack_pair_2
+        let __unpack_value_1 := (b, a +ₚ b)
+        let __unpack_pair_1 := __unpack_value_1
+        a := Prod.fst __unpack_pair_1
+        b := Prod.snd __unpack_pair_1
       return __gen'acc)
 
 def use_generators :=

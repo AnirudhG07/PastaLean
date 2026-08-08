@@ -59,19 +59,19 @@ def minStoneSum := fun (piles : List Int) ↦ fun (k : Int) ↦
 
 @[spec]
 theorem minStoneSum_spec :
-    ⦃⌜k ≥ (0 : Int) ∧ PastaLean.pyAll ((PastaLean.pyIter piles).map fun x => decide (x ≥ (0 : Int)))⌝⦄
-      minStoneSum piles k ⦃⇓result => ⌜(0 : Int) ≤ result ∧ result ≤ PastaLean.pySum piles⌝⦄ :=
+    ⦃⌜k ≥ (0 : Int) ∧ ∀ x ∈ PastaLean.pyIter piles, x ≥ (0 : Int)⌝⦄ minStoneSum piles k ⦃⇓result =>
+      ⌜(0 : Int) ≤ result ∧ result ≤ PastaLean.pySum piles⌝⦄ :=
   by
   try
     mvcgen [minStoneSum, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓cur => ⌜True⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem minStoneSum_correct :
     ∀ (piles : List Int),
       ∀ (k : Int),
-        k ≥ (0 : Int) ∧ PastaLean.pyAll ((PastaLean.pyIter piles).map fun x => decide (x ≥ (0 : Int))) →
+        (k ≥ (0 : Int) ∧ ∀ x ∈ PastaLean.pyIter piles, x ≥ (0 : Int)) →
           let result := (minStoneSum piles k).run;
           (0 : Int) ≤ result ∧ result ≤ PastaLean.pySum piles :=
   by

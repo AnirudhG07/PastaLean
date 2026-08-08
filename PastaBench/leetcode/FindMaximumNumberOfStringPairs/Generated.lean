@@ -64,7 +64,7 @@ theorem maximumNumberOfStringPairs_spec :
   try
     mvcgen [maximumNumberOfStringPairs, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓⟨cur, ans⟩ => ⌜ans = (cur.prefix.map (fun w => cnt⦋PastaLean.pySlice w none none (some (-(1 : Int)))⦌)).sum⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem maximumNumberOfStringPairs_correct :

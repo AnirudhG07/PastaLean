@@ -76,8 +76,10 @@ theorem findPoisonedDuration_spec :
               ((PastaLean.pyRange (PastaLean.pyLen timeSeries) (1 : Int)).map fun i =>
                 PastaLean.pyMin [duration, timeSeries⦋i⦌ -ₚ timeSeries⦋i -ₚ (1 : Int)⦌])⌝⦄ :=
   by
-  mvcgen [findPoisonedDuration, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  try
+    mvcgen [findPoisonedDuration, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · ⇓⟨cur, ans⟩ => ⌜ans = (cur.prefix.map (fun _loop => PastaLean.pyMin [duration, b -ₚ a])).sum⌝
+  taste?
   all_goals sorry
 
 theorem findPoisonedDuration_correct :

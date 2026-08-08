@@ -137,10 +137,8 @@ namespace PastaBench.humaneval.Minpath
 def minPath := fun (grid : PyAny) ↦ fun (k : Int) ↦
   (do
     let mut N : Int := PastaLean.pyLen grid
-    let __unpack_value_1 := ((0 : Int), (0 : Int))
-    let __unpack_pair_1 := __unpack_value_1
-    let mut x : Int := Prod.fst __unpack_pair_1
-    let mut y : Int := Prod.snd __unpack_pair_1
+    let mut x : Int := (0 : Int)
+    let mut y : Int := (0 : Int)
     for i in (PastaLean.pyRange N)do
       let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i))
       let _ := Libraries.passta.pyPassInvariant (decide (i ≤ N))
@@ -166,10 +164,8 @@ def minPath := fun (grid : PyAny) ↦ fun (k : Int) ↦
         let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ y))
         let _ := Libraries.passta.pyPassInvariant (decide (y < N))
         if h_1 : grid⦋i⦌⦋j⦌ = (1 : Int) then 
-          let __unpack_value_2 := (i, j)
-          let __unpack_pair_2 := __unpack_value_2
-          x := Prod.fst __unpack_pair_2
-          y := Prod.snd __unpack_pair_2
+          x := i
+          y := j
         else
           let _ := ()
     let _ := Libraries.passta.pyPassAssert (decide ((0 : Int) ≤ x) && decide (x < N))
@@ -177,19 +173,19 @@ def minPath := fun (grid : PyAny) ↦ fun (k : Int) ↦
     let _ := Libraries.passta.pyPassAssert (grid⦋x⦌⦋y⦌ == (1 : Int))
     let mut mn : PyAny := N *ₚ N
     if h_1 : x > (0 : Int) then 
-      let mut mn'rb0 := PastaLean.pyMin [mn, grid⦋x -ₚ (1 : Int)⦌⦋y⦌]
+      mn := PastaLean.pyMin [mn, grid⦋x -ₚ (1 : Int)⦌⦋y⦌]
     else
       let _ := ()
     if h_2 : x < N -ₚ (1 : Int) then 
-      let mut mn'rb1 := PastaLean.pyMin [mn, grid⦋x +ₚ (1 : Int)⦌⦋y⦌]
+      mn := PastaLean.pyMin [mn, grid⦋x +ₚ (1 : Int)⦌⦋y⦌]
     else
       let _ := ()
     if h_3 : y > (0 : Int) then 
-      let mut mn'rb2 := PastaLean.pyMin [mn, grid⦋x⦌⦋y -ₚ (1 : Int)⦌]
+      mn := PastaLean.pyMin [mn, grid⦋x⦌⦋y -ₚ (1 : Int)⦌]
     else
       let _ := ()
     if h_4 : y < N -ₚ (1 : Int) then 
-      let mut mn'rb3 := PastaLean.pyMin [mn, grid⦋x⦌⦋y +ₚ (1 : Int)⦌]
+      mn := PastaLean.pyMin [mn, grid⦋x⦌⦋y +ₚ (1 : Int)⦌]
     else
       let _ := ()
     let _ := Libraries.passta.pyPassAssert (decide (mn > (1 : Int)))
@@ -242,7 +238,7 @@ theorem minPath_spec :
   by
   try
     mvcgen [minPath, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓cur =>
+    · ⇓⟨cur, x, y⟩ =>
       ⌜let i := (cur.prefix.length : Int);
         ((0 : Int) ≤ i ∧ i ≤ N) ∧
           ((∀ r ∈ PastaLean.pyIter (PastaLean.pyRange i),
@@ -355,10 +351,8 @@ def minPath'rn := fun (grid : PyAny) ↦ fun (k : Int) ↦
       -- and is attained by one of them. `len(grid)` is used instead of `N` because `N` is bound
       -- below this point.
       let mut N : Int := PastaLean.pyLen grid
-      let __unpack_value_1 := ((0 : Int), (0 : Int))
-      let __unpack_pair_1 := __unpack_value_1
-      let mut x : Int := Prod.fst __unpack_pair_1
-      let mut y : Int := Prod.snd __unpack_pair_1
+      let mut x : Int := (0 : Int)
+      let mut y : Int := (0 : Int)
       for i in (PastaLean.pyRange N)do
         let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i))
         let _ := Libraries.passta.pyPassInvariant (decide (i ≤ N))
@@ -384,10 +378,8 @@ def minPath'rn := fun (grid : PyAny) ↦ fun (k : Int) ↦
           let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ y))
           let _ := Libraries.passta.pyPassInvariant (decide (y < N))
           if h_1 : grid⦋i⦌⦋j⦌ == (1 : Int) then 
-            let __unpack_value_2 := (i, j)
-            let __unpack_pair_2 := __unpack_value_2
-            x := Prod.fst __unpack_pair_2
-            y := Prod.snd __unpack_pair_2
+            x := i
+            y := j
           else
             let _ := ()
       let _ := Libraries.passta.pyPassAssert (decide ((0 : Int) ≤ x) && decide (x < N))
@@ -395,19 +387,19 @@ def minPath'rn := fun (grid : PyAny) ↦ fun (k : Int) ↦
       let _ := Libraries.passta.pyPassAssert (grid⦋x⦌⦋y⦌ == (1 : Int))
       let mut mn : PyAny := N *ₚ N
       if h_1 : x > (0 : Int) then 
-        let mut mn'rb0 := PastaLean.pyMin [mn, grid⦋x -ₚ (1 : Int)⦌⦋y⦌]
+        mn := PastaLean.pyMin [mn, grid⦋x -ₚ (1 : Int)⦌⦋y⦌]
       else
         let _ := ()
       if h_2 : x < N -ₚ (1 : Int) then 
-        let mut mn'rb1 := PastaLean.pyMin [mn, grid⦋x +ₚ (1 : Int)⦌⦋y⦌]
+        mn := PastaLean.pyMin [mn, grid⦋x +ₚ (1 : Int)⦌⦋y⦌]
       else
         let _ := ()
       if h_3 : y > (0 : Int) then 
-        let mut mn'rb2 := PastaLean.pyMin [mn, grid⦋x⦌⦋y -ₚ (1 : Int)⦌]
+        mn := PastaLean.pyMin [mn, grid⦋x⦌⦋y -ₚ (1 : Int)⦌]
       else
         let _ := ()
       if h_4 : y < N -ₚ (1 : Int) then 
-        let mut mn'rb3 := PastaLean.pyMin [mn, grid⦋x⦌⦋y +ₚ (1 : Int)⦌]
+        mn := PastaLean.pyMin [mn, grid⦋x⦌⦋y +ₚ (1 : Int)⦌]
       else
         let _ := ()
       let _ := Libraries.passta.pyPassAssert (decide (mn > (1 : Int)))

@@ -115,7 +115,7 @@ theorem skjkasdkd_spec :
   by
   try
     mvcgen [skjkasdkd, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · Invariant.withEarlyReturn (onReturn := fun _ _ => ⌜True⌝) (onContinue := fun _ _ => ⌜True⌝)
+    · Invariant.withEarlyReturn (onContinue := fun cur b => ⌜True⌝) (onReturn := fun _ _ => ⌜True⌝)
   taste?
   all_goals sorry
 

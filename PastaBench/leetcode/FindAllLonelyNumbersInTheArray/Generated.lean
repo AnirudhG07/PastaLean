@@ -70,7 +70,7 @@ theorem findLonely_correct :
                   (PastaLean.pyIter nums)).map
               fun x => x)) =
         true :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  by taste?
 
 def findLonely'rn := fun (nums : List Int) ↦
   let cnt := (Libraries.collections.pyCounter nums : Libraries.collections.PyDefaultDict Int Int)

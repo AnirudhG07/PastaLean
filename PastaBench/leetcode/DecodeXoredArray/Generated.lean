@@ -82,7 +82,7 @@ theorem decode_spec :
       ⌜PastaLean.pyLen ans ≤ PastaLean.pyLen encoded +ₚ (1 : Int) ∧
           ∀ j ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen ans -ₚ (1 : Int))),
             PastaLean.pyBitXor ans⦋j⦌ ans⦋j +ₚ (1 : Int)⦌ = encoded⦋j⦌⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem decode_correct :

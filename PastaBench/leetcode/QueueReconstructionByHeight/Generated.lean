@@ -148,10 +148,8 @@ def reconstructQueue := fun (people : List (List Int)) ↦
 
 @[spec]
 theorem reconstructQueue_spec :
-    ⦃⌜PastaLean.pyAll ((PastaLean.pyIter people).map fun p => PastaLean.pyLen p == (2 : Int)) ∧
-          PastaLean.pyAll
-            ((PastaLean.pyIter people).map fun p =>
-              decide (p⦋(0 : Int)⦌ ≥ (0 : Int)) && decide (p⦋(1 : Int)⦌ ≥ (0 : Int)))⌝⦄
+    ⦃⌜(∀ p ∈ PastaLean.pyIter people, PastaLean.pyLen p = (2 : Int)) ∧
+          ∀ p ∈ PastaLean.pyIter people, p⦋(0 : Int)⦌ ≥ (0 : Int) ∧ p⦋(1 : Int)⦌ ≥ (0 : Int)⌝⦄
       reconstructQueue people ⦃⇓ans =>
       ⌜PastaLean.pyLen ans = PastaLean.pyLen people ∧
           PastaLean.pyAll
@@ -178,15 +176,13 @@ theorem reconstructQueue_spec :
               p⦋(1 : Int)⦌ ≤ PastaLean.pyLen ans) ∧
             (0 : Int) ≤ PastaLean.pyLen ans) ∧
           PastaLean.pyLen ans < PastaLean.pyLen people⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem reconstructQueue_correct :
     ∀ (people : List (List Int)),
-      PastaLean.pyAll ((PastaLean.pyIter people).map fun p => PastaLean.pyLen p == (2 : Int)) ∧
-          PastaLean.pyAll
-            ((PastaLean.pyIter people).map fun p =>
-              decide (p⦋(0 : Int)⦌ ≥ (0 : Int)) && decide (p⦋(1 : Int)⦌ ≥ (0 : Int))) →
+      ((∀ p ∈ PastaLean.pyIter people, PastaLean.pyLen p = (2 : Int)) ∧
+          ∀ p ∈ PastaLean.pyIter people, p⦋(0 : Int)⦌ ≥ (0 : Int) ∧ p⦋(1 : Int)⦌ ≥ (0 : Int)) →
         let ans := (reconstructQueue people).run;
         PastaLean.pyLen ans = PastaLean.pyLen people ∧
           PastaLean.pyAll

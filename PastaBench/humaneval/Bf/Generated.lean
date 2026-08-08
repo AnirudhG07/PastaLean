@@ -59,15 +59,13 @@ def bf := fun (planet1 : String) ↦ fun (planet2 : String) ↦
       return __py_ret_1
     else
       let _ := ()
-    let __unpack_value_1 := (PastaLean.pyIndex planets planet1, PastaLean.pyIndex planets planet2)
-    let __unpack_pair_1 := __unpack_value_1
-    let mut i1 : Int := Prod.fst __unpack_pair_1
-    let mut i2 : Int := Prod.snd __unpack_pair_1
+    let mut i1 : Int := PastaLean.pyIndex planets planet1
+    let mut i2 : Int := PastaLean.pyIndex planets planet2
     if h_2 : i1 > i2 then 
-      let __unpack_value_2 := (i2, i1)
-      let __unpack_pair_2 := __unpack_value_2
-      i1 := Prod.fst __unpack_pair_2
-      i2 := Prod.snd __unpack_pair_2
+      let __unpack_value_1 := (i2, i1)
+      let __unpack_pair_1 := __unpack_value_1
+      i1 := Prod.fst __unpack_pair_1
+      i2 := Prod.snd __unpack_pair_1
     else
       let _ := ()
     let __py_ret_1 := PastaLean.pyList (PastaLean.pySlice planets (some (i1 +ₚ (1 : Int))) (some i2) none)
@@ -123,15 +121,13 @@ def bf'rn := fun (planet1 : String) ↦ fun (planet2 : String) ↦
         return __py_ret_1
       else
         let _ := ()
-      let __unpack_value_1 := (PastaLean.pyIndex planets planet1, PastaLean.pyIndex planets planet2)
-      let __unpack_pair_1 := __unpack_value_1
-      let mut i1 : Int := Prod.fst __unpack_pair_1
-      let mut i2 : Int := Prod.snd __unpack_pair_1
+      let mut i1 : Int := PastaLean.pyIndex planets planet1
+      let mut i2 : Int := PastaLean.pyIndex planets planet2
       if h_2 : i1 > i2 then 
-        let __unpack_value_2 := (i2, i1)
-        let __unpack_pair_2 := __unpack_value_2
-        i1 := Prod.fst __unpack_pair_2
-        i2 := Prod.snd __unpack_pair_2
+        let __unpack_value_1 := (i2, i1)
+        let __unpack_pair_1 := __unpack_value_1
+        i1 := Prod.fst __unpack_pair_1
+        i2 := Prod.snd __unpack_pair_1
       else
         let _ := ()
       let __py_ret_1 := PastaLean.pyList (PastaLean.pySlice planets (some (i1 +ₚ (1 : Int))) (some i2) none)

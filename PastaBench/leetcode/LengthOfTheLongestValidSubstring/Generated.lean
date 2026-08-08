@@ -100,7 +100,7 @@ theorem longestValidSubstring_spec :
       ⌜let j := (cur.prefix.length : Int);
         ((((0 : Int) ≤ j ∧ j ≤ PastaLean.pyLen word) ∧ (0 : Int) ≤ i ∧ i ≤ j) ∧ (0 : Int) ≤ ans ∧ ans ≤ j) ∧
           ans ≤ PastaLean.pyLen word⌝
-  sorry
+  taste?
   all_goals sorry
 
 theorem longestValidSubstring_correct :

@@ -83,7 +83,7 @@ theorem maximumScore_spec :
                 ans ≥ (0 : Int)) ∧
               s⦋(0 : Int)⦌ +ₚ s⦋(1 : Int)⦌ +ₚ s⦋(2 : Int)⦌ +ₚ (2 : Int) *ₚ ans = S0)
           (fun _ => True) s⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem maximumScore_correct :

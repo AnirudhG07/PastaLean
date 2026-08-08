@@ -81,8 +81,10 @@ def countAlternatingSubarrays := fun (nums : List Int) ↦
 theorem countAlternatingSubarrays_spec :
     ⦃⌜PastaLean.pyLen nums > (0 : Int)⌝⦄ countAlternatingSubarrays nums ⦃⇓ans => ⌜ans ≥ PastaLean.pyLen nums⌝⦄ :=
   by
-  mvcgen [countAlternatingSubarrays, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  try
+    mvcgen [countAlternatingSubarrays, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · ⇓⟨cur, ans, s⟩ => ⌜s ≥ (1 : Int) ∧ ans ≥ s⌝
+  taste?
   all_goals sorry
 
 theorem countAlternatingSubarrays_correct :

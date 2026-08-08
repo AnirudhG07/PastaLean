@@ -83,7 +83,7 @@ theorem closestToTarget_spec :
   try
     mvcgen [closestToTarget, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓⟨cur, ans, s⟩ => ⌜ans ≥ (0 : Int) ∧ s⌝
-  sorry
+  taste?
   all_goals sorry
 
 theorem closestToTarget_correct :

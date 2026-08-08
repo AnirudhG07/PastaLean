@@ -69,7 +69,7 @@ theorem minimumOperationsToMakeKPeriodic_correct :
             PastaLean.pyLen word %ₚ k = (0 : Int) →
               minimumOperationsToMakeKPeriodic word k ≥ (0 : Int) ∧
                 k *ₚ (minimumOperationsToMakeKPeriodic word k +ₚ (1 : Int)) ≤ PastaLean.pyLen word :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  by taste?
 
 def minimumOperationsToMakeKPeriodic'rn := fun (word : String) ↦ fun (k : Int) ↦
   let n := (PastaLean.pyLen word : Int)

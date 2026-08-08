@@ -32,7 +32,7 @@ attribute [simp] minimizedStringLength
 
 @[taste_ingr]
 theorem minimizedStringLength_correct : ∀ (s : String), minimizedStringLength s = PastaLean.pyLen (PastaLean.pySet s) :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]
+  by taste?
 
 def minimizedStringLength'rn := fun (s : String) ↦ PastaLean.pyLen (PastaLean.pySet s)
 

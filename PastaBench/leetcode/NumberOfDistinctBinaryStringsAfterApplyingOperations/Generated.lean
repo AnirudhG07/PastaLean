@@ -61,7 +61,7 @@ theorem countDistinctStrings_correct :
         k ≥ (1 : Int) ∧ k ≤ PastaLean.pyLen s +ₚ (1 : Int) →
           countDistinctStrings s k =
             PastaLean.pyPow (2 : Int) (PastaLean.pyLen s -ₚ k +ₚ (1 : Int)) %ₚ ((10 : Int) ^ₚ (9 : Int) +ₚ (7 : Int)) :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]
+  by taste?
 
 def countDistinctStrings'rn := fun (s : String) ↦ fun (k : Int) ↦
   PastaLean.pyPow (2 : Int) (PastaLean.pyLen s -ₚ k +ₚ (1 : Int)) %ₚ ((10 : Int) ^ₚ (9 : Int) +ₚ (7 : Int))

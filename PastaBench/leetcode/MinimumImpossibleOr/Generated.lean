@@ -73,19 +73,15 @@ attribute [simp] minImpossibleOR
 theorem minImpossibleOR_correct :
     ∀ (nums : List Int),
       let s := PastaLean.pySet nums
-      PastaLean.pyStdAny
-          ((PastaLean.pyRange (32 : Int)).map fun i =>
-            !(PastaLean.pyContains (PastaLean.pySet nums) (PastaLean.pyShiftLeft (1 : Int) i))) →
+      (∃ i ∈ PastaLean.pyIter (PastaLean.pyRange (32 : Int)),
+          !(PastaLean.pyContains (PastaLean.pySet nums) (PastaLean.pyShiftLeft (1 : Int) i))) →
         ((minImpossibleOR nums > (0 : Int) ∧
               PastaLean.pyBitAnd (minImpossibleOR nums) (minImpossibleOR nums -ₚ (1 : Int)) = (0 : Int)) ∧
             !(PastaLean.pyContains (PastaLean.pySet nums) (minImpossibleOR nums))) ∧
-          PastaLean.pyTruthy
-              (PastaLean.pyAll
-                ((List.filter (fun i => PastaLean.pyShiftLeft (1 : Int) i < minImpossibleOR nums)
-                      (PastaLean.pyRange (32 : Int))).map
-                  fun i => PastaLean.pyContains (PastaLean.pySet nums) (PastaLean.pyShiftLeft (1 : Int) i))) =
-            true :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+          ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (32 : Int)),
+            PastaLean.pyShiftLeft (1 : Int) i < minImpossibleOR nums →
+              PastaLean.pyContains (PastaLean.pySet nums) (PastaLean.pyShiftLeft (1 : Int) i) :=
+  by taste?
 
 def minImpossibleOR'rn := fun (nums : List Int) ↦
   let s := (PastaLean.pySet nums : List Int)

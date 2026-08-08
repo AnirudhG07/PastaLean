@@ -134,12 +134,10 @@ theorem maskPII_spec :
                           fun c => c))
                       (some (-(4 : Int))) none none)) =
                 true) ∧
-            PastaLean.pyTruthy
-                (PastaLean.pyAll ((PastaLean.pyIter result).map fun c => PastaLean.pyContains "0123456789*-+" c)) =
-              true⌝⦄ :=
+            ∀ c ∈ PastaLean.pyIter result, PastaLean.pyContains "0123456789*-+" c⌝⦄ :=
   by
   mvcgen [maskPII, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  sorry
+  taste?
   all_goals sorry
 
 theorem maskPII_correct :
@@ -170,9 +168,7 @@ theorem maskPII_correct :
                           fun c => c))
                       (some (-(4 : Int))) none none)) =
                 true) ∧
-            PastaLean.pyTruthy
-                (PastaLean.pyAll ((PastaLean.pyIter result).map fun c => PastaLean.pyContains "0123456789*-+" c)) =
-              true :=
+            ∀ c ∈ PastaLean.pyIter result, PastaLean.pyContains "0123456789*-+" c :=
   by
   intro s hpre
   exact maskPII_spec hpre

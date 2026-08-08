@@ -65,7 +65,7 @@ theorem minNumberOperations_correct :
             PastaLean.pySum
               ((PastaLean.pyRange (PastaLean.pyLen target) (1 : Int)).map fun i =>
                 PastaLean.pyMax [(0 : Int), target⦋i⦌ -ₚ target⦋i -ₚ (1 : Int)⦌]) :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  by taste?
 
 def minNumberOperations'rn := fun (target : List Int) ↦
   target⦋(0 : Int)⦌ +ₚ

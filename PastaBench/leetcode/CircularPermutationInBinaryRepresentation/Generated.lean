@@ -85,7 +85,7 @@ theorem circularPermutation_correct :
                     g⦋j⦌ = start) ∧
                   PastaLean.pyLen r = PastaLean.pyLen g) ∧
                 r⦋(0 : Int)⦌ = start :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  by taste?
 
 def circularPermutation'rn := fun (n : Int) ↦ fun (start : Int) ↦
   let g :=

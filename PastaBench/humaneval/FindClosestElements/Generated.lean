@@ -71,7 +71,7 @@ def find_closest_elements := fun (numbers : List Rat) ↦
     let mut numbers := numbers
     numbers := PastaLean.pySort numbers
     let mut min_diff := PastaLean.pyNonFinite "inf"
-    let mut min_pair := Option.none
+    let mut min_pair : Option (Rat × Rat) := Option.none
     for _pair_1 in
       (PastaLean.pyIter
         (PastaLean.pyZip (PastaLean.pySlice numbers none (some (-(1 : Int))) none)
@@ -112,7 +112,14 @@ theorem find_closest_elements_spec :
             PastaLean.pyContains numbers min_pair⦋(1 : Int)⦌) ∧
           min_pair⦋(1 : Int)⦌ -ₚ min_pair⦋(0 : Int)⦌ ≥ (0.0 : Rat)⌝⦄ :=
   by
-  mvcgen [find_closest_elements, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
+  try
+    mvcgen [find_closest_elements, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · ⇓⟨cur, min_diff, min_pair⟩ =>
+      ⌜(((min_diff = PastaLean.pyNonFinite "inf" ∨ min_diff ≥ (0.0 : Rat)) ∧
+              (PastaLean.pyIsNone min_pair ∨
+                PastaLean.pyContains numbers min_pair⦋(0 : Int)⦌ ∧ PastaLean.pyContains numbers min_pair⦋(1 : Int)⦌)) ∧
+            (PastaLean.pyIsNone min_pair ∨ min_pair⦋(0 : Int)⦌ ≤ min_pair⦋(1 : Int)⦌)) ∧
+          (PastaLean.pyIsNone min_pair ∨ min_pair⦋(1 : Int)⦌ -ₚ min_pair⦋(0 : Int)⦌ = min_diff)⌝
   taste?
   all_goals sorry
 
@@ -146,7 +153,7 @@ def find_closest_elements'rn := fun (numbers : List Float) ↦
       -- The difference must be non-negative.
       numbers := PastaLean.pySort numbers
       let mut min_diff := PastaLean.pyNonFinite "inf"
-      let mut min_pair := Option.none
+      let mut min_pair : Option (Float × Float) := Option.none
       for _pair_1 in
         (PastaLean.pyIter
           (PastaLean.pyZip (PastaLean.pySlice numbers none (some (-(1 : Int))) none)

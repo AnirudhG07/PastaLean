@@ -78,7 +78,7 @@ theorem fourSumCount_correct :
                     (PastaLean.pyIter nums3).flatMap fun c =>
                       (List.filter (fun d => a +ₚ b +ₚ c +ₚ d = (0 : Int)) (PastaLean.pyIter nums4)).map fun d =>
                         (1 : Int)) :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  by taste?
 
 def fourSumCount'rn := fun (nums1 : List Int) ↦ fun (nums2 : List Int) ↦ fun (nums3 : List Int) ↦
   fun (nums4 : List Int) ↦

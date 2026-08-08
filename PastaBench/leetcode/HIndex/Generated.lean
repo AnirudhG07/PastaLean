@@ -87,41 +87,35 @@ def hIndex := fun (citations : List Int) ↦
 theorem hIndex_spec :
     ⦃⌜True⌝⦄ hIndex citations ⦃⇓result =>
       ⌜((0 : Int) ≤ result ∧ result ≤ PastaLean.pyLen citations) ∧
-          (result = (0 : Int) ∧
-              PastaLean.pyTruthy
-                  (PastaLean.pyAll
-                    ((PastaLean.pyRange (PastaLean.pyLen citations +ₚ (1 : Int)) (1 : Int)).map fun k =>
-                      decide (citations⦋k -ₚ (1 : Int)⦌ < k))) =
-                true ∨
+          ((result = (0 : Int) ∧
+              ∀ k ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen citations +ₚ (1 : Int)) (1 : Int)),
+                citations⦋k -ₚ (1 : Int)⦌ < k) ∨
             (((1 : Int) ≤ result ∧ result ≤ PastaLean.pyLen citations) ∧ citations⦋result -ₚ (1 : Int)⦌ ≥ result) ∧
-              PastaLean.pyTruthy
-                  (PastaLean.pyAll
-                    ((PastaLean.pyRange (PastaLean.pyLen citations +ₚ (1 : Int)) (result +ₚ (1 : Int))).map fun k =>
-                      decide (citations⦋k -ₚ (1 : Int)⦌ < k))) =
-                true)⌝⦄ :=
+              ∀ k ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen citations +ₚ (1 : Int)) (result +ₚ (1 : Int))),
+                citations⦋k -ₚ (1 : Int)⦌ < k)⌝⦄ :=
   by
   try
     mvcgen [hIndex, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · Invariant.withEarlyReturn (onReturn := fun _ _ => ⌜True⌝) (onContinue := fun _ _ => ⌜True⌝)
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+    ·
+      Invariant.withEarlyReturn (onContinue := fun cur b =>
+        ⌜let h := (cur.prefix.length : Int);
+          ((1 : Int) ≤ h ∧ h ≤ n) ∧
+            ∀ k ∈ PastaLean.pyIter (PastaLean.pyRange (n +ₚ (1 : Int)) (h +ₚ (1 : Int))),
+              citations⦋k -ₚ (1 : Int)⦌ < k⌝)
+        (onReturn := fun _ _ => ⌜True⌝)
+  taste?
   all_goals sorry
 
 theorem hIndex_correct :
     ∀ (citations : List Int),
       let result := (hIndex citations).run;
       ((0 : Int) ≤ result ∧ result ≤ PastaLean.pyLen citations) ∧
-        (result = (0 : Int) ∧
-            PastaLean.pyTruthy
-                (PastaLean.pyAll
-                  ((PastaLean.pyRange (PastaLean.pyLen citations +ₚ (1 : Int)) (1 : Int)).map fun k =>
-                    decide (citations⦋k -ₚ (1 : Int)⦌ < k))) =
-              true ∨
+        ((result = (0 : Int) ∧
+            ∀ k ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen citations +ₚ (1 : Int)) (1 : Int)),
+              citations⦋k -ₚ (1 : Int)⦌ < k) ∨
           (((1 : Int) ≤ result ∧ result ≤ PastaLean.pyLen citations) ∧ citations⦋result -ₚ (1 : Int)⦌ ≥ result) ∧
-            PastaLean.pyTruthy
-                (PastaLean.pyAll
-                  ((PastaLean.pyRange (PastaLean.pyLen citations +ₚ (1 : Int)) (result +ₚ (1 : Int))).map fun k =>
-                    decide (citations⦋k -ₚ (1 : Int)⦌ < k))) =
-              true) :=
+            ∀ k ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen citations +ₚ (1 : Int)) (result +ₚ (1 : Int))),
+              citations⦋k -ₚ (1 : Int)⦌ < k) :=
   by
   intro citations
   exact hIndex_spec True.intro

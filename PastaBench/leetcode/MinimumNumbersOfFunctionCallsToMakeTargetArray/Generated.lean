@@ -67,9 +67,8 @@ attribute [simp] minOperations
 theorem minOperations_correct :
     ∀ (nums : List Int),
       PastaLean.pyLen nums > (0 : Int) →
-        PastaLean.pyAll ((PastaLean.pyIter nums).map fun v => decide (v ≥ (0 : Int))) →
-          minOperations nums ≥ (0 : Int) :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+        (∀ v ∈ PastaLean.pyIter nums, v ≥ (0 : Int)) → minOperations nums ≥ (0 : Int) :=
+  by taste?
 
 def minOperations'rn := fun (nums : List Int) ↦
   PastaLean.pySum ((PastaLean.pyIter nums).map fun v => PastaLean.pyBitCount v) +ₚ

@@ -98,10 +98,8 @@ namespace PastaBench.leetcode.ShortestSubarrayToBeRemovedToMakeArraySorted
 def findLengthOfShortestSubarray := fun (arr : List Int) ↦
   (do
     let mut n : Int := PastaLean.pyLen arr
-    let __unpack_value_1 := ((0 : Int), n -ₚ (1 : Int))
-    let __unpack_pair_1 := __unpack_value_1
-    let mut i : Int := Prod.fst __unpack_pair_1
-    let mut j : Int := Prod.snd __unpack_pair_1
+    let mut i : Int := (0 : Int)
+    let mut j : Int := n -ₚ (1 : Int)
     while (i +ₚ (1 : Int) < n ∧ arr⦋i⦌ ≤ arr⦋i +ₚ (1 : Int)⦌) do
       -- This loop is only entered if n >= 2.
       let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i))
@@ -173,7 +171,7 @@ theorem findLengthOfShortestSubarray_spec :
     · ⇓⟨cur, ans⟩ =>
       ⌜let l := (cur.prefix.length : Int);
         (((0 : Int) ≤ l ∧ l ≤ i) ∧ (0 : Int) ≤ ans ∧ ans ≤ n) ∧ i < j⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem findLengthOfShortestSubarray_correct :
@@ -188,10 +186,8 @@ def findLengthOfShortestSubarray'rn := fun (arr : List Int) ↦
   Id.run
     (do
       let mut n : Int := PastaLean.pyLen arr
-      let __unpack_value_1 := ((0 : Int), n -ₚ (1 : Int))
-      let __unpack_pair_1 := __unpack_value_1
-      let mut i : Int := Prod.fst __unpack_pair_1
-      let mut j : Int := Prod.snd __unpack_pair_1
+      let mut i : Int := (0 : Int)
+      let mut j : Int := n -ₚ (1 : Int)
       -- Find the end of the non-decreasing prefix arr[0...i]
       while (decide (i +ₚ (1 : Int) < n) && decide (arr⦋i⦌ ≤ arr⦋i +ₚ (1 : Int)⦌)) do
         -- This loop is only entered if n >= 2.

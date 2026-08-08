@@ -63,10 +63,8 @@ def minOperations := fun (nums : List Int) ↦
   (do
     let mut g : List Int := []
     for x in (PastaLean.pyIter nums)do
-      let __unpack_value_1 := ((0 : Int), PastaLean.pyLen g)
-      let __unpack_pair_1 := __unpack_value_1
-      let mut l : Int := Prod.fst __unpack_pair_1
-      let mut r : Int := Prod.snd __unpack_pair_1
+      let mut l : Int := (0 : Int)
+      let mut r : Int := PastaLean.pyLen g
       -- binary-search [l, r) to find first index where g[idx] < x
       while (l < r) do
         let mut mid : Int := PastaLean.pyShiftRight (l +ₚ r) (1 : Int)
@@ -92,7 +90,7 @@ theorem minOperations_spec :
   try
     mvcgen [minOperations, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓cur => ⌜True⌝
-  sorry
+  taste?
   all_goals sorry
 
 theorem minOperations_correct :
@@ -108,10 +106,8 @@ def minOperations'rn := fun (nums : List Int) ↦
     (do
       let mut g : Array Int := #[]
       for x in (PastaLean.pyIter nums)do
-        let __unpack_value_1 := ((0 : Int), PastaLean.pyLen g)
-        let __unpack_pair_1 := __unpack_value_1
-        let mut l : Int := Prod.fst __unpack_pair_1
-        let mut r : Int := Prod.snd __unpack_pair_1
+        let mut l : Int := (0 : Int)
+        let mut r : Int := PastaLean.pyLen g
         -- binary-search [l, r) to find first index where g[idx] < x
         while (l < r) do
           let mut mid : Int := PastaLean.pyShiftRight (l +ₚ r) (1 : Int)

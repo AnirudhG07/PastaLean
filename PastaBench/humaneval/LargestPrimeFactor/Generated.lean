@@ -116,7 +116,11 @@ theorem largest_prime_factor_spec :
     · ⇓cur =>
       ⌜let i := (cur.prefix.length : Int);
         ((2 : Int) ≤ i ∧ i ≤ n +ₚ (1 : Int)) ∧ PastaLean.pyLen isprime = n +ₚ (1 : Int)⌝
-    · Invariant.withEarlyReturn (onReturn := fun _ _ => ⌜True⌝) (onContinue := fun _ _ => ⌜True⌝)
+    ·
+      Invariant.withEarlyReturn (onContinue := fun cur b =>
+        ⌜let i := (cur.prefix.length : Int);
+          ((0 : Int) < i ∧ i < n) ∧ PastaLean.pyLen isprime = n +ₚ (1 : Int)⌝)
+        (onReturn := fun _ _ => ⌜True⌝)
   taste?
   all_goals sorry
 

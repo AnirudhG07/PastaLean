@@ -118,11 +118,9 @@ def findNumOfValidWords := fun (words : List String) ↦ fun (puzzles : List Str
       mask := (0 : Int)
       for c in (PastaLean.pyIter p)do
         mask := PastaLean.pyBitOr mask (PastaLean.pyShiftLeft (1 : Int) (PastaLean.pyOrd c -ₚ PastaLean.pyOrd "a"))
-      let __unpack_value_1 := ((0 : Int), (PastaLean.pyOrd p⦋(0 : Int)⦌ -ₚ PastaLean.pyOrd "a", mask))
-      let __unpack_pair_1 := __unpack_value_1
-      let mut x : Int := Prod.fst __unpack_pair_1
-      let mut i : Int := Prod.fst (Prod.snd __unpack_pair_1)
-      let mut j : Int := Prod.snd (Prod.snd __unpack_pair_1)
+      let mut x : Int := (0 : Int)
+      let mut i : Int := PastaLean.pyOrd p⦋(0 : Int)⦌ -ₚ PastaLean.pyOrd "a"
+      let mut j : Int := mask
       let _ := Libraries.passta.pyPassAssert (decide ((0 : Int) ≤ i) && decide (i < (26 : Int)))
       let _ :=
         Libraries.passta.pyPassAssert
@@ -146,43 +144,29 @@ def findNumOfValidWords := fun (words : List String) ↦ fun (puzzles : List Str
 
 @[spec]
 theorem findNumOfValidWords_spec :
-    ⦃⌜(PastaLean.pyAll ((PastaLean.pyIter puzzles).map fun p => decide (PastaLean.pyLen p > (0 : Int))) ∧
-            PastaLean.pyAll
-              ((PastaLean.pyIter words).map fun w =>
-                PastaLean.pyAll ((PastaLean.pyIter w).map fun c => decide ("a" ≤ c) && decide (c ≤ "z")))) ∧
-          PastaLean.pyAll
-            ((PastaLean.pyIter puzzles).map fun p =>
-              PastaLean.pyAll ((PastaLean.pyIter p).map fun c => decide ("a" ≤ c) && decide (c ≤ "z")))⌝⦄
+    ⦃⌜((∀ p ∈ PastaLean.pyIter puzzles, PastaLean.pyLen p > (0 : Int)) ∧
+            ∀ w ∈ PastaLean.pyIter words, ∀ c ∈ PastaLean.pyIter w, "a" ≤ c ∧ c ≤ "z") ∧
+          ∀ p ∈ PastaLean.pyIter puzzles, ∀ c ∈ PastaLean.pyIter p, "a" ≤ c ∧ c ≤ "z"⌝⦄
       findNumOfValidWords words puzzles ⦃⇓ans =>
-      ⌜PastaLean.pyLen ans = PastaLean.pyLen puzzles ∧
-          PastaLean.pyAll ((PastaLean.pyIter ans).map fun v => decide (v ≥ (0 : Int)))⌝⦄ :=
+      ⌜PastaLean.pyLen ans = PastaLean.pyLen puzzles ∧ ∀ v ∈ PastaLean.pyIter ans, v ≥ (0 : Int)⌝⦄ :=
   by
   try
     mvcgen [findNumOfValidWords, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓cur =>
-      ⌜PastaLean.pyAll
-            ((PastaLean.pyIter (PastaLean.pyKeys cnt)).map fun k =>
-              decide ((0 : Int) ≤ k) && decide (k < PastaLean.pyShiftLeft (1 : Int) (26 : Int))) ∧
-          PastaLean.pyAll ((PastaLean.pyIter (PastaLean.pyAnys cnt)).map fun v => decide (v > (0 : Int)))⌝
-    · ⇓cur =>
-      ⌜PastaLean.pyLen ans ≤ PastaLean.pyLen puzzles ∧
-          PastaLean.pyAll ((PastaLean.pyIter ans).map fun v => decide (v ≥ (0 : Int)))⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+      ⌜(∀ k ∈ PastaLean.pyIter (PastaLean.pyKeys cnt), (0 : Int) ≤ k ∧ k < PastaLean.pyShiftLeft (1 : Int) (26 : Int)) ∧
+          ∀ v ∈ PastaLean.pyIter (PastaLean.pyAnys cnt), v > (0 : Int)⌝
+    · ⇓cur => ⌜PastaLean.pyLen ans ≤ PastaLean.pyLen puzzles ∧ ∀ v ∈ PastaLean.pyIter ans, v ≥ (0 : Int)⌝
+  taste?
   all_goals sorry
 
 theorem findNumOfValidWords_correct :
     ∀ (words : List String),
       ∀ (puzzles : List String),
-        (PastaLean.pyAll ((PastaLean.pyIter puzzles).map fun p => decide (PastaLean.pyLen p > (0 : Int))) ∧
-              PastaLean.pyAll
-                ((PastaLean.pyIter words).map fun w =>
-                  PastaLean.pyAll ((PastaLean.pyIter w).map fun c => decide ("a" ≤ c) && decide (c ≤ "z")))) ∧
-            PastaLean.pyAll
-              ((PastaLean.pyIter puzzles).map fun p =>
-                PastaLean.pyAll ((PastaLean.pyIter p).map fun c => decide ("a" ≤ c) && decide (c ≤ "z"))) →
+        (((∀ p ∈ PastaLean.pyIter puzzles, PastaLean.pyLen p > (0 : Int)) ∧
+              ∀ w ∈ PastaLean.pyIter words, ∀ c ∈ PastaLean.pyIter w, "a" ≤ c ∧ c ≤ "z") ∧
+            ∀ p ∈ PastaLean.pyIter puzzles, ∀ c ∈ PastaLean.pyIter p, "a" ≤ c ∧ c ≤ "z") →
           let ans := (findNumOfValidWords words puzzles).run;
-          PastaLean.pyLen ans = PastaLean.pyLen puzzles ∧
-            PastaLean.pyAll ((PastaLean.pyIter ans).map fun v => decide (v ≥ (0 : Int))) :=
+          PastaLean.pyLen ans = PastaLean.pyLen puzzles ∧ ∀ v ∈ PastaLean.pyIter ans, v ≥ (0 : Int) :=
   by
   intro words puzzles hpre
   exact findNumOfValidWords_spec hpre
@@ -235,11 +219,9 @@ def findNumOfValidWords'rn := fun (words : List String) ↦ fun (puzzles : List 
         mask := (0 : Int)
         for c in (PastaLean.pyIter p)do
           mask := PastaLean.pyBitOr mask (PastaLean.pyShiftLeft (1 : Int) (PastaLean.pyOrd c -ₚ PastaLean.pyOrd "a"))
-        let __unpack_value_1 := ((0 : Int), (PastaLean.pyOrd p⦋(0 : Int)⦌ -ₚ PastaLean.pyOrd "a", mask))
-        let __unpack_pair_1 := __unpack_value_1
-        let mut x : Int := Prod.fst __unpack_pair_1
-        let mut i : Int := Prod.fst (Prod.snd __unpack_pair_1)
-        let mut j : Int := Prod.snd (Prod.snd __unpack_pair_1)
+        let mut x : Int := (0 : Int)
+        let mut i : Int := PastaLean.pyOrd p⦋(0 : Int)⦌ -ₚ PastaLean.pyOrd "a"
+        let mut j : Int := mask
         let _ := Libraries.passta.pyPassAssert (decide ((0 : Int) ≤ i) && decide (i < (26 : Int)))
         let _ :=
           Libraries.passta.pyPassAssert

@@ -134,7 +134,7 @@ theorem pathInZigZagTree_spec :
             let x := st |>.fst;
             i ≥ (1 : Int) ∧ x = PastaLean.pyShiftLeft (1 : Int) (i -ₚ (1 : Int)))
           (fun _ => True) s⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem pathInZigZagTree_correct :

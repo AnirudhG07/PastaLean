@@ -100,7 +100,7 @@ theorem numberOfUniqueGoodSubsequences_spec :
     · ⇓⟨cur, f, g, ans⟩ =>
       ⌜((mod = (10 : Int) ^ₚ (9 : Int) +ₚ (7 : Int) ∧ (0 : Int) ≤ f ∧ f < mod) ∧ (0 : Int) ≤ g ∧ g < mod) ∧
           (ans = (0 : Int) ∨ ans = (1 : Int))⌝
-  sorry
+  taste?
   all_goals sorry
 
 theorem numberOfUniqueGoodSubsequences_correct :

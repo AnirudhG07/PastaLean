@@ -61,10 +61,8 @@ namespace PastaBench.leetcode.StepsToMakeArrayNonDecreasing
 def totalSteps := fun (nums : List Int) ↦
   (do
     let mut stk : List Int := []
-    let __unpack_value_1 := ((0 : Int), PastaLean.pyLen nums)
-    let __unpack_pair_1 := __unpack_value_1
-    let mut ans : Int := Prod.fst __unpack_pair_1
-    let mut n : Int := Prod.snd __unpack_pair_1
+    let mut ans : Int := (0 : Int)
+    let mut n : Int := PastaLean.pyLen nums
     let mut dp : List Int := PastaLean.pyListRepeat [(0 : Int)] n
     let _ := Libraries.passta.pyPassAssert (PastaLean.pyLen dp == n)
     for i in (PastaLean.pyRange (-(1 : Int)) (n -ₚ (1 : Int)) (-(1 : Int)))do
@@ -92,7 +90,7 @@ theorem totalSteps_spec :
     · ⇓cur =>
       ⌜let i := (cur.prefix.length : Int);
         (0 : Int) ≤ i ∧ i < n⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem totalSteps_correct :
@@ -109,10 +107,8 @@ def totalSteps'rn := fun (nums : List Int) ↦
     (do
       let _ := Libraries.passta.pyPassRequires (decide (PastaLean.pyLen nums > (0 : Int)))
       let mut stk : List Int := []
-      let __unpack_value_1 := ((0 : Int), PastaLean.pyLen nums)
-      let __unpack_pair_1 := __unpack_value_1
-      let mut ans : Int := Prod.fst __unpack_pair_1
-      let mut n : Int := Prod.snd __unpack_pair_1
+      let mut ans : Int := (0 : Int)
+      let mut n : Int := PastaLean.pyLen nums
       let mut dp : List Int := PastaLean.pyListRepeat [(0 : Int)] n
       let _ := Libraries.passta.pyPassAssert (PastaLean.pyLen dp == n)
       for i in (PastaLean.pyRange (-(1 : Int)) (n -ₚ (1 : Int)) (-(1 : Int)))do

@@ -51,14 +51,11 @@ attribute [simp] isAcronym
 theorem isAcronym_correct :
     ∀ (words : List String),
       ∀ (s : String),
-        PastaLean.pyAll ((PastaLean.pyIter words).map fun w => decide (PastaLean.pyLen w > (0 : Int))) →
+        (∀ w ∈ PastaLean.pyIter words, PastaLean.pyLen w > (0 : Int)) →
           isAcronym words s =
             (PastaLean.pyLen words = PastaLean.pyLen s ∧
-              PastaLean.pyTruthy
-                  (PastaLean.pyAll
-                    ((PastaLean.pyRange (PastaLean.pyLen words)).map fun i => words⦋i⦌⦋(0 : Int)⦌ == s⦋i⦌)) =
-                true) :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+              ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen words)), words⦋i⦌⦋(0 : Int)⦌ = s⦋i⦌) :=
+  by taste?
 
 def isAcronym'rn := fun (words : List String) ↦ fun (s : String) ↦
   PastaLean.pyStringJoin "" ((PastaLean.pyIter words).map fun w => w⦋(0 : Int)⦌) == s

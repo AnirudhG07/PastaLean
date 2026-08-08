@@ -122,7 +122,12 @@ theorem is_prime_spec :
             let n_sqrt := st;
             n_sqrt ≥ (1 : Int) ∧ (n_sqrt -ₚ (1 : Int)) ^ₚ (2 : Int) < n)
           (fun _ => True) s⌝
-    · Invariant.withEarlyReturn (onReturn := fun _ _ => ⌜True⌝) (onContinue := fun _ _ => ⌜True⌝)
+    ·
+      Invariant.withEarlyReturn (onContinue := fun cur b =>
+        ⌜let i := (cur.prefix.length : Int);
+          ((2 : Int) ≤ i ∧ i ≤ PastaLean.pyMin [n_sqrt +ₚ (1 : Int), n]) ∧
+            ∀ d ∈ PastaLean.pyIter (PastaLean.pyRange i (2 : Int)), n %ₚ d ≠ (0 : Int)⌝)
+        (onReturn := fun _ _ => ⌜True⌝)
   taste?
   all_goals sorry
 

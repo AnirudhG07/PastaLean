@@ -62,10 +62,8 @@ namespace PastaBench.humaneval.FindMax
 
 def find_max := fun (words : PyAny) ↦
   (do
-    let __unpack_value_1 := ((0 : Int), "")
-    let __unpack_pair_1 := __unpack_value_1
-    let mut mx_ch_cnt : Int := Prod.fst __unpack_pair_1
-    let mut ans : PyAny := Prod.snd __unpack_pair_1
+    let mut mx_ch_cnt : Int := (0 : Int)
+    let mut ans : PyAny := ""
     for word in (PastaLean.pyIter words)do
       -- Invariant: The running count of unique characters is non-negative.
       let _ := Libraries.passta.pyPassInvariant (decide (mx_ch_cnt ≥ (0 : Int)))
@@ -79,10 +77,8 @@ def find_max := fun (words : PyAny) ↦
       let _ := Libraries.passta.pyPassInvariant (ans == "" || PastaLean.pyContains words ans)
       let mut ch_cnt : Int := PastaLean.pyLen (PastaLean.pySet word)
       if h_1 : ch_cnt > mx_ch_cnt ∨ ch_cnt = mx_ch_cnt ∧ word < ans then 
-        let __unpack_value_2 := (ch_cnt, word)
-        let __unpack_pair_2 := __unpack_value_2
-        mx_ch_cnt := Prod.fst __unpack_pair_2
-        ans := Prod.snd __unpack_pair_2
+        mx_ch_cnt := ch_cnt
+        ans := word
       else
         let _ := ()
     let _ := Libraries.passta.pyPassAssert (ans == "" || PastaLean.pyContains words ans)
@@ -95,7 +91,7 @@ theorem find_max_spec :
   by
   try
     mvcgen [find_max, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓cur =>
+    · ⇓⟨cur, mx_ch_cnt, ans⟩ =>
       ⌜(mx_ch_cnt ≥ (0 : Int) ∧ mx_ch_cnt = PastaLean.pyLen (PastaLean.pySet ans)) ∧
           (ans = "" ∨ PastaLean.pyContains words ans)⌝
   taste?
@@ -127,10 +123,8 @@ def find_max'rn := fun (words : PyAny) ↦
         -- Ensures that the function returns one of the original words, or the empty
         -- string if the input list was empty. This is a key property about the
         -- function's output domain.
-        let __unpack_value_1 := ((0 : Int), "")
-        let __unpack_pair_1 := __unpack_value_1
-        let mut mx_ch_cnt : Int := Prod.fst __unpack_pair_1
-        let mut ans : PyAny := Prod.snd __unpack_pair_1
+        let mut mx_ch_cnt : Int := (0 : Int)
+        let mut ans : PyAny := ""
         for word in (PastaLean.pyIter words)do
           -- Invariant: The running count of unique characters is non-negative.
           let _ := Libraries.passta.pyPassInvariant (decide (mx_ch_cnt ≥ (0 : Int)))
@@ -144,10 +138,8 @@ def find_max'rn := fun (words : PyAny) ↦
           let _ := Libraries.passta.pyPassInvariant (ans == "" || PastaLean.pyContains words ans)
           let mut ch_cnt : Int := PastaLean.pyLen (PastaLean.pySet word)
           if h_1 : decide (ch_cnt > mx_ch_cnt) || ch_cnt == mx_ch_cnt && decide (word < ans) then 
-            let __unpack_value_2 := (ch_cnt, word)
-            let __unpack_pair_2 := __unpack_value_2
-            mx_ch_cnt := Prod.fst __unpack_pair_2
-            ans := Prod.snd __unpack_pair_2
+            mx_ch_cnt := ch_cnt
+            ans := word
           else
             let _ := ()
         -- After the loop, the invariant about the answer's origin still holds,

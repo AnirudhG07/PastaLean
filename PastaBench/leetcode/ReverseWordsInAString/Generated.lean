@@ -48,7 +48,7 @@ attribute [simp] reverseWords
 theorem reverseWords_correct :
     ∀ (s : String),
       PastaLean.pyStringSplit (reverseWords s) = PastaLean.pyList (PastaLean.pyReversed (PastaLean.pyStringSplit s)) :=
-  by sorry
+  by taste?
 
 def reverseWords'rn := fun (s : String) ↦ PastaLean.pyStringJoin " " (PastaLean.pyReversed (PastaLean.pyStringSplit s))
 

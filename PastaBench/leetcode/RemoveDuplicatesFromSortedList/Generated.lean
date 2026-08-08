@@ -125,13 +125,13 @@ def deleteDuplicates := fun (head : Option ListNode) ↦
           Libraries.passta.pyPassAssert
             (((cur).getD default).val != ((((cur).getD default).next).getD default).val)
         cur := ((cur).getD default).next
-    return head : Id _)
+    return head : Id (Option ListNode))
 
 @[spec]
 theorem deleteDuplicates_spec : ⦃⌜True⌝⦄ deleteDuplicates head ⦃⇓head => ⌜head == head⌝⦄ :=
   by
   mvcgen [deleteDuplicates, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  all_goals sorry
+  taste?
   all_goals sorry
 
 theorem deleteDuplicates_correct :
@@ -143,44 +143,45 @@ theorem deleteDuplicates_correct :
   exact deleteDuplicates_spec True.intro
 
 def deleteDuplicates'rn : Option ListNode'rn → Option ListNode'rn := fun (head : Option ListNode'rn) ↦
-  Id.run
-    (do
-      /-
-      
-          Given the head of a sorted linked list, delete all duplicates such that each
-          element appears only once. Return the linked list sorted as well.
-          The list is modified in-place.
-          
-      -/
-      -- The main postcondition, that the resulting list has no adjacent duplicates,
-      -- is a property of the list's structure. Expressing structural properties of
-      -- a linked list (e.g., "for all nodes n, n.val != n.next.val") is beyond
-      -- the scope of simple boolean contracts on in-scope variables.
-      -- We can, however, assert a key behavioral property: the modification is in-place
-      -- and the original head node is returned.
-      let mut cur : Option ListNode'rn := head
-      while (PastaLean.pyTruthy cur && PastaLean.pyTruthy ((cur).getD default).next) do
-        -- The implicit loop invariant is that the portion of the list from `head`
-        -- up to `cur` has no adjacent duplicates. This is not expressible formally
-        -- with the given contract language.
-        -- Termination depends on the list being acyclic, which is an implicit
-        -- precondition. The measure that decreases is the number of nodes
-        -- remaining in the list from `cur` onwards.
-        if h_1 : ((cur).getD default).val == ((((cur).getD default).next).getD default).val then 
-          cur := some { (cur).getD default with next := ((((cur).getD default).next).getD default).next }
-          -- This assertion captures the inductive step of the algorithm.
-          -- On this path, we have confirmed that `cur` does not have a duplicate
-          -- as its immediate successor, so it is safe to advance `cur`.
-          -- Stating this makes the local correctness property explicit for the prover.
-        else
-          -- This assertion captures the inductive step of the algorithm.
-          -- On this path, we have confirmed that `cur` does not have a duplicate
-          -- as its immediate successor, so it is safe to advance `cur`.
-          -- Stating this makes the local correctness property explicit for the prover.
-          let _ :=
-            Libraries.passta.pyPassAssert
-              (((cur).getD default).val != ((((cur).getD default).next).getD default).val)
-          cur := ((cur).getD default).next
-      return head)
+  (show Option ListNode'rn from
+    Id.run
+      (do
+        /-
+        
+            Given the head of a sorted linked list, delete all duplicates such that each
+            element appears only once. Return the linked list sorted as well.
+            The list is modified in-place.
+            
+        -/
+        -- The main postcondition, that the resulting list has no adjacent duplicates,
+        -- is a property of the list's structure. Expressing structural properties of
+        -- a linked list (e.g., "for all nodes n, n.val != n.next.val") is beyond
+        -- the scope of simple boolean contracts on in-scope variables.
+        -- We can, however, assert a key behavioral property: the modification is in-place
+        -- and the original head node is returned.
+        let mut cur : Option ListNode'rn := head
+        while (PastaLean.pyTruthy cur && PastaLean.pyTruthy ((cur).getD default).next) do
+          -- The implicit loop invariant is that the portion of the list from `head`
+          -- up to `cur` has no adjacent duplicates. This is not expressible formally
+          -- with the given contract language.
+          -- Termination depends on the list being acyclic, which is an implicit
+          -- precondition. The measure that decreases is the number of nodes
+          -- remaining in the list from `cur` onwards.
+          if h_1 : ((cur).getD default).val == ((((cur).getD default).next).getD default).val then 
+            cur := some { (cur).getD default with next := ((((cur).getD default).next).getD default).next }
+            -- This assertion captures the inductive step of the algorithm.
+            -- On this path, we have confirmed that `cur` does not have a duplicate
+            -- as its immediate successor, so it is safe to advance `cur`.
+            -- Stating this makes the local correctness property explicit for the prover.
+          else
+            -- This assertion captures the inductive step of the algorithm.
+            -- On this path, we have confirmed that `cur` does not have a duplicate
+            -- as its immediate successor, so it is safe to advance `cur`.
+            -- Stating this makes the local correctness property explicit for the prover.
+            let _ :=
+              Libraries.passta.pyPassAssert
+                (((cur).getD default).val != ((((cur).getD default).next).getD default).val)
+            cur := ((cur).getD default).next
+        return head))
 
 end PastaBench.leetcode.RemoveDuplicatesFromSortedList

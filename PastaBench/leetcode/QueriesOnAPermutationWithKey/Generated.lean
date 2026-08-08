@@ -90,30 +90,24 @@ def processQueries := fun (queries : List Int) ↦ fun (m : Int) ↦
 
 @[spec]
 theorem processQueries_spec :
-    ⦃⌜m ≥ (1 : Int) ∧
-          PastaLean.pyAll ((PastaLean.pyIter queries).map fun v => decide ((1 : Int) ≤ v) && decide (v ≤ m))⌝⦄
-      processQueries queries m ⦃⇓ans =>
-      ⌜PastaLean.pyLen ans = PastaLean.pyLen queries ∧
-          PastaLean.pyAll ((PastaLean.pyIter ans).map fun j => decide ((0 : Int) ≤ j) && decide (j < m))⌝⦄ :=
+    ⦃⌜m ≥ (1 : Int) ∧ ∀ v ∈ PastaLean.pyIter queries, (1 : Int) ≤ v ∧ v ≤ m⌝⦄ processQueries queries m ⦃⇓ans =>
+      ⌜PastaLean.pyLen ans = PastaLean.pyLen queries ∧ ∀ j ∈ PastaLean.pyIter ans, (0 : Int) ≤ j ∧ j < m⌝⦄ :=
   by
   try
     mvcgen [processQueries, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓cur =>
-      ⌜((PastaLean.pyLen p = m ∧
-              PastaLean.pyAll ((PastaLean.pyIter p).map fun x => decide ((1 : Int) ≤ x) && decide (x ≤ m))) ∧
+      ⌜((PastaLean.pyLen p = m ∧ ∀ x ∈ PastaLean.pyIter p, (1 : Int) ≤ x ∧ x ≤ m) ∧
             PastaLean.pyLen (PastaLean.pySet p) = PastaLean.pyLen p) ∧
-          PastaLean.pyAll ((PastaLean.pyIter ans).map fun j => decide ((0 : Int) ≤ j) && decide (j < m))⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+          ∀ j ∈ PastaLean.pyIter ans, (0 : Int) ≤ j ∧ j < m⌝
+  taste?
   all_goals sorry
 
 theorem processQueries_correct :
     ∀ (queries : List Int),
       ∀ (m : Int),
-        m ≥ (1 : Int) ∧
-            PastaLean.pyAll ((PastaLean.pyIter queries).map fun v => decide ((1 : Int) ≤ v) && decide (v ≤ m)) →
+        (m ≥ (1 : Int) ∧ ∀ v ∈ PastaLean.pyIter queries, (1 : Int) ≤ v ∧ v ≤ m) →
           let ans := (processQueries queries m).run;
-          PastaLean.pyLen ans = PastaLean.pyLen queries ∧
-            PastaLean.pyAll ((PastaLean.pyIter ans).map fun j => decide ((0 : Int) ≤ j) && decide (j < m)) :=
+          PastaLean.pyLen ans = PastaLean.pyLen queries ∧ ∀ j ∈ PastaLean.pyIter ans, (0 : Int) ≤ j ∧ j < m :=
   by
   intro queries m hpre
   exact processQueries_spec hpre

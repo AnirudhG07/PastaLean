@@ -64,10 +64,8 @@ namespace PastaBench.leetcode.ContainerWithMostWater
 
 def maxArea := fun (height : List Int) ↦
   (do
-    let __unpack_value_1 := ((0 : Int), PastaLean.pyLen height -ₚ (1 : Int))
-    let __unpack_pair_1 := __unpack_value_1
-    let mut l : Int := Prod.fst __unpack_pair_1
-    let mut r : Int := Prod.snd __unpack_pair_1
+    let mut l : Int := (0 : Int)
+    let mut r : Int := PastaLean.pyLen height -ₚ (1 : Int)
     let mut ans : Int := (0 : Int)
     while (l < r) do
       let mut t : Int := PastaLean.pyMin [height⦋l⦌, height⦋r⦌] *ₚ (r -ₚ l)
@@ -96,7 +94,7 @@ theorem maxArea_spec :
                   PastaLean.pyMin [height⦋i⦌, height⦋j⦌] *ₚ (j -ₚ i))⌝⦄ :=
   by
   mvcgen [maxArea, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  taste?
   all_goals sorry
 
 theorem maxArea_correct :
@@ -125,10 +123,8 @@ def maxArea'rn := fun (height : List Int) ↦
     (do
       let _ := Libraries.passta.pyPassRequires (decide (PastaLean.pyLen height ≥ (2 : Int)))
       -- The result equals the maximum container area over all pairs (i, j) with i < j
-      let __unpack_value_1 := ((0 : Int), PastaLean.pyLen height -ₚ (1 : Int))
-      let __unpack_pair_1 := __unpack_value_1
-      let mut l : Int := Prod.fst __unpack_pair_1
-      let mut r : Int := Prod.snd __unpack_pair_1
+      let mut l : Int := (0 : Int)
+      let mut r : Int := PastaLean.pyLen height -ₚ (1 : Int)
       let mut ans : Int := (0 : Int)
       while (l < r) do
         let mut t : Int := PastaLean.pyMin [height⦋l⦌, height⦋r⦌] *ₚ (r -ₚ l)

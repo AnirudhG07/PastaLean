@@ -125,6 +125,8 @@ theorem search_spec :
   try
     mvcgen [search, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓cur => ⌜True⌝
+    · ⇓⟨cur, ans⟩ =>
+      ⌜ans ≥ -(1 : Int) ∧ (ans ≤ -(1 : Int) ∨ PastaLean.pyContains (PastaLean.pyKeys count) ans ∧ count⦋ans⦌ ≥ ans)⌝
   taste?
   all_goals sorry
 

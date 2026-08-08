@@ -100,7 +100,7 @@ theorem minimumPerimeter_spec :
             x ≥ (1 : Int) ∧
               (x = (1 : Int) ∨ (2 : Int) *ₚ (x -ₚ (1 : Int)) *ₚ x *ₚ ((2 : Int) *ₚ x -ₚ (1 : Int)) < neededApples))
           (fun _ => True) s⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry; pyany_cases <;> grind +locals; sorry
+  taste?
   all_goals sorry
 
 theorem minimumPerimeter_correct :

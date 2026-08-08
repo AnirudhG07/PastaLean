@@ -102,30 +102,27 @@ def asteroidCollision := fun (asteroids : List Int) ↦
 
 @[spec]
 theorem asteroidCollision_spec :
-    ⦃⌜PastaLean.pyAll ((PastaLean.pyIter asteroids).map fun a => a != (0 : Int))⌝⦄ asteroidCollision asteroids ⦃⇓stk =>
-      ⌜PastaLean.pyAll
-            ((PastaLean.pyRange (PastaLean.pyLen stk -ₚ (1 : Int))).map fun i =>
-              !(decide (stk⦋i⦌ > (0 : Int)) && decide (stk⦋i +ₚ (1 : Int)⦌ < (0 : Int)))) ∧
-          PastaLean.pyAll ((PastaLean.pyIter stk).map fun a => a != (0 : Int))⌝⦄ :=
+    ⦃⌜∀ a ∈ PastaLean.pyIter asteroids, a ≠ (0 : Int)⌝⦄ asteroidCollision asteroids ⦃⇓stk =>
+      ⌜(∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen stk -ₚ (1 : Int))),
+            ¬(stk⦋i⦌ > (0 : Int) ∧ stk⦋i +ₚ (1 : Int)⦌ < (0 : Int))) ∧
+          ∀ a ∈ PastaLean.pyIter stk, a ≠ (0 : Int)⌝⦄ :=
   by
   try
     mvcgen [asteroidCollision, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓cur =>
-      ⌜PastaLean.pyAll
-            ((PastaLean.pyRange (PastaLean.pyLen stk -ₚ (1 : Int))).map fun i =>
-              !(decide (stk⦋i⦌ > (0 : Int)) && decide (stk⦋i +ₚ (1 : Int)⦌ < (0 : Int)))) ∧
-          PastaLean.pyAll ((PastaLean.pyIter stk).map fun s => s != (0 : Int))⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+      ⌜(∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen stk -ₚ (1 : Int))),
+            ¬(stk⦋i⦌ > (0 : Int) ∧ stk⦋i +ₚ (1 : Int)⦌ < (0 : Int))) ∧
+          ∀ s ∈ PastaLean.pyIter stk, s ≠ (0 : Int)⌝
+  taste?
   all_goals sorry
 
 theorem asteroidCollision_correct :
     ∀ (asteroids : List Int),
-      PastaLean.pyAll ((PastaLean.pyIter asteroids).map fun a => a != (0 : Int)) →
+      (∀ a ∈ PastaLean.pyIter asteroids, a ≠ (0 : Int)) →
         let stk := (asteroidCollision asteroids).run;
-        PastaLean.pyAll
-            ((PastaLean.pyRange (PastaLean.pyLen stk -ₚ (1 : Int))).map fun i =>
-              !(decide (stk⦋i⦌ > (0 : Int)) && decide (stk⦋i +ₚ (1 : Int)⦌ < (0 : Int)))) ∧
-          PastaLean.pyAll ((PastaLean.pyIter stk).map fun a => a != (0 : Int)) :=
+        (∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen stk -ₚ (1 : Int))),
+            ¬(stk⦋i⦌ > (0 : Int) ∧ stk⦋i +ₚ (1 : Int)⦌ < (0 : Int))) ∧
+          ∀ a ∈ PastaLean.pyIter stk, a ≠ (0 : Int) :=
   by
   intro asteroids hpre
   exact asteroidCollision_spec hpre

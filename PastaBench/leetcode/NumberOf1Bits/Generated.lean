@@ -96,7 +96,7 @@ def hammingWeight := fun (n : Int) ↦
 theorem hammingWeight_spec : ⦃⌜n ≥ (0 : Int)⌝⦄ hammingWeight n ⦃⇓ans => ⌜ans = PastaLean.pyBitCount n⌝⦄ :=
   by
   mvcgen [hammingWeight, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  taste?
   all_goals sorry
 
 theorem hammingWeight_correct :

@@ -61,10 +61,8 @@ namespace PastaBench.leetcode.FindPeakElement
 
 def findPeakElement := fun (nums : List Int) ↦
   (do
-    let __unpack_value_1 := ((0 : Int), PastaLean.pyLen nums -ₚ (1 : Int))
-    let __unpack_pair_1 := __unpack_value_1
-    let mut left : Int := Prod.fst __unpack_pair_1
-    let mut right : Int := Prod.snd __unpack_pair_1
+    let mut left : Int := (0 : Int)
+    let mut right : Int := PastaLean.pyLen nums -ₚ (1 : Int)
     let _ := Libraries.passta.pyPassDecreases (right -ₚ left)
     while (left < right) do
       let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ left))
@@ -90,7 +88,7 @@ theorem findPeakElement_spec :
             (left = PastaLean.pyLen nums -ₚ (1 : Int) ∨ nums⦋left⦌ > nums⦋left +ₚ (1 : Int)⦌)⌝⦄ :=
   by
   mvcgen [findPeakElement, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  taste?
   all_goals sorry
 
 theorem findPeakElement_correct :
@@ -108,10 +106,8 @@ def findPeakElement'rn := fun (nums : List Int) ↦
   Id.run
     (do
       let _ := Libraries.passta.pyPassRequires (decide (PastaLean.pyLen nums > (0 : Int)))
-      let __unpack_value_1 := ((0 : Int), PastaLean.pyLen nums -ₚ (1 : Int))
-      let __unpack_pair_1 := __unpack_value_1
-      let mut left : Int := Prod.fst __unpack_pair_1
-      let mut right : Int := Prod.snd __unpack_pair_1
+      let mut left : Int := (0 : Int)
+      let mut right : Int := PastaLean.pyLen nums -ₚ (1 : Int)
       let _ := Libraries.passta.pyPassDecreases (right -ₚ left)
       while (left < right) do
         let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ left))

@@ -95,7 +95,7 @@ theorem countSubarrays_spec :
   try
     mvcgen [countSubarrays, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓⟨cur, ans, pre⟩ => ⌜ans = (cur.prefix.map (fun x => cur⦋k⦌)).sum⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem countSubarrays_correct :

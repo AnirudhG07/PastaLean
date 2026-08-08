@@ -84,7 +84,7 @@ theorem makeTheIntegerZero_spec :
             result ≤ num1 -ₚ result *ₚ num2⌝⦄ :=
   by
   mvcgen [makeTheIntegerZero, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  sorry; sorry; sorry; sorry; sorry; sorry; pyany_cases <;> grind +locals; sorry
+  taste?
   all_goals sorry
 
 theorem makeTheIntegerZero_correct :

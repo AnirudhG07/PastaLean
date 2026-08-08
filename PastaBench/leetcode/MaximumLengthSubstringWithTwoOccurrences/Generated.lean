@@ -133,8 +133,14 @@ def maximumLengthSubstring := fun (s : String) ↦
 theorem maximumLengthSubstring_spec :
     ⦃⌜True⌝⦄ maximumLengthSubstring s ⦃⇓ans => ⌜ans ≥ (0 : Int) ∧ ans ≤ PastaLean.pyLen s⌝⦄ :=
   by
-  mvcgen [maximumLengthSubstring, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  try
+    mvcgen [maximumLengthSubstring, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · ⇓⟨cur, ans, i⟩ =>
+      ⌜((((((((0 : Int) ≤ j ∧ j ≤ PastaLean.pyLen s) ∧ (0 : Int) ≤ i) ∧ i ≤ j) ∧ ans ≥ (0 : Int)) ∧ ans ≤ j) ∧
+              PastaLean.pySum (PastaLean.pyAnys cnt) = j -ₚ i) ∧
+            ∀ val ∈ PastaLean.pyIter (PastaLean.pyAnys cnt), val ≥ (0 : Int)) ∧
+          ∀ val ∈ PastaLean.pyIter (PastaLean.pyAnys cnt), val ≤ (2 : Int)⌝
+  taste?
   all_goals sorry
 
 theorem maximumLengthSubstring_correct :

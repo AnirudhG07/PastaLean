@@ -67,7 +67,7 @@ theorem isReachableAtTime_spec :
             (sx ≠ fx ∨ sy ≠ fy) ∧ PastaLean.pyMax [PastaLean.pyAbs (sx -ₚ fx), PastaLean.pyAbs (sy -ₚ fy)] ≤ t)⌝⦄ :=
   by
   mvcgen [isReachableAtTime, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals
+  taste?
   all_goals sorry
 
 theorem isReachableAtTime_correct :

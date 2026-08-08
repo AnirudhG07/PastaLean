@@ -106,7 +106,12 @@ theorem minOperations_spec :
   try
     mvcgen [minOperations, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓⟨cur, x⟩ => ⌜True⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+    ·
+      Invariant.withEarlyReturn (onContinue := fun cur b =>
+        ⌜((0 : Int) ≤ i ∧ i ≤ PastaLean.pyLen nums) ∧
+            ∀ j ∈ PastaLean.pyIter (PastaLean.pyRange i), x %ₚ nums⦋j⦌ ≠ (0 : Int)⌝)
+        (onReturn := fun _ _ => ⌜True⌝)
+  taste?
   all_goals sorry
 
 theorem minOperations_correct :

@@ -121,7 +121,7 @@ theorem maximumNumberOfOnes_spec :
       ⌜let i := (cur.prefix.length : Int);
         ((((0 : Int) ≤ i ∧ i ≤ width) ∧ PastaLean.pyLen cnt = x *ₚ x) ∧ ∀ c ∈ PastaLean.pyIter cnt, c ≥ (0 : Int)) ∧
           PastaLean.pySum cnt = i *ₚ height⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem maximumNumberOfOnes_correct :

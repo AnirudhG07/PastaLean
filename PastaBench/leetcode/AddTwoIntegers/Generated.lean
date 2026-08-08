@@ -47,7 +47,7 @@ def sum := fun (num1 : Int) ↦ fun (num2 : Int) ↦ num1 +ₚ num2
 attribute [simp] sum
 
 @[taste_ingr]
-theorem sum_correct : ∀ (num1 : Int), ∀ (num2 : Int), num1 +ₚ num2 = num1 +ₚ num2 := by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]
+theorem sum_correct : ∀ (num1 : Int), ∀ (num2 : Int), num1 +ₚ num2 = num1 +ₚ num2 := by taste?
 
 def sum'rn := fun (num1 : Int) ↦ fun (num2 : Int) ↦ num1 +ₚ num2
 

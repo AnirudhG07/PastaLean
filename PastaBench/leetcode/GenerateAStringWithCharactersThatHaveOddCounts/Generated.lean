@@ -49,49 +49,20 @@ def generateTheString(n: int) -> str:
 namespace PastaBench.leetcode.GenerateAStringWithCharactersThatHaveOddCounts
 
 def generateTheString := fun (n : Int) ↦
-  (do
-    if h_1 : PastaLean.pyTruthy (PastaLean.pyBitAnd n (1 : Int)) then 
-      let __py_ret_1 := "a" *ₚ n
-      return __py_ret_1
-    else
-      let __py_ret_1 := "a" *ₚ (n -ₚ (1 : Int)) +ₚ "b"
-      return __py_ret_1 :
-    Id _)
+  if PastaLean.pyTruthy (PastaLean.pyBitAnd n (1 : Int)) then "a" *ₚ n else "a" *ₚ (n -ₚ (1 : Int)) +ₚ "b"
 
-@[spec]
-theorem generateTheString_spec :
-    ⦃⌜n ≥ (1 : Int)⌝⦄ generateTheString n ⦃⇓result =>
-      ⌜PastaLean.pyLen result = n ∧
-          PastaLean.pyAll
-            ((PastaLean.pyIter (PastaLean.pySet result)).map fun c =>
-              PastaLean.pyCount result c %ₚ (2 : Int) == (1 : Int))⌝⦄ :=
-  by
-  mvcgen [generateTheString, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
-  all_goals sorry
+attribute [simp] generateTheString
 
+@[taste_ingr]
 theorem generateTheString_correct :
     ∀ (n : Int),
       n ≥ (1 : Int) →
-        let result := (generateTheString n).run;
-        PastaLean.pyLen result = n ∧
-          PastaLean.pyAll
-            ((PastaLean.pyIter (PastaLean.pySet result)).map fun c =>
-              PastaLean.pyCount result c %ₚ (2 : Int) == (1 : Int)) :=
-  by
-  intro n hpre
-  exact generateTheString_spec hpre
+        PastaLean.pyLen (generateTheString n) = n ∧
+          ∀ c ∈ PastaLean.pyIter (PastaLean.pySet (generateTheString n)),
+            PastaLean.pyCount (generateTheString n) c %ₚ (2 : Int) = (1 : Int) :=
+  by taste?
 
 def generateTheString'rn := fun (n : Int) ↦
-  Id.run
-    (do
-      let _ := Libraries.passta.pyPassRequires (decide (n ≥ (1 : Int)))
-      -- The returned string has every character an odd number of times.
-      if h_1 : PastaLean.pyTruthy (PastaLean.pyBitAnd n (1 : Int)) then 
-        let __py_ret_1 := "a" *ₚ n
-        return __py_ret_1
-      else
-        let __py_ret_1 := "a" *ₚ (n -ₚ (1 : Int)) +ₚ "b"
-        return __py_ret_1)
+  if PastaLean.pyTruthy (PastaLean.pyBitAnd n (1 : Int)) then "a" *ₚ n else "a" *ₚ (n -ₚ (1 : Int)) +ₚ "b"
 
 end PastaBench.leetcode.GenerateAStringWithCharactersThatHaveOddCounts

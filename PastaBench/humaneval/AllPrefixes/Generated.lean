@@ -41,7 +41,7 @@ attribute [simp] all_prefixes
 
 @[taste_ingr]
 theorem all_prefixes_correct : ∀ (string : String), PastaLean.pyLen (all_prefixes string) = PastaLean.pyLen string := by
-  intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
 
 def all_prefixes'rn := fun (string : String) ↦
   (PastaLean.pyRange (PastaLean.pyLen string)).map fun i =>

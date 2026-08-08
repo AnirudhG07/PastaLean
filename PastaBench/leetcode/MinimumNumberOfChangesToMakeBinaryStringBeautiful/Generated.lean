@@ -50,7 +50,7 @@ attribute [simp] minChanges
 @[taste_ingr]
 theorem minChanges_correct :
     ∀ (s : String), (0 : Int) ≤ minChanges s ∧ minChanges s ≤ PastaLean.pyFloorDiv (PastaLean.pyLen s) (2 : Int) := by
-  intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
 
 def minChanges'rn := fun (s : String) ↦
   PastaLean.pySum ((PastaLean.pyRange (PastaLean.pyLen s) (1 : Int) (2 : Int)).map fun i => s⦋i⦌ != s⦋i -ₚ (1 : Int)⦌)

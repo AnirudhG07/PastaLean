@@ -60,10 +60,8 @@ namespace PastaBench.leetcode.RemoveAdjacentAlmostEqualCharacters
 def removeAlmostEqualCharacters := fun (word : String) ↦
   (do
     let mut ans : Int := (0 : Int)
-    let __unpack_value_1 := ((1 : Int), PastaLean.pyLen word)
-    let __unpack_pair_1 := __unpack_value_1
-    let mut i : Int := Prod.fst __unpack_pair_1
-    let mut n : Int := Prod.snd __unpack_pair_1
+    let mut i : Int := (1 : Int)
+    let mut n : Int := PastaLean.pyLen word
     while (i < n) do
       let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i))
       let _ := Libraries.passta.pyPassInvariant (decide (i ≤ n))
@@ -95,7 +93,7 @@ theorem removeAlmostEqualCharacters_spec :
             let ans := st |>.fst;
             ((0 : Int) ≤ i ∧ i ≤ n) ∧ (2 : Int) *ₚ ans ≤ i)
           (fun _ => True) s⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem removeAlmostEqualCharacters_correct :
@@ -110,10 +108,8 @@ def removeAlmostEqualCharacters'rn := fun (word : String) ↦
   Id.run
     (do
       let mut ans : Int := (0 : Int)
-      let __unpack_value_1 := ((1 : Int), PastaLean.pyLen word)
-      let __unpack_pair_1 := __unpack_value_1
-      let mut i : Int := Prod.fst __unpack_pair_1
-      let mut n : Int := Prod.snd __unpack_pair_1
+      let mut i : Int := (1 : Int)
+      let mut n : Int := PastaLean.pyLen word
       while (i < n) do
         let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i))
         let _ := Libraries.passta.pyPassInvariant (decide (i ≤ n))

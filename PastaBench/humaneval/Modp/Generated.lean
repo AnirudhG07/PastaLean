@@ -65,10 +65,8 @@ def modp := fun (n : Int) ↦ fun (p : Int) ↦
   (do
     let mut n := n
     let mut n_0 : Int := n
-    let __unpack_value_1 := ((1 : Int), (2 : Int))
-    let __unpack_pair_1 := __unpack_value_1
-    let mut res : Int := Prod.fst __unpack_pair_1
-    let mut x : Int := Prod.snd __unpack_pair_1
+    let mut res : Int := (1 : Int)
+    let mut x : Int := (2 : Int)
     while (n ≠ (0 : Int)) do
       let _ := Libraries.passta.pyPassInvariant (decide (n ≥ (0 : Int)))
       -- Square-and-multiply's carried equation: res * x**n stays congruent to 2**n_0 mod p.
@@ -127,10 +125,8 @@ def modp'rn := fun (n : Int) ↦ fun (p : Int) ↦
       -- [0, p) that is congruent to 2**n". (`pow(2, n_0, p)` is not usable here: the runtime's modular
       -- `pow` is a fuelled square-and-multiply with no equational theory, so a spec written with it is
       -- unprovable rather than merely hard.)
-      let __unpack_value_1 := ((1 : Int), (2 : Int))
-      let __unpack_pair_1 := __unpack_value_1
-      let mut res : Int := Prod.fst __unpack_pair_1
-      let mut x : Int := Prod.snd __unpack_pair_1
+      let mut res : Int := (1 : Int)
+      let mut x : Int := (2 : Int)
       while (n != (0 : Int)) do
         let _ := Libraries.passta.pyPassInvariant (decide (n ≥ (0 : Int)))
         -- Square-and-multiply's carried equation: res * x**n stays congruent to 2**n_0 mod p.

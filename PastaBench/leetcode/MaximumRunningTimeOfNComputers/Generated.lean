@@ -57,10 +57,8 @@ namespace PastaBench.leetcode.MaximumRunningTimeOfNComputers
 
 def maxRunTime := fun (n : Int) ↦ fun (batteries : List Int) ↦
   (do
-    let __unpack_value_1 := ((0 : Int), PastaLean.pySum batteries)
-    let __unpack_pair_1 := __unpack_value_1
-    let mut l : Int := Prod.fst __unpack_pair_1
-    let mut r : Int := Prod.snd __unpack_pair_1
+    let mut l : Int := (0 : Int)
+    let mut r : Int := PastaLean.pySum batteries
     while (l < r) do
       let _ := Libraries.passta.pyPassDecreases (r -ₚ l)
       let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ l))
@@ -80,18 +78,17 @@ def maxRunTime := fun (n : Int) ↦ fun (batteries : List Int) ↦
 
 @[spec]
 theorem maxRunTime_spec :
-    ⦃⌜n > (0 : Int) ∧ PastaLean.pyAll ((PastaLean.pyIter batteries).map fun x => decide (x ≥ (0 : Int)))⌝⦄
-      maxRunTime n batteries ⦃⇓l =>
+    ⦃⌜n > (0 : Int) ∧ ∀ x ∈ PastaLean.pyIter batteries, x ≥ (0 : Int)⌝⦄ maxRunTime n batteries ⦃⇓l =>
       ⌜PastaLean.pySum ((PastaLean.pyIter batteries).map fun x => PastaLean.pyMin [x, l]) ≥ n *ₚ l⌝⦄ :=
   by
   mvcgen [maxRunTime, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  taste?
   all_goals sorry
 
 theorem maxRunTime_correct :
     ∀ (n : Int),
       ∀ (batteries : List Int),
-        n > (0 : Int) ∧ PastaLean.pyAll ((PastaLean.pyIter batteries).map fun x => decide (x ≥ (0 : Int))) →
+        (n > (0 : Int) ∧ ∀ x ∈ PastaLean.pyIter batteries, x ≥ (0 : Int)) →
           let l := (maxRunTime n batteries).run;
           PastaLean.pySum ((PastaLean.pyIter batteries).map fun x => PastaLean.pyMin [x, l]) ≥ n *ₚ l :=
   by
@@ -105,10 +102,8 @@ def maxRunTime'rn := fun (n : Int) ↦ fun (batteries : List Int) ↦
       let _ :=
         Libraries.passta.pyPassRequires
           (PastaLean.pyAll ((PastaLean.pyIter batteries).map fun x => decide (x ≥ (0 : Int))))
-      let __unpack_value_1 := ((0 : Int), PastaLean.pySum batteries)
-      let __unpack_pair_1 := __unpack_value_1
-      let mut l : Int := Prod.fst __unpack_pair_1
-      let mut r : Int := Prod.snd __unpack_pair_1
+      let mut l : Int := (0 : Int)
+      let mut r : Int := PastaLean.pySum batteries
       while (l < r) do
         let _ := Libraries.passta.pyPassDecreases (r -ₚ l)
         let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ l))

@@ -84,13 +84,12 @@ attribute [simp] findDuplicate
 theorem findDuplicate_correct :
     ∀ (nums : List Int),
       PastaLean.pyLen nums > (1 : Int) →
-        PastaLean.pyAll
-            ((PastaLean.pyIter nums).map fun v => decide ((1 : Int) ≤ v) && decide (v < PastaLean.pyLen nums)) →
+        (∀ v ∈ PastaLean.pyIter nums, (1 : Int) ≤ v ∧ v < PastaLean.pyLen nums) →
           PastaLean.pySum
                 ((List.filter (fun v => v = findDuplicate nums) (PastaLean.pyIter nums)).map fun v => (1 : Int)) >
               (1 : Int) ∧
             (1 : Int) ≤ findDuplicate nums ∧ findDuplicate nums < PastaLean.pyLen nums :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  by taste?
 
 private def _findDuplicate'f'rn := fun (x : Int) ↦ fun (nums : List Int) ↦
   -- This key function for the binary search is true iff the count of

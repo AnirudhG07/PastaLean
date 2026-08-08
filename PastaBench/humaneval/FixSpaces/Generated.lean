@@ -68,7 +68,7 @@ def fix_spaces := fun (text : PyAny) ↦
       -- or more have been replaced in previous iterations.
       let _ := Libraries.passta.pyPassInvariant !(PastaLean.pyContains ans (" " *ₚ (i +ₚ (1 : Int))))
       let _ := Libraries.passta.pyPassDecreases (i -ₚ (2 : Int))
-      let mut ans'rb0 := PastaLean.pyStringReplace ans (" " *ₚ i) "-"
+      ans := PastaLean.pyStringReplace ans (" " *ₚ i) "-"
     let _ := Libraries.passta.pyPassAssert !(PastaLean.pyStrContainsSubstr ans "   ")
     let _ := Libraries.passta.pyPassAssert (decide (PastaLean.pyLen ans ≤ PastaLean.pyLen text))
     let __py_ret_1 := PastaLean.pyStringReplace ans " " "_"
@@ -121,7 +121,7 @@ def fix_spaces'rn := fun (text : PyAny) ↦
         -- or more have been replaced in previous iterations.
         let _ := Libraries.passta.pyPassInvariant !(PastaLean.pyContains ans (" " *ₚ (i +ₚ (1 : Int))))
         let _ := Libraries.passta.pyPassDecreases (i -ₚ (2 : Int))
-        let mut ans'rb0 := PastaLean.pyStringReplace ans (" " *ₚ i) "-"
+        ans := PastaLean.pyStringReplace ans (" " *ₚ i) "-"
       -- The loop removes all runs of 3 or more spaces.
       let _ := Libraries.passta.pyPassAssert !(PastaLean.pyStrContainsSubstr ans "   ")
       let _ := Libraries.passta.pyPassAssert (decide (PastaLean.pyLen ans ≤ PastaLean.pyLen text))

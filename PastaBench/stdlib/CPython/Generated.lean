@@ -135,7 +135,7 @@ theorem gcd_spec : ⦃⌜a ≥ (0 : Int) ∧ b ≥ (0 : Int)⌝⦄ gcd a b ⦃�
             let x := st |>.fst;
             x ≥ (0 : Int) ∧ y ≥ (0 : Int))
           (fun _ => True) s⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem gcd_correct :
@@ -197,7 +197,7 @@ theorem bisect_left_spec : ⦃⌜PastaLean.pyLen a ≥ (0 : Int)⌝⦄ bisect_le
             let lo := st |>.fst;
             lo ≥ (0 : Int) ∧ lo ≤ hi)
           (fun _ => True) s⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals; sorry; sorry
+  taste?
   all_goals sorry
 
 theorem bisect_left_correct :
@@ -258,7 +258,7 @@ theorem bisect_right_spec : ⦃⌜PastaLean.pyLen a ≥ (0 : Int)⌝⦄ bisect_r
             let lo := st |>.fst;
             lo ≥ (0 : Int) ∧ lo ≤ hi)
           (fun _ => True) s⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals; sorry; sorry
+  taste?
   all_goals sorry
 
 theorem bisect_right_correct :
@@ -287,19 +287,21 @@ def bisect_right'rn := fun (a : List Int) ↦ fun (x : Int) ↦
         lo := if x < a⦋mid⦌ then lo else mid +ₚ (1 : Int)
       return lo)
 
-def mean := fun (data : List Int) ↦ (PastaLean.pySum data /ₚ PastaLean.pyLen data : Rat)
+def mean := fun (data : List Int) ↦ (show Rat from PastaLean.pySum data /ₚ PastaLean.pyLen data)
 
 attribute [simp] mean
 
 @[taste_ingr]
 theorem mean_correct :
     ∀ (data : List Int), PastaLean.pyLen data > (0 : Int) → mean data *ₚ PastaLean.pyLen data = PastaLean.pySum data :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  by taste?
 
-def mean'rn := fun (data : List Int) ↦ (PastaLean.pyFloat (PastaLean.pySum data) /ₚ PastaLean.pyLen data : Float)
+def mean'rn := fun (data : List Int) ↦
+  (show Float from PastaLean.pyFloat (PastaLean.pySum data) /ₚ PastaLean.pyLen data)
 
 def median := fun (data : List Int) ↦
-  (Id.run
+  (show Rat from
+    Id.run
       (do
         let _ := Libraries.passta.pyPassRequires (decide (PastaLean.pyLen data > (0 : Int)))
         let mut s : List Int := PastaLean.pySort data
@@ -309,13 +311,13 @@ def median := fun (data : List Int) ↦
             else
               (s⦋PastaLean.pyFloorDiv n (2 : Int) -ₚ (1 : Int)⦌ +ₚ s⦋PastaLean.pyFloorDiv n (2 : Int)⦌) /ₚ (2 : Int) :
             Rat)
-        return __py_ret_1) :
-    Rat)
+        return __py_ret_1))
 
 attribute [simp, taste_ingr] median
 
 def median'rn := fun (data : List Int) ↦
-  (Id.run
+  (show Float from
+    Id.run
       (do
         let _ := Libraries.passta.pyPassRequires (decide (PastaLean.pyLen data > (0 : Int)))
         let mut s : List Int := PastaLean.pySort data
@@ -327,7 +329,6 @@ def median'rn := fun (data : List Int) ↦
                   (s⦋PastaLean.pyFloorDiv n (2 : Int) -ₚ (1 : Int)⦌ +ₚ s⦋PastaLean.pyFloorDiv n (2 : Int)⦌) /ₚ
                 (2 : Int) :
             Float)
-        return __py_ret_1) :
-    Float)
+        return __py_ret_1))
 
 end PastaBench.stdlib.CPython

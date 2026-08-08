@@ -117,6 +117,7 @@ theorem minJumps_spec :
   by
   try
     mvcgen [minJumps, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · ⇓cur => ⌜True⌝
     · fun s =>
       let ans := s;
       (⟨(PastaLean.pyLen arr -ₚ PastaLean.pyLen vis).toNat⟩ : ULift Nat)
@@ -128,7 +129,7 @@ theorem minJumps_spec :
                 PastaLean.pyLen vis ≤ PastaLean.pyLen arr) ∧
               PastaLean.pyLen q > (0 : Int))
           (fun _ => True) s⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem minJumps_correct :

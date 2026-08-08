@@ -46,93 +46,65 @@ def fullBloomFlowers(flowers: List[List[int]], people: List[int]) -> List[int]:
 namespace PastaBench.leetcode.NumberOfFlowersInFullBloom
 
 def fullBloomFlowers := fun (flowers : List (List Int)) ↦ fun (people : List Int) ↦
-  (do
-    let __unpack_value_1 :=
-      (PastaLean.pySort
-          ((PastaLean.pyIter flowers).map fun (_pair_1 : List Int) =>
-            let a := PastaLean.pyListGetItem _pair_1 (0 : Int);
-            let _ := PastaLean.pyListGetItem _pair_1 (1 : Int);
-            a),
-        PastaLean.pySort
-          ((PastaLean.pyIter flowers).map fun (_pair_2 : List Int) =>
-            let _ := PastaLean.pyListGetItem _pair_2 (0 : Int);
-            let b := PastaLean.pyListGetItem _pair_2 (1 : Int);
-            b))
-    let __unpack_pair_1 := __unpack_value_1
-    let mut start : List Int := Prod.fst __unpack_pair_1
-    let mut «end» : List Int := Prod.snd __unpack_pair_1
-    let __py_ret_1 :=
-      (PastaLean.pyIter people).map fun p =>
-        Libraries.bisect.pyBisectRight start p -ₚ Libraries.bisect.pyBisectLeft «end» p
-    return __py_ret_1 : Id _)
+  let start :=
+    (PastaLean.pySort
+        ((PastaLean.pyIter flowers).map fun (_pair_2 : List Int) =>
+          let a := PastaLean.pyListGetItem _pair_2 (0 : Int);
+          let _ := PastaLean.pyListGetItem _pair_2 (1 : Int);
+          a) :
+      List Int)
+  let «end» :=
+    (PastaLean.pySort
+        ((PastaLean.pyIter flowers).map fun (_pair_1 : List Int) =>
+          let _ := PastaLean.pyListGetItem _pair_1 (0 : Int);
+          let b := PastaLean.pyListGetItem _pair_1 (1 : Int);
+          b) :
+      List Int)
+  (PastaLean.pyIter people).map fun p => Libraries.bisect.pyBisectRight start p -ₚ Libraries.bisect.pyBisectLeft «end» p
 
-@[spec]
-theorem fullBloomFlowers_spec :
-    ⦃⌜PastaLean.pyAll ((PastaLean.pyIter flowers).map fun f => PastaLean.pyLen f == (2 : Int)) ∧
-          PastaLean.pyAll ((PastaLean.pyIter flowers).map fun f => decide (f⦋(0 : Int)⦌ ≤ f⦋(1 : Int)⦌))⌝⦄
-      fullBloomFlowers flowers people ⦃⇓result =>
-      ⌜PastaLean.pyLen result = PastaLean.pyLen people ∧
-          result =
-            (PastaLean.pyIter people).map fun p =>
-              PastaLean.pySum
-                ((List.filter (fun f => f⦋(0 : Int)⦌ ≤ p ∧ p ≤ f⦋(1 : Int)⦌) (PastaLean.pyIter flowers)).map fun f =>
-                  (1 : Int))⌝⦄ :=
-  by
-  mvcgen [fullBloomFlowers, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
-  all_goals sorry
+attribute [simp] fullBloomFlowers
 
+@[taste_ingr]
 theorem fullBloomFlowers_correct :
     ∀ (flowers : List (List Int)),
       ∀ (people : List Int),
-        PastaLean.pyAll ((PastaLean.pyIter flowers).map fun f => PastaLean.pyLen f == (2 : Int)) ∧
-            PastaLean.pyAll ((PastaLean.pyIter flowers).map fun f => decide (f⦋(0 : Int)⦌ ≤ f⦋(1 : Int)⦌)) →
-          let result := (fullBloomFlowers flowers people).run;
-          PastaLean.pyLen result = PastaLean.pyLen people ∧
-            result =
-              (PastaLean.pyIter people).map fun p =>
-                PastaLean.pySum
-                  ((List.filter (fun f => f⦋(0 : Int)⦌ ≤ p ∧ p ≤ f⦋(1 : Int)⦌) (PastaLean.pyIter flowers)).map fun f =>
-                    (1 : Int)) :=
-  by
-  intro flowers people hpre
-  exact fullBloomFlowers_spec hpre
-
-def fullBloomFlowers'rn := fun (flowers : List (List Int)) ↦ fun (people : List Int) ↦
-  Id.run
-    (do
-      /-
-      
-          For each person, calculates the number of flowers that are in full bloom at the time
-          of the person's arrival. A flower is in bloom if the arrival time is between its
-          start and end bloom times, inclusive.
-          
-      -/
-      let _ :=
-        Libraries.passta.pyPassRequires
-          (PastaLean.pyAll ((PastaLean.pyIter flowers).map fun f => PastaLean.pyLen f == (2 : Int)))
-      let _ :=
-        Libraries.passta.pyPassRequires
-          (PastaLean.pyAll ((PastaLean.pyIter flowers).map fun f => decide (f⦋(0 : Int)⦌ ≤ f⦋(1 : Int)⦌)))
-      -- THE POINT: The i-th result is the count of flowers whose bloom interval [start, end]
-      -- contains the i-th person's arrival time. This is the definitional property.
-      let __unpack_value_1 :=
-        (PastaLean.pySort
-            ((PastaLean.pyIter flowers).map fun (_pair_1 : List Int) =>
-              let a := PastaLean.pyListGetItem _pair_1 (0 : Int);
-              let _ := PastaLean.pyListGetItem _pair_1 (1 : Int);
-              a),
+        let start :=
           PastaLean.pySort
             ((PastaLean.pyIter flowers).map fun (_pair_2 : List Int) =>
-              let _ := PastaLean.pyListGetItem _pair_2 (0 : Int);
-              let b := PastaLean.pyListGetItem _pair_2 (1 : Int);
-              b))
-      let __unpack_pair_1 := __unpack_value_1
-      let mut start : List Int := Prod.fst __unpack_pair_1
-      let mut «end» : List Int := Prod.snd __unpack_pair_1
-      let __py_ret_1 :=
-        (PastaLean.pyIter people).map fun p =>
-          Libraries.bisect.pyBisectRight start p -ₚ Libraries.bisect.pyBisectLeft «end» p
-      return __py_ret_1)
+              let a := PastaLean.pyListGetItem _pair_2 (0 : Int);
+              let _ := PastaLean.pyListGetItem _pair_2 (1 : Int);
+              a)
+        let «end» :=
+          PastaLean.pySort
+            ((PastaLean.pyIter flowers).map fun (_pair_1 : List Int) =>
+              let _ := PastaLean.pyListGetItem _pair_1 (0 : Int);
+              let b := PastaLean.pyListGetItem _pair_1 (1 : Int);
+              b)
+        (∀ f ∈ PastaLean.pyIter flowers, PastaLean.pyLen f = (2 : Int)) →
+          (∀ f ∈ PastaLean.pyIter flowers, f⦋(0 : Int)⦌ ≤ f⦋(1 : Int)⦌) →
+            PastaLean.pyLen (fullBloomFlowers flowers people) = PastaLean.pyLen people ∧
+              fullBloomFlowers flowers people =
+                (PastaLean.pyIter people).map fun p =>
+                  PastaLean.pySum
+                    ((List.filter (fun f => f⦋(0 : Int)⦌ ≤ p ∧ p ≤ f⦋(1 : Int)⦌) (PastaLean.pyIter flowers)).map
+                      fun f => (1 : Int)) :=
+  by taste?
+
+def fullBloomFlowers'rn := fun (flowers : List (List Int)) ↦ fun (people : List Int) ↦
+  let start :=
+    (PastaLean.pySort
+        ((PastaLean.pyIter flowers).map fun (_pair_2 : List Int) =>
+          let a := PastaLean.pyListGetItem _pair_2 (0 : Int);
+          let _ := PastaLean.pyListGetItem _pair_2 (1 : Int);
+          a) :
+      List Int)
+  let «end» :=
+    (PastaLean.pySort
+        ((PastaLean.pyIter flowers).map fun (_pair_1 : List Int) =>
+          let _ := PastaLean.pyListGetItem _pair_1 (0 : Int);
+          let b := PastaLean.pyListGetItem _pair_1 (1 : Int);
+          b) :
+      List Int)
+  (PastaLean.pyIter people).map fun p => Libraries.bisect.pyBisectRight start p -ₚ Libraries.bisect.pyBisectLeft «end» p
 
 end PastaBench.leetcode.NumberOfFlowersInFullBloom

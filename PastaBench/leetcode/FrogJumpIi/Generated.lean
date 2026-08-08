@@ -96,53 +96,39 @@ def maxJump := fun (stones : List Int) ↦
 @[spec]
 theorem maxJump_spec :
     ⦃⌜PastaLean.pyLen stones ≥ (2 : Int) ∧
-          PastaLean.pyAll
-            ((PastaLean.pyRange (PastaLean.pyLen stones -ₚ (1 : Int))).map fun i =>
-              decide (stones⦋i⦌ ≤ stones⦋i +ₚ (1 : Int)⦌))⌝⦄
+          ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen stones -ₚ (1 : Int))),
+            stones⦋i⦌ ≤ stones⦋i +ₚ (1 : Int)⦌⌝⦄
       maxJump stones ⦃⇓ans =>
       ⌜(ans ≥ stones⦋(1 : Int)⦌ -ₚ stones⦋(0 : Int)⦌ ∧
-            PastaLean.pyAll
-              ((PastaLean.pyRange (PastaLean.pyLen stones) (2 : Int)).map fun k =>
-                decide (ans ≥ stones⦋k⦌ -ₚ stones⦋k -ₚ (2 : Int)⦌))) ∧
+            ∀ k ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen stones) (2 : Int)),
+              ans ≥ stones⦋k⦌ -ₚ stones⦋k -ₚ (2 : Int)⦌) ∧
           (ans = stones⦋(1 : Int)⦌ -ₚ stones⦋(0 : Int)⦌ ∨
-            PastaLean.pyTruthy
-                (PastaLean.pyStdAny
-                  ((PastaLean.pyRange (PastaLean.pyLen stones) (2 : Int)).map fun k =>
-                    ans == stones⦋k⦌ -ₚ stones⦋k -ₚ (2 : Int)⦌)) =
-              true)⌝⦄ :=
+            ∃ k ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen stones) (2 : Int)),
+              ans = stones⦋k⦌ -ₚ stones⦋k -ₚ (2 : Int)⦌)⌝⦄ :=
   by
   try
     mvcgen [maxJump, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓⟨cur, ans⟩ =>
       ⌜let i := (cur.prefix.length : Int);
         ((((2 : Int) ≤ i ∧ i ≤ PastaLean.pyLen stones) ∧ ans ≥ stones⦋(1 : Int)⦌ -ₚ stones⦋(0 : Int)⦌) ∧
-            PastaLean.pyAll
-              ((PastaLean.pyRange i (2 : Int)).map fun k => decide (ans ≥ stones⦋k⦌ -ₚ stones⦋k -ₚ (2 : Int)⦌))) ∧
+            ∀ k ∈ PastaLean.pyIter (PastaLean.pyRange i (2 : Int)), ans ≥ stones⦋k⦌ -ₚ stones⦋k -ₚ (2 : Int)⦌) ∧
           (ans = stones⦋(1 : Int)⦌ -ₚ stones⦋(0 : Int)⦌ ∨
-            PastaLean.pyTruthy
-                (PastaLean.pyStdAny
-                  ((PastaLean.pyRange i (2 : Int)).map fun k => ans == stones⦋k⦌ -ₚ stones⦋k -ₚ (2 : Int)⦌)) =
-              true)⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+            ∃ k ∈ PastaLean.pyIter (PastaLean.pyRange i (2 : Int)), ans = stones⦋k⦌ -ₚ stones⦋k -ₚ (2 : Int)⦌)⌝
+  taste?
   all_goals sorry
 
 theorem maxJump_correct :
     ∀ (stones : List Int),
-      PastaLean.pyLen stones ≥ (2 : Int) ∧
-          PastaLean.pyAll
-            ((PastaLean.pyRange (PastaLean.pyLen stones -ₚ (1 : Int))).map fun i =>
-              decide (stones⦋i⦌ ≤ stones⦋i +ₚ (1 : Int)⦌)) →
+      (PastaLean.pyLen stones ≥ (2 : Int) ∧
+          ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen stones -ₚ (1 : Int))),
+            stones⦋i⦌ ≤ stones⦋i +ₚ (1 : Int)⦌) →
         let ans := (maxJump stones).run;
         (ans ≥ stones⦋(1 : Int)⦌ -ₚ stones⦋(0 : Int)⦌ ∧
-            PastaLean.pyAll
-              ((PastaLean.pyRange (PastaLean.pyLen stones) (2 : Int)).map fun k =>
-                decide (ans ≥ stones⦋k⦌ -ₚ stones⦋k -ₚ (2 : Int)⦌))) ∧
+            ∀ k ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen stones) (2 : Int)),
+              ans ≥ stones⦋k⦌ -ₚ stones⦋k -ₚ (2 : Int)⦌) ∧
           (ans = stones⦋(1 : Int)⦌ -ₚ stones⦋(0 : Int)⦌ ∨
-            PastaLean.pyTruthy
-                (PastaLean.pyStdAny
-                  ((PastaLean.pyRange (PastaLean.pyLen stones) (2 : Int)).map fun k =>
-                    ans == stones⦋k⦌ -ₚ stones⦋k -ₚ (2 : Int)⦌)) =
-              true) :=
+            ∃ k ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen stones) (2 : Int)),
+              ans = stones⦋k⦌ -ₚ stones⦋k -ₚ (2 : Int)⦌) :=
   by
   intro stones hpre
   exact maxJump_spec hpre

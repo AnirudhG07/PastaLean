@@ -54,82 +54,40 @@ def rescale_to_unit(numbers: List[float]) -> List[float]:
 namespace PastaBench.humaneval.RescaleToUnit
 
 def rescale_to_unit := fun (numbers : List Rat) ↦
-  (do
-    let __unpack_value_1 := (PastaLean.pyMax numbers, PastaLean.pyMin numbers)
-    let __unpack_pair_1 := __unpack_value_1
-    let mut ma : Rat := ↑(Prod.fst __unpack_pair_1)
-    let mut mi : Rat := ↑(Prod.snd __unpack_pair_1)
-    let _ := Libraries.passta.pyPassAssert (decide (ma > mi))
-    let mut k := (1 : Int) /ₚ (ma -ₚ mi)
-    let __py_ret_1 := PastaLean.pyList (PastaLean.pyMap (fun x ↦ (x -ₚ mi) *ₚ k) numbers)
-    return __py_ret_1 : Id _)
+  let ma := PastaLean.pyMax numbers
+  let mi := PastaLean.pyMin numbers
+  let k := (1 : Int) /ₚ (ma -ₚ mi)
+  PastaLean.pyList (PastaLean.pyMap (fun x ↦ (x -ₚ mi) *ₚ k) numbers)
 
-@[spec]
-theorem rescale_to_unit_spec :
-    ⦃⌜PastaLean.pyLen numbers > (0 : Int) ∧ PastaLean.pyMax numbers > PastaLean.pyMin numbers⌝⦄
-      rescale_to_unit numbers ⦃⇓result =>
-      ⌜(((PastaLean.pyLen result = PastaLean.pyLen numbers ∧
-                ∀ v ∈ PastaLean.pyIter result,
-                  -(OfScientific.ofScientific 1 true 9 : Rat) ≤ v ∧
-                    v ≤ (1.0 : Rat) +ₚ (OfScientific.ofScientific 1 true 9 : Rat)) ∧
-              ∃ v ∈ PastaLean.pyIter result, v = (0.0 : Rat)) ∧
-            ∃ v ∈ PastaLean.pyIter result,
-              PastaLean.pyAbs (v -ₚ (1.0 : Rat)) ≤ (OfScientific.ofScientific 1 true 9 : Rat)) ∧
-          ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen numbers)),
-            PastaLean.pyAbs
-                (result⦋i⦌ *ₚ (PastaLean.pyMax numbers -ₚ PastaLean.pyMin numbers) -ₚ
-                  (numbers⦋i⦌ -ₚ PastaLean.pyMin numbers)) ≤
-              (OfScientific.ofScientific 1 true 9 : Rat) *ₚ (PastaLean.pyMax numbers -ₚ PastaLean.pyMin numbers)⌝⦄ :=
-  by
-  mvcgen [rescale_to_unit, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  taste?
-  all_goals sorry
+attribute [simp] rescale_to_unit
 
+@[taste_ingr]
 theorem rescale_to_unit_correct :
     ∀ (numbers : List Rat),
-      PastaLean.pyLen numbers > (0 : Int) ∧ PastaLean.pyMax numbers > PastaLean.pyMin numbers →
-        let result := (rescale_to_unit numbers).run;
-        (((PastaLean.pyLen result = PastaLean.pyLen numbers ∧
-                ∀ v ∈ PastaLean.pyIter result,
-                  -(OfScientific.ofScientific 1 true 9 : Rat) ≤ v ∧
-                    v ≤ (1.0 : Rat) +ₚ (OfScientific.ofScientific 1 true 9 : Rat)) ∧
-              ∃ v ∈ PastaLean.pyIter result, v = (0.0 : Rat)) ∧
-            ∃ v ∈ PastaLean.pyIter result,
-              PastaLean.pyAbs (v -ₚ (1.0 : Rat)) ≤ (OfScientific.ofScientific 1 true 9 : Rat)) ∧
-          ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen numbers)),
-            PastaLean.pyAbs
-                (result⦋i⦌ *ₚ (PastaLean.pyMax numbers -ₚ PastaLean.pyMin numbers) -ₚ
-                  (numbers⦋i⦌ -ₚ PastaLean.pyMin numbers)) ≤
-              (OfScientific.ofScientific 1 true 9 : Rat) *ₚ (PastaLean.pyMax numbers -ₚ PastaLean.pyMin numbers) :=
-  by
-  intro numbers hpre
-  exact rescale_to_unit_spec hpre
+      let ma := PastaLean.pyMax numbers
+      let mi := PastaLean.pyMin numbers
+      let k := (1 : Int) /ₚ (ma -ₚ mi)
+      PastaLean.pyLen numbers > (0 : Int) →
+        PastaLean.pyMax numbers > PastaLean.pyMin numbers →
+          ((((PastaLean.pyLen (rescale_to_unit numbers) = PastaLean.pyLen numbers ∧
+                    ∀ v ∈ PastaLean.pyIter (rescale_to_unit numbers),
+                      -(OfScientific.ofScientific 1 true 9 : Rat) ≤ v ∧
+                        v ≤ (1.0 : Rat) +ₚ (OfScientific.ofScientific 1 true 9 : Rat)) ∧
+                  ∃ v ∈ PastaLean.pyIter (rescale_to_unit numbers), v = (0.0 : Rat)) ∧
+                ∃ v ∈ PastaLean.pyIter (rescale_to_unit numbers),
+                  PastaLean.pyAbs (v -ₚ (1.0 : Rat)) ≤ (OfScientific.ofScientific 1 true 9 : Rat)) ∧
+              ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen numbers)),
+                PastaLean.pyAbs
+                    ((rescale_to_unit numbers)⦋i⦌ *ₚ (PastaLean.pyMax numbers -ₚ PastaLean.pyMin numbers) -ₚ
+                      (numbers⦋i⦌ -ₚ PastaLean.pyMin numbers)) ≤
+                  (OfScientific.ofScientific 1 true 9 : Rat) *ₚ (PastaLean.pyMax numbers -ₚ PastaLean.pyMin numbers)) ∧
+            ma > mi :=
+  by taste?
 
 def rescale_to_unit'rn := fun (numbers : List Float) ↦
-  Id.run
-    (do
-      /-
-       Given list of numbers (of at least two elements), apply a linear transform to that list,
-          such that the smallest number will become 0 and the largest will become 1
-          >>> rescale_to_unit([1.0, 2.0, 3.0, 4.0, 5.0])
-          [0.0, 0.25, 0.5, 0.75, 1.0]
-          
-      -/
-      let _ := Libraries.passta.pyPassRequires (decide (PastaLean.pyLen numbers > (0 : Int)))
-      let _ := Libraries.passta.pyPassRequires (decide (PastaLean.pyMax numbers > PastaLean.pyMin numbers))
-      -- The point: the output is the affine image of the input that maps min -> 0 and max -> 1.
-      -- Stated over floats, so the two "hits the endpoint" facts and the affine law are given with a
-      -- tolerance: `(ma - mi) * (1 / (ma - mi))` is not exactly 1.0 in IEEE-754 (see the recorded
-      -- case [1.0, 2.0, 3.0, 4.88337557029465], whose maximum comes out as 0.9999999999999999).
-      -- `min -> 0` IS exact ((mi - mi) * k == 0.0), so no tolerance is needed there.
-      -- Affine relation, division-free: Result()[i] * (ma - mi) == numbers[i] - mi.
-      let __unpack_value_1 := (PastaLean.pyMax numbers, PastaLean.pyMin numbers)
-      let __unpack_pair_1 := __unpack_value_1
-      let mut ma : Float := ↑(Prod.fst __unpack_pair_1)
-      let mut mi : Float := ↑(Prod.snd __unpack_pair_1)
-      let _ := Libraries.passta.pyPassAssert (decide (ma > mi))
-      let mut k := PastaLean.pyFloat (1 : Int) /ₚ (ma -ₚ mi)
-      let __py_ret_1 := PastaLean.pyList (PastaLean.pyMap (fun x ↦ (x -ₚ mi) *ₚ k) numbers)
-      return __py_ret_1)
+  let ma := PastaLean.pyMax numbers
+  let mi := PastaLean.pyMin numbers
+  let k := PastaLean.pyFloat (1 : Int) /ₚ (ma -ₚ mi)
+  PastaLean.pyList (PastaLean.pyMap (fun x ↦ (x -ₚ mi) *ₚ k) numbers)
 
 end PastaBench.humaneval.RescaleToUnit

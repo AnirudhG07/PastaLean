@@ -72,9 +72,9 @@ attribute [simp] countCollisions
 theorem countCollisions_correct :
     ∀ (directions : String),
       let s := PastaLean.pyStringRstrip (PastaLean.pyStringLstrip directions "L") "R"
-      PastaLean.pyAll ((PastaLean.pyIter directions).map fun c => PastaLean.pyContains ("L", ("R", "S")) c) →
+      (∀ c ∈ PastaLean.pyIter directions, PastaLean.pyContains ("L", ("R", "S")) c) →
         (0 : Int) ≤ countCollisions directions ∧ countCollisions directions ≤ PastaLean.pyLen directions :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  by taste?
 
 def countCollisions'rn := fun (directions : String) ↦
   let s := (PastaLean.pyStringRstrip (PastaLean.pyStringLstrip directions "L") "R" : String)

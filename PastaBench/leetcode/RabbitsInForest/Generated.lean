@@ -82,16 +82,18 @@ def numRabbits := fun (answers : List Int) ↦
 
 @[spec]
 theorem numRabbits_spec :
-    ⦃⌜PastaLean.pyAll ((PastaLean.pyIter answers).map fun a => decide (a ≥ (0 : Int)))⌝⦄ numRabbits answers ⦃⇓ans =>
+    ⦃⌜∀ a ∈ PastaLean.pyIter answers, a ≥ (0 : Int)⌝⦄ numRabbits answers ⦃⇓ans =>
       ⌜ans ≥ (0 : Int) ∧ ans ≥ PastaLean.pyLen answers⌝⦄ :=
   by
-  mvcgen [numRabbits, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  try
+    mvcgen [numRabbits, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · ⇓⟨cur, ans⟩ => ⌜(x ≥ (0 : Int) ∧ v > (0 : Int)) ∧ ans ≥ (0 : Int)⌝
+  taste?
   all_goals sorry
 
 theorem numRabbits_correct :
     ∀ (answers : List Int),
-      PastaLean.pyAll ((PastaLean.pyIter answers).map fun a => decide (a ≥ (0 : Int))) →
+      (∀ a ∈ PastaLean.pyIter answers, a ≥ (0 : Int)) →
         let ans := (numRabbits answers).run;
         ans ≥ (0 : Int) ∧ ans ≥ PastaLean.pyLen answers :=
   by

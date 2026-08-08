@@ -61,28 +61,19 @@ attribute [simp] transpose
 @[taste_ingr]
 theorem transpose_correct :
     ∀ (matrix : List (List Int)),
-      ¬PastaLean.pyTruthy matrix = true ∨
-          PastaLean.pyTruthy
-              (PastaLean.pyAll
-                ((PastaLean.pyIter matrix).map fun row => PastaLean.pyLen row == PastaLean.pyLen matrix⦋(0 : Int)⦌)) =
-            true →
+      (¬PastaLean.pyTruthy matrix = true ∨
+          ∀ row ∈ PastaLean.pyIter matrix, PastaLean.pyLen row = PastaLean.pyLen matrix⦋(0 : Int)⦌) →
         ((PastaLean.pyLen (transpose matrix) =
               if PastaLean.pyTruthy matrix then PastaLean.pyLen matrix⦋(0 : Int)⦌ else (0 : Int)) ∧
-            PastaLean.pyTruthy
-                (PastaLean.pyAll
-                  ((PastaLean.pyIter (transpose matrix)).map fun row =>
-                    PastaLean.pyLen row == PastaLean.pyLen matrix)) =
-              true) ∧
-          PastaLean.pyTruthy
-              (PastaLean.pyAll
-                ((PastaLean.pyRange
-                      (if PastaLean.pyTruthy matrix then PastaLean.pyLen matrix⦋(0 : Int)⦌ else (0 : Int))).map
-                  fun j =>
-                  PastaLean.pyAll
-                    ((PastaLean.pyRange (PastaLean.pyLen matrix)).map fun i =>
-                      (transpose matrix)⦋j⦌⦋i⦌ == matrix⦋i⦌⦋j⦌))) =
-            true :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+            ∀ row ∈ PastaLean.pyIter (transpose matrix), PastaLean.pyLen row = PastaLean.pyLen matrix) ∧
+          ∀
+            j ∈
+              PastaLean.pyIter
+                (PastaLean.pyRange
+                  (if PastaLean.pyTruthy matrix then PastaLean.pyLen matrix⦋(0 : Int)⦌ else (0 : Int))),
+            ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen matrix)),
+              (transpose matrix)⦋j⦌⦋i⦌ = matrix⦋i⦌⦋j⦌ :=
+  by taste?
 
 def transpose'rn := fun (matrix : List (List Int)) ↦ PastaLean.pyList (PastaLean.pyZipStar matrix)
 

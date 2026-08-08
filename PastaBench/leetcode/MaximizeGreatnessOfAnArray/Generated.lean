@@ -76,7 +76,7 @@ theorem maximizeGreatness_spec : ⦃⌜True⌝⦄ maximizeGreatness nums ⦃⇓i
   try
     mvcgen [maximizeGreatness, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓⟨cur, i⟩ => ⌜((0 : Int) ≤ i ∧ i ≤ __loop_iter_0) ∧ i ≤ PastaLean.pyLen nums⌝
-  sorry
+  taste?
   all_goals sorry
 
 theorem maximizeGreatness_correct :

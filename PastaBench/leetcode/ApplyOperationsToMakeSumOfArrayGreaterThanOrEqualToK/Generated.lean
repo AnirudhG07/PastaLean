@@ -73,7 +73,7 @@ theorem minOperations_spec : ⦃⌜k ≥ (0 : Int)⌝⦄ minOperations k ⦃⇓a
     · ⇓⟨cur, ans⟩ =>
       ⌜let a := (cur.prefix.length : Int);
         ((0 : Int) ≤ a ∧ a < k) ∧ ans ≤ k⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry; sorry; pyany_cases <;> grind +locals
+  taste?
   all_goals sorry
 
 theorem minOperations_correct :

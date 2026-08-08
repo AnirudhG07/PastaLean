@@ -98,7 +98,7 @@ theorem numOfSubarrays_spec :
         ((k ≤ i ∧ i ≤ PastaLean.pyLen arr) ∧
             s = PastaLean.pySum (PastaLean.pySlice arr (some (i -ₚ k)) (some i) none)) ∧
           (0 : Int) ≤ ans ∧ ans ≤ i -ₚ k +ₚ (1 : Int)⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  taste?
   all_goals sorry
 
 theorem numOfSubarrays_correct :

@@ -89,10 +89,8 @@ def prod_signs := fun (arr : PyAny) ↦
       let _ := ()
     let _ := Libraries.passta.pyPassAssert (arr != [])
     let _ := Libraries.passta.pyPassAssert !(PastaLean.pyContains arr (0 : Int))
-    let __unpack_value_1 := ((0 : Int), (1 : Int))
-    let __unpack_pair_1 := __unpack_value_1
-    let mut s : Int := Prod.fst __unpack_pair_1
-    let mut sgn : Int := Prod.snd __unpack_pair_1
+    let mut s : Int := (0 : Int)
+    let mut sgn : Int := (1 : Int)
     for _pair_1 in (PastaLean.pyIter (PastaLean.pyEnumerate arr))do
       let i := Prod.fst _pair_1
       let x := Prod.snd _pair_1
@@ -123,7 +121,7 @@ def prod_signs := fun (arr : PyAny) ↦
         (sgn ==
           Libraries.math.pyMathProd ((PastaLean.pyIter arr).map fun x => PastaLean.pyFloorDiv x (PastaLean.pyAbs x)))
     let __py_ret_1 := s *ₚ sgn
-    return __py_ret_1 : Id _)
+    return __py_ret_1 : Id (Option Int))
 
 @[spec]
 theorem prod_signs_spec :
@@ -138,7 +136,19 @@ theorem prod_signs_spec :
                   Libraries.math.pyMathProd
                     ((PastaLean.pyIter arr).map fun x => PastaLean.pyFloorDiv x (PastaLean.pyAbs x)))⌝⦄ :=
   by
-  mvcgen [prod_signs, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
+  try
+    mvcgen [prod_signs, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · ⇓⟨cur, s, sgn⟩ =>
+      ⌜(((((0 : Int) ≤ i ∧ i ≤ PastaLean.pyLen arr) ∧
+                s =
+                  PastaLean.pySum
+                    ((PastaLean.pyIter (PastaLean.pySlice arr none (some i) none)).map fun y => PastaLean.pyAbs y)) ∧
+              sgn =
+                Libraries.math.pyMathProd
+                  ((PastaLean.pyIter (PastaLean.pySlice arr none (some i) none)).map fun y =>
+                    PastaLean.pyFloorDiv y (PastaLean.pyAbs y))) ∧
+            s ≥ (0 : Int)) ∧
+          (sgn = (1 : Int) ∨ sgn = -(1 : Int))⌝
   taste?
   all_goals sorry
 
@@ -159,73 +169,73 @@ theorem prod_signs_correct :
   exact prod_signs_spec True.intro
 
 def prod_signs'rn := fun (arr : PyAny) ↦
-  Id.run
-    (do
-      /-
-      
-          You are given an array arr of integers and you need to return
-          sum of magnitudes of integers multiplied by product of all signs
-          of each number in the array, represented by 1, -1 or 0.
-          Note: return None for empty arr.
-      
-          Example:
-          >>> prod_signs([1, 2, 2, -4]) == -9
-          >>> prod_signs([0, 1]) == 0
-          >>> prod_signs([]) == None
-          
-      -/
-      -- The Ensures contract captures the full specification of the function across its three return paths.
-      -- The conditional expression (A if C else B) is pure and suitable for specifications.
-      if h_1 : arr == [] then 
-        return Option.none
-      else
-        let _ := ()
-      if h_2 : PastaLean.pyContains arr (0 : Int) then 
-        return (0 : Int)
-      else
-        let _ := ()
-      -- After the guards, we can assert that the array is non-empty and contains no zeros.
-      -- This is a crucial fact for the safety of the division in the loop.
-      let _ := Libraries.passta.pyPassAssert (arr != [])
-      let _ := Libraries.passta.pyPassAssert !(PastaLean.pyContains arr (0 : Int))
-      let __unpack_value_1 := ((0 : Int), (1 : Int))
-      let __unpack_pair_1 := __unpack_value_1
-      let mut s : Int := Prod.fst __unpack_pair_1
-      let mut sgn : Int := Prod.snd __unpack_pair_1
-      -- To write index-style invariants that capture the function's core logic, we use
-      -- enumerate to track the loop index `i`. This does not change runtime behavior.
-      for _pair_1 in (PastaLean.pyIter (PastaLean.pyEnumerate arr))do
-        let i := Prod.fst _pair_1
-        let x := Prod.snd _pair_1
-        let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i) && decide (i ≤ PastaLean.pyLen arr))
-        -- s accumulates the sum of absolute values of the prefix arr[:i].
+  (show Option Int from
+    Id.run
+      (do
+        /-
+        
+            You are given an array arr of integers and you need to return
+            sum of magnitudes of integers multiplied by product of all signs
+            of each number in the array, represented by 1, -1 or 0.
+            Note: return None for empty arr.
+        
+            Example:
+            >>> prod_signs([1, 2, 2, -4]) == -9
+            >>> prod_signs([0, 1]) == 0
+            >>> prod_signs([]) == None
+            
+        -/
+        -- The Ensures contract captures the full specification of the function across its three return paths.
+        -- The conditional expression (A if C else B) is pure and suitable for specifications.
+        if h_1 : arr == [] then 
+          return Option.none
+        else
+          let _ := ()
+        if h_2 : PastaLean.pyContains arr (0 : Int) then 
+          return (0 : Int)
+        else
+          let _ := ()
+        -- After the guards, we can assert that the array is non-empty and contains no zeros.
+        -- This is a crucial fact for the safety of the division in the loop.
+        let _ := Libraries.passta.pyPassAssert (arr != [])
+        let _ := Libraries.passta.pyPassAssert !(PastaLean.pyContains arr (0 : Int))
+        let mut s : Int := (0 : Int)
+        let mut sgn : Int := (1 : Int)
+        -- To write index-style invariants that capture the function's core logic, we use
+        -- enumerate to track the loop index `i`. This does not change runtime behavior.
+        for _pair_1 in (PastaLean.pyIter (PastaLean.pyEnumerate arr))do
+          let i := Prod.fst _pair_1
+          let x := Prod.snd _pair_1
+          let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i) && decide (i ≤ PastaLean.pyLen arr))
+          -- s accumulates the sum of absolute values of the prefix arr[:i].
+          let _ :=
+            Libraries.passta.pyPassInvariant
+              (s ==
+                PastaLean.pySum
+                  ((PastaLean.pyIter (PastaLean.pySlice arr none (some i) none)).map fun y => PastaLean.pyAbs y))
+          -- sgn accumulates the product of signs of the prefix arr[:i].
+          -- The verifier is assumed to have a model for the pure function math.prod.
+          let _ :=
+            Libraries.passta.pyPassInvariant
+              (sgn ==
+                Libraries.math.pyMathProd
+                  ((PastaLean.pyIter (PastaLean.pySlice arr none (some i) none)).map fun y =>
+                    PastaLean.pyFloorDiv y (PastaLean.pyAbs y)))
+          -- Weaker, but helpful linear/simple properties for the solver.
+          let _ := Libraries.passta.pyPassInvariant (decide (s ≥ (0 : Int)))
+          let _ := Libraries.passta.pyPassInvariant (sgn == (1 : Int) || sgn == -(1 : Int))
+          s := s +ₚ PastaLean.pyAbs x
+          sgn := sgn *ₚ PastaLean.pyFloorDiv x (PastaLean.pyAbs x)
+        -- After the loop, the invariants hold for i == len(arr). These assertions bridge
+        -- the loop's final state to the function's postcondition.
         let _ :=
-          Libraries.passta.pyPassInvariant
-            (s ==
-              PastaLean.pySum
-                ((PastaLean.pyIter (PastaLean.pySlice arr none (some i) none)).map fun y => PastaLean.pyAbs y))
-        -- sgn accumulates the product of signs of the prefix arr[:i].
-        -- The verifier is assumed to have a model for the pure function math.prod.
+          Libraries.passta.pyPassAssert (s == PastaLean.pySum ((PastaLean.pyIter arr).map fun x => PastaLean.pyAbs x))
         let _ :=
-          Libraries.passta.pyPassInvariant
+          Libraries.passta.pyPassAssert
             (sgn ==
               Libraries.math.pyMathProd
-                ((PastaLean.pyIter (PastaLean.pySlice arr none (some i) none)).map fun y =>
-                  PastaLean.pyFloorDiv y (PastaLean.pyAbs y)))
-        -- Weaker, but helpful linear/simple properties for the solver.
-        let _ := Libraries.passta.pyPassInvariant (decide (s ≥ (0 : Int)))
-        let _ := Libraries.passta.pyPassInvariant (sgn == (1 : Int) || sgn == -(1 : Int))
-        s := s +ₚ PastaLean.pyAbs x
-        sgn := sgn *ₚ PastaLean.pyFloorDiv x (PastaLean.pyAbs x)
-      -- After the loop, the invariants hold for i == len(arr). These assertions bridge
-      -- the loop's final state to the function's postcondition.
-      let _ :=
-        Libraries.passta.pyPassAssert (s == PastaLean.pySum ((PastaLean.pyIter arr).map fun x => PastaLean.pyAbs x))
-      let _ :=
-        Libraries.passta.pyPassAssert
-          (sgn ==
-            Libraries.math.pyMathProd ((PastaLean.pyIter arr).map fun x => PastaLean.pyFloorDiv x (PastaLean.pyAbs x)))
-      let __py_ret_1 := s *ₚ sgn
-      return __py_ret_1)
+                ((PastaLean.pyIter arr).map fun x => PastaLean.pyFloorDiv x (PastaLean.pyAbs x)))
+        let __py_ret_1 := s *ₚ sgn
+        return __py_ret_1))
 
 end PastaBench.humaneval.ProdSigns

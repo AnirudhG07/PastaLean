@@ -65,10 +65,8 @@ namespace PastaBench.leetcode.SearchInsertPosition
 
 def searchInsert := fun (nums : List Int) ↦ fun (target : Int) ↦
   (do
-    let __unpack_value_1 := ((0 : Int), PastaLean.pyLen nums)
-    let __unpack_pair_1 := __unpack_value_1
-    let mut l : Int := Prod.fst __unpack_pair_1
-    let mut r : Int := Prod.snd __unpack_pair_1
+    let mut l : Int := (0 : Int)
+    let mut r : Int := PastaLean.pyLen nums
     while (l < r) do
       let _ :=
         Libraries.passta.pyPassInvariant
@@ -101,32 +99,25 @@ def searchInsert := fun (nums : List Int) ↦ fun (target : Int) ↦
 
 @[spec]
 theorem searchInsert_spec :
-    ⦃⌜PastaLean.pyAll
-          ((PastaLean.pyRange (PastaLean.pyLen nums -ₚ (1 : Int))).map fun i =>
-            decide (nums⦋i⦌ ≤ nums⦋i +ₚ (1 : Int)⦌))⌝⦄
+    ⦃⌜∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen nums -ₚ (1 : Int))), nums⦋i⦌ ≤ nums⦋i +ₚ (1 : Int)⦌⌝⦄
       searchInsert nums target ⦃⇓l =>
       ⌜(((0 : Int) ≤ l ∧ l ≤ PastaLean.pyLen nums) ∧
-            PastaLean.pyAll
-              ((PastaLean.pyIter (PastaLean.pySlice nums none (some l) none)).map fun x => decide (x < target))) ∧
-          PastaLean.pyAll
-            ((PastaLean.pyIter (PastaLean.pySlice nums (some l) none none)).map fun x => decide (x ≥ target))⌝⦄ :=
+            ∀ x ∈ PastaLean.pyIter (PastaLean.pySlice nums none (some l) none), x < target) ∧
+          ∀ x ∈ PastaLean.pyIter (PastaLean.pySlice nums (some l) none none), x ≥ target⌝⦄ :=
   by
   mvcgen [searchInsert, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  taste?
   all_goals sorry
 
 theorem searchInsert_correct :
     ∀ (nums : List Int),
       ∀ (target : Int),
-        PastaLean.pyAll
-            ((PastaLean.pyRange (PastaLean.pyLen nums -ₚ (1 : Int))).map fun i =>
-              decide (nums⦋i⦌ ≤ nums⦋i +ₚ (1 : Int)⦌)) →
+        (∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen nums -ₚ (1 : Int))),
+            nums⦋i⦌ ≤ nums⦋i +ₚ (1 : Int)⦌) →
           let l := (searchInsert nums target).run;
           (((0 : Int) ≤ l ∧ l ≤ PastaLean.pyLen nums) ∧
-              PastaLean.pyAll
-                ((PastaLean.pyIter (PastaLean.pySlice nums none (some l) none)).map fun x => decide (x < target))) ∧
-            PastaLean.pyAll
-              ((PastaLean.pyIter (PastaLean.pySlice nums (some l) none none)).map fun x => decide (x ≥ target)) :=
+              ∀ x ∈ PastaLean.pyIter (PastaLean.pySlice nums none (some l) none), x < target) ∧
+            ∀ x ∈ PastaLean.pyIter (PastaLean.pySlice nums (some l) none none), x ≥ target :=
   by
   intro nums target hpre
   exact searchInsert_spec hpre
@@ -139,10 +130,8 @@ def searchInsert'rn := fun (nums : List Int) ↦ fun (target : Int) ↦
           (PastaLean.pyAll
             ((PastaLean.pyRange (PastaLean.pyLen nums -ₚ (1 : Int))).map fun i =>
               decide (nums⦋i⦌ ≤ nums⦋i +ₚ (1 : Int)⦌)))
-      let __unpack_value_1 := ((0 : Int), PastaLean.pyLen nums)
-      let __unpack_pair_1 := __unpack_value_1
-      let mut l : Int := Prod.fst __unpack_pair_1
-      let mut r : Int := Prod.snd __unpack_pair_1
+      let mut l : Int := (0 : Int)
+      let mut r : Int := PastaLean.pyLen nums
       while (l < r) do
         let _ :=
           Libraries.passta.pyPassInvariant

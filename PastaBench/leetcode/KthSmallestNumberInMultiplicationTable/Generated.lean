@@ -80,10 +80,8 @@ namespace PastaBench.leetcode.KthSmallestNumberInMultiplicationTable
 
 def findKthNumber := fun (m : Int) ↦ fun (n : Int) ↦ fun (k : Int) ↦
   (do
-    let __unpack_value_1 := ((1 : Int), m *ₚ n)
-    let __unpack_pair_1 := __unpack_value_1
-    let mut left : Int := Prod.fst __unpack_pair_1
-    let mut right : Int := Prod.snd __unpack_pair_1
+    let mut left : Int := (1 : Int)
+    let mut right : Int := m *ₚ n
     while (left < right) do
       let _ := Libraries.passta.pyPassInvariant (decide ((1 : Int) ≤ left))
       let _ := Libraries.passta.pyPassInvariant (decide (left ≤ right))
@@ -120,7 +118,7 @@ theorem findKthNumber_spec :
             k⌝⦄ :=
   by
   mvcgen [findKthNumber, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  taste?
   all_goals sorry
 
 theorem findKthNumber_correct :
@@ -149,10 +147,8 @@ def findKthNumber'rn := fun (m : Int) ↦ fun (n : Int) ↦ fun (k : Int) ↦
       let _ := Libraries.passta.pyPassRequires (decide ((1 : Int) ≤ k) && decide (k ≤ m *ₚ n))
       -- The returned value L is the k-th smallest entry in the m×n multiplication table:
       -- at least k products ≤ L, and fewer than k products ≤ L-1.
-      let __unpack_value_1 := ((1 : Int), m *ₚ n)
-      let __unpack_pair_1 := __unpack_value_1
-      let mut left : Int := Prod.fst __unpack_pair_1
-      let mut right : Int := Prod.snd __unpack_pair_1
+      let mut left : Int := (1 : Int)
+      let mut right : Int := m *ₚ n
       -- Binary-search invariant: the true answer lies in [left, right].
       -- And boundaries stay in [1, m*n].
       -- Decrease measure ensures termination.

@@ -78,7 +78,7 @@ theorem add_spec : ⦃⌜PastaLean.pyLen lst > (0 : Int)⌝⦄ add lst ⦃⇓s =
     · ⇓⟨cur, s⟩ =>
       ⌜let i := (cur.prefix.length : Int);
         ((s %ₚ (2 : Int) = (0 : Int) ∧ (1 : Int) ≤ i) ∧ i < PastaLean.pyLen lst) ∧ i %ₚ (2 : Int) = (1 : Int)⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry; sorry; sorry; pyany_cases <;> grind +locals
+  taste?
   all_goals sorry
 
 theorem add_correct :

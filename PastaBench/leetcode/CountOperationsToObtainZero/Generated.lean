@@ -86,7 +86,7 @@ theorem countOperations_spec :
             let ans := st;
             (ans ≥ (0 : Int) ∧ num1 ≥ (0 : Int)) ∧ num2 ≥ (0 : Int))
           (fun _ => True) s⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem countOperations_correct :

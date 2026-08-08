@@ -70,7 +70,7 @@ theorem waysToSplitArray_spec :
   try
     mvcgen [waysToSplitArray, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓⟨cur, ans, t⟩ => ⌜s = PastaLean.pySum nums ∧ ans ≥ (0 : Int)⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem waysToSplitArray_correct :

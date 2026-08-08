@@ -66,10 +66,8 @@ def distanceBetweenBusStops := fun (distance : List Int) ↦ fun (start : Int) �
   (do
     let mut start := start
     let mut s : Int := PastaLean.pySum distance
-    let __unpack_value_1 := ((0 : Int), PastaLean.pyLen distance)
-    let __unpack_pair_1 := __unpack_value_1
-    let mut t : Int := Prod.fst __unpack_pair_1
-    let mut n : Int := Prod.snd __unpack_pair_1
+    let mut t : Int := (0 : Int)
+    let mut n : Int := PastaLean.pyLen distance
     while (start ≠ destination) do
       let _ := Libraries.passta.pyPassDecreases ((destination -ₚ start +ₚ n) %ₚ n)
       let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ start) && decide (start < n))
@@ -84,21 +82,21 @@ def distanceBetweenBusStops := fun (distance : List Int) ↦ fun (start : Int) �
 theorem distanceBetweenBusStops_spec :
     ⦃⌜((PastaLean.pyLen distance > (0 : Int) ∧ (0 : Int) ≤ start ∧ start < PastaLean.pyLen distance) ∧
             (0 : Int) ≤ destination ∧ destination < PastaLean.pyLen distance) ∧
-          PastaLean.pyAll ((PastaLean.pyIter distance).map fun d => decide (d ≥ (0 : Int)))⌝⦄
+          ∀ d ∈ PastaLean.pyIter distance, d ≥ (0 : Int)⌝⦄
       distanceBetweenBusStops distance start destination ⦃⇓result =>
       ⌜result ≥ (0 : Int) ∧ (2 : Int) *ₚ result ≤ PastaLean.pySum distance⌝⦄ :=
   by
   mvcgen [distanceBetweenBusStops, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  taste?
   all_goals sorry
 
 theorem distanceBetweenBusStops_correct :
     ∀ (distance : List Int),
       ∀ (start : Int),
         ∀ (destination : Int),
-          ((PastaLean.pyLen distance > (0 : Int) ∧ (0 : Int) ≤ start ∧ start < PastaLean.pyLen distance) ∧
+          (((PastaLean.pyLen distance > (0 : Int) ∧ (0 : Int) ≤ start ∧ start < PastaLean.pyLen distance) ∧
                 (0 : Int) ≤ destination ∧ destination < PastaLean.pyLen distance) ∧
-              PastaLean.pyAll ((PastaLean.pyIter distance).map fun d => decide (d ≥ (0 : Int))) →
+              ∀ d ∈ PastaLean.pyIter distance, d ≥ (0 : Int)) →
             let result := (distanceBetweenBusStops distance start destination).run;
             result ≥ (0 : Int) ∧ (2 : Int) *ₚ result ≤ PastaLean.pySum distance :=
   by
@@ -119,10 +117,8 @@ def distanceBetweenBusStops'rn := fun (distance : List Int) ↦ fun (start : Int
         Libraries.passta.pyPassRequires
           (PastaLean.pyAll ((PastaLean.pyIter distance).map fun d => decide (d ≥ (0 : Int))))
       let mut s : Int := PastaLean.pySum distance
-      let __unpack_value_1 := ((0 : Int), PastaLean.pyLen distance)
-      let __unpack_pair_1 := __unpack_value_1
-      let mut t : Int := Prod.fst __unpack_pair_1
-      let mut n : Int := Prod.snd __unpack_pair_1
+      let mut t : Int := (0 : Int)
+      let mut n : Int := PastaLean.pyLen distance
       -- The loop calculates the distance `t` in the clockwise direction from `start` to `destination`.
       -- The termination measure is the number of clockwise steps remaining to reach the destination.
       while (start != destination) do

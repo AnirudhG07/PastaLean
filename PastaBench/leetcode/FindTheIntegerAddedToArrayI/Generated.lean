@@ -54,7 +54,7 @@ theorem addedInteger_correct :
         PastaLean.pyLen nums1 > (0 : Int) →
           PastaLean.pyLen nums2 > (0 : Int) →
             addedInteger nums1 nums2 = PastaLean.pyMin nums2 -ₚ PastaLean.pyMin nums1 :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]
+  by taste?
 
 def addedInteger'rn := fun (nums1 : List Int) ↦ fun (nums2 : List Int) ↦
   PastaLean.pyMin nums2 -ₚ PastaLean.pyMin nums1

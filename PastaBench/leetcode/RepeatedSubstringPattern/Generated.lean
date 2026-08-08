@@ -58,13 +58,10 @@ theorem repeatedSubstringPattern_correct :
     ∀ (s : String),
       PastaLean.pyLen s > (0 : Int) →
         repeatedSubstringPattern s =
-          PastaLean.pyStdAny
-            ((PastaLean.pyRange (PastaLean.pyLen s) (1 : Int)).map fun k =>
-              PastaLean.pyLen s %ₚ k == (0 : Int) &&
-                s ==
-                  PastaLean.pySlice s (some (0 : Int)) (some k) none *ₚ
-                    PastaLean.pyFloorDiv (PastaLean.pyLen s) k) :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+          ∃ k ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen s) (1 : Int)),
+            PastaLean.pyLen s %ₚ k = (0 : Int) ∧
+              s = PastaLean.pySlice s (some (0 : Int)) (some k) none *ₚ PastaLean.pyFloorDiv (PastaLean.pyLen s) k :=
+  by taste?
 
 def repeatedSubstringPattern'rn := fun (s : String) ↦
   decide (PastaLean.pyIndex (s +ₚ s) s (1 : Int) < PastaLean.pyLen s)

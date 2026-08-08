@@ -79,7 +79,7 @@ theorem maxValue_spec :
       ⌜PastaLean.pyLen result = PastaLean.pyLen n +ₚ (1 : Int)⌝⦄ :=
   by
   mvcgen [maxValue, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  all_goals sorry
+  taste?
   all_goals sorry
 
 theorem maxValue_correct :

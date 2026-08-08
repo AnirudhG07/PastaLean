@@ -84,7 +84,7 @@ theorem maxBottlesDrunk_spec :
       ⌜ans -ₚ numBottles = numExchange -ₚ numExchange ∧ numBottles < numExchange⌝⦄ :=
   by
   mvcgen [maxBottlesDrunk, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  taste?
   all_goals sorry
 
 theorem maxBottlesDrunk_correct :

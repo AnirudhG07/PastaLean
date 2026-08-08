@@ -99,20 +99,21 @@ def maxConsecutive := fun (bottom : Int) ↦ fun (top : Int) ↦ fun (special : 
 
 @[spec]
 theorem maxConsecutive_spec :
-    ⦃⌜(bottom ≤ top ∧ PastaLean.pyLen special > (0 : Int)) ∧
-          PastaLean.pyAll ((PastaLean.pyIter special).map fun s => decide (bottom ≤ s) && decide (s ≤ top))⌝⦄
+    ⦃⌜(bottom ≤ top ∧ PastaLean.pyLen special > (0 : Int)) ∧ ∀ s ∈ PastaLean.pyIter special, bottom ≤ s ∧ s ≤ top⌝⦄
       maxConsecutive bottom top special ⦃⇓ans => ⌜(0 : Int) ≤ ans ∧ ans ≤ top -ₚ bottom⌝⦄ :=
   by
-  mvcgen [maxConsecutive, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  try
+    mvcgen [maxConsecutive, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · ⇓⟨cur, ans⟩ => ⌜(0 : Int) ≤ ans ∧ ans ≤ top -ₚ bottom⌝
+  taste?
   all_goals sorry
 
 theorem maxConsecutive_correct :
     ∀ (bottom : Int),
       ∀ (top : Int),
         ∀ (special : List Int),
-          (bottom ≤ top ∧ PastaLean.pyLen special > (0 : Int)) ∧
-              PastaLean.pyAll ((PastaLean.pyIter special).map fun s => decide (bottom ≤ s) && decide (s ≤ top)) →
+          ((bottom ≤ top ∧ PastaLean.pyLen special > (0 : Int)) ∧
+              ∀ s ∈ PastaLean.pyIter special, bottom ≤ s ∧ s ≤ top) →
             let ans := (maxConsecutive bottom top special).run;
             (0 : Int) ≤ ans ∧ ans ≤ top -ₚ bottom :=
   by

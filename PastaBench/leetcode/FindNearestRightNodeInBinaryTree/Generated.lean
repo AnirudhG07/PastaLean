@@ -131,14 +131,14 @@ def findNearestRightNode := fun (root : Option TreeNode) ↦ fun (u : TreeNode) 
           q := PastaLean.pyAppend q ((root).getD default).right
         else
           let _ := ()
-    return default : Id _)
+    return default : Id (Option TreeNode))
 
 @[spec]
 theorem findNearestRightNode_spec :
     ⦃⌜!PastaLean.pyIsNone root ∧ !PastaLean.pyIsNone u⌝⦄ findNearestRightNode root u ⦃⇓result => ⌜result != u⌝⦄ :=
   by
   mvcgen [findNearestRightNode, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  taste?
   all_goals sorry
 
 theorem findNearestRightNode_correct :
@@ -153,38 +153,39 @@ theorem findNearestRightNode_correct :
 
 def findNearestRightNode'rn : Option TreeNode'rn → TreeNode'rn → Option TreeNode'rn :=
   fun (root : Option TreeNode'rn) ↦ fun (u : TreeNode'rn) ↦
-  Id.run
-    (do
-      let mut root := root
-      let _ := Libraries.passta.pyPassRequires !PastaLean.pyIsNone root
-      let _ := Libraries.passta.pyPassRequires !PastaLean.pyIsNone u
-      let mut q : List (Option TreeNode'rn) := Libraries.collections.pyDeque [root]
-      while (PastaLean.pyTruthy q) do
-        for i in (PastaLean.pyRange (-(1 : Int)) (PastaLean.pyLen q -ₚ (1 : Int)) (-(1 : Int)))do
-          let _ := Libraries.passta.pyPassInvariant (decide (i ≥ (0 : Int)))
-          -- The queue contains at least `i` elements from the current level.
-          -- This is sufficient to prove memory safety of the `q[0]` access below.
-          let _ := Libraries.passta.pyPassInvariant (decide (PastaLean.pyLen q ≥ i))
-          root := PastaLean.pyPopLeftValue q
-          q := PastaLean.pyPopLeftRest q
-          if h_1 : root == u then 
-            if h_2 : PastaLean.pyTruthy i then 
-              let _ := Libraries.passta.pyPassAssert (decide (i > (0 : Int)))
-              let _ := Libraries.passta.pyPassAssert (decide (PastaLean.pyLen q > (0 : Int)))
-              let __py_ret_1 := q⦋(0 : Int)⦌
-              return __py_ret_1
+  (show Option TreeNode'rn from
+    Id.run
+      (do
+        let mut root := root
+        let _ := Libraries.passta.pyPassRequires !PastaLean.pyIsNone root
+        let _ := Libraries.passta.pyPassRequires !PastaLean.pyIsNone u
+        let mut q : List (Option TreeNode'rn) := Libraries.collections.pyDeque [root]
+        while (PastaLean.pyTruthy q) do
+          for i in (PastaLean.pyRange (-(1 : Int)) (PastaLean.pyLen q -ₚ (1 : Int)) (-(1 : Int)))do
+            let _ := Libraries.passta.pyPassInvariant (decide (i ≥ (0 : Int)))
+            -- The queue contains at least `i` elements from the current level.
+            -- This is sufficient to prove memory safety of the `q[0]` access below.
+            let _ := Libraries.passta.pyPassInvariant (decide (PastaLean.pyLen q ≥ i))
+            root := PastaLean.pyPopLeftValue q
+            q := PastaLean.pyPopLeftRest q
+            if h_1 : root == u then 
+              if h_2 : PastaLean.pyTruthy i then 
+                let _ := Libraries.passta.pyPassAssert (decide (i > (0 : Int)))
+                let _ := Libraries.passta.pyPassAssert (decide (PastaLean.pyLen q > (0 : Int)))
+                let __py_ret_1 := q⦋(0 : Int)⦌
+                return __py_ret_1
+              else
+                return Option.none
             else
-              return Option.none
-          else
-            let _ := ()
-          if h_2 : PastaLean.pyTruthy ((root).getD default).left then 
-            q := PastaLean.pyAppend q ((root).getD default).left
-          else
-            let _ := ()
-          if h_3 : PastaLean.pyTruthy ((root).getD default).right then 
-            q := PastaLean.pyAppend q ((root).getD default).right
-          else
-            let _ := ()
-      return default)
+              let _ := ()
+            if h_2 : PastaLean.pyTruthy ((root).getD default).left then 
+              q := PastaLean.pyAppend q ((root).getD default).left
+            else
+              let _ := ()
+            if h_3 : PastaLean.pyTruthy ((root).getD default).right then 
+              q := PastaLean.pyAppend q ((root).getD default).right
+            else
+              let _ := ()
+        return default))
 
 end PastaBench.leetcode.FindNearestRightNodeInBinaryTree

@@ -32,7 +32,7 @@ attribute [simp] checkOnesSegment
 
 @[taste_ingr]
 theorem checkOnesSegment_correct : ∀ (s : String), checkOnesSegment s = !(PastaLean.pyStrContainsSubstr s "01") := by
-  intros; simp_all (config := { zetaDelta := true }) [taste_ingr]
+  taste?
 
 def checkOnesSegment'rn := fun (s : String) ↦ !(PastaLean.pyStrContainsSubstr s "01")
 

@@ -121,7 +121,7 @@ theorem goodNodes_spec :
       ⌜PastaLean.pyIsNone root ∧ ans = (0 : Int) ∨ !PastaLean.pyIsNone root ∧ ans ≥ (1 : Int)⌝⦄ :=
   by
   mvcgen [goodNodes, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem goodNodes_correct :

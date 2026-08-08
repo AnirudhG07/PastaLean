@@ -117,7 +117,11 @@ theorem get_closest_vowel_spec :
   by
   try
     mvcgen [get_closest_vowel, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · Invariant.withEarlyReturn (onReturn := fun _ _ => ⌜True⌝) (onContinue := fun _ _ => ⌜True⌝)
+    ·
+      Invariant.withEarlyReturn (onContinue := fun cur b =>
+        ⌜let i := (cur.prefix.length : Int);
+          (0 : Int) < i ∧ i < PastaLean.pyLen word -ₚ (1 : Int)⌝)
+        (onReturn := fun _ _ => ⌜True⌝)
   taste?
   all_goals sorry
 

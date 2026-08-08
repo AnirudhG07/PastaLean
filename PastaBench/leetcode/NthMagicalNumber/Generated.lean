@@ -77,7 +77,7 @@ theorem nthMagicalNumber_correct :
                 (a %ₚ b ≠ (0 : Int) ∧ b %ₚ a ≠ (0 : Int) ∨
                     nthMagicalNumber n a b = n *ₚ PastaLean.pyMin [a, b] %ₚ mod) ∧
                   (0 : Int) ≤ nthMagicalNumber n a b ∧ nthMagicalNumber n a b < mod :=
-  by sorry
+  by taste?
 
 def nthMagicalNumber'rn := fun (n : Int) ↦ fun (a : Int) ↦ fun (b : Int) ↦
   let mod := ((10 : Int) ^ₚ (9 : Int) +ₚ (7 : Int) : Int)

@@ -66,10 +66,8 @@ namespace PastaBench.leetcode.CuttingRibbons
 def maxLength := fun (ribbons : List Int) ↦ fun (k : Int) ↦
   (do
     let mut M : Int := PastaLean.pyMax ribbons
-    let __unpack_value_1 := ((0 : Int), M)
-    let __unpack_pair_1 := __unpack_value_1
-    let mut left : Int := Prod.fst __unpack_pair_1
-    let mut right : Int := Prod.snd __unpack_pair_1
+    let mut left : Int := (0 : Int)
+    let mut right : Int := M
     while (left < right) do
       let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ left))
       let _ := Libraries.passta.pyPassInvariant (decide (left ≤ right))
@@ -102,7 +100,7 @@ theorem maxLength_spec :
             PastaLean.pySum ((PastaLean.pyIter ribbons).map fun x => PastaLean.pyFloorDiv x left) ≥ k)⌝⦄ :=
   by
   mvcgen [maxLength, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  taste?
   all_goals sorry
 
 theorem maxLength_correct :
@@ -125,10 +123,8 @@ def maxLength'rn := fun (ribbons : List Int) ↦ fun (k : Int) ↦
       let _ := Libraries.passta.pyPassRequires (decide (k > (0 : Int)))
       -- At return, no length > Result() yields >= k pieces, and Result()==0 or Result() yields >= k pieces
       let mut M : Int := PastaLean.pyMax ribbons
-      let __unpack_value_1 := ((0 : Int), M)
-      let __unpack_pair_1 := __unpack_value_1
-      let mut left : Int := Prod.fst __unpack_pair_1
-      let mut right : Int := Prod.snd __unpack_pair_1
+      let mut left : Int := (0 : Int)
+      let mut right : Int := M
       while (left < right) do
         let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ left))
         let _ := Libraries.passta.pyPassInvariant (decide (left ≤ right))

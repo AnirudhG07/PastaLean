@@ -48,7 +48,7 @@ attribute [simp] encode
 
 @[taste_ingr]
 theorem encode_correct :
-    ∀ (num : Int), num ≥ (0 : Int) → num +ₚ (1 : Int) = PastaLean.pyIntBase ("1" +ₚ encode num) (2 : Int) := by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+    ∀ (num : Int), num ≥ (0 : Int) → num +ₚ (1 : Int) = PastaLean.pyIntBase ("1" +ₚ encode num) (2 : Int) := by taste?
 
 def encode'rn := fun (num : Int) ↦ PastaLean.pySlice (PastaLean.pyBin (num +ₚ (1 : Int))) (some (3 : Int)) none none
 

@@ -126,7 +126,7 @@ theorem countDifferentSubsequenceGCDs_spec :
     · ⇓⟨cur, ans⟩ =>
       ⌜let x := (cur.prefix.length : Int);
         ((1 : Int) ≤ x ∧ x ≤ mx +ₚ (1 : Int)) ∧ (0 : Int) ≤ ans ∧ ans < x⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem countDifferentSubsequenceGCDs_correct :

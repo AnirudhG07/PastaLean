@@ -61,11 +61,9 @@ namespace PastaBench.humaneval.SeparateParenGroups
 
 def separate_paren_groups := fun (paren_string : String) ↦
   (do
-    let __unpack_value_1 := ((0 : Int), ("", []))
-    let __unpack_pair_1 := __unpack_value_1
-    let mut cnt : Int := Prod.fst __unpack_pair_1
-    let mut group : String := Prod.fst (Prod.snd __unpack_pair_1)
-    let mut results : List String := Prod.snd (Prod.snd __unpack_pair_1)
+    let mut cnt : Int := (0 : Int)
+    let mut group : String := ""
+    let mut results : List String := []
     for ch in (PastaLean.pyIter paren_string)do
       -- The concatenation of completed groups and the current group forms a prefix
       -- of the input string with spaces removed.
@@ -143,11 +141,9 @@ def separate_paren_groups'rn := fun (paren_string : String) ↦
       -/
       let _ :=
         Libraries.passta.pyPassRequires (PastaLean.pyCount paren_string "(" == PastaLean.pyCount paren_string ")")
-      let __unpack_value_1 := ((0 : Int), ("", []))
-      let __unpack_pair_1 := __unpack_value_1
-      let mut cnt : Int := Prod.fst __unpack_pair_1
-      let mut group : String := Prod.fst (Prod.snd __unpack_pair_1)
-      let mut results : List String := Prod.snd (Prod.snd __unpack_pair_1)
+      let mut cnt : Int := (0 : Int)
+      let mut group : String := ""
+      let mut results : List String := []
       for ch in (PastaLean.pyIter paren_string)do
         -- The concatenation of completed groups and the current group forms a prefix
         -- of the input string with spaces removed.

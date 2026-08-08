@@ -91,16 +91,23 @@ def appealSum := fun (s : String) ↦
 
 @[spec]
 theorem appealSum_spec :
-    ⦃⌜PastaLean.pyAll ((PastaLean.pyIter s).map fun c => decide ("a" ≤ c) && decide (c ≤ "z"))⌝⦄ appealSum s ⦃⇓ans =>
+    ⦃⌜∀ c ∈ PastaLean.pyIter s, "a" ≤ c ∧ c ≤ "z"⌝⦄ appealSum s ⦃⇓ans =>
       ⌜if PastaLean.pyLen s > (0 : Int) then ans > (0 : Int) else ans = (0 : Int)⌝⦄ :=
   by
-  mvcgen [appealSum, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  try
+    mvcgen [appealSum, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · ⇓⟨cur, ans, t⟩ =>
+      ⌜(((((((0 : Int) ≤ i ∧ i ≤ PastaLean.pyLen s) ∧ t ≥ (0 : Int)) ∧ ans ≥ (0 : Int)) ∧
+                (i = (0 : Int) ∨ ans > (0 : Int))) ∧
+              PastaLean.pyLen pos = (26 : Int)) ∧
+            ∀ p ∈ PastaLean.pyIter pos, p ≥ -(1 : Int)) ∧
+          ∀ p ∈ PastaLean.pyIter pos, p < i⌝
+  taste?
   all_goals sorry
 
 theorem appealSum_correct :
     ∀ (s : String),
-      PastaLean.pyAll ((PastaLean.pyIter s).map fun c => decide ("a" ≤ c) && decide (c ≤ "z")) →
+      (∀ c ∈ PastaLean.pyIter s, "a" ≤ c ∧ c ≤ "z") →
         let ans := (appealSum s).run;
         if PastaLean.pyLen s > (0 : Int) then ans > (0 : Int) else ans = (0 : Int) :=
   by

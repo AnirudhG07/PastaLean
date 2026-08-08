@@ -109,7 +109,7 @@ theorem reverseList_spec :
     ⦃⌜True⌝⦄ reverseList head ⦃⇓result => ⌜PastaLean.pyIsNone head = PastaLean.pyIsNone result⌝⦄ :=
   by
   mvcgen [reverseList, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  all_goals sorry
+  taste?
   all_goals sorry
 
 theorem reverseList_correct :

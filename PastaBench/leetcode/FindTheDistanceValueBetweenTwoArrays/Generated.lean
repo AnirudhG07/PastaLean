@@ -60,7 +60,7 @@ theorem findTheDistanceValue_spec :
   try
     mvcgen [findTheDistanceValue, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓⟨cur, ans⟩ => ⌜ans ≥ (0 : Int) ∧ ans ≤ PastaLean.pyLen arr1⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry; simp_all (config := { zetaDelta := true }) [taste_ingr]
+  taste?
   all_goals sorry
 
 theorem findTheDistanceValue_correct :

@@ -63,7 +63,7 @@ theorem minSteps_spec :
   try
     mvcgen [minSteps, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓cur => ⌜True⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem minSteps_correct :

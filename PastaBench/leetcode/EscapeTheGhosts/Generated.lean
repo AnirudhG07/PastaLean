@@ -68,33 +68,27 @@ def escapeGhosts := fun (ghosts : List (List Int)) ↦ fun (target : List Int) �
 
 @[spec]
 theorem escapeGhosts_spec :
-    ⦃⌜PastaLean.pyLen target = (2 : Int) ∧
-          PastaLean.pyAll ((PastaLean.pyIter ghosts).map fun g => PastaLean.pyLen g == (2 : Int))⌝⦄
+    ⦃⌜PastaLean.pyLen target = (2 : Int) ∧ ∀ g ∈ PastaLean.pyIter ghosts, PastaLean.pyLen g = (2 : Int)⌝⦄
       escapeGhosts ghosts target ⦃⇓result =>
       ⌜result =
-          PastaLean.pyAll
-            ((PastaLean.pyIter ghosts).map fun g =>
-              decide
-                (PastaLean.pyAbs (target⦋(0 : Int)⦌ -ₚ g⦋(0 : Int)⦌) +ₚ
-                    PastaLean.pyAbs (target⦋(1 : Int)⦌ -ₚ g⦋(1 : Int)⦌) >
-                  PastaLean.pyAbs target⦋(0 : Int)⦌ +ₚ PastaLean.pyAbs target⦋(1 : Int)⦌))⌝⦄ :=
+          ∀ g ∈ PastaLean.pyIter ghosts,
+            PastaLean.pyAbs (target⦋(0 : Int)⦌ -ₚ g⦋(0 : Int)⦌) +ₚ PastaLean.pyAbs (target⦋(1 : Int)⦌ -ₚ g⦋(1 : Int)⦌) >
+              PastaLean.pyAbs target⦋(0 : Int)⦌ +ₚ PastaLean.pyAbs target⦋(1 : Int)⦌⌝⦄ :=
   by
   mvcgen [escapeGhosts, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
+  taste?
   all_goals sorry
 
 theorem escapeGhosts_correct :
     ∀ (ghosts : List (List Int)),
       ∀ (target : List Int),
-        PastaLean.pyLen target = (2 : Int) ∧
-            PastaLean.pyAll ((PastaLean.pyIter ghosts).map fun g => PastaLean.pyLen g == (2 : Int)) →
+        (PastaLean.pyLen target = (2 : Int) ∧ ∀ g ∈ PastaLean.pyIter ghosts, PastaLean.pyLen g = (2 : Int)) →
           let result := (escapeGhosts ghosts target).run;
           result =
-            PastaLean.pyAll
-              ((PastaLean.pyIter ghosts).map fun g =>
-                decide
-                  (PastaLean.pyAbs (target⦋(0 : Int)⦌ -ₚ g⦋(0 : Int)⦌) +ₚ
-                      PastaLean.pyAbs (target⦋(1 : Int)⦌ -ₚ g⦋(1 : Int)⦌) >
-                    PastaLean.pyAbs target⦋(0 : Int)⦌ +ₚ PastaLean.pyAbs target⦋(1 : Int)⦌)) :=
+            ∀ g ∈ PastaLean.pyIter ghosts,
+              PastaLean.pyAbs (target⦋(0 : Int)⦌ -ₚ g⦋(0 : Int)⦌) +ₚ
+                  PastaLean.pyAbs (target⦋(1 : Int)⦌ -ₚ g⦋(1 : Int)⦌) >
+                PastaLean.pyAbs target⦋(0 : Int)⦌ +ₚ PastaLean.pyAbs target⦋(1 : Int)⦌ :=
   by
   intro ghosts target hpre
   exact escapeGhosts_spec hpre

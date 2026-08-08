@@ -90,7 +90,7 @@ theorem maxTotalReward_spec :
   try
     mvcgen [maxTotalReward, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓⟨cur, f⟩ => ⌜(v ≥ (1 : Int) ∧ f ≥ (1 : Int)) ∧ PastaLean.pyBitLength f -ₚ (1 : Int) < (2 : Int) *ₚ v⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem maxTotalReward_correct :

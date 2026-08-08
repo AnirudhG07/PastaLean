@@ -92,27 +92,22 @@ def finalPrices := fun (prices : List Int) ↦
 
 @[spec]
 theorem finalPrices_spec :
-    ⦃⌜PastaLean.pyAll ((PastaLean.pyIter prices).map fun p => decide (p ≥ (0 : Int)))⌝⦄ finalPrices prices ⦃⇓prices =>
-      ⌜PastaLean.pyLen prices = PastaLean.pyLen prices ∧
-          PastaLean.pyAll ((PastaLean.pyIter prices).map fun p => decide (p ≥ (0 : Int)))⌝⦄ :=
+    ⦃⌜∀ p ∈ PastaLean.pyIter prices, p ≥ (0 : Int)⌝⦄ finalPrices prices ⦃⇓prices =>
+      ⌜PastaLean.pyLen prices = PastaLean.pyLen prices ∧ ∀ p ∈ PastaLean.pyIter prices, p ≥ (0 : Int)⌝⦄ :=
   by
   try
     mvcgen [finalPrices, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓cur =>
-      ⌜((-(1 : Int) ≤ i ∧ i < PastaLean.pyLen prices) ∧
-            PastaLean.pyAll ((PastaLean.pyIter stk).map fun p => decide (p ≥ (0 : Int)))) ∧
-          PastaLean.pyAll
-            ((PastaLean.pyRange (PastaLean.pyLen stk -ₚ (1 : Int))).map fun j =>
-              decide (stk⦋j⦌ ≤ stk⦋j +ₚ (1 : Int)⦌))⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+      ⌜((-(1 : Int) ≤ i ∧ i < PastaLean.pyLen prices) ∧ ∀ p ∈ PastaLean.pyIter stk, p ≥ (0 : Int)) ∧
+          ∀ j ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen stk -ₚ (1 : Int))), stk⦋j⦌ ≤ stk⦋j +ₚ (1 : Int)⦌⌝
+  taste?
   all_goals sorry
 
 theorem finalPrices_correct :
     ∀ (prices : List Int),
-      PastaLean.pyAll ((PastaLean.pyIter prices).map fun p => decide (p ≥ (0 : Int))) →
+      (∀ p ∈ PastaLean.pyIter prices, p ≥ (0 : Int)) →
         let prices := (finalPrices prices).run;
-        PastaLean.pyLen prices = PastaLean.pyLen prices ∧
-          PastaLean.pyAll ((PastaLean.pyIter prices).map fun p => decide (p ≥ (0 : Int))) :=
+        PastaLean.pyLen prices = PastaLean.pyLen prices ∧ ∀ p ∈ PastaLean.pyIter prices, p ≥ (0 : Int) :=
   by
   intro prices hpre
   exact finalPrices_spec hpre

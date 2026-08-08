@@ -98,7 +98,7 @@ theorem validSubarrays_spec : ⦃⌜True⌝⦄ validSubarrays nums ⦃⇓result 
     · ⇓cur =>
       ⌜let i := (cur.prefix.length : Int);
         (0 : Int) ≤ i ∧ i < PastaLean.pyLen nums⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem validSubarrays_correct :

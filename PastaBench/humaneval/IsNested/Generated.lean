@@ -98,10 +98,8 @@ def is_nested := fun (string : List String) ↦
       let _ := Libraries.passta.pyPassAssert (decide ((0 : Int) ≤ i))
       let _ := Libraries.passta.pyPassAssert (decide (i < PastaLean.pyLen string))
       let _ := Libraries.passta.pyPassAssert (string⦋i⦌ == "[")
-      let __unpack_value_1 := ((0 : Int), (0 : Int))
-      let __unpack_pair_1 := __unpack_value_1
-      let mut cnt : Int := Prod.fst __unpack_pair_1
-      let mut max_nest : Int := Prod.snd __unpack_pair_1
+      let mut cnt : Int := (0 : Int)
+      let mut max_nest : Int := (0 : Int)
       for j in (PastaLean.pyRange (PastaLean.pyLen string) i)do
         let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i))
         let _ := Libraries.passta.pyPassInvariant (decide (i < PastaLean.pyLen string))
@@ -200,10 +198,8 @@ def is_nested'rn := fun (string : List String) ↦
         let _ := Libraries.passta.pyPassAssert (decide ((0 : Int) ≤ i))
         let _ := Libraries.passta.pyPassAssert (decide (i < PastaLean.pyLen string))
         let _ := Libraries.passta.pyPassAssert (string⦋i⦌ == "[")
-        let __unpack_value_1 := ((0 : Int), (0 : Int))
-        let __unpack_pair_1 := __unpack_value_1
-        let mut cnt : Int := Prod.fst __unpack_pair_1
-        let mut max_nest : Int := Prod.snd __unpack_pair_1
+        let mut cnt : Int := (0 : Int)
+        let mut max_nest : Int := (0 : Int)
         for j in (PastaLean.pyRange (PastaLean.pyLen string) i)do
           let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i))
           let _ := Libraries.passta.pyPassInvariant (decide (i < PastaLean.pyLen string))

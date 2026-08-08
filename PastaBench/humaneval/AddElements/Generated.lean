@@ -103,7 +103,7 @@ theorem add_elements_spec :
     · ⇓⟨cur, total⟩ =>
       ⌜let i := (cur.prefix.length : Int);
         (((0 : Int) ≤ i ∧ i ≤ k) ∧ -(99 : Int) *ₚ i ≤ total) ∧ total ≤ (99 : Int) *ₚ i⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry; pyany_cases <;> grind +locals; pyany_cases <;> grind +locals; pyany_cases <;> grind +locals
+  taste?
   all_goals sorry
 
 theorem add_elements_correct :

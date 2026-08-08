@@ -91,8 +91,12 @@ theorem maxScoreSightseeingPair_spec :
             ((PastaLean.pyRange (PastaLean.pyLen values)).flatMap fun j =>
               (PastaLean.pyRange j).map fun i => values⦋i⦌ +ₚ values⦋j⦌ +ₚ i -ₚ j)⌝⦄ :=
   by
-  mvcgen [maxScoreSightseeingPair, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr];
+  try
+    mvcgen [maxScoreSightseeingPair, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · ⇓⟨cur, ans, mx⟩ =>
+      ⌜((0 : Int) ≤ j ∧ j ≤ PastaLean.pyLen values) ∧
+          mx = PastaLean.pyMax ([(0 : Int)] +ₚ (PastaLean.pyRange j).map fun i => values⦋i⦌ +ₚ i)⌝
+  taste?
   all_goals sorry
 
 theorem maxScoreSightseeingPair_correct :

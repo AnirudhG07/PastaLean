@@ -114,10 +114,8 @@ def find_zero := fun (xs : List PyAny) ↦
   (do
     let mut dxs : List PyAny := (PastaLean.pyRange (PastaLean.pyLen xs) (1 : Int)).map fun i => xs⦋i⦌ *ₚ i
     let _ := Libraries.passta.pyPassAssert (PastaLean.pyLen dxs == PastaLean.pyLen xs -ₚ (1 : Int))
-    let __unpack_value_1 := ((0 : Int), (OfScientific.ofScientific 1 true 5 : Rat))
-    let __unpack_pair_1 := __unpack_value_1
-    let mut x : Int := Prod.fst __unpack_pair_1
-    let mut tol : Rat := ↑(Prod.snd __unpack_pair_1)
+    let mut x := (0 : Rat)
+    let mut tol := (OfScientific.ofScientific 1 true 5 : Rat)
     for _ in (PastaLean.pyRange (1000 : Int))do
       let mut fx := _find_zero'func x xs
       let mut dfx := _find_zero'derivative x dxs
@@ -144,7 +142,11 @@ theorem find_zero_spec :
   by
   try
     mvcgen [find_zero, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · Invariant.withEarlyReturn (onReturn := fun _ _ => ⌜True⌝) (onContinue := fun _ _ => ⌜True⌝)
+    ·
+      Invariant.withEarlyReturn (onContinue := fun cur b =>
+        ⌜let x := b;
+          True⌝)
+        (onReturn := fun _ _ => ⌜True⌝)
   taste?
   all_goals sorry
 
@@ -189,10 +191,8 @@ def find_zero'rn := fun (xs : List PyAny) ↦
         -- self-contained statement about Result() and does not depend on a second function.
         let mut dxs : List PyAny := (PastaLean.pyRange (PastaLean.pyLen xs) (1 : Int)).map fun i => xs⦋i⦌ *ₚ i
         let _ := Libraries.passta.pyPassAssert (PastaLean.pyLen dxs == PastaLean.pyLen xs -ₚ (1 : Int))
-        let __unpack_value_1 := ((0 : Int), Float.ofScientific 1 true 5)
-        let __unpack_pair_1 := __unpack_value_1
-        let mut x : Int := Prod.fst __unpack_pair_1
-        let mut tol : Float := ↑(Prod.snd __unpack_pair_1)
+        let mut x := (0 : Float)
+        let mut tol := Float.ofScientific 1 true 5
         for _ in (PastaLean.pyRange (1000 : Int))do
           let mut fx := _find_zero'func'rn x xs
           let mut dfx := _find_zero'derivative'rn x dxs

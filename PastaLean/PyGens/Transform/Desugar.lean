@@ -62,6 +62,17 @@ partial def rewriteStatementLists (f : Array Json → DesugarM (Array Json)) (js
 
 /-! ### Nested `for` targets -/
 
+/-- Does `json` reference (as a `Name`) any id in `names`? -/
+partial def jsonMentionsAnyName (names : Array String) (json : Json) : Bool :=
+  if jsonNodeType? json == some "Name" then
+    match json.getObjValAs? String "id" with
+    | .ok id => names.contains id
+    | _ => false
+  else match json with
+    | .arr a => a.any (jsonMentionsAnyName names)
+    | .obj kvs => kvs.toList.any (fun (_, v) => jsonMentionsAnyName names v)
+    | _ => false
+
 /-- Emit `target = value` as assignments whose tuple targets contain no further tuples. The tuple
 targets are stamped `_tuple_unpack` — a nested for-target (`for i, (a, b) in enumerate(zip(…))`)
 unpacks a `Prod`, so codegen must use `Prod.fst`/`Prod.snd`, not list indexing. -/
@@ -255,25 +266,25 @@ def splitChainedAssign (stmts : Array Json) : DesugarM (Array Json) := do
     | none => out := out.push stmt
   return out
 
-/-- NOT YET WIRED (see below). `a, (b, c) = …` → flatten the nested tuple target into a
-temporary plus a second unpack, so
-codegen only ever sees tuple targets whose elements are names or subscripts. `flattenAssign` already
-does the work; this applies it to plain assignments (it was only wired into `for` targets).
-
-Left out of `desugarAst` for now: the second unpack (`b, c = tmp`) still lowers with list indexing
-because `_tuple_unpack` is not stamped on it, so the result compiles worse than the clean
-"unsupported nested target" error it replaces. Wire it once that stamp fires here. -/
-def flattenAssignTargets (stmts : Array Json) : DesugarM (Array Json) := do
+/-- SAFE SPLIT: flat `a, b = e1, e2` with a literal-tuple RHS of matching arity referencing no
+target (excludes swaps like `a, b = b, a+b`, which must stay simultaneous) → separate
+`a = e1; b = e2`, so each var gets its own inferred type instead of being unpacked from a boxed
+`Prod` (which boxes mixed-type elements to `PyAny`). -/
+def splitIndependentTupleAssign (stmts : Array Json) : DesugarM (Array Json) := do
   let mut out := #[]
   for stmt in stmts do
     match (do
       guard (jsonNodeType? stmt == some "Assign")
       let t ← (stmt.getObjVal? "target").toOption
       let v ← (stmt.getObjVal? "value").toOption
-      guard (isTupleTarget t)
-      guard (((t.getObjValAs? (Array Json) "elts").toOption.getD #[]).any isTupleTarget)
-      pure (t, v)) with
-    | some (t, v) => out := out ++ (← flattenAssign t v)
+      guard (isTupleTarget t && jsonNodeType? v == some "Tuple")
+      let elts := (t.getObjValAs? (Array Json) "elts").toOption.getD #[]
+      let valElts := (v.getObjValAs? (Array Json) "elts").toOption.getD #[]
+      let names := elts.filterMap (fun (e : Json) => (e.getObjValAs? String "id").toOption)
+      guard (valElts.size == elts.size && names.size == elts.size
+        && !valElts.any (jsonMentionsAnyName names))
+      pure (elts.zip valElts)) with
+    | some pairs => out := out ++ pairs.map (fun (t, v) => assignStmt t v)
     | none => out := out.push stmt
   return out
 
@@ -512,6 +523,7 @@ def desugarAst (json : Json) : Except String Json := do
   let pass : DesugarM Json := do
     let json ← rewriteStatementLists rewriteFullSliceAssign json
     let json ← rewriteStatementLists splitChainedAssign json
+    let json ← rewriteStatementLists splitIndependentTupleAssign json
     let json ← rewriteStatementLists flattenForTargets json
     let json ← rewriteStatementLists unrollInfiniteIter json
     let json ← rewriteStatementLists hoistWalrus json

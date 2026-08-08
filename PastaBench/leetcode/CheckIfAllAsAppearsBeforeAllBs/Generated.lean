@@ -31,7 +31,7 @@ def checkString := fun (s : String) ↦ !(PastaLean.pyStrContainsSubstr s "ba")
 attribute [simp] checkString
 
 @[taste_ingr]
-theorem checkString_correct : ∀ (s : String), checkString s = !(PastaLean.pyStrContainsSubstr s "ba") := by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]
+theorem checkString_correct : ∀ (s : String), checkString s = !(PastaLean.pyStrContainsSubstr s "ba") := by taste?
 
 def checkString'rn := fun (s : String) ↦ !(PastaLean.pyStrContainsSubstr s "ba")
 

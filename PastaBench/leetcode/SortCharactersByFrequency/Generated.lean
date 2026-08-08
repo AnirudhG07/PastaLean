@@ -72,16 +72,11 @@ theorem frequencySort_correct :
     ∀ (s : String),
       let cnt := Libraries.collections.pyCounter s
       Libraries.collections.pyCounter (frequencySort s) = Libraries.collections.pyCounter s ∧
-        PastaLean.pyTruthy
-            (PastaLean.pyAll
-              ((List.filter (fun i => (frequencySort s)⦋i⦌ ≠ (frequencySort s)⦋i +ₚ (1 : Int)⦌)
-                    (PastaLean.pyRange (PastaLean.pyLen (frequencySort s) -ₚ (1 : Int)))).map
-                fun i =>
-                decide
-                  ((Libraries.collections.pyCounter s)⦋(frequencySort s)⦋i⦌⦌ ≥
-                    (Libraries.collections.pyCounter s)⦋(frequencySort s)⦋i +ₚ (1 : Int)⦌⦌))) =
-          true :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+        ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen (frequencySort s) -ₚ (1 : Int))),
+          (frequencySort s)⦋i⦌ ≠ (frequencySort s)⦋i +ₚ (1 : Int)⦌ →
+            (Libraries.collections.pyCounter s)⦋(frequencySort s)⦋i⦌⦌ ≥
+              (Libraries.collections.pyCounter s)⦋(frequencySort s)⦋i +ₚ (1 : Int)⦌⦌ :=
+  by taste?
 
 def frequencySort'rn := fun (s : String) ↦
   let cnt := (Libraries.collections.pyCounter s : Libraries.collections.PyDefaultDict String Int)

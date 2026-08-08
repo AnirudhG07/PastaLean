@@ -71,10 +71,8 @@ namespace PastaBench.humaneval.Solve161
 
 def solve := fun (s : String) ↦
   (do
-    let __unpack_value_1 := ("", Bool.false)
-    let __unpack_pair_1 := __unpack_value_1
-    let mut ans : String := Prod.fst __unpack_pair_1
-    let mut has_letter : Bool := Prod.snd __unpack_pair_1
+    let mut ans : String := ""
+    let mut has_letter : Bool := Bool.false
     for ch in (PastaLean.pyIter s)do
       let _ :=
         Libraries.passta.pyPassInvariant
@@ -184,10 +182,8 @@ def solve'rn := fun (s : String) ↦
       -/
       -- With a letter present: every position is case-swapped if alphabetic, else copied.
       -- With no letter at all, the result is the reversal.
-      let __unpack_value_1 := ("", Bool.false)
-      let __unpack_pair_1 := __unpack_value_1
-      let mut ans : String := Prod.fst __unpack_pair_1
-      let mut has_letter : Bool := Prod.snd __unpack_pair_1
+      let mut ans : String := ""
+      let mut has_letter : Bool := Bool.false
       for ch in (PastaLean.pyIter s)do
         let _ :=
           Libraries.passta.pyPassInvariant

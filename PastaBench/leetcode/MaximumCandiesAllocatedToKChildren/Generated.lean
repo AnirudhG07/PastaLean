@@ -66,10 +66,8 @@ namespace PastaBench.leetcode.MaximumCandiesAllocatedToKChildren
 
 def maximumCandies := fun (candies : List Int) ↦ fun (k : Int) ↦
   (do
-    let __unpack_value_1 := ((0 : Int), PastaLean.pyMax candies)
-    let __unpack_pair_1 := __unpack_value_1
-    let mut l : Int := Prod.fst __unpack_pair_1
-    let mut r : Int := Prod.snd __unpack_pair_1
+    let mut l : Int := (0 : Int)
+    let mut r : Int := PastaLean.pyMax candies
     while (l < r) do
       let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ l))
       let _ := Libraries.passta.pyPassInvariant (decide (l ≤ r))
@@ -100,22 +98,20 @@ def maximumCandies := fun (candies : List Int) ↦ fun (k : Int) ↦
 
 @[spec]
 theorem maximumCandies_spec :
-    ⦃⌜(k > (0 : Int) ∧ PastaLean.pyLen candies > (0 : Int)) ∧
-          PastaLean.pyAll ((PastaLean.pyIter candies).map fun c => decide (c ≥ (0 : Int)))⌝⦄
+    ⦃⌜(k > (0 : Int) ∧ PastaLean.pyLen candies > (0 : Int)) ∧ ∀ c ∈ PastaLean.pyIter candies, c ≥ (0 : Int)⌝⦄
       maximumCandies candies k ⦃⇓l =>
       ⌜(((0 : Int) ≤ l ∧ l ≤ PastaLean.pyMax candies) ∧
             (l = (0 : Int) ∨ PastaLean.pySum ((PastaLean.pyIter candies).map fun c => PastaLean.pyFloorDiv c l) ≥ k)) ∧
           PastaLean.pySum ((PastaLean.pyIter candies).map fun c => PastaLean.pyFloorDiv c (l +ₚ (1 : Int))) < k⌝⦄ :=
   by
   mvcgen [maximumCandies, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  taste?
   all_goals sorry
 
 theorem maximumCandies_correct :
     ∀ (candies : List Int),
       ∀ (k : Int),
-        (k > (0 : Int) ∧ PastaLean.pyLen candies > (0 : Int)) ∧
-            PastaLean.pyAll ((PastaLean.pyIter candies).map fun c => decide (c ≥ (0 : Int))) →
+        ((k > (0 : Int) ∧ PastaLean.pyLen candies > (0 : Int)) ∧ ∀ c ∈ PastaLean.pyIter candies, c ≥ (0 : Int)) →
           let l := (maximumCandies candies k).run;
           (((0 : Int) ≤ l ∧ l ≤ PastaLean.pyMax candies) ∧
               (l = (0 : Int) ∨
@@ -134,10 +130,8 @@ def maximumCandies'rn := fun (candies : List Int) ↦ fun (k : Int) ↦
         Libraries.passta.pyPassRequires
           (PastaLean.pyAll ((PastaLean.pyIter candies).map fun c => decide (c ≥ (0 : Int))))
       -- result is the largest size m such that sum(c // m) >= k
-      let __unpack_value_1 := ((0 : Int), PastaLean.pyMax candies)
-      let __unpack_pair_1 := __unpack_value_1
-      let mut l : Int := Prod.fst __unpack_pair_1
-      let mut r : Int := Prod.snd __unpack_pair_1
+      let mut l : Int := (0 : Int)
+      let mut r : Int := PastaLean.pyMax candies
       while (l < r) do
         let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ l))
         let _ := Libraries.passta.pyPassInvariant (decide (l ≤ r))

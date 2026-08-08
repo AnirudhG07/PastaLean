@@ -104,7 +104,7 @@ def magicalString := fun (n : Int) ↦
 theorem magicalString_spec : ⦃⌜n ≥ (0 : Int)⌝⦄ magicalString n ⦃⇓result => ⌜(0 : Int) ≤ result ∧ result ≤ n⌝⦄ :=
   by
   mvcgen [magicalString, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry; sorry; pyany_cases <;> grind +locals; sorry; sorry; sorry; sorry
+  taste?
   all_goals sorry
 
 theorem magicalString_correct :

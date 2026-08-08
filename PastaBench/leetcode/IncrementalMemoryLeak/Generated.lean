@@ -93,7 +93,7 @@ theorem memLeak_spec :
             let i := st;
             (memory1 ≥ (0 : Int) ∧ memory2 ≥ (0 : Int)) ∧ i ≥ (1 : Int))
           (fun _ => True) s⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem memLeak_correct :

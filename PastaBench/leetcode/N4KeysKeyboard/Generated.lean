@@ -103,8 +103,8 @@ theorem maxA_spec : ⦃⌜n ≥ (0 : Int)⌝⦄ maxA n ⦃⇓result => ⌜result
     · ⇓cur =>
       ⌜let i := (cur.prefix.length : Int);
         (((3 : Int) ≤ i ∧ i ≤ n +ₚ (1 : Int)) ∧ PastaLean.pyLen dp = n +ₚ (1 : Int)) ∧
-          PastaLean.pyAll ((PastaLean.pyRange (n +ₚ (1 : Int))).map fun k => decide (dp⦋k⦌ ≥ k))⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+          ∀ k ∈ PastaLean.pyIter (PastaLean.pyRange (n +ₚ (1 : Int))), dp⦋k⦌ ≥ k⌝
+  taste?
   all_goals sorry
 
 theorem maxA_correct :

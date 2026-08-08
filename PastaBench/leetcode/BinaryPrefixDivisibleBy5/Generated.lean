@@ -70,7 +70,7 @@ theorem prefixesDivBy5_spec :
   try
     mvcgen [prefixesDivBy5, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓⟨cur, x⟩ => ⌜(0 : Int) ≤ x ∧ x < (5 : Int)⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem prefixesDivBy5_correct :

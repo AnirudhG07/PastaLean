@@ -55,7 +55,7 @@ theorem numberOfSubstrings_spec :
   try
     mvcgen [numberOfSubstrings, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓⟨cur, ans⟩ => ⌜ans = (cur.prefix.map (fun c => cnt⦋c⦌)).sum⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem numberOfSubstrings_correct :

@@ -50,14 +50,10 @@ attribute [simp] buildArray
 @[taste_ingr]
 theorem buildArray_correct :
     ∀ (nums : List Int),
-      PastaLean.pyAll
-          ((PastaLean.pyIter nums).map fun x => decide ((0 : Int) ≤ x) && decide (x < PastaLean.pyLen nums)) →
+      (∀ x ∈ PastaLean.pyIter nums, (0 : Int) ≤ x ∧ x < PastaLean.pyLen nums) →
         PastaLean.pyLen (buildArray nums) = PastaLean.pyLen nums ∧
-          PastaLean.pyTruthy
-              (PastaLean.pyAll
-                ((PastaLean.pyRange (PastaLean.pyLen nums)).map fun i => (buildArray nums)⦋i⦌ == nums⦋nums⦋i⦌⦌)) =
-            true :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+          ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen nums)), (buildArray nums)⦋i⦌ = nums⦋nums⦋i⦌⦌ :=
+  by taste?
 
 def buildArray'rn := fun (nums : List Int) ↦ (PastaLean.pyIter nums).map fun num => nums⦋num⦌
 

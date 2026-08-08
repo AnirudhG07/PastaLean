@@ -146,7 +146,7 @@ theorem findMaximumLength_spec :
               All ((PastaLean.pyRange i).map fun k => decide ((0 : Int) ≤ f⦋k⦌) && decide (f⦋k⦌ ≤ k))) ∧
             All ((PastaLean.pyRange i (1 : Int)).map fun k => decide ((0 : Int) ≤ pre⦋k⦌) && decide (pre⦋k⦌ < k))) ∧
           All ((PastaLean.pyRange (i -ₚ (1 : Int))).map fun k => decide (pre⦋k⦌ ≤ pre⦋k +ₚ (1 : Int)⦌))⌝
-  sorry
+  taste?
   all_goals sorry
 
 theorem findMaximumLength_correct :

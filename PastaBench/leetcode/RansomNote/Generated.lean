@@ -54,14 +54,13 @@ def canConstruct := fun (ransomNote : String) ↦ fun (magazine : String) ↦
 theorem canConstruct_spec :
     ⦃⌜True⌝⦄ canConstruct ransomNote magazine ⦃⇓result =>
       ⌜result =
-          PastaLean.pyAll
-            ((PastaLean.pyIter (PastaLean.pySet ransomNote)).map fun c =>
-              decide (PastaLean.pyCount ransomNote c ≤ PastaLean.pyCount magazine c))⌝⦄ :=
+          ∀ c ∈ PastaLean.pyIter (PastaLean.pySet ransomNote),
+            PastaLean.pyCount ransomNote c ≤ PastaLean.pyCount magazine c⌝⦄ :=
   by
   try
     mvcgen [canConstruct, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · Invariant.withEarlyReturn (onReturn := fun _ _ => ⌜True⌝) (onContinue := fun _ _ => ⌜True⌝)
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+    · Invariant.withEarlyReturn (onContinue := fun cur b => ⌜True⌝) (onReturn := fun _ _ => ⌜True⌝)
+  taste?
   all_goals sorry
 
 theorem canConstruct_correct :
@@ -69,9 +68,8 @@ theorem canConstruct_correct :
       ∀ (magazine : String),
         let result := (canConstruct ransomNote magazine).run;
         result =
-          PastaLean.pyAll
-            ((PastaLean.pyIter (PastaLean.pySet ransomNote)).map fun c =>
-              decide (PastaLean.pyCount ransomNote c ≤ PastaLean.pyCount magazine c)) :=
+          ∀ c ∈ PastaLean.pyIter (PastaLean.pySet ransomNote),
+            PastaLean.pyCount ransomNote c ≤ PastaLean.pyCount magazine c :=
   by
   intro ransomNote magazine
   exact canConstruct_spec True.intro

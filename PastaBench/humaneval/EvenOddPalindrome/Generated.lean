@@ -45,10 +45,8 @@ namespace PastaBench.humaneval.EvenOddPalindrome
 
 def even_odd_palindrome := fun (n : Int) ↦
   (do
-    let __unpack_value_1 := ((0 : Int), (0 : Int))
-    let __unpack_pair_1 := __unpack_value_1
-    let mut odd_cnt : Int := Prod.fst __unpack_pair_1
-    let mut even_cnt : Int := Prod.snd __unpack_pair_1
+    let mut odd_cnt : Int := (0 : Int)
+    let mut even_cnt : Int := (0 : Int)
     for i in (PastaLean.pyRange (n +ₚ (1 : Int)) (1 : Int))do
       let _ := Libraries.passta.pyPassInvariant (decide (odd_cnt +ₚ even_cnt ≤ i -ₚ (1 : Int)))
       if h_1 : PastaLean.pyStr i = PastaLean.pySlice (PastaLean.pyStr i) none none (some (-(1 : Int))) then 
@@ -95,10 +93,8 @@ def even_odd_palindrome'rn := fun (n : Int) ↦
       -- Deep counting law: each of the n integers 1..n is counted at most once (only if it is a
       -- palindrome, and then into exactly one of the two buckets), so the two palindrome counts
       -- together never exceed n.
-      let __unpack_value_1 := ((0 : Int), (0 : Int))
-      let __unpack_pair_1 := __unpack_value_1
-      let mut odd_cnt : Int := Prod.fst __unpack_pair_1
-      let mut even_cnt : Int := Prod.snd __unpack_pair_1
+      let mut odd_cnt : Int := (0 : Int)
+      let mut even_cnt : Int := (0 : Int)
       for i in (PastaLean.pyRange (n +ₚ (1 : Int)) (1 : Int))do
         let _ := Libraries.passta.pyPassInvariant (decide (odd_cnt +ₚ even_cnt ≤ i -ₚ (1 : Int)))
         if h_1 : PastaLean.pyStr i == PastaLean.pySlice (PastaLean.pyStr i) none none (some (-(1 : Int))) then 

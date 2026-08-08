@@ -81,8 +81,7 @@ def largestCombination := fun (candidates : List Int) ↦
 
 @[spec]
 theorem largestCombination_spec :
-    ⦃⌜PastaLean.pyLen candidates > (0 : Int) ∧
-          PastaLean.pyAll ((PastaLean.pyIter candidates).map fun c => decide (c ≥ (0 : Int)))⌝⦄
+    ⦃⌜PastaLean.pyLen candidates > (0 : Int) ∧ ∀ c ∈ PastaLean.pyIter candidates, c ≥ (0 : Int)⌝⦄
       largestCombination candidates ⦃⇓ans => ⌜(0 : Int) ≤ ans ∧ ans ≤ PastaLean.pyLen candidates⌝⦄ :=
   by
   try
@@ -90,13 +89,12 @@ theorem largestCombination_spec :
     · ⇓⟨cur, ans⟩ =>
       ⌜let i := (cur.prefix.length : Int);
         (((0 : Int) ≤ i ∧ i ≤ limit) ∧ (0 : Int) ≤ ans) ∧ ans ≤ PastaLean.pyLen candidates⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem largestCombination_correct :
     ∀ (candidates : List Int),
-      PastaLean.pyLen candidates > (0 : Int) ∧
-          PastaLean.pyAll ((PastaLean.pyIter candidates).map fun c => decide (c ≥ (0 : Int))) →
+      (PastaLean.pyLen candidates > (0 : Int) ∧ ∀ c ∈ PastaLean.pyIter candidates, c ≥ (0 : Int)) →
         let ans := (largestCombination candidates).run;
         (0 : Int) ≤ ans ∧ ans ≤ PastaLean.pyLen candidates :=
   by

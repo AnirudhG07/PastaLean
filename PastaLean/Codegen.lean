@@ -153,6 +153,9 @@ structure State where
   /-- Variables bound with `let mut` (reassignable in place). An immutable `let` loop var that a body
   reassigns to a different type is shadowed instead; a `let mut` (incl. a `PyAny` slot) is not. -/
   mutVars : HashSet Name := HashSet.emptyWithCapacity 32
+  /-- Mut vars whose slot type is `PyAny`. A `PyAny` slot absorbs any later value by coercion, so a
+  cross-type reassignment to it is a plain reassign — NOT a type-changing `'rbN` rebind. -/
+  pyAnySlotVars : HashSet Name := HashSet.emptyWithCapacity 16
   /-- SSA renames for type-changing rebinds. When `s = list(s)` reassigns an existing `let mut s`
   (a `str`) to a `List`, we can neither re-`let mut s` (Lean forbids shadowing a mut var) nor
   reassign (types differ), so we bind a fresh `let mut s'rbN` and map `s ↦ s'rbN` here; every later
@@ -321,7 +324,8 @@ def withFixedVariables {α : Type} (x : PygenM α) : PygenM α := do
       withPygenStateField (·.libObjVars) (fun st libObjVars => { st with libObjVars := libObjVars }) (← get).libObjVars <|
       withPygenStateField (·.dictVars) (fun st dictVars => { st with dictVars := dictVars }) (← get).dictVars <|
        withPygenStateField (·.renames) (fun st renames => { st with renames := renames }) (← get).renames <|
-        withPygenStateField (·.mutVars) (fun st mutVars => { st with mutVars := mutVars }) (← get).mutVars x
+        withPygenStateField (·.mutVars) (fun st mutVars => { st with mutVars := mutVars }) (← get).mutVars <|
+         withPygenStateField (·.pyAnySlotVars) (fun st v => { st with pyAnySlotVars := v }) (← get).pyAnySlotVars x
 
 /-- Run `x` with the current loop's break-flag set to `flag?`. A loop body always overrides the
 flag (to its own `else` flag, or `none`) so a `break` binds to the innermost loop only. -/
@@ -394,6 +398,14 @@ def isMutVar (name : Name) : PygenM Bool := do
 
 def setMutVar (name : Name) : PygenM Unit := do
   modify fun st => { st with mutVars := st.mutVars.insert name }
+
+/-- Whether `name`'s `let mut` slot has type `PyAny` (so a reassign coerces, never rebinds). -/
+def isPyAnySlot (name : Name) : PygenM Bool := do
+  return (← get).pyAnySlotVars.contains name
+
+def setPyAnySlot (name : Name) (isPyAny : Bool) : PygenM Unit := do
+  modify fun st => { st with
+    pyAnySlotVars := if isPyAny then st.pyAnySlotVars.insert name else st.pyAnySlotVars.erase name }
 
 /-- Resolve a local name through the SSA rename map (identity if unrenamed). -/
 def applyRename (name : Name) : PygenM Name := do

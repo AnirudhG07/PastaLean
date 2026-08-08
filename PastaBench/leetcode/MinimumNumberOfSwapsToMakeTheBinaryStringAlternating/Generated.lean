@@ -102,7 +102,7 @@ theorem _minSwaps'calc_spec :
               let x := Prod.snd _pair_1;
               PastaLean.pyBitXor c (PastaLean.pyBitAnd i (1 : Int)) != x)
         c = (0 : Int) ∨ c = (1 : Int) → _minSwaps'calc c s ≥ (0 : Int) ∧ mismatches %ₚ (2 : Int) = (0 : Int) :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  by taste?
 
 def minSwaps := fun (s : String) ↦
   (do
@@ -125,22 +125,17 @@ def minSwaps := fun (s : String) ↦
 
 @[spec]
 theorem minSwaps_spec :
-    ⦃⌜s = "" ∨
-          PastaLean.pyTruthy (PastaLean.pyAll ((PastaLean.pyIter s).map fun c => PastaLean.pyContains ("0", "1") c)) =
-            true⌝⦄
-      minSwaps s ⦃⇓result =>
+    ⦃⌜s = "" ∨ ∀ c ∈ PastaLean.pyIter s, PastaLean.pyContains ("0", "1") c⌝⦄ minSwaps s ⦃⇓result =>
       ⌜(result = -(1 : Int)) =
           (PastaLean.pyAbs (PastaLean.pyCount s "0" *ₚ (2 : Int) -ₚ PastaLean.pyLen s) > (1 : Int))⌝⦄ :=
   by
   mvcgen [minSwaps, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  sorry
+  taste?
   all_goals sorry
 
 theorem minSwaps_correct :
     ∀ (s : String),
-      s = "" ∨
-          PastaLean.pyTruthy (PastaLean.pyAll ((PastaLean.pyIter s).map fun c => PastaLean.pyContains ("0", "1") c)) =
-            true →
+      (s = "" ∨ ∀ c ∈ PastaLean.pyIter s, PastaLean.pyContains ("0", "1") c) →
         let result := (minSwaps s).run;
         (result = -(1 : Int)) =
           (PastaLean.pyAbs (PastaLean.pyCount s "0" *ₚ (2 : Int) -ₚ PastaLean.pyLen s) > (1 : Int)) :=

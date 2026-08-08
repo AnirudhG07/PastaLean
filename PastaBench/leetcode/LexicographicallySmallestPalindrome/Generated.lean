@@ -60,10 +60,8 @@ namespace PastaBench.leetcode.LexicographicallySmallestPalindrome
 def makeSmallestPalindrome := fun (s : String) ↦
   (do
     let mut cs : List String := PastaLean.pyList s
-    let __unpack_value_1 := ((0 : Int), PastaLean.pyLen s -ₚ (1 : Int))
-    let __unpack_pair_1 := __unpack_value_1
-    let mut i : Int := Prod.fst __unpack_pair_1
-    let mut j : Int := Prod.snd __unpack_pair_1
+    let mut i : Int := (0 : Int)
+    let mut j : Int := PastaLean.pyLen s -ₚ (1 : Int)
     while (i < j) do
       let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i))
       let _ := Libraries.passta.pyPassInvariant (decide (j < PastaLean.pyLen s))
@@ -83,10 +81,10 @@ def makeSmallestPalindrome := fun (s : String) ↦
       let mut __chain_1 : String := PastaLean.pyMin [cs⦋i⦌, cs⦋j⦌]
       cs := PastaLean.pySetItem cs i __chain_1
       cs := PastaLean.pySetItem cs j __chain_1
-      let __unpack_value_2 := (i +ₚ (1 : Int), j -ₚ (1 : Int))
-      let __unpack_pair_2 := __unpack_value_2
-      i := Prod.fst __unpack_pair_2
-      j := Prod.snd __unpack_pair_2
+      let __unpack_value_1 := (i +ₚ (1 : Int), j -ₚ (1 : Int))
+      let __unpack_pair_1 := __unpack_value_1
+      i := Prod.fst __unpack_pair_1
+      j := Prod.snd __unpack_pair_1
     let __py_ret_1 := PastaLean.pyStringJoin "" cs
     return __py_ret_1 : Id _)
 
@@ -98,7 +96,7 @@ theorem makeSmallestPalindrome_spec :
           result ≤ s⌝⦄ :=
   by
   mvcgen [makeSmallestPalindrome, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  all_goals sorry
+  taste?
   all_goals sorry
 
 theorem makeSmallestPalindrome_correct :
@@ -115,10 +113,8 @@ def makeSmallestPalindrome'rn := fun (s : String) ↦
   Id.run
     (do
       let mut cs : List String := PastaLean.pyList s
-      let __unpack_value_1 := ((0 : Int), PastaLean.pyLen s -ₚ (1 : Int))
-      let __unpack_pair_1 := __unpack_value_1
-      let mut i : Int := Prod.fst __unpack_pair_1
-      let mut j : Int := Prod.snd __unpack_pair_1
+      let mut i : Int := (0 : Int)
+      let mut j : Int := PastaLean.pyLen s -ₚ (1 : Int)
       while (i < j) do
         let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i))
         let _ := Libraries.passta.pyPassInvariant (decide (j < PastaLean.pyLen s))
@@ -138,10 +134,10 @@ def makeSmallestPalindrome'rn := fun (s : String) ↦
         let mut __chain_1 : String := PastaLean.pyMin [cs⦋i⦌, cs⦋j⦌]
         cs := PastaLean.pySetItem cs i __chain_1
         cs := PastaLean.pySetItem cs j __chain_1
-        let __unpack_value_2 := (i +ₚ (1 : Int), j -ₚ (1 : Int))
-        let __unpack_pair_2 := __unpack_value_2
-        i := Prod.fst __unpack_pair_2
-        j := Prod.snd __unpack_pair_2
+        let __unpack_value_1 := (i +ₚ (1 : Int), j -ₚ (1 : Int))
+        let __unpack_pair_1 := __unpack_value_1
+        i := Prod.fst __unpack_pair_1
+        j := Prod.snd __unpack_pair_1
       let __py_ret_1 := PastaLean.pyStringJoin "" cs
       return __py_ret_1)
 

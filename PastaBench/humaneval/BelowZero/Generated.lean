@@ -87,7 +87,13 @@ theorem below_zero_spec :
   by
   try
     mvcgen [below_zero, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · Invariant.withEarlyReturn (onReturn := fun _ _ => ⌜True⌝) (onContinue := fun _ _ => ⌜True⌝)
+    ·
+      Invariant.withEarlyReturn (onContinue := fun cur b =>
+        ⌜let account := b;
+          account ≥ (0 : Int) ∧
+            account ≤
+              PastaLean.pySum ((List.filter (fun x => x > (0 : Int)) (PastaLean.pyIter operations)).map fun x => x)⌝)
+        (onReturn := fun _ _ => ⌜True⌝)
   taste?
   all_goals sorry
 

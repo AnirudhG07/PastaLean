@@ -95,12 +95,10 @@ def fib4 := fun (n : Int) ↦
               return (0 : Int)
             else
               let _ := Libraries.passta.pyPassAssert (decide (n ≥ (4 : Int)))
-              let __unpack_value_1 := ((0 : Int), ((0 : Int), ((2 : Int), (0 : Int))))
-              let __unpack_pair_1 := __unpack_value_1
-              let mut a : Int := Prod.fst __unpack_pair_1
-              let mut b : Int := Prod.fst (Prod.snd __unpack_pair_1)
-              let mut c : Int := Prod.fst (Prod.snd (Prod.snd __unpack_pair_1))
-              let mut d : Int := Prod.snd (Prod.snd (Prod.snd __unpack_pair_1))
+              let mut a : Int := (0 : Int)
+              let mut b : Int := (0 : Int)
+              let mut c : Int := (2 : Int)
+              let mut d : Int := (0 : Int)
               for i in (PastaLean.pyRange (n +ₚ (1 : Int)) (4 : Int))do
                 let _ := Libraries.passta.pyPassInvariant (decide ((4 : Int) ≤ i))
                 let _ := Libraries.passta.pyPassInvariant (decide (i ≤ n +ₚ (1 : Int)))
@@ -115,12 +113,12 @@ def fib4 := fun (n : Int) ↦
                 let _ := Libraries.passta.pyPassInvariant (decide (c ≥ (0 : Int)))
                 let _ := Libraries.passta.pyPassInvariant (decide (d ≥ (0 : Int)))
                 let _ := Libraries.passta.pyPassDecreases (n +ₚ (1 : Int) -ₚ i)
-                let __unpack_value_2 := (b, (c, (d, a +ₚ b +ₚ c +ₚ d)))
-                let __unpack_pair_2 := __unpack_value_2
-                a := Prod.fst __unpack_pair_2
-                b := Prod.fst (Prod.snd __unpack_pair_2)
-                c := Prod.fst (Prod.snd (Prod.snd __unpack_pair_2))
-                d := Prod.snd (Prod.snd (Prod.snd __unpack_pair_2))
+                let __unpack_value_1 := (b, (c, (d, a +ₚ b +ₚ c +ₚ d)))
+                let __unpack_pair_1 := __unpack_value_1
+                a := Prod.fst __unpack_pair_1
+                b := Prod.fst (Prod.snd __unpack_pair_1)
+                c := Prod.fst (Prod.snd (Prod.snd __unpack_pair_1))
+                d := Prod.snd (Prod.snd (Prod.snd __unpack_pair_1))
               let _ := Libraries.passta.pyPassAssert (d %ₚ (2 : Int) == (0 : Int))
               let _ := Libraries.passta.pyPassAssert (decide (d ≥ (0 : Int)))
               return d)
@@ -146,12 +144,10 @@ def fib4'rn := fun (n : Int) ↦
               return (0 : Int)
             else
               let _ := Libraries.passta.pyPassAssert (decide (n ≥ (4 : Int)))
-              let __unpack_value_1 := ((0 : Int), ((0 : Int), ((2 : Int), (0 : Int))))
-              let __unpack_pair_1 := __unpack_value_1
-              let mut a : Int := Prod.fst __unpack_pair_1
-              let mut b : Int := Prod.fst (Prod.snd __unpack_pair_1)
-              let mut c : Int := Prod.fst (Prod.snd (Prod.snd __unpack_pair_1))
-              let mut d : Int := Prod.snd (Prod.snd (Prod.snd __unpack_pair_1))
+              let mut a : Int := (0 : Int)
+              let mut b : Int := (0 : Int)
+              let mut c : Int := (2 : Int)
+              let mut d : Int := (0 : Int)
               for i in (PastaLean.pyRange (n +ₚ (1 : Int)) (4 : Int))do
                 let _ := Libraries.passta.pyPassInvariant (decide ((4 : Int) ≤ i))
                 let _ := Libraries.passta.pyPassInvariant (decide (i ≤ n +ₚ (1 : Int)))
@@ -166,12 +162,12 @@ def fib4'rn := fun (n : Int) ↦
                 let _ := Libraries.passta.pyPassInvariant (decide (c ≥ (0 : Int)))
                 let _ := Libraries.passta.pyPassInvariant (decide (d ≥ (0 : Int)))
                 let _ := Libraries.passta.pyPassDecreases (n +ₚ (1 : Int) -ₚ i)
-                let __unpack_value_2 := (b, (c, (d, a +ₚ b +ₚ c +ₚ d)))
-                let __unpack_pair_2 := __unpack_value_2
-                a := Prod.fst __unpack_pair_2
-                b := Prod.fst (Prod.snd __unpack_pair_2)
-                c := Prod.fst (Prod.snd (Prod.snd __unpack_pair_2))
-                d := Prod.snd (Prod.snd (Prod.snd __unpack_pair_2))
+                let __unpack_value_1 := (b, (c, (d, a +ₚ b +ₚ c +ₚ d)))
+                let __unpack_pair_1 := __unpack_value_1
+                a := Prod.fst __unpack_pair_1
+                b := Prod.fst (Prod.snd __unpack_pair_1)
+                c := Prod.fst (Prod.snd (Prod.snd __unpack_pair_1))
+                d := Prod.snd (Prod.snd (Prod.snd __unpack_pair_1))
               let _ := Libraries.passta.pyPassAssert (d %ₚ (2 : Int) == (0 : Int))
               let _ := Libraries.passta.pyPassAssert (decide (d ≥ (0 : Int)))
               return d)

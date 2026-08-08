@@ -101,8 +101,15 @@ theorem maxProduct_spec :
               (PastaLean.pyRange (PastaLean.pyLen nums) (i +ₚ (1 : Int))).map fun j =>
                 decide (ans ≥ (nums⦋i⦌ -ₚ (1 : Int)) *ₚ (nums⦋j⦌ -ₚ (1 : Int))))⌝⦄ :=
   by
-  mvcgen [maxProduct, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  try
+    mvcgen [maxProduct, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · ⇓⟨cur, ans⟩ =>
+      ⌜(((0 : Int) ≤ i ∧ i ≤ PastaLean.pyLen nums) ∧ ans ≥ (0 : Int)) ∧
+          PastaLean.pyAll
+            ((PastaLean.pyRange i).flatMap fun k =>
+              (PastaLean.pyRange (PastaLean.pyLen nums) (k +ₚ (1 : Int))).map fun l =>
+                decide (ans ≥ (nums⦋k⦌ -ₚ (1 : Int)) *ₚ (nums⦋l⦌ -ₚ (1 : Int))))⌝
+  taste?
   all_goals sorry
 
 theorem maxProduct_correct :

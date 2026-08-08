@@ -129,7 +129,7 @@ theorem levelOrder_spec :
       ⌜PastaLean.pyIsNone root ∧ ans = [] ∨ !PastaLean.pyIsNone root ∧ PastaLean.pyLen ans > (0 : Int)⌝⦄ :=
   by
   mvcgen [levelOrder, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry; sorry; sorry; pyany_cases <;> grind +locals; sorry; sorry; sorry; sorry; sorry; sorry; sorry; sorry; sorry
+  taste?
   all_goals sorry
 
 theorem levelOrder_correct :

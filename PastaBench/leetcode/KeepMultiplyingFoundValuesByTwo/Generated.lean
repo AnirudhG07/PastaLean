@@ -57,7 +57,7 @@ theorem findFinalValue_spec :
     ⦃⌜True⌝⦄ findFinalValue nums original ⦃⇓original => ⌜!(PastaLean.pyContains (PastaLean.pySet nums) original)⌝⦄ :=
   by
   mvcgen [findFinalValue, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  all_goals sorry
+  taste?
   all_goals sorry
 
 theorem findFinalValue_correct :

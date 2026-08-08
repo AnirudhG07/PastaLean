@@ -80,7 +80,7 @@ theorem returnToBoundaryCount_spec :
     · ⇓⟨cur, count, current_sum⟩ =>
       ⌜let i := (cur.prefix.length : Int);
         (((0 : Int) ≤ i ∧ i ≤ PastaLean.pyLen nums) ∧ (0 : Int) ≤ count) ∧ count ≤ i⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals; pyany_cases <;> grind +locals; simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals
+  taste?
   all_goals sorry
 
 theorem returnToBoundaryCount_correct :

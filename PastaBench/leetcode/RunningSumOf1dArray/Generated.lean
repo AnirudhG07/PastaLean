@@ -50,13 +50,9 @@ attribute [simp] runningSum
 theorem runningSum_correct :
     ∀ (nums : List Int),
       PastaLean.pyLen (runningSum nums) = PastaLean.pyLen nums ∧
-        PastaLean.pyTruthy
-            (PastaLean.pyAll
-              ((PastaLean.pyRange (PastaLean.pyLen nums)).map fun i =>
-                (runningSum nums)⦋i⦌ ==
-                  PastaLean.pySum (PastaLean.pySlice nums none (some (i +ₚ (1 : Int))) none))) =
-          true :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+        ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen nums)),
+          (runningSum nums)⦋i⦌ = PastaLean.pySum (PastaLean.pySlice nums none (some (i +ₚ (1 : Int))) none) :=
+  by taste?
 
 def runningSum'rn := fun (nums : List Int) ↦ PastaLean.pyList (Libraries.itertools.pyAccumulate nums)
 

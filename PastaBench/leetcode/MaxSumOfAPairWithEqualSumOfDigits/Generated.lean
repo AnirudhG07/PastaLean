@@ -67,10 +67,8 @@ def maximumSum := fun (nums : List Int) ↦
       let _ :=
         Libraries.passta.pyPassInvariant
           (PastaLean.pyAll ((PastaLean.pyIter (PastaLean.pyAnys d)).map fun val => decide (val ≥ (0 : Int))))
-      let __unpack_value_1 := ((0 : Int), v)
-      let __unpack_pair_1 := __unpack_value_1
-      let mut x : Int := Prod.fst __unpack_pair_1
-      let mut y : Int := Prod.snd __unpack_pair_1
+      let mut x : Int := (0 : Int)
+      let mut y : Int := v
       while (PastaLean.pyTruthy y) do
         let _ := Libraries.passta.pyPassInvariant (decide (y ≥ (0 : Int)))
         let _ := Libraries.passta.pyPassInvariant (decide (x ≥ (0 : Int)))
@@ -86,20 +84,18 @@ def maximumSum := fun (nums : List Int) ↦
 
 @[spec]
 theorem maximumSum_spec :
-    ⦃⌜PastaLean.pyAll ((PastaLean.pyIter nums).map fun v => decide (v ≥ (0 : Int)))⌝⦄ maximumSum nums ⦃⇓ans =>
+    ⦃⌜∀ v ∈ PastaLean.pyIter nums, v ≥ (0 : Int)⌝⦄ maximumSum nums ⦃⇓ans =>
       ⌜ans ≥ -(1 : Int) ∧ (PastaLean.pyLen nums ≤ (1 : Int) ∨ ans = -(1 : Int))⌝⦄ :=
   by
   try
     mvcgen [maximumSum, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓⟨cur, ans⟩ =>
-      ⌜ans ≥ -(1 : Int) ∧
-          PastaLean.pyAll ((PastaLean.pyIter (PastaLean.pyAnys d)).map fun val => decide (val ≥ (0 : Int)))⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+    · ⇓⟨cur, ans⟩ => ⌜ans ≥ -(1 : Int) ∧ ∀ val ∈ PastaLean.pyIter (PastaLean.pyAnys d), val ≥ (0 : Int)⌝
+  taste?
   all_goals sorry
 
 theorem maximumSum_correct :
     ∀ (nums : List Int),
-      PastaLean.pyAll ((PastaLean.pyIter nums).map fun v => decide (v ≥ (0 : Int))) →
+      (∀ v ∈ PastaLean.pyIter nums, v ≥ (0 : Int)) →
         let ans := (maximumSum nums).run;
         ans ≥ -(1 : Int) ∧ (PastaLean.pyLen nums ≤ (1 : Int) ∨ ans = -(1 : Int)) :=
   by
@@ -118,10 +114,8 @@ def maximumSum'rn := fun (nums : List Int) ↦
         let _ :=
           Libraries.passta.pyPassInvariant
             (PastaLean.pyAll ((PastaLean.pyIter (PastaLean.pyAnys d)).map fun val => decide (val ≥ (0 : Int))))
-        let __unpack_value_1 := ((0 : Int), v)
-        let __unpack_pair_1 := __unpack_value_1
-        let mut x : Int := Prod.fst __unpack_pair_1
-        let mut y : Int := Prod.snd __unpack_pair_1
+        let mut x : Int := (0 : Int)
+        let mut y : Int := v
         while (PastaLean.pyTruthy y) do
           let _ := Libraries.passta.pyPassInvariant (decide (y ≥ (0 : Int)))
           let _ := Libraries.passta.pyPassInvariant (decide (x ≥ (0 : Int)))

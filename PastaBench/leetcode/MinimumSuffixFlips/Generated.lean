@@ -78,20 +78,19 @@ def minFlips := fun (target : String) ↦
 
 @[spec]
 theorem minFlips_spec :
-    ⦃⌜PastaLean.pyAll ((PastaLean.pyIter target).map fun c => PastaLean.pyContains ("0", "1") c)⌝⦄
-      minFlips target ⦃⇓ans =>
+    ⦃⌜∀ c ∈ PastaLean.pyIter target, PastaLean.pyContains ("0", "1") c⌝⦄ minFlips target ⦃⇓ans =>
       ⌜((0 : Int) ≤ ans ∧ ans ≤ PastaLean.pyLen target) ∧
           (PastaLean.pyLen target = (0 : Int) ∨ ans %ₚ (2 : Int) = PastaLean.pyInt target⦋(-1 : Int)⦌)⌝⦄ :=
   by
   try
     mvcgen [minFlips, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓⟨cur, ans⟩ => ⌜ans ≥ (0 : Int)⌝
-  sorry
+  taste?
   all_goals sorry
 
 theorem minFlips_correct :
     ∀ (target : String),
-      PastaLean.pyAll ((PastaLean.pyIter target).map fun c => PastaLean.pyContains ("0", "1") c) →
+      (∀ c ∈ PastaLean.pyIter target, PastaLean.pyContains ("0", "1") c) →
         let ans := (minFlips target).run;
         ((0 : Int) ≤ ans ∧ ans ≤ PastaLean.pyLen target) ∧
           (PastaLean.pyLen target = (0 : Int) ∨ ans %ₚ (2 : Int) = PastaLean.pyInt target⦋(-1 : Int)⦌) :=

@@ -200,7 +200,7 @@ theorem kBigIndices_spec :
               (fun v =>
                 decide (BinaryIndexedTree.query tree1 (v -ₚ (1 : Int)) ≥ k) &&
                   decide (BinaryIndexedTree.query tree2 (v -ₚ (1 : Int)) ≥ k))).sum⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem kBigIndices_correct :

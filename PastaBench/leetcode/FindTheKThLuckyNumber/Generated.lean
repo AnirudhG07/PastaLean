@@ -137,7 +137,7 @@ theorem kthLuckyNumber_spec : ⦃⌜k ≥ (1 : Int)⌝⦄ kthLuckyNumber k ⦃�
             let n := st;
             (n ≥ (1 : Int) ∧ PastaLean.pyLen ans +ₚ n = n_len) ∧ (1 : Int) ≤ k ∧ k ≤ PastaLean.pyShiftLeft (1 : Int) n)
           (fun _ => True) s⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem kthLuckyNumber_correct :

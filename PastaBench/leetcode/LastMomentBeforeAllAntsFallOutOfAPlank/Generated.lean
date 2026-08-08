@@ -74,7 +74,7 @@ theorem getLastMoment_spec :
     mvcgen [getLastMoment, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓⟨cur, ans⟩ => ⌜True⌝
     · ⇓⟨cur, ans⟩ => ⌜True⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem getLastMoment_correct :

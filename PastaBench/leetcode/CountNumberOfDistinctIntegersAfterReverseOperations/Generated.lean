@@ -88,7 +88,7 @@ theorem countDistinctIntegers_spec :
     · ⇓cur =>
       ⌜PastaLean.pyLen s ≥ PastaLean.pyLen (PastaLean.pySet nums) ∧
           PastaLean.pyLen s ≤ PastaLean.pyLen (PastaLean.pySet nums) +ₚ PastaLean.pyLen nums⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem countDistinctIntegers_correct :

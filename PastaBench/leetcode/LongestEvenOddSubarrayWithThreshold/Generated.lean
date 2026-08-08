@@ -63,10 +63,8 @@ namespace PastaBench.leetcode.LongestEvenOddSubarrayWithThreshold
 
 def longestAlternatingSubarray := fun (nums : List Int) ↦ fun (threshold : Int) ↦
   (do
-    let __unpack_value_1 := ((0 : Int), PastaLean.pyLen nums)
-    let __unpack_pair_1 := __unpack_value_1
-    let mut ans : Int := Prod.fst __unpack_pair_1
-    let mut n : Int := Prod.snd __unpack_pair_1
+    let mut ans : Int := (0 : Int)
+    let mut n : Int := PastaLean.pyLen nums
     for l in (PastaLean.pyRange n)do
       let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ l) && decide (l ≤ n))
       let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ ans) && decide (ans ≤ n))
@@ -96,7 +94,7 @@ theorem longestAlternatingSubarray_spec :
     · ⇓⟨cur, ans⟩ =>
       ⌜let l := (cur.prefix.length : Int);
         ((0 : Int) ≤ l ∧ l ≤ n) ∧ (0 : Int) ≤ ans ∧ ans ≤ n⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem longestAlternatingSubarray_correct :
@@ -111,10 +109,8 @@ theorem longestAlternatingSubarray_correct :
 def longestAlternatingSubarray'rn := fun (nums : List Int) ↦ fun (threshold : Int) ↦
   Id.run
     (do
-      let __unpack_value_1 := ((0 : Int), PastaLean.pyLen nums)
-      let __unpack_pair_1 := __unpack_value_1
-      let mut ans : Int := Prod.fst __unpack_pair_1
-      let mut n : Int := Prod.snd __unpack_pair_1
+      let mut ans : Int := (0 : Int)
+      let mut n : Int := PastaLean.pyLen nums
       for l in (PastaLean.pyRange n)do
         let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ l) && decide (l ≤ n))
         let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ ans) && decide (ans ≤ n))

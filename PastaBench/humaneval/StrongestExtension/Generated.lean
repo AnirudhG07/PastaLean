@@ -75,10 +75,8 @@ namespace PastaBench.humaneval.StrongestExtension
 
 def strength := fun (s : String) ↦
   (do
-    let __unpack_value_1 := ((0 : Int), (0 : Int))
-    let __unpack_pair_1 := __unpack_value_1
-    let mut CAP : Int := Prod.fst __unpack_pair_1
-    let mut SM : Int := Prod.snd __unpack_pair_1
+    let mut CAP : Int := (0 : Int)
+    let mut SM : Int := (0 : Int)
     for ch in (PastaLean.pyIter s)do
       let _ := Libraries.passta.pyPassInvariant (decide (CAP ≥ (0 : Int)))
       let _ := Libraries.passta.pyPassInvariant (decide (SM ≥ (0 : Int)))
@@ -102,10 +100,8 @@ theorem strength_spec : ⦃⌜True⌝⦄ strength s ⦃⇓_ => ⌜True⌝⦄ :=
 def strength'rn := fun (s : String) ↦
   Id.run
     (do
-      let __unpack_value_1 := ((0 : Int), (0 : Int))
-      let __unpack_pair_1 := __unpack_value_1
-      let mut CAP : Int := Prod.fst __unpack_pair_1
-      let mut SM : Int := Prod.snd __unpack_pair_1
+      let mut CAP : Int := (0 : Int)
+      let mut SM : Int := (0 : Int)
       for ch in (PastaLean.pyIter s)do
         let _ := Libraries.passta.pyPassInvariant (decide (CAP ≥ (0 : Int)))
         let _ := Libraries.passta.pyPassInvariant (decide (SM ≥ (0 : Int)))
@@ -155,7 +151,7 @@ theorem Strongest_Extension_spec :
   by
   try
     mvcgen [Strongest_Extension, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · Invariant.withEarlyReturn (onReturn := fun _ _ => ⌜True⌝) (onContinue := fun _ _ => ⌜True⌝)
+    · Invariant.withEarlyReturn (onContinue := fun cur b => ⌜True⌝) (onReturn := fun _ _ => ⌜True⌝)
   taste?
   all_goals sorry
 

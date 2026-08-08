@@ -121,7 +121,12 @@ theorem get_row_spec :
               res⦋k⦌⦋(0 : Int)⦌ = res⦋k +ₚ (1 : Int)⦌⦋(0 : Int)⦌ ∧
                 res⦋k⦌⦋(1 : Int)⦌ > res⦋k +ₚ (1 : Int)⦌⦋(1 : Int)⦌⌝⦄ :=
   by
-  mvcgen [get_row, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
+  try
+    mvcgen [get_row, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · ⇓cur =>
+      ⌜((((0 : Int) ≤ i ∧ i < PastaLean.pyLen lst) ∧ l = lst⦋i⦌) ∧
+            ∀ p ∈ PastaLean.pyIter res, lst⦋Prod.fst p⦌⦋Prod.snd p⦌ = x) ∧
+          PastaLean.pyLen res = PastaLean.pySum ((PastaLean.pyRange i).map fun r => PastaLean.pyCount lst⦋r⦌ x)⌝
   taste?
   all_goals sorry
 

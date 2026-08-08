@@ -128,10 +128,9 @@ theorem maxSlidingWindow_spec :
     · ⇓cur =>
       ⌜let i := (cur.prefix.length : Int);
         (((k -ₚ (1 : Int) ≤ i ∧ i < PastaLean.pyLen nums) ∧ PastaLean.pyLen ans = i -ₚ (k -ₚ (1 : Int))) ∧
-            PastaLean.pyAll
-              ((PastaLean.pyIter q).map fun t => decide ((0 : Int) ≤ Prod.snd t) && decide (Prod.snd t < i))) ∧
-          PastaLean.pyAll ((PastaLean.pyIter q).map fun t => -Prod.fst t == nums⦋Prod.snd t⦌)⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+            ∀ t ∈ PastaLean.pyIter q, (0 : Int) ≤ Prod.snd t ∧ Prod.snd t < i) ∧
+          ∀ t ∈ PastaLean.pyIter q, -Prod.fst t = nums⦋Prod.snd t⦌⌝
+  taste?
   all_goals sorry
 
 theorem maxSlidingWindow_correct :

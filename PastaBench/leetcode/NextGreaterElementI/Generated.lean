@@ -147,10 +147,8 @@ theorem nextGreaterElement_spec :
   try
     mvcgen [nextGreaterElement, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓cur =>
-      ⌜((PastaLean.pyAll
-                ((PastaLean.pyRange (PastaLean.pyLen stk -ₚ (1 : Int))).map fun i =>
-                  decide (stk⦋i⦌ > stk⦋i +ₚ (1 : Int)⦌)) ∧
-              PastaLean.pyAll ((PastaLean.pyIter stk).map fun val => PastaLean.pyContains nums2 val)) ∧
+      ⌜(((∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen stk -ₚ (1 : Int))), stk⦋i⦌ > stk⦋i +ₚ (1 : Int)⦌) ∧
+              ∀ val ∈ PastaLean.pyIter stk, PastaLean.pyContains nums2 val) ∧
             PastaLean.pyAll
               ((PastaLean.pyIter (PastaLean.pyItems d)).map fun (_pair_2 : Int × Int) =>
                 let k := Prod.fst _pair_2;
@@ -161,7 +159,7 @@ theorem nextGreaterElement_spec :
               let k := Prod.fst _pair_4;
               let v := Prod.snd _pair_4;
               decide (v > k))⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem nextGreaterElement_correct :

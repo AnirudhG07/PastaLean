@@ -68,7 +68,7 @@ theorem removePalindromeSub_correct :
         PastaLean.pyLen (PastaLean.pySet s) ≤ (2 : Int) →
           ((0 : Int) < removePalindromeSub s ∧ removePalindromeSub s ≤ (2 : Int)) ∧
             (s = PastaLean.pySlice s none none (some (-(1 : Int)))) = (removePalindromeSub s = (1 : Int)) :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals
+  by taste?
 
 def removePalindromeSub'rn := fun (s : String) ↦
   if PastaLean.pySlice s none none (some (-(1 : Int))) == s then (1 : Int) else (2 : Int)

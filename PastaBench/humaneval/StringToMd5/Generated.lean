@@ -50,13 +50,13 @@ def string_to_md5 := fun (text : String) ↦
     let mut m : String := Libraries.hashlib.pyMd5Dummy
     m := Libraries.hashlib.pyHashUpdateDummy m (PastaLean.pyStringEncodeDummy text "utf-8")
     let __py_ret_1 := Libraries.hashlib.pyMd5HexdigestDummy m
-    return __py_ret_1 : Id _)
+    return __py_ret_1 : Id (Option String))
 
 @[spec]
 theorem string_to_md5_spec : ⦃⌜True⌝⦄ string_to_md5 text ⦃⇓result => ⌜text ≠ "" ∨ PastaLean.pyIsNone result⌝⦄ :=
   by
   mvcgen [string_to_md5, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  sorry
+  taste?
   all_goals sorry
 
 theorem string_to_md5_correct :

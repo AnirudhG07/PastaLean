@@ -93,11 +93,9 @@ namespace PastaBench.leetcode.LastSubstringInLexicographicalOrder
 
 def lastSubstring := fun (s : String) ↦
   (do
-    let __unpack_value_1 := ((0 : Int), ((1 : Int), (0 : Int)))
-    let __unpack_pair_1 := __unpack_value_1
-    let mut i : Int := Prod.fst __unpack_pair_1
-    let mut j : Int := Prod.fst (Prod.snd __unpack_pair_1)
-    let mut k : Int := Prod.snd (Prod.snd __unpack_pair_1)
+    let mut i : Int := (0 : Int)
+    let mut j : Int := (1 : Int)
+    let mut k : Int := (0 : Int)
     while (j +ₚ k < PastaLean.pyLen s) do
       -- --- Loop Invariants ---
       -- Bounds for the indices i, j, k. These are crucial for proving memory safety.
@@ -155,9 +153,8 @@ def lastSubstring := fun (s : String) ↦
 @[spec]
 theorem lastSubstring_spec :
     ⦃⌜True⌝⦄ lastSubstring s ⦃⇓result =>
-      ⌜PastaLean.pyAll
-          ((PastaLean.pyRange (PastaLean.pyLen s)).map fun p =>
-            decide (result ≥ PastaLean.pySlice s (some p) none none))⌝⦄ :=
+      ⌜∀ p ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen s)),
+          result ≥ PastaLean.pySlice s (some p) none none⌝⦄ :=
   by
   try
     mvcgen [lastSubstring, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
@@ -175,15 +172,14 @@ theorem lastSubstring_spec :
             (((((0 : Int) ≤ i ∧ i < j) ∧ j ≤ PastaLean.pyLen s) ∧ (0 : Int) ≤ k) ∧ j +ₚ k < PastaLean.pyLen s) ∧
               i +ₚ k < PastaLean.pyLen s)
           (fun _ => True) s⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem lastSubstring_correct :
     ∀ (s : String),
       let result := (lastSubstring s).run;
-      PastaLean.pyAll
-        ((PastaLean.pyRange (PastaLean.pyLen s)).map fun p =>
-          decide (result ≥ PastaLean.pySlice s (some p) none none)) :=
+      ∀ p ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen s)),
+        result ≥ PastaLean.pySlice s (some p) none none :=
   by
   intro s
   exact lastSubstring_spec True.intro
@@ -197,11 +193,9 @@ def lastSubstring'rn := fun (s : String) ↦
           This is equivalent to finding the lexicographically largest suffix of s.
           
       -/
-      let __unpack_value_1 := ((0 : Int), ((1 : Int), (0 : Int)))
-      let __unpack_pair_1 := __unpack_value_1
-      let mut i : Int := Prod.fst __unpack_pair_1
-      let mut j : Int := Prod.fst (Prod.snd __unpack_pair_1)
-      let mut k : Int := Prod.snd (Prod.snd __unpack_pair_1)
+      let mut i : Int := (0 : Int)
+      let mut j : Int := (1 : Int)
+      let mut k : Int := (0 : Int)
       while (j +ₚ k < PastaLean.pyLen s) do
         -- --- Loop Invariants ---
         -- Bounds for the indices i, j, k. These are crucial for proving memory safety.

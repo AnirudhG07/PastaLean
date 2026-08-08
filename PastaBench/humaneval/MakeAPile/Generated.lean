@@ -59,10 +59,8 @@ namespace PastaBench.humaneval.MakeAPile
 
 def make_a_pile := fun (n : Int) ↦
   (do
-    let __unpack_value_1 := ([], n)
-    let __unpack_pair_1 := __unpack_value_1
-    let mut ans : List Int := Prod.fst __unpack_pair_1
-    let mut num : Int := Prod.snd __unpack_pair_1
+    let mut ans : List Int := []
+    let mut num : Int := n
     for i in (PastaLean.pyRange n)do
       let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i))
       let _ := Libraries.passta.pyPassInvariant (decide (i ≤ n))
@@ -119,10 +117,8 @@ def make_a_pile'rn := fun (n : Int) ↦
       let _ := Libraries.passta.pyPassRequires (decide (n ≥ (0 : Int)))
       -- THE POINT: n levels holding the arithmetic progression n, n+2, …, n+2(n-1). Length pins the
       -- level count; the total pins the progression's closed form, n*n + n*(n-1) = 2n^2 - n.
-      let __unpack_value_1 := ([], n)
-      let __unpack_pair_1 := __unpack_value_1
-      let mut ans : List Int := Prod.fst __unpack_pair_1
-      let mut num : Int := Prod.snd __unpack_pair_1
+      let mut ans : List Int := []
+      let mut num : Int := n
       for i in (PastaLean.pyRange n)do
         let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i))
         let _ := Libraries.passta.pyPassInvariant (decide (i ≤ n))

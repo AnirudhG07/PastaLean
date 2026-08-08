@@ -93,7 +93,7 @@ theorem strangePrinter_spec :
     · ⇓cur =>
       ⌜let i := (cur.prefix.length : Int);
         -(1 : Int) ≤ i ∧ i < n⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem strangePrinter_correct :

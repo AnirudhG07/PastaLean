@@ -83,8 +83,10 @@ theorem earliestFullBloom_spec :
           ∀ t ∈ PastaLean.pyIter growTime, t ≥ (0 : Int)⌝⦄
       earliestFullBloom plantTime growTime ⦃⇓ans => ⌜ans ≥ (0 : Int) ∧ ans ≥ PastaLean.pySum plantTime⌝⦄ :=
   by
-  mvcgen [earliestFullBloom, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  try
+    mvcgen [earliestFullBloom, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · ⇓⟨cur, ans, t⟩ => ⌜(t ≥ (0 : Int) ∧ ans ≥ (0 : Int)) ∧ ans ≥ t⌝
+  taste?
   all_goals sorry
 
 theorem earliestFullBloom_correct :

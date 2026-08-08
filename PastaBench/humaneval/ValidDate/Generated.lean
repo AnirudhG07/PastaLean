@@ -99,14 +99,9 @@ def valid_date := fun (date : String) ↦
     else
       let _ := ()
     let _ := Libraries.passta.pyPassAssert (date⦋(2 : Int)⦌ == "-" && date⦋(5 : Int)⦌ == "-")
-    let __unpack_value_1 :=
-      (PastaLean.pySlice date none (some (2 : Int)) none,
-        (PastaLean.pySlice date (some (3 : Int)) (some (5 : Int)) none,
-          PastaLean.pySlice date (some (6 : Int)) none none))
-    let __unpack_pair_1 := __unpack_value_1
-    let mut m : PyAny := Prod.fst __unpack_pair_1
-    let mut d : PyAny := Prod.fst (Prod.snd __unpack_pair_1)
-    let mut y : String := Prod.snd (Prod.snd __unpack_pair_1)
+    let mut m : PyAny := PastaLean.pySlice date none (some (2 : Int)) none
+    let mut d : PyAny := PastaLean.pySlice date (some (3 : Int)) (some (5 : Int)) none
+    let mut y : String := PastaLean.pySlice date (some (6 : Int)) none none
     if h_3 :
         (¬PastaLean.pyTruthy (PastaLean.pyIsDecimal m) = true ∨
             ¬PastaLean.pyTruthy (PastaLean.pyIsDecimal d) = true) ∨
@@ -120,10 +115,10 @@ def valid_date := fun (date : String) ↦
         (if PastaLean.pyTruthy (PastaLean.pyIsDecimal m) then
           if PastaLean.pyTruthy (PastaLean.pyIsDecimal d) then PastaLean.pyIsDecimal y else PastaLean.pyIsDecimal d
         else PastaLean.pyIsDecimal m)
-    let __unpack_value_2 := (PastaLean.pyInt m, PastaLean.pyInt d)
-    let __unpack_pair_2 := __unpack_value_2
-    m := Prod.fst __unpack_pair_2
-    d := Prod.snd __unpack_pair_2
+    let __unpack_value_1 := (PastaLean.pyInt m, PastaLean.pyInt d)
+    let __unpack_pair_1 := __unpack_value_1
+    m := Prod.fst __unpack_pair_1
+    d := Prod.snd __unpack_pair_1
     if h_4 : ¬((1 : Int) ≤ m ∧ m ≤ (12 : Int)) then 
       return Bool.false
     else
@@ -233,14 +228,9 @@ def valid_date'rn := fun (date : String) ↦
       else
         let _ := ()
       let _ := Libraries.passta.pyPassAssert (date⦋(2 : Int)⦌ == "-" && date⦋(5 : Int)⦌ == "-")
-      let __unpack_value_1 :=
-        (PastaLean.pySlice date none (some (2 : Int)) none,
-          (PastaLean.pySlice date (some (3 : Int)) (some (5 : Int)) none,
-            PastaLean.pySlice date (some (6 : Int)) none none))
-      let __unpack_pair_1 := __unpack_value_1
-      let mut m : PyAny := Prod.fst __unpack_pair_1
-      let mut d : PyAny := Prod.fst (Prod.snd __unpack_pair_1)
-      let mut y : String := Prod.snd (Prod.snd __unpack_pair_1)
+      let mut m : PyAny := PastaLean.pySlice date none (some (2 : Int)) none
+      let mut d : PyAny := PastaLean.pySlice date (some (3 : Int)) (some (5 : Int)) none
+      let mut y : String := PastaLean.pySlice date (some (6 : Int)) none none
       if h_3 :
           !PastaLean.pyTruthy (PastaLean.pyIsDecimal m) || !PastaLean.pyTruthy (PastaLean.pyIsDecimal d) ||
             !PastaLean.pyTruthy (PastaLean.pyIsDecimal y) then
@@ -253,10 +243,10 @@ def valid_date'rn := fun (date : String) ↦
           (if PastaLean.pyTruthy (PastaLean.pyIsDecimal m) then
             if PastaLean.pyTruthy (PastaLean.pyIsDecimal d) then PastaLean.pyIsDecimal y else PastaLean.pyIsDecimal d
           else PastaLean.pyIsDecimal m)
-      let __unpack_value_2 := (PastaLean.pyInt m, PastaLean.pyInt d)
-      let __unpack_pair_2 := __unpack_value_2
-      m := Prod.fst __unpack_pair_2
-      d := Prod.snd __unpack_pair_2
+      let __unpack_value_1 := (PastaLean.pyInt m, PastaLean.pyInt d)
+      let __unpack_pair_1 := __unpack_value_1
+      m := Prod.fst __unpack_pair_1
+      d := Prod.snd __unpack_pair_1
       if h_4 : !(decide ((1 : Int) ≤ m) && decide (m ≤ (12 : Int))) then 
         return Bool.false
       else

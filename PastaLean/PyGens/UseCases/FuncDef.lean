@@ -1178,7 +1178,11 @@ def funcDefSyntax : (kind : SyntaxNodeKind) → Json →
               let prelude ← mutatedParamPrelude argInfos info.cleanBody (optMutParamsOf json)
               let bodyStxArray ← monadicFunctionBodySyntax info.cleanBody
               let doStx ← `(do $[$prelude:doElem]* $[$bodyStxArray:doElem]*)
-              let monadTy ← if usesExc then `(ExceptT PastaLean.PyException Id _) else `(Id _)
+              -- A nullable return (`return None` / `return v`) pins the codomain to `Id (Option τ)` so
+              -- the `none`/`some v` branches share a type Lean can't infer from a bare `Id _`.
+              let optRet? ← optionalReturnAscription? json
+              let monadTy ← if usesExc then `(ExceptT PastaLean.PyException Id _)
+                else match optRet? with | some t => `(Id $t) | none => `(Id _)
               let mut v ← `(($doStx : $monadTy))
               for (argIdent, ty?) in argInfos.reverse do
                 v ← match ty? with

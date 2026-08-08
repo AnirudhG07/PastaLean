@@ -131,8 +131,12 @@ theorem shortestSubarray_spec :
     ⦃⌜k > (0 : Int)⌝⦄ shortestSubarray nums k ⦃⇓result =>
       ⌜result = -(1 : Int) ∨ (1 : Int) ≤ result ∧ result ≤ PastaLean.pyLen nums⌝⦄ :=
   by
-  mvcgen [shortestSubarray, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  try
+    mvcgen [shortestSubarray, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · ⇓⟨cur, ans⟩ =>
+      ⌜(((0 : Int) ≤ i ∧ i ≤ PastaLean.pyLen s) ∧ (ans = inf ∨ (1 : Int) ≤ ans ∧ ans ≤ PastaLean.pyLen nums)) ∧
+          (PastaLean.pyLen q = (0 : Int) ∨ (0 : Int) ≤ q⦋(0 : Int)⦌ ∧ q⦋(-1 : Int)⦌ < i)⌝
+  taste?
   all_goals sorry
 
 theorem shortestSubarray_correct :

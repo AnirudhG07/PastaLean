@@ -89,10 +89,8 @@ def maxHeightOfTriangle := fun (red : Int) ↦ fun (blue : Int) ↦
     for k in (PastaLean.pyRange (2 : Int))do
       let _ := Libraries.passta.pyPassInvariant (decide (ans ≥ (0 : Int)))
       let mut c : List Int := [red, blue]
-      let __unpack_value_1 := ((1 : Int), k)
-      let __unpack_pair_1 := __unpack_value_1
-      let mut i : Int := Prod.fst __unpack_pair_1
-      let mut j : Int := Prod.snd __unpack_pair_1
+      let mut i : Int := (1 : Int)
+      let mut j : Int := k
       -- This loop simulates building the triangle row by row.
       while (i ≤ c⦋j⦌) do
         -- Termination: The total number of balls `c[0] + c[1]` is a
@@ -133,7 +131,7 @@ theorem maxHeightOfTriangle_spec :
     · ⇓⟨cur, ans⟩ =>
       ⌜let k := (cur.prefix.length : Int);
         ans ≥ (0 : Int)⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem maxHeightOfTriangle_correct :
@@ -159,10 +157,8 @@ def maxHeightOfTriangle'rn := fun (red : Int) ↦ fun (blue : Int) ↦
       for k in (PastaLean.pyRange (2 : Int))do
         let _ := Libraries.passta.pyPassInvariant (decide (ans ≥ (0 : Int)))
         let mut c : Array Int := #[red, blue]
-        let __unpack_value_1 := ((1 : Int), k)
-        let __unpack_pair_1 := __unpack_value_1
-        let mut i : Int := Prod.fst __unpack_pair_1
-        let mut j : Int := Prod.snd __unpack_pair_1
+        let mut i : Int := (1 : Int)
+        let mut j : Int := k
         -- This loop simulates building the triangle row by row.
         while (i ≤ c⦋j⦌) do
           -- Termination: The total number of balls `c[0] + c[1]` is a

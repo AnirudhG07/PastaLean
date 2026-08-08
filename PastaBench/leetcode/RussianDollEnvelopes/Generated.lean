@@ -103,8 +103,10 @@ theorem maxEnvelopes_spec :
     ⦃⌜PastaLean.pyLen envelopes > (0 : Int)⌝⦄ maxEnvelopes envelopes ⦃⇓result =>
       ⌜result ≥ (1 : Int) ∧ result ≤ PastaLean.pyLen envelopes⌝⦄ :=
   by
-  mvcgen [maxEnvelopes, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  try
+    mvcgen [maxEnvelopes, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · ⇓cur => ⌜PastaLean.pyLen d ≥ (1 : Int) ∧ PastaLean.pyLen d ≤ PastaLean.pyLen envelopes⌝
+  taste?
   all_goals sorry
 
 theorem maxEnvelopes_correct :

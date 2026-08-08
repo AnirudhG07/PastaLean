@@ -58,7 +58,7 @@ theorem singleNumber_correct :
     ∀ (nums : List Int),
       PastaLean.pyLen nums > (0 : Int) →
         Libraries.functools.pyReduce (nums +ₚ [singleNumber nums]) PastaLean.pyBitXor = (0 : Int) :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  by taste?
 
 def singleNumber'rn := fun (nums : List Int) ↦ Libraries.functools.pyReduce nums PastaLean.pyBitXor
 

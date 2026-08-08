@@ -61,16 +61,13 @@ theorem sortTheStudents_correct :
     ∀ (score : List (List Int)),
       ∀ (k : Int),
         k ≥ (0 : Int) →
-          PastaLean.pyAll ((PastaLean.pyIter score).map fun row => decide (k < PastaLean.pyLen row)) →
+          (∀ row ∈ PastaLean.pyIter score, k < PastaLean.pyLen row) →
             (PastaLean.pyLen (sortTheStudents score k) = PastaLean.pyLen score ∧
                 Libraries.collections.pyCounter (PastaLean.pyMap PastaLean.pyList (sortTheStudents score k)) =
                   Libraries.collections.pyCounter (PastaLean.pyMap PastaLean.pyList score)) ∧
-              PastaLean.pyTruthy
-                  (PastaLean.pyAll
-                    ((PastaLean.pyRange (PastaLean.pyLen (sortTheStudents score k) -ₚ (1 : Int))).map fun i =>
-                      decide ((sortTheStudents score k)⦋i⦌⦋k⦌ ≥ (sortTheStudents score k)⦋i +ₚ (1 : Int)⦌⦋k⦌))) =
-                true :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+              ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen (sortTheStudents score k) -ₚ (1 : Int))),
+                (sortTheStudents score k)⦋i⦌⦋k⦌ ≥ (sortTheStudents score k)⦋i +ₚ (1 : Int)⦌⦋k⦌ :=
+  by taste?
 
 def sortTheStudents'rn := fun (score : List (List Int)) ↦ fun (k : Int) ↦
   PastaLean.pySortBy (fun (x : List Int) ↦ -x⦋k⦌) false score

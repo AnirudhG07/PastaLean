@@ -175,14 +175,9 @@ def maxHeight := fun (cuboids : List (List Int)) ↦
 
 @[spec]
 theorem maxHeight_spec :
-    ⦃⌜(PastaLean.pyLen cuboids > (0 : Int) ∧
-            PastaLean.pyAll ((PastaLean.pyIter cuboids).map fun c => PastaLean.pyLen c == (3 : Int))) ∧
-          PastaLean.pyAll
-            ((PastaLean.pyIter cuboids).map fun c =>
-              PastaLean.pyAll ((PastaLean.pyIter c).map fun d => decide (d ≥ (0 : Int))))⌝⦄
-      maxHeight cuboids ⦃⇓result =>
-      ⌜PastaLean.pyAll ((PastaLean.pyIter cuboids).map fun c => decide (result ≥ c⦋(2 : Int)⦌)) ∧
-          result ≥ (0 : Int)⌝⦄ :=
+    ⦃⌜(PastaLean.pyLen cuboids > (0 : Int) ∧ ∀ c ∈ PastaLean.pyIter cuboids, PastaLean.pyLen c = (3 : Int)) ∧
+          ∀ c ∈ PastaLean.pyIter cuboids, ∀ d ∈ PastaLean.pyIter c, d ≥ (0 : Int)⌝⦄
+      maxHeight cuboids ⦃⇓result => ⌜(∀ c ∈ PastaLean.pyIter cuboids, result ≥ c⦋(2 : Int)⦌) ∧ result ≥ (0 : Int)⌝⦄ :=
   by
   try
     mvcgen [maxHeight, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
@@ -190,21 +185,17 @@ theorem maxHeight_spec :
     · ⇓cur =>
       ⌜let i := (cur.prefix.length : Int);
         (((((0 : Int) ≤ i ∧ i ≤ n) ∧ PastaLean.pyLen f = n) ∧ PastaLean.pyLen cuboids = n) ∧
-            PastaLean.pyAll ((PastaLean.pyRange i).map fun k => decide (f⦋k⦌ ≥ cuboids⦋k⦌⦋(2 : Int)⦌))) ∧
-          PastaLean.pyAll ((PastaLean.pyIter f).map fun x => decide (x ≥ (0 : Int)))⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+            ∀ k ∈ PastaLean.pyIter (PastaLean.pyRange i), f⦋k⦌ ≥ cuboids⦋k⦌⦋(2 : Int)⦌) ∧
+          ∀ x ∈ PastaLean.pyIter f, x ≥ (0 : Int)⌝
+  taste?
   all_goals sorry
 
 theorem maxHeight_correct :
     ∀ (cuboids : List (List Int)),
-      (PastaLean.pyLen cuboids > (0 : Int) ∧
-            PastaLean.pyAll ((PastaLean.pyIter cuboids).map fun c => PastaLean.pyLen c == (3 : Int))) ∧
-          PastaLean.pyAll
-            ((PastaLean.pyIter cuboids).map fun c =>
-              PastaLean.pyAll ((PastaLean.pyIter c).map fun d => decide (d ≥ (0 : Int)))) →
+      ((PastaLean.pyLen cuboids > (0 : Int) ∧ ∀ c ∈ PastaLean.pyIter cuboids, PastaLean.pyLen c = (3 : Int)) ∧
+          ∀ c ∈ PastaLean.pyIter cuboids, ∀ d ∈ PastaLean.pyIter c, d ≥ (0 : Int)) →
         let result := (maxHeight cuboids).run;
-        PastaLean.pyAll ((PastaLean.pyIter cuboids).map fun c => decide (result ≥ c⦋(2 : Int)⦌)) ∧
-          result ≥ (0 : Int) :=
+        (∀ c ∈ PastaLean.pyIter cuboids, result ≥ c⦋(2 : Int)⦌) ∧ result ≥ (0 : Int) :=
   by
   intro cuboids hpre
   exact maxHeight_spec hpre

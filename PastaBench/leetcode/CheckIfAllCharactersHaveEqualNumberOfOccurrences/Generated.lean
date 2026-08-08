@@ -51,7 +51,7 @@ theorem areOccurrencesEqual_correct :
     ∀ (s : String),
       areOccurrencesEqual s =
         (PastaLean.pyLen (PastaLean.pySet (PastaLean.pyAnys (Libraries.collections.pyCounter s))) = (1 : Int)) :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]
+  by taste?
 
 def areOccurrencesEqual'rn := fun (s : String) ↦
   PastaLean.pyLen (PastaLean.pySet (PastaLean.pyAnys (Libraries.collections.pyCounter s))) == (1 : Int)

@@ -239,7 +239,14 @@ to find which mutable variables a loop threads (its mvcgen state). -/
 partial def jsonAssignsName (stmt : Json) (name : String) : Bool :=
   match jsonNodeType? stmt with
   | some "Assign" | some "AugAssign" =>
-    ((stmt.getObjVal? "target").bind (·.getObjValAs? String "id")) == .ok name
+    match (stmt.getObjVal? "target").toOption with
+    | some tgt =>
+      -- single `Name` target, OR a tuple target (`a, b = …`) whose elements include `name`.
+      tgt.getObjValAs? String "id" == .ok name
+        || (match tgt.getObjValAs? (Array Json) "elts" with
+            | .ok elts => elts.any (·.getObjValAs? String "id" == .ok name)
+            | _ => false)
+    | none => false
   | _ => Id.run do
     for key in ["body", "orelse", "finalbody"] do
       if let .ok (arr : Array Json) := stmt.getObjValAs? (Array Json) key then
@@ -330,9 +337,12 @@ structure MonadicContract where
 
 /-- Builds a LoopInv from one For node. Returns none only if the For lacks a target/iter. -/
 def loopInvOf (declaredOrder : Array String) (forNode : Json) : Option LoopInv :=
-  match (forNode.getObjVal? "target").bind (·.getObjValAs? String "id"),
-        (forNode.getObjVal? "iter").toOption with
-  | .ok loopVar, some iter =>
+  match (forNode.getObjVal? "iter").toOption with
+  | none => none
+  | some iter =>
+    -- Loop var: a single `Name` target's id, else a placeholder — a tuple target (`for a, b in …`)
+    -- has no `id`; its components are body-locals and a non-range invariant never references the index.
+    let loopVar := ((forNode.getObjVal? "target").bind (·.getObjValAs? String "id")).toOption.getD "_loop"
     let isRange := jsonNodeType? iter == some "Range"
     let loopBody := (forNode.getObjValAs? (Array Json) "body").toOption.getD #[]
     let invariants := loopBody.filterMap fun s =>
@@ -344,7 +354,6 @@ def loopInvOf (declaredOrder : Array String) (forNode : Json) : Option LoopInv :
       (accContribution? loopBody a).map (fun e => (a, e))
     let hasEarlyExit := loopBody.any jsonHasEarlyExit
     some { loopVar, isRange, accumulators, invariants, accMutations, hasEarlyExit }
-  | _, _ => none
 
 /-- Builds a LoopInv from one `While` node. mvcgen lowers a native `while` differently from a `for`:
 its loop state is the tuple of vars the body reassigns (an `MProd`), and it needs a termination
@@ -563,10 +572,6 @@ The binder is `⇓ cur =>` with no accumulators, `⇓⟨cur, a, …⟩` with som
 def buildBullet (li : LoopInv) : PygenM (TSyntax `term) := do
   for a in li.accumulators do addVar a.toName
   addVar li.loopVar.toName
-  -- A loop that `return`s/`break`s threads an early-return state; its invariant is supplied via
-  -- `Invariant.withEarlyReturn`. For the `True` postcondition a trivial pair discharges it.
-  if li.hasEarlyExit then
-    return ← `(Invariant.withEarlyReturn (onReturn := fun _ _ => ⌜True⌝) (onContinue := fun _ _ => ⌜True⌝))
   let cur := mkIdent `cur
   let loopVarId := mkIdent li.loopVar.toName
   let body ←
@@ -583,12 +588,25 @@ def buildBullet (li : LoopInv) : PygenM (TSyntax `term) := do
       conjoin autos
     else
       `(True)
+  let accIdents := li.accumulators.map (fun s => mkIdent s.toName)
+  -- A `break`/`return` loop supplies its invariant via `Invariant.withEarlyReturn`; carry the user
+  -- invariant in `onContinue` (previously dropped to `True`). `onReturn` stays trivial.
+  if li.hasEarlyExit then
+    -- `onContinue : Cursor → accState → Assertion`: `cur` is the cursor, the accumulators are
+    -- projected out of the state `b` (right-nested `MProd` in declaration order).
+    let b := mkIdent `b
+    let k := li.accumulators.size
+    let mut assertBody := body
+    for h : i in [0:k] do
+      let mut proj : TSyntax `term := b
+      for _ in [0:i] do proj ← `($proj |>.snd)
+      if k > 1 && i + 1 != k then proj ← `($proj |>.fst)
+      assertBody ← `(let $(accIdents[i]!) := $proj; $assertBody)
+    return ← `(Invariant.withEarlyReturn (onContinue := fun $cur $b => ⌜$assertBody⌝)
+      (onReturn := fun _ _ => ⌜True⌝))
   if li.accumulators.isEmpty then
     `(⇓ $cur => ⌜$body⌝)
   else
-    -- mvcgen threads the loop state as a right-nested `MProd` whose `.fst` is the *first*-declared
-    -- mutable variable, so the binder lists the accumulators in **declaration order**.
-    let accIdents := li.accumulators.map (fun s => mkIdent s.toName)
     `(⇓⟨$cur, $accIdents,*⟩ => ⌜$body⌝)
 
 /-- The `i`-th projection of a right-nested `MProd` of `k` elements (`.fst`, `.snd.fst`, …, and the

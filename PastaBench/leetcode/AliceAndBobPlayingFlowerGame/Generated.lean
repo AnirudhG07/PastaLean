@@ -59,7 +59,7 @@ theorem flowerGame_correct :
         n ≥ (0 : Int) →
           m ≥ (0 : Int) →
             flowerGame n m = PastaLean.pyFloorDiv (n *ₚ m) (2 : Int) ∧ res = PastaLean.pyFloorDiv (n *ₚ m) (2 : Int) :=
-  by sorry
+  by taste?
 
 def flowerGame'rn := fun (n : Int) ↦ fun (m : Int) ↦
   let a1 := (PastaLean.pyFloorDiv (n +ₚ (1 : Int)) (2 : Int) : Int)

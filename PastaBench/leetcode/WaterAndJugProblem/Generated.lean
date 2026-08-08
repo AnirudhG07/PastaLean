@@ -87,7 +87,7 @@ theorem canMeasureWater_spec :
       ⌜result = (target = (0 : Int) ∨ x +ₚ y ≥ target ∧ target %ₚ Libraries.math.pyMathGcd x y = (0 : Int))⌝⦄ :=
   by
   mvcgen [canMeasureWater, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]
+  taste?
   all_goals sorry
 
 theorem canMeasureWater_correct :

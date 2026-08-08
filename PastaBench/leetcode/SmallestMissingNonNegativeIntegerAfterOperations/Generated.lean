@@ -75,8 +75,12 @@ theorem findSmallestInteger_spec :
   by
   try
     mvcgen [findSmallestInteger, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · Invariant.withEarlyReturn (onReturn := fun _ _ => ⌜True⌝) (onContinue := fun _ _ => ⌜True⌝)
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+    ·
+      Invariant.withEarlyReturn (onContinue := fun cur b =>
+        ⌜let i := (cur.prefix.length : Int);
+          (0 : Int) ≤ i ∧ i ≤ PastaLean.pyLen nums⌝)
+        (onReturn := fun _ _ => ⌜True⌝)
+  taste?
   all_goals sorry
 
 theorem findSmallestInteger_correct :

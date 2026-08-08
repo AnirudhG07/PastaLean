@@ -84,7 +84,7 @@ theorem countLetters_spec :
       ⌜ans ≥ (0 : Int) ∧ (2 : Int) *ₚ ans ≤ PastaLean.pyLen s *ₚ (PastaLean.pyLen s +ₚ (1 : Int))⌝⦄ :=
   by
   mvcgen [countLetters, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  all_goals sorry
+  taste?
   all_goals sorry
 
 theorem countLetters_correct :

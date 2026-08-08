@@ -91,14 +91,12 @@ attribute [simp] _maxValue'sum
 
 @[taste_ingr]
 theorem _maxValue'sum_spec : ∀ (x : Int), ∀ (cnt : Int), x ≥ (0 : Int) → cnt ≥ (0 : Int) → _maxValue'sum x cnt ≥ cnt :=
-  by sorry
+  by taste?
 
 def maxValue := fun (n : Int) ↦ fun (index : Int) ↦ fun (maxSum : Int) ↦
   (do
-    let __unpack_value_1 := ((1 : Int), maxSum)
-    let __unpack_pair_1 := __unpack_value_1
-    let mut left : Int := Prod.fst __unpack_pair_1
-    let mut right : Int := Prod.snd __unpack_pair_1
+    let mut left : Int := (1 : Int)
+    let mut right : Int := maxSum
     while (left < right) do
       -- Invariants for the binary search.
       let _ := Libraries.passta.pyPassInvariant (decide ((1 : Int) ≤ left))
@@ -128,7 +126,7 @@ theorem maxValue_spec :
           (left = maxSum ∨ _maxValue'sum left index +ₚ _maxValue'sum (left +ₚ (1 : Int)) (n -ₚ index) > maxSum)⌝⦄ :=
   by
   mvcgen [maxValue, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  taste?
   all_goals sorry
 
 theorem maxValue_correct :
@@ -162,10 +160,8 @@ def maxValue'rn := fun (n : Int) ↦ fun (index : Int) ↦ fun (maxSum : Int) �
       -- The total array sum for the returned value must not exceed maxSum.
       -- The returned value must be maximal: either it's maxSum itself, or the
       -- next integer value would cause the sum to exceed the constraint.
-      let __unpack_value_1 := ((1 : Int), maxSum)
-      let __unpack_pair_1 := __unpack_value_1
-      let mut left : Int := Prod.fst __unpack_pair_1
-      let mut right : Int := Prod.snd __unpack_pair_1
+      let mut left : Int := (1 : Int)
+      let mut right : Int := maxSum
       while (left < right) do
         -- Invariants for the binary search.
         let _ := Libraries.passta.pyPassInvariant (decide ((1 : Int) ≤ left))

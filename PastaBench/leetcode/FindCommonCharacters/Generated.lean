@@ -94,7 +94,7 @@ theorem commonChars_spec :
     · ⇓cur =>
       ⌜PastaLean.pySetSubset (PastaLean.pySet (PastaLean.pyKeys cnt)) (PastaLean.pySet words⦋(0 : Int)⦌) ∧
           PastaLean.pySum (PastaLean.pyAnys cnt) ≤ PastaLean.pyLen words⦋(0 : Int)⦌⌝
-  sorry
+  taste?
   all_goals sorry
 
 theorem commonChars_correct :

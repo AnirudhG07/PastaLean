@@ -57,7 +57,7 @@ theorem longestString_spec :
           x = y ∧ result = (x +ₚ y +ₚ z) *ₚ (2 : Int)⌝⦄ :=
   by
   mvcgen [longestString, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals
+  taste?
   all_goals sorry
 
 theorem longestString_correct :

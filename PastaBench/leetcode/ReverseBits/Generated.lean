@@ -94,7 +94,7 @@ theorem reverseBits_spec :
             PastaLean.pySum
               ((PastaLean.pyRange i).map fun j =>
                 PastaLean.pyShiftLeft (PastaLean.pyBitAnd (PastaLean.pyShiftRight orig j) (1 : Int)) ((31 : Int) -ₚ j))⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem reverseBits_correct :

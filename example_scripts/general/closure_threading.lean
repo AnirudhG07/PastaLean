@@ -39,16 +39,12 @@ private def _count_components'union := fun (a : Int) ↦ fun (b : Int) ↦ fun (
       let mut p := p
       let __unpack_value_1 := _count_components'find a p
       let __unpack_pair_1 := __unpack_value_1
-      let mut __thread_t1 := Prod.fst __unpack_pair_1
       p := Prod.snd __unpack_pair_1
+      let mut pa := Prod.fst __unpack_pair_1
       let __unpack_value_2 := _count_components'find b p
       let __unpack_pair_2 := __unpack_value_2
-      let mut __thread_t2 := Prod.fst __unpack_pair_2
       p := Prod.snd __unpack_pair_2
-      let __unpack_value_3 := (__thread_t1, __thread_t2)
-      let __unpack_pair_3 := __unpack_value_3
-      let mut pa := Prod.fst __unpack_pair_3
-      let mut pb := Prod.snd __unpack_pair_3
+      let mut pb := Prod.fst __unpack_pair_2
       if h_1 : pa ≠ pb then 
         p := PastaLean.pySetItem p pa pb
       else
@@ -98,16 +94,12 @@ private def _count_components'union'rn := fun (a : Int) ↦ fun (b : Int) ↦ fu
       let mut p := p
       let __unpack_value_1 := _count_components'find'rn a p
       let __unpack_pair_1 := __unpack_value_1
-      let mut __thread_t1 := Prod.fst __unpack_pair_1
       p := Prod.snd __unpack_pair_1
+      let mut pa := Prod.fst __unpack_pair_1
       let __unpack_value_2 := _count_components'find'rn b p
       let __unpack_pair_2 := __unpack_value_2
-      let mut __thread_t2 := Prod.fst __unpack_pair_2
       p := Prod.snd __unpack_pair_2
-      let __unpack_value_3 := (__thread_t1, __thread_t2)
-      let __unpack_pair_3 := __unpack_value_3
-      let mut pa := Prod.fst __unpack_pair_3
-      let mut pb := Prod.snd __unpack_pair_3
+      let mut pb := Prod.fst __unpack_pair_2
       if h_1 : pa != pb then 
         p := PastaLean.pySetItem p pa pb
       else

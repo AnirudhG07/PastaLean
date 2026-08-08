@@ -50,7 +50,7 @@ attribute [simp] checkRecord
 @[taste_ingr]
 theorem checkRecord_correct :
     ∀ (s : String), checkRecord s = (PastaLean.pyCount s "A" < (2 : Int) ∧ !(PastaLean.pyStrContainsSubstr s "LLL")) :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]
+  by taste?
 
 def checkRecord'rn := fun (s : String) ↦
   if PastaLean.pyTruthy (decide (PastaLean.pyCount s "A" < (2 : Int))) then !(PastaLean.pyStrContainsSubstr s "LLL")

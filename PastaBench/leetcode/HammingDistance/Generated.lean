@@ -49,7 +49,7 @@ attribute [simp] hammingDistance
 
 @[taste_ingr]
 theorem hammingDistance_correct :
-    ∀ (x : Int), ∀ (y : Int), x ≥ (0 : Int) → y ≥ (0 : Int) → hammingDistance x y ≥ (0 : Int) := by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+    ∀ (x : Int), ∀ (y : Int), x ≥ (0 : Int) → y ≥ (0 : Int) → hammingDistance x y ≥ (0 : Int) := by taste?
 
 def hammingDistance'rn := fun (x : Int) ↦ fun (y : Int) ↦ PastaLean.pyBitCount (PastaLean.pyBitXor x y)
 

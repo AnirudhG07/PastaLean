@@ -104,8 +104,10 @@ theorem mergeSimilarItems_spec :
                       (v, w)))
                   item⦋(0 : Int)⦌ (0 : Int)⌝⦄ :=
   by
-  mvcgen [mergeSimilarItems, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  try
+    mvcgen [mergeSimilarItems, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · ⇓cur => ⌜True⌝
+  taste?
   all_goals sorry
 
 theorem mergeSimilarItems_correct :

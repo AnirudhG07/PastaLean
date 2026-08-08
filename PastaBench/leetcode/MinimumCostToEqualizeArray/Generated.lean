@@ -105,7 +105,7 @@ theorem minCostToEqualizeArray_spec :
       minCostToEqualizeArray nums cost1 cost2 ⦃⇓result => ⌜result ≥ (0 : Int) ∧ result < (1000000007 : Int)⌝⦄ :=
   by
   mvcgen [minCostToEqualizeArray, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals; sorry
+  taste?
   all_goals sorry
 
 theorem minCostToEqualizeArray_correct :

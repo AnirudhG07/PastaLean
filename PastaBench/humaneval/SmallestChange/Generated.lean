@@ -49,10 +49,8 @@ namespace PastaBench.humaneval.SmallestChange
 
 def smallest_change := fun (arr : List Int) ↦
   (do
-    let __unpack_value_1 := (PastaLean.pySlice arr none none (some (-(1 : Int))), (0 : Int))
-    let __unpack_pair_1 := __unpack_value_1
-    let mut arr_reversed : List Int := Prod.fst __unpack_pair_1
-    let mut cnt : Int := Prod.snd __unpack_pair_1
+    let mut arr_reversed : List Int := PastaLean.pySlice arr none none (some (-(1 : Int)))
+    let mut cnt : Int := (0 : Int)
     for i in (PastaLean.pyRange (PastaLean.pyFloorDiv (PastaLean.pyLen arr) (2 : Int)))do
       let _ :=
         Libraries.passta.pyPassInvariant
@@ -104,10 +102,8 @@ def smallest_change'rn := fun (arr : List Int) ↦
           smallest_change([1, 2, 3, 2, 1]) == 0
           
       -/
-      let __unpack_value_1 := (PastaLean.pySlice arr none none (some (-(1 : Int))), (0 : Int))
-      let __unpack_pair_1 := __unpack_value_1
-      let mut arr_reversed : List Int := Prod.fst __unpack_pair_1
-      let mut cnt : Int := Prod.snd __unpack_pair_1
+      let mut arr_reversed : List Int := PastaLean.pySlice arr none none (some (-(1 : Int)))
+      let mut cnt : Int := (0 : Int)
       for i in (PastaLean.pyRange (PastaLean.pyFloorDiv (PastaLean.pyLen arr) (2 : Int)))do
         let _ :=
           Libraries.passta.pyPassInvariant

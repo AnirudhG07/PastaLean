@@ -74,20 +74,16 @@ namespace PastaBench.leetcode.PalindromicSubstrings
 
 def countSubstrings := fun (s : String) ↦
   (do
-    let __unpack_value_1 := ((0 : Int), PastaLean.pyLen s)
-    let __unpack_pair_1 := __unpack_value_1
-    let mut ans : Int := Prod.fst __unpack_pair_1
-    let mut n : Int := Prod.snd __unpack_pair_1
+    let mut ans : Int := (0 : Int)
+    let mut n : Int := PastaLean.pyLen s
     for k in (PastaLean.pyRange (n *ₚ (2 : Int) -ₚ (1 : Int)))do
       -- Invariant: ans counts palindromes centered in 0..k-1, plus at least one for each even k.
       -- This implies ans is at least the number of even centers seen so far.
       let _ := Libraries.passta.pyPassInvariant (decide (ans ≥ PastaLean.pyFloorDiv (k +ₚ (1 : Int)) (2 : Int)))
       -- Trivial bound on k from the loop structure, useful for later assertions.
       let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ k))
-      let __unpack_value_2 := (PastaLean.pyFloorDiv k (2 : Int), PastaLean.pyFloorDiv (k +ₚ (1 : Int)) (2 : Int))
-      let __unpack_pair_2 := __unpack_value_2
-      let mut i : Int := Prod.fst __unpack_pair_2
-      let mut j : Int := Prod.snd __unpack_pair_2
+      let mut i : Int := PastaLean.pyFloorDiv k (2 : Int)
+      let mut j : Int := PastaLean.pyFloorDiv (k +ₚ (1 : Int)) (2 : Int)
       -- The loop only runs if n >= 1. These assertions bridge from k's bounds to i and j's
       -- bounds, which are necessary to prove the safety of the access s[i] and s[j].
       let _ := Libraries.passta.pyPassAssert (decide ((0 : Int) ≤ i) && decide (i < n))
@@ -104,10 +100,10 @@ def countSubstrings := fun (s : String) ↦
         -- The loop terminates because i moves towards -1.
         let _ := Libraries.passta.pyPassDecreases i
         ans := ans +ₚ (1 : Int)
-        let __unpack_value_3 := (i -ₚ (1 : Int), j +ₚ (1 : Int))
-        let __unpack_pair_3 := __unpack_value_3
-        i := Prod.fst __unpack_pair_3
-        j := Prod.snd __unpack_pair_3
+        let __unpack_value_1 := (i -ₚ (1 : Int), j +ₚ (1 : Int))
+        let __unpack_pair_1 := __unpack_value_1
+        i := Prod.fst __unpack_pair_1
+        j := Prod.snd __unpack_pair_1
     let _ := Libraries.passta.pyPassAssert (decide (ans ≥ n))
     let _ := Libraries.passta.pyPassAssert (decide ((2 : Int) *ₚ ans ≤ n *ₚ (n +ₚ (1 : Int))))
     return ans : Id _)
@@ -122,7 +118,7 @@ theorem countSubstrings_spec :
     · ⇓⟨cur, ans⟩ =>
       ⌜let k := (cur.prefix.length : Int);
         ans ≥ PastaLean.pyFloorDiv (k +ₚ (1 : Int)) (2 : Int) ∧ (0 : Int) ≤ k⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem countSubstrings_correct :
@@ -136,20 +132,16 @@ theorem countSubstrings_correct :
 def countSubstrings'rn := fun (s : String) ↦
   Id.run
     (do
-      let __unpack_value_1 := ((0 : Int), PastaLean.pyLen s)
-      let __unpack_pair_1 := __unpack_value_1
-      let mut ans : Int := Prod.fst __unpack_pair_1
-      let mut n : Int := Prod.snd __unpack_pair_1
+      let mut ans : Int := (0 : Int)
+      let mut n : Int := PastaLean.pyLen s
       for k in (PastaLean.pyRange (n *ₚ (2 : Int) -ₚ (1 : Int)))do
         -- Invariant: ans counts palindromes centered in 0..k-1, plus at least one for each even k.
         -- This implies ans is at least the number of even centers seen so far.
         let _ := Libraries.passta.pyPassInvariant (decide (ans ≥ PastaLean.pyFloorDiv (k +ₚ (1 : Int)) (2 : Int)))
         -- Trivial bound on k from the loop structure, useful for later assertions.
         let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ k))
-        let __unpack_value_2 := (PastaLean.pyFloorDiv k (2 : Int), PastaLean.pyFloorDiv (k +ₚ (1 : Int)) (2 : Int))
-        let __unpack_pair_2 := __unpack_value_2
-        let mut i : Int := Prod.fst __unpack_pair_2
-        let mut j : Int := Prod.snd __unpack_pair_2
+        let mut i : Int := PastaLean.pyFloorDiv k (2 : Int)
+        let mut j : Int := PastaLean.pyFloorDiv (k +ₚ (1 : Int)) (2 : Int)
         -- The loop only runs if n >= 1. These assertions bridge from k's bounds to i and j's
         -- bounds, which are necessary to prove the safety of the access s[i] and s[j].
         let _ := Libraries.passta.pyPassAssert (decide ((0 : Int) ≤ i) && decide (i < n))
@@ -167,10 +159,10 @@ def countSubstrings'rn := fun (s : String) ↦
           -- The loop terminates because i moves towards -1.
           let _ := Libraries.passta.pyPassDecreases i
           ans := ans +ₚ (1 : Int)
-          let __unpack_value_3 := (i -ₚ (1 : Int), j +ₚ (1 : Int))
-          let __unpack_pair_3 := __unpack_value_3
-          i := Prod.fst __unpack_pair_3
-          j := Prod.snd __unpack_pair_3
+          let __unpack_value_1 := (i -ₚ (1 : Int), j +ₚ (1 : Int))
+          let __unpack_pair_1 := __unpack_value_1
+          i := Prod.fst __unpack_pair_1
+          j := Prod.snd __unpack_pair_1
       -- After the loop, the invariant for k = (2*n-1) gives the lower bound.
       let _ := Libraries.passta.pyPassAssert (decide (ans ≥ n))
       -- The upper bound holds because every counted item is a unique substring.

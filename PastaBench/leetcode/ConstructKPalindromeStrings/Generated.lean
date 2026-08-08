@@ -76,7 +76,7 @@ theorem canConstruct_spec :
               k)⌝⦄ :=
   by
   mvcgen [canConstruct, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]
+  taste?
   all_goals sorry
 
 theorem canConstruct_correct :

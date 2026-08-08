@@ -81,7 +81,7 @@ theorem brokenCalc_spec :
     ⦃⌜startValue > (0 : Int) ∧ target > (0 : Int)⌝⦄ brokenCalc startValue target ⦃⇓ans => ⌜ans ≥ (0 : Int)⌝⦄ :=
   by
   mvcgen [brokenCalc, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  taste?
   all_goals sorry
 
 theorem brokenCalc_correct :

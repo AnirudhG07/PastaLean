@@ -106,7 +106,7 @@ def next_smallest := fun (lst : List Int) ↦
       else
         let _ := ()
     let _ := Libraries.passta.pyPassAssert (sorted_list⦋(0 : Int)⦌ == sorted_list⦋(-1 : Int)⦌)
-    return default : Id _)
+    return default : Id (Option Int))
 
 @[spec]
 theorem next_smallest_spec :
@@ -120,7 +120,11 @@ theorem next_smallest_spec :
   by
   try
     mvcgen [next_smallest, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · Invariant.withEarlyReturn (onReturn := fun _ _ => ⌜True⌝) (onContinue := fun _ _ => ⌜True⌝)
+    ·
+      Invariant.withEarlyReturn (onContinue := fun cur b =>
+        ⌜(PastaLean.pyContains lst x ∧ x ≥ PastaLean.pyMin lst) ∧
+            (x = PastaLean.pyMin lst ∨ ∀ y ∈ PastaLean.pyIter lst, y ≤ PastaLean.pyMin lst ∨ y ≥ x)⌝)
+        (onReturn := fun _ _ => ⌜True⌝)
   taste?
   all_goals sorry
 
@@ -138,60 +142,61 @@ theorem next_smallest_correct :
   exact next_smallest_spec True.intro
 
 def next_smallest'rn := fun (lst : List Int) ↦
-  Id.run
-    (do
-      /-
-      
-          You are given a list of integers.
-          Write a function next_smallest() that returns the 2nd smallest element of the list.
-          Return None if there is no such element.
-          
-          next_smallest([1, 2, 3, 4, 5]) == 2
-          next_smallest([5, 1, 4, 3, 2]) == 2
-          next_smallest([]) == None
-          next_smallest([1, 1]) == None
-          
-      -/
-      -- When a 2nd-smallest exists, it is characterised by three facts that together say
-      -- "the smallest value strictly above the minimum":
-      -- 1. it really occurs in the input,
-      -- 2. it is strictly above the minimum,
-      -- 3. and NOTHING in the input lies strictly between the minimum and it — this maximality
-      -- clause is what rules out any larger element and pins the answer down uniquely.
-      -- Conversely, None is returned only when there is nothing above the minimum at all.
-      if h_1 : PastaLean.pyLen lst ≤ (1 : Int) then 
-        return Option.none
-      else
-        let _ := ()
-      let _ := Libraries.passta.pyPassAssert (decide (PastaLean.pyLen lst > (1 : Int)))
-      let mut sorted_list : List Int := PastaLean.pySort lst
-      let _ := Libraries.passta.pyPassAssert (decide (PastaLean.pyLen sorted_list > (1 : Int)))
-      -- Bridge sorted_list back to the input, and identify its head as the minimum, so the
-      -- returned element can be related to `lst` and `min(lst)` in the Ensures.
-      let _ := Libraries.passta.pyPassAssert (PastaLean.pySort sorted_list == PastaLean.pySort lst)
-      let _ := Libraries.passta.pyPassAssert (sorted_list⦋(0 : Int)⦌ == PastaLean.pyMin lst)
-      for x in (PastaLean.pyIter sorted_list)do
-        -- Accumulator-style. The scan is ascending, so the body is only ever reached while `x`
-        -- is still the minimum, plus exactly once more with the first value above it. Hence the
-        -- current candidate is always an input element, never below the minimum, and — the
-        -- moment it stops being the minimum — has nothing of `lst` strictly beneath it.
-        let _ := Libraries.passta.pyPassInvariant (PastaLean.pyContains lst x)
-        let _ := Libraries.passta.pyPassInvariant (decide (x ≥ PastaLean.pyMin lst))
-        let _ :=
-          Libraries.passta.pyPassInvariant
-            (if PastaLean.pyTruthy (x == PastaLean.pyMin lst) then x == PastaLean.pyMin lst
-            else
-              PastaLean.pyAll
-                ((PastaLean.pyIter lst).map fun y => decide (y ≤ PastaLean.pyMin lst) || decide (y ≥ x)))
-        if h_2 : x != sorted_list⦋(0 : Int)⦌ then 
-          -- The first element in a sorted list that is not the minimum is, by
-          -- definition, the second-smallest unique element.
-          return x
+  (show Option Int from
+    Id.run
+      (do
+        /-
+        
+            You are given a list of integers.
+            Write a function next_smallest() that returns the 2nd smallest element of the list.
+            Return None if there is no such element.
+            
+            next_smallest([1, 2, 3, 4, 5]) == 2
+            next_smallest([5, 1, 4, 3, 2]) == 2
+            next_smallest([]) == None
+            next_smallest([1, 1]) == None
+            
+        -/
+        -- When a 2nd-smallest exists, it is characterised by three facts that together say
+        -- "the smallest value strictly above the minimum":
+        -- 1. it really occurs in the input,
+        -- 2. it is strictly above the minimum,
+        -- 3. and NOTHING in the input lies strictly between the minimum and it — this maximality
+        -- clause is what rules out any larger element and pins the answer down uniquely.
+        -- Conversely, None is returned only when there is nothing above the minimum at all.
+        if h_1 : PastaLean.pyLen lst ≤ (1 : Int) then 
+          return Option.none
         else
           let _ := ()
-      -- If the loop completes, it means the `if` condition was never true.
-      -- For a sorted list, this implies all elements are identical.
-      let _ := Libraries.passta.pyPassAssert (sorted_list⦋(0 : Int)⦌ == sorted_list⦋(-1 : Int)⦌)
-      return default)
+        let _ := Libraries.passta.pyPassAssert (decide (PastaLean.pyLen lst > (1 : Int)))
+        let mut sorted_list : List Int := PastaLean.pySort lst
+        let _ := Libraries.passta.pyPassAssert (decide (PastaLean.pyLen sorted_list > (1 : Int)))
+        -- Bridge sorted_list back to the input, and identify its head as the minimum, so the
+        -- returned element can be related to `lst` and `min(lst)` in the Ensures.
+        let _ := Libraries.passta.pyPassAssert (PastaLean.pySort sorted_list == PastaLean.pySort lst)
+        let _ := Libraries.passta.pyPassAssert (sorted_list⦋(0 : Int)⦌ == PastaLean.pyMin lst)
+        for x in (PastaLean.pyIter sorted_list)do
+          -- Accumulator-style. The scan is ascending, so the body is only ever reached while `x`
+          -- is still the minimum, plus exactly once more with the first value above it. Hence the
+          -- current candidate is always an input element, never below the minimum, and — the
+          -- moment it stops being the minimum — has nothing of `lst` strictly beneath it.
+          let _ := Libraries.passta.pyPassInvariant (PastaLean.pyContains lst x)
+          let _ := Libraries.passta.pyPassInvariant (decide (x ≥ PastaLean.pyMin lst))
+          let _ :=
+            Libraries.passta.pyPassInvariant
+              (if PastaLean.pyTruthy (x == PastaLean.pyMin lst) then x == PastaLean.pyMin lst
+              else
+                PastaLean.pyAll
+                  ((PastaLean.pyIter lst).map fun y => decide (y ≤ PastaLean.pyMin lst) || decide (y ≥ x)))
+          if h_2 : x != sorted_list⦋(0 : Int)⦌ then 
+            -- The first element in a sorted list that is not the minimum is, by
+            -- definition, the second-smallest unique element.
+            return x
+          else
+            let _ := ()
+        -- If the loop completes, it means the `if` condition was never true.
+        -- For a sorted list, this implies all elements are identical.
+        let _ := Libraries.passta.pyPassAssert (sorted_list⦋(0 : Int)⦌ == sorted_list⦋(-1 : Int)⦌)
+        return default))
 
 end PastaBench.humaneval.NextSmallest

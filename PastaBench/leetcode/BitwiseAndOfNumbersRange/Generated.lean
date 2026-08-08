@@ -53,7 +53,7 @@ theorem rangeBitwiseAnd_spec :
     ⦃⌜(0 : Int) ≤ left ∧ left ≤ right⌝⦄ rangeBitwiseAnd left right ⦃⇓right => ⌜(0 : Int) ≤ right ∧ right ≤ left⌝⦄ :=
   by
   mvcgen [rangeBitwiseAnd, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  all_goals sorry
+  taste?
   all_goals sorry
 
 theorem rangeBitwiseAnd_correct :

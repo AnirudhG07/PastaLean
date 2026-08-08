@@ -67,10 +67,8 @@ def decodeCiphertext := fun (encodedText : String) ↦ fun (rows : Int) ↦
     for j in (PastaLean.pyRange cols)do
       let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ j))
       let _ := Libraries.passta.pyPassInvariant (decide (j ≤ cols))
-      let __unpack_value_1 := ((0 : Int), j)
-      let __unpack_pair_1 := __unpack_value_1
-      let mut x : Int := Prod.fst __unpack_pair_1
-      let mut y : Int := Prod.snd __unpack_pair_1
+      let mut x : Int := (0 : Int)
+      let mut y : Int := j
       while (x < rows ∧ y < cols) do
         let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ x))
         let _ := Libraries.passta.pyPassInvariant (decide (x ≤ rows))
@@ -81,10 +79,10 @@ def decodeCiphertext := fun (encodedText : String) ↦ fun (rows : Int) ↦
           Libraries.passta.pyPassAssert
             (decide ((0 : Int) ≤ x *ₚ cols +ₚ y) && decide (x *ₚ cols +ₚ y < PastaLean.pyLen encodedText))
         ans := PastaLean.pyAppend ans encodedText⦋x *ₚ cols +ₚ y⦌
-        let __unpack_value_2 := (x +ₚ (1 : Int), y +ₚ (1 : Int))
-        let __unpack_pair_2 := __unpack_value_2
-        x := Prod.fst __unpack_pair_2
-        y := Prod.snd __unpack_pair_2
+        let __unpack_value_1 := (x +ₚ (1 : Int), y +ₚ (1 : Int))
+        let __unpack_pair_1 := __unpack_value_1
+        x := Prod.fst __unpack_pair_1
+        y := Prod.snd __unpack_pair_1
     let __py_ret_1 := PastaLean.pyStringRstrip (PastaLean.pyStringJoin "" ans)
     return __py_ret_1 : Id _)
 
@@ -98,7 +96,7 @@ theorem decodeCiphertext_spec :
     · ⇓cur =>
       ⌜let j := (cur.prefix.length : Int);
         (0 : Int) ≤ j ∧ j ≤ cols⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem decodeCiphertext_correct :
@@ -122,10 +120,8 @@ def decodeCiphertext'rn := fun (encodedText : String) ↦ fun (rows : Int) ↦
       for j in (PastaLean.pyRange cols)do
         let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ j))
         let _ := Libraries.passta.pyPassInvariant (decide (j ≤ cols))
-        let __unpack_value_1 := ((0 : Int), j)
-        let __unpack_pair_1 := __unpack_value_1
-        let mut x : Int := Prod.fst __unpack_pair_1
-        let mut y : Int := Prod.snd __unpack_pair_1
+        let mut x : Int := (0 : Int)
+        let mut y : Int := j
         while (decide (x < rows) && decide (y < cols)) do
           let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ x))
           let _ := Libraries.passta.pyPassInvariant (decide (x ≤ rows))
@@ -136,10 +132,10 @@ def decodeCiphertext'rn := fun (encodedText : String) ↦ fun (rows : Int) ↦
             Libraries.passta.pyPassAssert
               (decide ((0 : Int) ≤ x *ₚ cols +ₚ y) && decide (x *ₚ cols +ₚ y < PastaLean.pyLen encodedText))
           ans := PastaLean.pyAppend ans encodedText⦋x *ₚ cols +ₚ y⦌
-          let __unpack_value_2 := (x +ₚ (1 : Int), y +ₚ (1 : Int))
-          let __unpack_pair_2 := __unpack_value_2
-          x := Prod.fst __unpack_pair_2
-          y := Prod.snd __unpack_pair_2
+          let __unpack_value_1 := (x +ₚ (1 : Int), y +ₚ (1 : Int))
+          let __unpack_pair_1 := __unpack_value_1
+          x := Prod.fst __unpack_pair_1
+          y := Prod.snd __unpack_pair_1
       let __py_ret_1 := PastaLean.pyStringRstrip (PastaLean.pyStringJoin "" ans)
       return __py_ret_1)
 

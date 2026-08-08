@@ -59,10 +59,8 @@ namespace PastaBench.humaneval.FruitDistribution
 def fruit_distribution := fun (s : String) ↦ fun (n : Int) ↦
   (do
     let mut words : List String := PastaLean.pyStringSplit s " "
-    let __unpack_value_1 := (PastaLean.pyInt words⦋(0 : Int)⦌, PastaLean.pyInt words⦋(3 : Int)⦌)
-    let __unpack_pair_1 := __unpack_value_1
-    let mut c1 : Int := Prod.fst __unpack_pair_1
-    let mut c2 : Int := Prod.snd __unpack_pair_1
+    let mut c1 : Int := PastaLean.pyInt words⦋(0 : Int)⦌
+    let mut c2 : Int := PastaLean.pyInt words⦋(3 : Int)⦌
     have ht_1 : n -ₚ c1 -ₚ c2 ≥ (0 : Int) := by taste?
     let _ := Libraries.passta.pyPassAssert (decide (n -ₚ c1 -ₚ c2 ≥ (0 : Int)))
     let __py_ret_1 := n -ₚ c1 -ₚ c2
@@ -110,10 +108,8 @@ def fruit_distribution'rn := fun (s : String) ↦ fun (n : Int) ↦
       -/
       let _ := Libraries.passta.pyPassRequires (decide (n ≥ (0 : Int)))
       let mut words : List String := PastaLean.pyStringSplit s " "
-      let __unpack_value_1 := (PastaLean.pyInt words⦋(0 : Int)⦌, PastaLean.pyInt words⦋(3 : Int)⦌)
-      let __unpack_pair_1 := __unpack_value_1
-      let mut c1 : Int := Prod.fst __unpack_pair_1
-      let mut c2 : Int := Prod.snd __unpack_pair_1
+      let mut c1 : Int := PastaLean.pyInt words⦋(0 : Int)⦌
+      let mut c2 : Int := PastaLean.pyInt words⦋(3 : Int)⦌
       -- The problem implies that fruit counts are non-negative.
       -- The caller guarantees this by providing a valid input string.
       let _ := Libraries.passta.pyPassAssume (decide (c1 ≥ (0 : Int)))

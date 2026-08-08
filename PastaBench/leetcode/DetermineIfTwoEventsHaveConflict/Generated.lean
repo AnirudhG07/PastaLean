@@ -70,7 +70,7 @@ theorem haveConflict_correct :
               event2⦋(0 : Int)⦌ ≤ event2⦋(1 : Int)⦌ →
                 haveConflict event1 event2 =
                   (event1⦋(0 : Int)⦌ ≤ event2⦋(1 : Int)⦌ ∧ event1⦋(1 : Int)⦌ ≥ event2⦋(0 : Int)⦌) :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; grind +locals +suggestions
+  by taste?
 
 def haveConflict'rn := fun (event1 : List String) ↦ fun (event2 : List String) ↦
   !(decide (event1⦋(0 : Int)⦌ > event2⦋(1 : Int)⦌) || decide (event1⦋(1 : Int)⦌ < event2⦋(0 : Int)⦌))

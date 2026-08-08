@@ -89,11 +89,8 @@ theorem longestSubsequence_spec :
   by
   try
     mvcgen [longestSubsequence, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓cur =>
-      ⌜PastaLean.pyAll
-          ((PastaLean.pyIter (PastaLean.pyAnys f)).map fun v =>
-            decide ((1 : Int) ≤ v) && decide (v ≤ PastaLean.pyLen arr))⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+    · ⇓cur => ⌜∀ v ∈ PastaLean.pyIter (PastaLean.pyAnys f), (1 : Int) ≤ v ∧ v ≤ PastaLean.pyLen arr⌝
+  taste?
   all_goals sorry
 
 theorem longestSubsequence_correct :

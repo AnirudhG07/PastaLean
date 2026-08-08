@@ -54,10 +54,8 @@ def findUnsortedSubarray := fun (nums : List Int) ↦
   (do
     let mut n : Int := PastaLean.pyLen nums
     let mut arr : List Int := PastaLean.pySort nums
-    let __unpack_value_1 := ((0 : Int), n -ₚ (1 : Int))
-    let __unpack_pair_1 := __unpack_value_1
-    let mut l : Int := Prod.fst __unpack_pair_1
-    let mut r : Int := Prod.snd __unpack_pair_1
+    let mut l : Int := (0 : Int)
+    let mut r : Int := n -ₚ (1 : Int)
     while (l ≤ r ∧ nums⦋l⦌ = arr⦋l⦌) do
       let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ l))
       let _ := Libraries.passta.pyPassInvariant (decide (l ≤ n))
@@ -98,7 +96,7 @@ theorem findUnsortedSubarray_spec :
             let r := st;
             ((0 : Int) ≤ r ∧ r < n) ∧ r ≥ -(1 : Int))
           (fun _ => True) s⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem findUnsortedSubarray_correct :
@@ -114,10 +112,8 @@ def findUnsortedSubarray'rn := fun (nums : List Int) ↦
     (do
       let mut n : Int := PastaLean.pyLen nums
       let mut arr : List Int := PastaLean.pySort nums
-      let __unpack_value_1 := ((0 : Int), n -ₚ (1 : Int))
-      let __unpack_pair_1 := __unpack_value_1
-      let mut l : Int := Prod.fst __unpack_pair_1
-      let mut r : Int := Prod.snd __unpack_pair_1
+      let mut l : Int := (0 : Int)
+      let mut r : Int := n -ₚ (1 : Int)
       -- advance l past the sorted prefix
       while (decide (l ≤ r) && nums⦋l⦌ == arr⦋l⦌) do
         let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ l))

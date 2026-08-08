@@ -63,7 +63,7 @@ theorem squareIsWhite_correct :
                     (PastaLean.pyOrd coordinates⦋(1 : Int)⦌ -ₚ PastaLean.pyOrd "1")) %ₚ
                   (2 : Int) =
                 (1 : Int)) :=
-  by sorry
+  by taste?
 
 def squareIsWhite'rn := fun (coordinates : String) ↦
   (PastaLean.pyOrd coordinates⦋(0 : Int)⦌ +ₚ PastaLean.pyOrd coordinates⦋(1 : Int)⦌) %ₚ (2 : Int) == (1 : Int)

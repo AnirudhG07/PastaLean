@@ -78,8 +78,10 @@ def maxSubarrayLength := fun (nums : List Int) ↦ fun (k : Int) ↦
 theorem maxSubarrayLength_spec :
     ⦃⌜k ≥ (0 : Int)⌝⦄ maxSubarrayLength nums k ⦃⇓ans => ⌜(0 : Int) ≤ ans ∧ ans ≤ PastaLean.pyLen nums⌝⦄ :=
   by
-  mvcgen [maxSubarrayLength, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  try
+    mvcgen [maxSubarrayLength, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · ⇓⟨cur, ans, j⟩ => ⌜(((0 : Int) ≤ j ∧ j ≤ i +ₚ (1 : Int)) ∧ ans ≥ (0 : Int)) ∧ ans ≤ i -ₚ j +ₚ (1 : Int)⌝
+  taste?
   all_goals sorry
 
 theorem maxSubarrayLength_correct :

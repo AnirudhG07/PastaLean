@@ -78,7 +78,7 @@ theorem minimizedMaximum_correct :
       ∀ (quantities : List Int),
         n > (0 : Int) →
           PastaLean.pyLen quantities > (0 : Int) →
-            PastaLean.pyAll ((PastaLean.pyIter quantities).map fun q => decide (q > (0 : Int))) →
+            (∀ q ∈ PastaLean.pyIter quantities, q > (0 : Int)) →
               n ≥ PastaLean.pyLen quantities →
                 (minimizedMaximum n quantities ≥ (1 : Int) ∧
                     PastaLean.pySum
@@ -92,7 +92,7 @@ theorem minimizedMaximum_correct :
                           PastaLean.pyFloorDiv (q +ₚ (minimizedMaximum n quantities -ₚ (1 : Int)) -ₚ (1 : Int))
                             (minimizedMaximum n quantities -ₚ (1 : Int))) >
                       n) :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  by taste?
 
 private def _minimizedMaximum'check'rn := fun (x : Int) ↦ fun (n : Int) ↦ fun (quantities : List Int) ↦
   decide

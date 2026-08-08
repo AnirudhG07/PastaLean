@@ -93,22 +93,27 @@ def maxEqualRowsAfterFlips := fun (matrix : List (List Int)) ↦
 @[spec]
 theorem maxEqualRowsAfterFlips_spec :
     ⦃⌜((PastaLean.pyLen matrix > (0 : Int) ∧ PastaLean.pyLen matrix⦋(0 : Int)⦌ > (0 : Int)) ∧
-            PastaLean.pyAll
-              ((PastaLean.pyIter matrix).map fun row => PastaLean.pyLen row == PastaLean.pyLen matrix⦋(0 : Int)⦌)) ∧
+            ∀ row ∈ PastaLean.pyIter matrix, PastaLean.pyLen row = PastaLean.pyLen matrix⦋(0 : Int)⦌) ∧
           PastaLean.pyAll
             ((PastaLean.pyIter matrix).flatMap fun row =>
               (PastaLean.pyIter row).map fun cell => cell == (0 : Int) || cell == (1 : Int))⌝⦄
       maxEqualRowsAfterFlips matrix ⦃⇓result => ⌜(1 : Int) ≤ result ∧ result ≤ PastaLean.pyLen matrix⌝⦄ :=
   by
-  mvcgen [maxEqualRowsAfterFlips, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  try
+    mvcgen [maxEqualRowsAfterFlips, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · ⇓cur =>
+      ⌜((((0 : Int) ≤ i ∧ i ≤ PastaLean.pyLen matrix) ∧ PastaLean.pySum (PastaLean.pyAnys cnt) = i) ∧
+            ∀ key ∈ PastaLean.pyIter (PastaLean.pyKeys cnt), PastaLean.pyLen key = PastaLean.pyLen matrix⦋(0 : Int)⦌) ∧
+          PastaLean.pyAll
+            ((PastaLean.pyIter (PastaLean.pyKeys cnt)).flatMap fun key =>
+              (PastaLean.pyIter key).map fun x => x == (0 : Int) || x == (1 : Int))⌝
+  taste?
   all_goals sorry
 
 theorem maxEqualRowsAfterFlips_correct :
     ∀ (matrix : List (List Int)),
       ((PastaLean.pyLen matrix > (0 : Int) ∧ PastaLean.pyLen matrix⦋(0 : Int)⦌ > (0 : Int)) ∧
-            PastaLean.pyAll
-              ((PastaLean.pyIter matrix).map fun row => PastaLean.pyLen row == PastaLean.pyLen matrix⦋(0 : Int)⦌)) ∧
+            ∀ row ∈ PastaLean.pyIter matrix, PastaLean.pyLen row = PastaLean.pyLen matrix⦋(0 : Int)⦌) ∧
           PastaLean.pyAll
             ((PastaLean.pyIter matrix).flatMap fun row =>
               (PastaLean.pyIter row).map fun cell => cell == (0 : Int) || cell == (1 : Int)) →

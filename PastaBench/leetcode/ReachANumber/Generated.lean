@@ -100,7 +100,7 @@ theorem reachNumber_spec :
             (0 : Int)⌝⦄ :=
   by
   mvcgen [reachNumber, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  all_goals sorry
+  taste?
   all_goals sorry
 
 theorem reachNumber_correct :

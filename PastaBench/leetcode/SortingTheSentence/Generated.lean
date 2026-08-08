@@ -78,7 +78,7 @@ namespace PastaBench.leetcode.SortingTheSentence
 def sortSentence := fun (s : String) ↦
   (do
     let mut ws : List String := PastaLean.pyStringSplit s
-    let mut ans := PastaLean.pyListRepeat [Option.none] (PastaLean.pyLen ws)
+    let mut ans : List (Option String) := PastaLean.pyListRepeat [Option.none] (PastaLean.pyLen ws)
     for w in (PastaLean.pyIter ws)do
       -- This assertion is the key to proving memory safety. It follows from the
       -- preconditions and states that the array access is always in bounds.
@@ -105,17 +105,15 @@ def sortSentence := fun (s : String) ↦
 
 @[spec]
 theorem sortSentence_spec :
-    ⦃⌜(PastaLean.pyAll
-              ((PastaLean.pyIter (PastaLean.pyStringSplit s)).map fun w =>
-                PastaLean.pyTruthy w && PastaLean.pyTruthy (PastaLean.pyIsDecimal w⦋(-1 : Int)⦌)) ∧
+    ⦃⌜((∀ w ∈ PastaLean.pyIter (PastaLean.pyStringSplit s),
+              PastaLean.pyTruthy w = true ∧ PastaLean.pyTruthy (PastaLean.pyIsDecimal w⦋(-1 : Int)⦌) = true) ∧
             PastaLean.pyLen
                 (PastaLean.pySetFromList
                   ((PastaLean.pyIter (PastaLean.pyStringSplit s)).map fun w => PastaLean.pyInt w⦋(-1 : Int)⦌)) =
               PastaLean.pyLen (PastaLean.pyStringSplit s)) ∧
-          PastaLean.pyAll
-            ((PastaLean.pyIter (PastaLean.pyStringSplit s)).map fun w =>
-              decide ((1 : Int) ≤ PastaLean.pyInt w⦋(-1 : Int)⦌) &&
-                decide (PastaLean.pyInt w⦋(-1 : Int)⦌ ≤ PastaLean.pyLen (PastaLean.pyStringSplit s)))⌝⦄
+          ∀ w ∈ PastaLean.pyIter (PastaLean.pyStringSplit s),
+            (1 : Int) ≤ PastaLean.pyInt w⦋(-1 : Int)⦌ ∧
+              PastaLean.pyInt w⦋(-1 : Int)⦌ ≤ PastaLean.pyLen (PastaLean.pyStringSplit s)⌝⦄
       sortSentence s ⦃⇓result =>
       ⌜result =
           PastaLean.pyStringJoin " "
@@ -131,22 +129,20 @@ theorem sortSentence_spec :
   try
     mvcgen [sortSentence, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓cur => ⌜True⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem sortSentence_correct :
     ∀ (s : String),
-      (PastaLean.pyAll
-              ((PastaLean.pyIter (PastaLean.pyStringSplit s)).map fun w =>
-                PastaLean.pyTruthy w && PastaLean.pyTruthy (PastaLean.pyIsDecimal w⦋(-1 : Int)⦌)) ∧
+      (((∀ w ∈ PastaLean.pyIter (PastaLean.pyStringSplit s),
+              PastaLean.pyTruthy w = true ∧ PastaLean.pyTruthy (PastaLean.pyIsDecimal w⦋(-1 : Int)⦌) = true) ∧
             PastaLean.pyLen
                 (PastaLean.pySetFromList
                   ((PastaLean.pyIter (PastaLean.pyStringSplit s)).map fun w => PastaLean.pyInt w⦋(-1 : Int)⦌)) =
               PastaLean.pyLen (PastaLean.pyStringSplit s)) ∧
-          PastaLean.pyAll
-            ((PastaLean.pyIter (PastaLean.pyStringSplit s)).map fun w =>
-              decide ((1 : Int) ≤ PastaLean.pyInt w⦋(-1 : Int)⦌) &&
-                decide (PastaLean.pyInt w⦋(-1 : Int)⦌ ≤ PastaLean.pyLen (PastaLean.pyStringSplit s))) →
+          ∀ w ∈ PastaLean.pyIter (PastaLean.pyStringSplit s),
+            (1 : Int) ≤ PastaLean.pyInt w⦋(-1 : Int)⦌ ∧
+              PastaLean.pyInt w⦋(-1 : Int)⦌ ≤ PastaLean.pyLen (PastaLean.pyStringSplit s)) →
         let result := (sortSentence s).run;
         result =
           PastaLean.pyStringJoin " "
@@ -189,7 +185,7 @@ def sortSentence'rn := fun (s : String) ↦
       -- Postcondition: The result is the correctly ordered sentence. This is specified
       -- declaratively by sorting the (number, word) pairs derived from the input.
       let mut ws : List String := PastaLean.pyStringSplit s
-      let mut ans := PastaLean.pyListRepeat [Option.none] (PastaLean.pyLen ws)
+      let mut ans : List (Option String) := PastaLean.pyListRepeat [Option.none] (PastaLean.pyLen ws)
       for w in (PastaLean.pyIter ws)do
         -- This assertion is the key to proving memory safety. It follows from the
         -- preconditions and states that the array access is always in bounds.

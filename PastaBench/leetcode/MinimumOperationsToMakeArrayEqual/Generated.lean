@@ -39,7 +39,7 @@ theorem minOperations_correct :
     ∀ (n : Int),
       n ≥ (0 : Int) →
         minOperations n = PastaLean.pyShiftRight n (1 : Int) *ₚ (n -ₚ PastaLean.pyShiftRight n (1 : Int)) :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  by taste?
 
 def minOperations'rn := fun (n : Int) ↦
   PastaLean.pySum

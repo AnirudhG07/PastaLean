@@ -22,16 +22,14 @@ private partial def _count_components'dfs := fun (i : Int) ↦ fun (adj : List (
     (do
       let mut vis := vis
       vis := PastaLean.pySetItem vis i Bool.true
-      let __unpack_value_1 := ((1 : Int), PastaLean.pyLen adj⦋i⦌)
-      let __unpack_pair_1 := __unpack_value_1
-      let mut nodes : Int := Prod.fst __unpack_pair_1
-      let mut edges : Int := Prod.snd __unpack_pair_1
+      let mut nodes : Int := (1 : Int)
+      let mut edges : Int := PastaLean.pyLen adj⦋i⦌
       for j in (PastaLean.pyIter adj⦋i⦌)do
         if h_1 : ¬PastaLean.pyTruthy vis⦋j⦌ = true then 
-          let __unpack_value_2 := _count_components'dfs j adj vis
-          let __unpack_pair_2 := __unpack_value_2
-          vis := Prod.snd __unpack_pair_2
-          let __unpack_nested_1 := Prod.fst __unpack_pair_2
+          let __unpack_value_1 := _count_components'dfs j adj vis
+          let __unpack_pair_1 := __unpack_value_1
+          vis := Prod.snd __unpack_pair_1
+          let __unpack_nested_1 := Prod.fst __unpack_pair_1
           let mut a := Prod.fst __unpack_nested_1
           let mut b := Prod.snd __unpack_nested_1
           nodes := nodes +ₚ a
@@ -69,16 +67,14 @@ private partial def _count_components'dfs'rn := fun (i : Int) ↦ fun (adj : Lis
     (do
       let mut vis := vis
       vis := PastaLean.pySetItem vis i Bool.true
-      let __unpack_value_1 := ((1 : Int), PastaLean.pyLen adj⦋i⦌)
-      let __unpack_pair_1 := __unpack_value_1
-      let mut nodes : Int := Prod.fst __unpack_pair_1
-      let mut edges : Int := Prod.snd __unpack_pair_1
+      let mut nodes : Int := (1 : Int)
+      let mut edges : Int := PastaLean.pyLen adj⦋i⦌
       for j in (PastaLean.pyIter adj⦋i⦌)do
         if h_1 : !PastaLean.pyTruthy vis⦋j⦌ then 
-          let __unpack_value_2 := _count_components'dfs'rn j adj vis
-          let __unpack_pair_2 := __unpack_value_2
-          vis := Prod.snd __unpack_pair_2
-          let __unpack_nested_1 := Prod.fst __unpack_pair_2
+          let __unpack_value_1 := _count_components'dfs'rn j adj vis
+          let __unpack_pair_1 := __unpack_value_1
+          vis := Prod.snd __unpack_pair_1
+          let __unpack_nested_1 := Prod.fst __unpack_pair_1
           let mut a := Prod.fst __unpack_nested_1
           let mut b := Prod.snd __unpack_nested_1
           nodes := nodes +ₚ a

@@ -62,10 +62,8 @@ namespace PastaBench.leetcode.FindTheLosersOfTheCircularGame
 def circularGameLosers := fun (n : Int) ↦ fun (k : Int) ↦
   (do
     let mut vis : List Bool := PastaLean.pyListRepeat [Bool.false] n
-    let __unpack_value_1 := ((0 : Int), (1 : Int))
-    let __unpack_pair_1 := __unpack_value_1
-    let mut i : Int := Prod.fst __unpack_pair_1
-    let mut p : Int := Prod.snd __unpack_pair_1
+    let mut i : Int := (0 : Int)
+    let mut p : Int := (1 : Int)
     while (¬PastaLean.pyTruthy vis⦋i⦌ = true) do
       let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i) && decide (i < n))
       let _ := Libraries.passta.pyPassInvariant (decide (p ≥ (1 : Int)))
@@ -92,7 +90,7 @@ def circularGameLosers := fun (n : Int) ↦ fun (k : Int) ↦
 @[spec]
 theorem circularGameLosers_spec :
     ⦃⌜n ≥ (1 : Int) ∧ k ≥ (1 : Int)⌝⦄ circularGameLosers n k ⦃⇓result =>
-      ⌜PastaLean.pyAll ((PastaLean.pyIter result).map fun x => decide ((1 : Int) ≤ x) && decide (x ≤ n))⌝⦄ :=
+      ⌜∀ x ∈ PastaLean.pyIter result, (1 : Int) ≤ x ∧ x ≤ n⌝⦄ :=
   by
   try
     mvcgen [circularGameLosers, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
@@ -114,7 +112,7 @@ theorem circularGameLosers_spec :
                   ((List.filter (fun v => PastaLean.pyTruthy v) (PastaLean.pyIter vis)).map fun v => (1 : Int)) =
                 p -ₚ (1 : Int))
           (fun _ => True) s⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem circularGameLosers_correct :
@@ -122,7 +120,7 @@ theorem circularGameLosers_correct :
       ∀ (k : Int),
         n ≥ (1 : Int) ∧ k ≥ (1 : Int) →
           let result := (circularGameLosers n k).run;
-          PastaLean.pyAll ((PastaLean.pyIter result).map fun x => decide ((1 : Int) ≤ x) && decide (x ≤ n)) :=
+          ∀ x ∈ PastaLean.pyIter result, (1 : Int) ≤ x ∧ x ≤ n :=
   by
   intro n k hpre
   exact circularGameLosers_spec hpre
@@ -133,10 +131,8 @@ def circularGameLosers'rn := fun (n : Int) ↦ fun (k : Int) ↦
       let _ := Libraries.passta.pyPassRequires (decide (n ≥ (1 : Int)))
       let _ := Libraries.passta.pyPassRequires (decide (k ≥ (1 : Int)))
       let mut vis : List Bool := PastaLean.pyListRepeat [Bool.false] n
-      let __unpack_value_1 := ((0 : Int), (1 : Int))
-      let __unpack_pair_1 := __unpack_value_1
-      let mut i : Int := Prod.fst __unpack_pair_1
-      let mut p : Int := Prod.snd __unpack_pair_1
+      let mut i : Int := (0 : Int)
+      let mut p : Int := (1 : Int)
       while (!PastaLean.pyTruthy vis⦋i⦌) do
         let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i) && decide (i < n))
         let _ := Libraries.passta.pyPassInvariant (decide (p ≥ (1 : Int)))

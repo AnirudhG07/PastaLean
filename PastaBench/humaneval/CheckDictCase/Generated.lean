@@ -68,10 +68,8 @@ def check_dict_case := fun (dict : PyAny) ↦
     else
       let _ := ()
     let _ := Libraries.passta.pyPassAssert (decide (PastaLean.pyLen keys > (0 : Int)))
-    let __unpack_value_1 := (Bool.true, Bool.true)
-    let __unpack_pair_1 := __unpack_value_1
-    let mut lower : Bool := Prod.fst __unpack_pair_1
-    let mut upper : Bool := Prod.snd __unpack_pair_1
+    let mut lower : Bool := Bool.true
+    let mut upper : Bool := Bool.true
     for k in (PastaLean.pyIter keys)do
       -- The flags `lower` and `upper` track if all keys *seen so far*
       -- could satisfy the all-lowercase or all-uppercase condition.
@@ -129,7 +127,17 @@ theorem check_dict_case_spec :
   by
   try
     mvcgen [check_dict_case, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · Invariant.withEarlyReturn (onReturn := fun _ _ => ⌜True⌝) (onContinue := fun _ _ => ⌜True⌝)
+    ·
+      Invariant.withEarlyReturn (onContinue := fun cur b =>
+        ⌜let upper := b |>.snd;
+          let lower := b |>.fst;
+          (lower =
+              ∀ p ∈ PastaLean.pyIter (PastaLean.pySlice keys none (some (PastaLean.pyIndex keys k)) none),
+                PastaLean.pyTruthy (isinstance p str) = true ∧ PastaLean.pyTruthy (PastaLean.pyIsLower p) = true) ∧
+            upper =
+              ∀ p ∈ PastaLean.pyIter (PastaLean.pySlice keys none (some (PastaLean.pyIndex keys k)) none),
+                PastaLean.pyTruthy (isinstance p str) = true ∧ PastaLean.pyTruthy (PastaLean.pyIsUpper p) = true⌝)
+        (onReturn := fun _ _ => ⌜True⌝)
   taste?
   all_goals sorry
 
@@ -168,10 +176,8 @@ def check_dict_case'rn := fun (dict : PyAny) ↦
       else
         let _ := ()
       let _ := Libraries.passta.pyPassAssert (decide (PastaLean.pyLen keys > (0 : Int)))
-      let __unpack_value_1 := (Bool.true, Bool.true)
-      let __unpack_pair_1 := __unpack_value_1
-      let mut lower : Bool := Prod.fst __unpack_pair_1
-      let mut upper : Bool := Prod.snd __unpack_pair_1
+      let mut lower : Bool := Bool.true
+      let mut upper : Bool := Bool.true
       for k in (PastaLean.pyIter keys)do
         -- The flags `lower` and `upper` track if all keys *seen so far*
         -- could satisfy the all-lowercase or all-uppercase condition.

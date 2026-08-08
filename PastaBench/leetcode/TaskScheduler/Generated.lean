@@ -79,7 +79,7 @@ theorem leastInterval_correct :
             (((leastInterval tasks n ≥ PastaLean.pyLen tasks ∧ leastInterval tasks n > (0 : Int)) ∧ x ≥ (1 : Int)) ∧
                 s ≥ (1 : Int)) ∧
               s ≤ PastaLean.pyLen cnt :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  by taste?
 
 def leastInterval'rn := fun (tasks : List String) ↦ fun (n : Int) ↦
   let cnt := (Libraries.collections.pyCounter tasks : Libraries.collections.PyDefaultDict String Int)

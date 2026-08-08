@@ -111,10 +111,8 @@ def coin_change := fun (coins : List Int) ↦ fun (amount : Int) ↦
   Id.run
     (do
       let mut inf := PastaLean.pyNonFinite "inf"
-      let __unpack_value_1 := (PastaLean.pyLen coins, amount)
-      let __unpack_pair_1 := __unpack_value_1
-      let mut m : Int := Prod.fst __unpack_pair_1
-      let mut n : Int := Prod.snd __unpack_pair_1
+      let mut m : Int := PastaLean.pyLen coins
+      let mut n : Int := amount
       let mut f : List (List Int) :=
         (PastaLean.pyRange (m +ₚ (1 : Int))).map fun _ => PastaLean.pyListRepeat [inf] (n +ₚ (1 : Int))
       f := PastaLean.pyModifyItem f (0 : Int) (fun __row_1 => PastaLean.pySetItem __row_1 (0 : Int) (0 : Int))
@@ -138,10 +136,8 @@ def coin_change'rn := fun (coins : List Int) ↦ fun (amount : Int) ↦
   Id.run
     (do
       let mut inf := PastaLean.pyNonFinite "inf"
-      let __unpack_value_1 := (PastaLean.pyLen coins, amount)
-      let __unpack_pair_1 := __unpack_value_1
-      let mut m : Int := Prod.fst __unpack_pair_1
-      let mut n : Int := Prod.snd __unpack_pair_1
+      let mut m : Int := PastaLean.pyLen coins
+      let mut n : Int := amount
       let mut f : Array (Array Int) :=
         ((PastaLean.pyRange (m +ₚ (1 : Int))).map fun _ => PastaLean.pyArrayRepeat #[inf] (n +ₚ (1 : Int))) |>.toArray
       f := PastaLean.pyModifyItem f (0 : Int) (fun __row_1 => PastaLean.pySetItem __row_1 (0 : Int) (0 : Int))

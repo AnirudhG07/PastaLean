@@ -95,10 +95,8 @@ def intersection := fun (interval1 : List Int) ↦ fun (interval2 : List Int) �
     else
       let _ := ()
     let _ := Libraries.passta.pyPassAssert (decide (interval1⦋(0 : Int)⦌ ≤ interval2⦋(0 : Int)⦌))
-    let __unpack_value_1 := (interval2⦋(0 : Int)⦌, PastaLean.pyMin [interval1⦋(1 : Int)⦌, interval2⦋(1 : Int)⦌])
-    let __unpack_pair_1 := __unpack_value_1
-    let mut l : Int := Prod.fst __unpack_pair_1
-    let mut r : Int := Prod.snd __unpack_pair_1
+    let mut l : Int := interval2⦋(0 : Int)⦌
+    let mut r : Int := PastaLean.pyMin [interval1⦋(1 : Int)⦌, interval2⦋(1 : Int)⦌]
     let __py_ret_1 := if PastaLean.pyTruthy (_intersection'is_prime (r -ₚ l)) then "YES" else "NO"
     return __py_ret_1 : Id _)
 
@@ -209,10 +207,8 @@ def intersection'rn := fun (interval1 : List Int) ↦ fun (interval2 : List Int)
       -- This assertion establishes the ordering after the potential swap, which is a key
       -- lemma for proving that the subsequent calculation of l and r is correct.
       let _ := Libraries.passta.pyPassAssert (decide (interval1⦋(0 : Int)⦌ ≤ interval2⦋(0 : Int)⦌))
-      let __unpack_value_1 := (interval2⦋(0 : Int)⦌, PastaLean.pyMin [interval1⦋(1 : Int)⦌, interval2⦋(1 : Int)⦌])
-      let __unpack_pair_1 := __unpack_value_1
-      let mut l : Int := Prod.fst __unpack_pair_1
-      let mut r : Int := Prod.snd __unpack_pair_1
+      let mut l : Int := interval2⦋(0 : Int)⦌
+      let mut r : Int := PastaLean.pyMin [interval1⦋(1 : Int)⦌, interval2⦋(1 : Int)⦌]
       let __py_ret_1 := if PastaLean.pyTruthy (_intersection'is_prime'rn (r -ₚ l)) then "YES" else "NO"
       return __py_ret_1)
 

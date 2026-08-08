@@ -74,10 +74,8 @@ def numRescueBoats := fun (people : List Int) ↦ fun (limit : Int) ↦
     let mut people := people
     people := PastaLean.pySort people
     let mut ans : Int := (0 : Int)
-    let __unpack_value_1 := ((0 : Int), PastaLean.pyLen people -ₚ (1 : Int))
-    let __unpack_pair_1 := __unpack_value_1
-    let mut i : Int := Prod.fst __unpack_pair_1
-    let mut j : Int := Prod.snd __unpack_pair_1
+    let mut i : Int := (0 : Int)
+    let mut j : Int := PastaLean.pyLen people -ₚ (1 : Int)
     while (i ≤ j) do
       -- INVARIANTS
       -- The pointers `i` and `j` must remain within the bounds of the list.
@@ -103,8 +101,7 @@ def numRescueBoats := fun (people : List Int) ↦ fun (limit : Int) ↦
 
 @[spec]
 theorem numRescueBoats_spec :
-    ⦃⌜limit > (0 : Int) ∧
-          PastaLean.pyAll ((PastaLean.pyIter people).map fun p => decide ((0 : Int) < p) && decide (p ≤ limit))⌝⦄
+    ⦃⌜limit > (0 : Int) ∧ ∀ p ∈ PastaLean.pyIter people, (0 : Int) < p ∧ p ≤ limit⌝⦄
       numRescueBoats people limit ⦃⇓ans =>
       ⌜(2 : Int) *ₚ ans ≥ PastaLean.pyLen people ∧ ans ≤ PastaLean.pyLen people⌝⦄ :=
   by
@@ -124,14 +121,13 @@ theorem numRescueBoats_spec :
             ((((0 : Int) ≤ i ∧ j < PastaLean.pyLen people) ∧ i ≤ j +ₚ (1 : Int)) ∧ i ≤ ans) ∧
               ans +ₚ j = PastaLean.pyLen people -ₚ (1 : Int))
           (fun _ => True) s⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  taste?
   all_goals sorry
 
 theorem numRescueBoats_correct :
     ∀ (people : List Int),
       ∀ (limit : Int),
-        limit > (0 : Int) ∧
-            PastaLean.pyAll ((PastaLean.pyIter people).map fun p => decide ((0 : Int) < p) && decide (p ≤ limit)) →
+        (limit > (0 : Int) ∧ ∀ p ∈ PastaLean.pyIter people, (0 : Int) < p ∧ p ≤ limit) →
           let ans := (numRescueBoats people limit).run;
           (2 : Int) *ₚ ans ≥ PastaLean.pyLen people ∧ ans ≤ PastaLean.pyLen people :=
   by
@@ -148,10 +144,8 @@ def numRescueBoats'rn := fun (people : List Int) ↦ fun (limit : Int) ↦
           (PastaLean.pyAll ((PastaLean.pyIter people).map fun p => decide ((0 : Int) < p) && decide (p ≤ limit)))
       people := PastaLean.pySort people
       let mut ans : Int := (0 : Int)
-      let __unpack_value_1 := ((0 : Int), PastaLean.pyLen people -ₚ (1 : Int))
-      let __unpack_pair_1 := __unpack_value_1
-      let mut i : Int := Prod.fst __unpack_pair_1
-      let mut j : Int := Prod.snd __unpack_pair_1
+      let mut i : Int := (0 : Int)
+      let mut j : Int := PastaLean.pyLen people -ₚ (1 : Int)
       while (i ≤ j) do
         -- INVARIANTS
         -- The pointers `i` and `j` must remain within the bounds of the list.

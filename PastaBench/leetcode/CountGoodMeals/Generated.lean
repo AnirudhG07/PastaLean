@@ -74,22 +74,18 @@ def countPairs := fun (deliciousness : List Int) ↦
 
 @[spec]
 theorem countPairs_spec :
-    ⦃⌜PastaLean.pyLen deliciousness > (0 : Int) ∧
-          PastaLean.pyAll ((PastaLean.pyIter deliciousness).map fun d => decide (d ≥ (0 : Int)))⌝⦄
+    ⦃⌜PastaLean.pyLen deliciousness > (0 : Int) ∧ ∀ d ∈ PastaLean.pyIter deliciousness, d ≥ (0 : Int)⌝⦄
       countPairs deliciousness ⦃⇓ans => ⌜ans ≥ (0 : Int) ∧ ans < (10 : Int) ^ₚ (9 : Int) +ₚ (7 : Int)⌝⦄ :=
   by
   try
     mvcgen [countPairs, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓⟨cur, ans⟩ =>
-      ⌜((0 : Int) ≤ ans ∧ ans < mod) ∧
-          PastaLean.pyAll ((PastaLean.pyIter (PastaLean.pyAnys cnt)).map fun v => decide (v ≥ (0 : Int)))⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+    · ⇓⟨cur, ans⟩ => ⌜((0 : Int) ≤ ans ∧ ans < mod) ∧ ∀ v ∈ PastaLean.pyIter (PastaLean.pyAnys cnt), v ≥ (0 : Int)⌝
+  taste?
   all_goals sorry
 
 theorem countPairs_correct :
     ∀ (deliciousness : List Int),
-      PastaLean.pyLen deliciousness > (0 : Int) ∧
-          PastaLean.pyAll ((PastaLean.pyIter deliciousness).map fun d => decide (d ≥ (0 : Int))) →
+      (PastaLean.pyLen deliciousness > (0 : Int) ∧ ∀ d ∈ PastaLean.pyIter deliciousness, d ≥ (0 : Int)) →
         let ans := (countPairs deliciousness).run;
         ans ≥ (0 : Int) ∧ ans < (10 : Int) ^ₚ (9 : Int) +ₚ (7 : Int) :=
   by

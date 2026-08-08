@@ -154,7 +154,7 @@ theorem closestKValues_spec :
           PastaLean.pyLen result ≤ k⌝⦄ :=
   by
   mvcgen [closestKValues, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem closestKValues_correct :

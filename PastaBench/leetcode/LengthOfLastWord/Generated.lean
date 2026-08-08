@@ -102,7 +102,7 @@ theorem lengthOfLastWord_spec :
             let j := st;
             (-(1 : Int) ≤ j ∧ j ≤ i) ∧ j < PastaLean.pyLen s)
           (fun _ => True) s⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem lengthOfLastWord_correct :

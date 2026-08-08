@@ -70,7 +70,7 @@ theorem maximumSetSize_correct :
         let a := PastaLean.pyMin [PastaLean.pyLen (s1 -ₚ s2), PastaLean.pyFloorDiv n (2 : Int)]
         let b := PastaLean.pyMin [PastaLean.pyLen (s2 -ₚ s1), PastaLean.pyFloorDiv n (2 : Int)]
         (0 : Int) ≤ maximumSetSize nums1 nums2 ∧ maximumSetSize nums1 nums2 ≤ PastaLean.pyLen nums1 :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  by taste?
 
 def maximumSetSize'rn := fun (nums1 : List Int) ↦ fun (nums2 : List Int) ↦
   let s1 := (PastaLean.pySet nums1 : List Int)

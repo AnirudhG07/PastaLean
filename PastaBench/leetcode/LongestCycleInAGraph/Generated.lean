@@ -132,22 +132,20 @@ def longestCycle := fun (edges : List Int) ↦
 
 @[spec]
 theorem longestCycle_spec :
-    ⦃⌜PastaLean.pyAll
-          ((PastaLean.pyIter edges).map fun e => decide (-(1 : Int) ≤ e) && decide (e < PastaLean.pyLen edges))⌝⦄
-      longestCycle edges ⦃⇓ans => ⌜-(1 : Int) ≤ ans ∧ ans ≤ PastaLean.pyLen edges⌝⦄ :=
+    ⦃⌜∀ e ∈ PastaLean.pyIter edges, -(1 : Int) ≤ e ∧ e < PastaLean.pyLen edges⌝⦄ longestCycle edges ⦃⇓ans =>
+      ⌜-(1 : Int) ≤ ans ∧ ans ≤ PastaLean.pyLen edges⌝⦄ :=
   by
   try
     mvcgen [longestCycle, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓⟨cur, ans⟩ =>
       ⌜let i := (cur.prefix.length : Int);
         (((0 : Int) ≤ i ∧ i ≤ n) ∧ -(1 : Int) ≤ ans ∧ ans ≤ n) ∧ PastaLean.pyLen vis = n⌝
-  sorry
+  taste?
   all_goals sorry
 
 theorem longestCycle_correct :
     ∀ (edges : List Int),
-      PastaLean.pyAll
-          ((PastaLean.pyIter edges).map fun e => decide (-(1 : Int) ≤ e) && decide (e < PastaLean.pyLen edges)) →
+      (∀ e ∈ PastaLean.pyIter edges, -(1 : Int) ≤ e ∧ e < PastaLean.pyLen edges) →
         let ans := (longestCycle edges).run;
         -(1 : Int) ≤ ans ∧ ans ≤ PastaLean.pyLen edges :=
   by

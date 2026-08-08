@@ -80,32 +80,28 @@ theorem customSortString_correct :
       ∀ (s : String),
         let d :=
           Std.HashMap.ofList
-            ((PastaLean.pyIter (PastaLean.pyEnumerate order)).map fun (_pair_5 : Int × String) =>
-              let i := Prod.fst _pair_5;
-              let c := Prod.snd _pair_5;
+            ((PastaLean.pyIter (PastaLean.pyEnumerate order)).map fun (_pair_3 : Int × String) =>
+              let i := Prod.fst _pair_3;
+              let c := Prod.snd _pair_3;
               (c, i))
         PastaLean.pyLen (PastaLean.pySet order) = PastaLean.pyLen order →
           Libraries.collections.pyCounter (customSortString order s) = Libraries.collections.pyCounter s ∧
-            PastaLean.pyTruthy
-                (PastaLean.pyAll
-                  ((PastaLean.pyRange (PastaLean.pyLen (customSortString order s) -ₚ (1 : Int))).map fun i =>
-                    decide
-                      (PastaLean.pyGetD
-                          (Std.HashMap.ofList
-                            ((PastaLean.pyIter (PastaLean.pyEnumerate order)).map fun (_pair_3 : Int × String) =>
-                              let k := Prod.fst _pair_3;
-                              let c := Prod.snd _pair_3;
-                              (c, k)))
-                          (customSortString order s)⦋i⦌ (0 : Int) ≤
-                        PastaLean.pyGetD
-                          (Std.HashMap.ofList
-                            ((PastaLean.pyIter (PastaLean.pyEnumerate order)).map fun (_pair_4 : Int × String) =>
-                              let k := Prod.fst _pair_4;
-                              let c := Prod.snd _pair_4;
-                              (c, k)))
-                          (customSortString order s)⦋i +ₚ (1 : Int)⦌ (0 : Int)))) =
-              true :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+            ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen (customSortString order s) -ₚ (1 : Int))),
+              PastaLean.pyGetD
+                  (Std.HashMap.ofList
+                    ((PastaLean.pyIter (PastaLean.pyEnumerate order)).map fun (_pair_3 : Int × String) =>
+                      let k := Prod.fst _pair_3;
+                      let c := Prod.snd _pair_3;
+                      (c, k)))
+                  (customSortString order s)⦋i⦌ (0 : Int) ≤
+                PastaLean.pyGetD
+                  (Std.HashMap.ofList
+                    ((PastaLean.pyIter (PastaLean.pyEnumerate order)).map fun (_pair_4 : Int × String) =>
+                      let k := Prod.fst _pair_4;
+                      let c := Prod.snd _pair_4;
+                      (c, k)))
+                  (customSortString order s)⦋i +ₚ (1 : Int)⦌ (0 : Int) :=
+  by taste?
 
 def customSortString'rn := fun (order : String) ↦ fun (s : String) ↦
   let d :=

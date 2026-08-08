@@ -64,10 +64,8 @@ namespace PastaBench.humaneval.ParseNestedParens
 
 def count_depth := fun (s : String) ↦
   (do
-    let __unpack_value_1 := ((0 : Int), (0 : Int))
-    let __unpack_pair_1 := __unpack_value_1
-    let mut max_depth : Int := Prod.fst __unpack_pair_1
-    let mut cnt : Int := Prod.snd __unpack_pair_1
+    let mut max_depth : Int := (0 : Int)
+    let mut cnt : Int := (0 : Int)
     for ch in (PastaLean.pyIter s)do
       -- max_depth is the running maximum of the prefix depths, so it dominates cnt and, since
       -- it starts at the depth of the empty prefix, is never negative.
@@ -125,10 +123,8 @@ def count_depth'rn := fun (s : String) ↦
         Libraries.passta.pyPassRequires (PastaLean.pyAll ((PastaLean.pyIter s).map fun c => c == "(" || c == ")"))
       -- The point: the returned number IS the maximum nesting depth of s — it dominates the depth
       -- of every prefix, and some prefix actually attains it. (Upper bound + attained = maximum.)
-      let __unpack_value_1 := ((0 : Int), (0 : Int))
-      let __unpack_pair_1 := __unpack_value_1
-      let mut max_depth : Int := Prod.fst __unpack_pair_1
-      let mut cnt : Int := Prod.snd __unpack_pair_1
+      let mut max_depth : Int := (0 : Int)
+      let mut cnt : Int := (0 : Int)
       for ch in (PastaLean.pyIter s)do
         -- max_depth is the running maximum of the prefix depths, so it dominates cnt and, since
         -- it starts at the depth of the empty prefix, is never negative.

@@ -106,7 +106,7 @@ theorem continuousSubarrays_spec :
   try
     mvcgen [continuousSubarrays, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓⟨cur, ans, i⟩ => ⌜ans = (cur.prefix.map (fun x => PastaLean.pyLen sl)).sum⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem continuousSubarrays_correct :

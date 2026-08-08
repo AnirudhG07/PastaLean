@@ -81,7 +81,7 @@ theorem maxArrayValue_spec :
     · ⇓cur =>
       ⌜let i := (cur.prefix.length : Int);
         ((0 : Int) ≤ i ∧ i < PastaLean.pyLen nums) ∧ (0 : Int) ≤ i +ₚ (1 : Int) ∧ i +ₚ (1 : Int) < PastaLean.pyLen nums⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem maxArrayValue_correct :

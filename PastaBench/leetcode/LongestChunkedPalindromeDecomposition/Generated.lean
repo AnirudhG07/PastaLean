@@ -76,10 +76,8 @@ def longestDecomposition := fun (text : String) ↦
   (do
     let mut ans : Int := (0 : Int)
     let mut n : Int := PastaLean.pyLen text
-    let __unpack_value_1 := ((0 : Int), n -ₚ (1 : Int))
-    let __unpack_pair_1 := __unpack_value_1
-    let mut i : Int := Prod.fst __unpack_pair_1
-    let mut j : Int := Prod.snd __unpack_pair_1
+    let mut i : Int := (0 : Int)
+    let mut j : Int := n -ₚ (1 : Int)
     while (i ≤ j) do
       let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i))
       let _ := Libraries.passta.pyPassInvariant (decide (j < n))
@@ -118,7 +116,7 @@ theorem longestDecomposition_spec :
     ⦃⌜True⌝⦄ longestDecomposition text ⦃⇓ans => ⌜ans ≥ (0 : Int) ∧ ans ≤ PastaLean.pyLen text⌝⦄ :=
   by
   mvcgen [longestDecomposition, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  all_goals sorry
+  taste?
   all_goals sorry
 
 theorem longestDecomposition_correct :
@@ -134,10 +132,8 @@ def longestDecomposition'rn := fun (text : String) ↦
     (do
       let mut ans : Int := (0 : Int)
       let mut n : Int := PastaLean.pyLen text
-      let __unpack_value_1 := ((0 : Int), n -ₚ (1 : Int))
-      let __unpack_pair_1 := __unpack_value_1
-      let mut i : Int := Prod.fst __unpack_pair_1
-      let mut j : Int := Prod.snd __unpack_pair_1
+      let mut i : Int := (0 : Int)
+      let mut j : Int := n -ₚ (1 : Int)
       while (i ≤ j) do
         let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i))
         let _ := Libraries.passta.pyPassInvariant (decide (j < n))

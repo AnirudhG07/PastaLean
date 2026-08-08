@@ -56,18 +56,11 @@ attribute [simp] sortByBits
 theorem sortByBits_correct :
     ∀ (arr : List Int),
       (PastaLean.pyLen (sortByBits arr) = PastaLean.pyLen arr ∧
-          PastaLean.pyTruthy
-              (PastaLean.pyAll
-                ((PastaLean.pyIter arr).map fun x => PastaLean.pyCount (sortByBits arr) x == PastaLean.pyCount arr x)) =
-            true) ∧
-        PastaLean.pyTruthy
-            (PastaLean.pyAll
-              ((PastaLean.pyRange (PastaLean.pyLen (sortByBits arr) -ₚ (1 : Int))).map fun i =>
-                decide
-                  ((PastaLean.pyBitCount (sortByBits arr)⦋i⦌, (sortByBits arr)⦋i⦌) ≤
-                    (PastaLean.pyBitCount (sortByBits arr)⦋i +ₚ (1 : Int)⦌, (sortByBits arr)⦋i +ₚ (1 : Int)⦌)))) =
-          true :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+          ∀ x ∈ PastaLean.pyIter arr, PastaLean.pyCount (sortByBits arr) x = PastaLean.pyCount arr x) ∧
+        ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen (sortByBits arr) -ₚ (1 : Int))),
+          (PastaLean.pyBitCount (sortByBits arr)⦋i⦌, (sortByBits arr)⦋i⦌) ≤
+            (PastaLean.pyBitCount (sortByBits arr)⦋i +ₚ (1 : Int)⦌, (sortByBits arr)⦋i +ₚ (1 : Int)⦌) :=
+  by taste?
 
 def sortByBits'rn := fun (arr : List Int) ↦ PastaLean.pySortBy (fun (x : Int) ↦ (PastaLean.pyBitCount x, x)) false arr
 

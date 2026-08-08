@@ -68,9 +68,8 @@ def sumOfDigits := fun (nums : List Int) ↦
 
 @[spec]
 theorem sumOfDigits_spec :
-    ⦃⌜PastaLean.pyLen nums > (0 : Int) ∧
-          PastaLean.pyAll ((PastaLean.pyIter nums).map fun n => decide (n ≥ (0 : Int)))⌝⦄
-      sumOfDigits nums ⦃⇓result => ⌜result = (0 : Int) ∨ result = (1 : Int)⌝⦄ :=
+    ⦃⌜PastaLean.pyLen nums > (0 : Int) ∧ ∀ n ∈ PastaLean.pyIter nums, n ≥ (0 : Int)⌝⦄ sumOfDigits nums ⦃⇓result =>
+      ⌜result = (0 : Int) ∨ result = (1 : Int)⌝⦄ :=
   by
   try
     mvcgen [sumOfDigits, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
@@ -85,13 +84,12 @@ theorem sumOfDigits_spec :
             let x := st |>.fst;
             x ≥ (0 : Int) ∧ s ≥ (0 : Int))
           (fun _ => True) s⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem sumOfDigits_correct :
     ∀ (nums : List Int),
-      PastaLean.pyLen nums > (0 : Int) ∧
-          PastaLean.pyAll ((PastaLean.pyIter nums).map fun n => decide (n ≥ (0 : Int))) →
+      (PastaLean.pyLen nums > (0 : Int) ∧ ∀ n ∈ PastaLean.pyIter nums, n ≥ (0 : Int)) →
         let result := (sumOfDigits nums).run;
         result = (0 : Int) ∨ result = (1 : Int) :=
   by

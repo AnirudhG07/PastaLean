@@ -113,7 +113,7 @@ theorem nearestPalindromic_spec :
     mvcgen [nearestPalindromic, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓cur => ⌜True⌝
     · ⇓⟨cur, ans⟩ => ⌜True⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem nearestPalindromic_correct :

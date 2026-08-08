@@ -102,26 +102,23 @@ def replaceNonCoprimes := fun (nums : List Int) ↦
 @[spec]
 theorem replaceNonCoprimes_spec :
     ⦃⌜True⌝⦄ replaceNonCoprimes nums ⦃⇓stk =>
-      ⌜PastaLean.pyAll
-          ((PastaLean.pyRange (PastaLean.pyLen stk -ₚ (1 : Int))).map fun i =>
-            Libraries.math.pyMathGcd stk⦋i⦌ stk⦋i +ₚ (1 : Int)⦌ == (1 : Int))⌝⦄ :=
+      ⌜∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen stk -ₚ (1 : Int))),
+          Libraries.math.pyMathGcd stk⦋i⦌ stk⦋i +ₚ (1 : Int)⦌ = (1 : Int)⌝⦄ :=
   by
   try
     mvcgen [replaceNonCoprimes, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓cur =>
       ⌜((0 : Int) ≤ PastaLean.pyLen stk ∧ PastaLean.pyLen stk ≤ PastaLean.pyLen nums) ∧
-          PastaLean.pyAll
-            ((PastaLean.pyRange (PastaLean.pyLen stk -ₚ (1 : Int))).map fun i =>
-              Libraries.math.pyMathGcd stk⦋i⦌ stk⦋i +ₚ (1 : Int)⦌ == (1 : Int))⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+          ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen stk -ₚ (1 : Int))),
+            Libraries.math.pyMathGcd stk⦋i⦌ stk⦋i +ₚ (1 : Int)⦌ = (1 : Int)⌝
+  taste?
   all_goals sorry
 
 theorem replaceNonCoprimes_correct :
     ∀ (nums : List Int),
       let stk := (replaceNonCoprimes nums).run;
-      PastaLean.pyAll
-        ((PastaLean.pyRange (PastaLean.pyLen stk -ₚ (1 : Int))).map fun i =>
-          Libraries.math.pyMathGcd stk⦋i⦌ stk⦋i +ₚ (1 : Int)⦌ == (1 : Int)) :=
+      ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen stk -ₚ (1 : Int))),
+        Libraries.math.pyMathGcd stk⦋i⦌ stk⦋i +ₚ (1 : Int)⦌ = (1 : Int) :=
   by
   intro nums
   exact replaceNonCoprimes_spec True.intro

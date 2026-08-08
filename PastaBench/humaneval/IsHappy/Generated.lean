@@ -62,7 +62,11 @@ theorem is_happy_spec : ⦃⌜True⌝⦄ is_happy s ⦃⇓result => ⌜result = 
   by
   try
     mvcgen [is_happy, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · Invariant.withEarlyReturn (onReturn := fun _ _ => ⌜True⌝) (onContinue := fun _ _ => ⌜True⌝)
+    ·
+      Invariant.withEarlyReturn (onContinue := fun cur b =>
+        ⌜let i := (cur.prefix.length : Int);
+          PastaLean.pyLen s ≥ (3 : Int)⌝)
+        (onReturn := fun _ _ => ⌜True⌝)
   taste?
   all_goals sorry
 

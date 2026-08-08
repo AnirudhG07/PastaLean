@@ -87,7 +87,7 @@ theorem minDeletion_spec :
             let i := st |>.fst;
             (((0 : Int) ≤ i ∧ i ≤ n) ∧ (0 : Int) ≤ ans) ∧ ans ≤ n)
           (fun _ => True) s⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  taste?
   all_goals sorry
 
 theorem minDeletion_correct :

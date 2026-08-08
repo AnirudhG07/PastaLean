@@ -84,10 +84,8 @@ def inf {α : Type} [PastaLean.PyNonFinite α] : α :=
 
 def maximumValueSum := fun (nums : List Int) ↦ fun (k : Int) ↦ fun (edges : List (List Int)) ↦
   (do
-    let __unpack_value_1 := ((0 : Int), -inf)
-    let __unpack_pair_1 := __unpack_value_1
-    let mut f0 : Int := Prod.fst __unpack_pair_1
-    let mut f1 : Int := Prod.snd __unpack_pair_1
+    let mut f0 : Int := (0 : Int)
+    let mut f1 : Int := -inf
     for x in (PastaLean.pyIter nums)do
       -- f0 is always a sum of non-negative numbers, so it remains non-negative.
       let _ := Libraries.passta.pyPassInvariant (decide (f0 ≥ (0 : Int)))
@@ -99,10 +97,8 @@ def maximumValueSum := fun (nums : List Int) ↦ fun (k : Int) ↦ fun (edges : 
       -- 1. Not XOR x, and have an odd number of XORs on the old prefix.
       -- 2. XOR x, and have an even number of XORs on the old prefix.
       let mut f1_next : Int := PastaLean.pyMax [f1 +ₚ x, f0 +ₚ PastaLean.pyBitXor x k]
-      let __unpack_value_2 := (f0_next, f1_next)
-      let __unpack_pair_2 := __unpack_value_2
-      f0 := Prod.fst __unpack_pair_2
-      f1 := Prod.snd __unpack_pair_2
+      f0 := f0_next
+      f1 := f1_next
     return f0 : Id _)
 
 @[spec]
@@ -113,8 +109,8 @@ theorem maximumValueSum_spec :
   by
   try
     mvcgen [maximumValueSum, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓cur => ⌜f0 ≥ (0 : Int)⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+    · ⇓⟨cur, f0, f1⟩ => ⌜f0 ≥ (0 : Int)⌝
+  taste?
   all_goals sorry
 
 theorem maximumValueSum_correct :
@@ -153,10 +149,8 @@ def maximumValueSum'rn := fun (nums : List Int) ↦ fun (k : Int) ↦ fun (edges
       -- DP state:
       -- f0: max sum for the prefix of nums processed so far, with an even number of XOR ops.
       -- f1: max sum for the prefix of nums processed so far, with an odd number of XOR ops.
-      let __unpack_value_1 := ((0 : Int), -inf)
-      let __unpack_pair_1 := __unpack_value_1
-      let mut f0 : Int := Prod.fst __unpack_pair_1
-      let mut f1 : Int := Prod.snd __unpack_pair_1
+      let mut f0 : Int := (0 : Int)
+      let mut f1 : Int := -inf
       for x in (PastaLean.pyIter nums)do
         -- f0 is always a sum of non-negative numbers, so it remains non-negative.
         let _ := Libraries.passta.pyPassInvariant (decide (f0 ≥ (0 : Int)))
@@ -168,10 +162,8 @@ def maximumValueSum'rn := fun (nums : List Int) ↦ fun (k : Int) ↦ fun (edges
         -- 1. Not XOR x, and have an odd number of XORs on the old prefix.
         -- 2. XOR x, and have an even number of XORs on the old prefix.
         let mut f1_next : Int := PastaLean.pyMax [f1 +ₚ x, f0 +ₚ PastaLean.pyBitXor x k]
-        let __unpack_value_2 := (f0_next, f1_next)
-        let __unpack_pair_2 := __unpack_value_2
-        f0 := Prod.fst __unpack_pair_2
-        f1 := Prod.snd __unpack_pair_2
+        f0 := f0_next
+        f1 := f1_next
       -- The final answer must come from an even number of XORs in total.
       return f0)
 

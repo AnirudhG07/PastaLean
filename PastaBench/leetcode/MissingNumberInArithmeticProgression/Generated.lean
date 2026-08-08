@@ -71,7 +71,7 @@ theorem missingNumber_correct :
             PastaLean.pyFloorDiv ((arr⦋(0 : Int)⦌ +ₚ arr⦋(-1 : Int)⦌) *ₚ (PastaLean.pyLen arr +ₚ (1 : Int)))
                 (2 : Int) -ₚ
               PastaLean.pySum arr :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]
+  by taste?
 
 def missingNumber'rn := fun (arr : List Int) ↦
   PastaLean.pyFloorDiv ((arr⦋(0 : Int)⦌ +ₚ arr⦋(-1 : Int)⦌) *ₚ (PastaLean.pyLen arr +ₚ (1 : Int))) (2 : Int) -ₚ

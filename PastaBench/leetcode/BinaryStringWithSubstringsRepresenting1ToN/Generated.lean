@@ -72,12 +72,11 @@ theorem queryString_spec :
       ⌜result =
           if n > (1000 : Int) then Bool.false
           else
-            PastaLean.pyAll
-              ((PastaLean.pyRange (PastaLean.pyFloorDiv n (2 : Int)) n (-(1 : Int))).map fun i =>
-                PastaLean.pyContains s (PastaLean.pySlice (PastaLean.pyBin i) (some (2 : Int)) none none))⌝⦄ :=
+            ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyFloorDiv n (2 : Int)) n (-(1 : Int))),
+              PastaLean.pyContains s (PastaLean.pySlice (PastaLean.pyBin i) (some (2 : Int)) none none)⌝⦄ :=
   by
   mvcgen [queryString, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]
+  taste?
   all_goals sorry
 
 theorem queryString_correct :
@@ -88,9 +87,8 @@ theorem queryString_correct :
           result =
             if n > (1000 : Int) then Bool.false
             else
-              PastaLean.pyAll
-                ((PastaLean.pyRange (PastaLean.pyFloorDiv n (2 : Int)) n (-(1 : Int))).map fun i =>
-                  PastaLean.pyContains s (PastaLean.pySlice (PastaLean.pyBin i) (some (2 : Int)) none none)) :=
+              ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyFloorDiv n (2 : Int)) n (-(1 : Int))),
+                PastaLean.pyContains s (PastaLean.pySlice (PastaLean.pyBin i) (some (2 : Int)) none none) :=
   by
   intro s n hpre
   exact queryString_spec hpre

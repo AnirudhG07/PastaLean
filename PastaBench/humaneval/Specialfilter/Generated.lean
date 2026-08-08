@@ -43,10 +43,8 @@ namespace PastaBench.humaneval.Specialfilter
 
 def specialFilter := fun (nums : List Int) ↦
   (do
-    let __unpack_value_1 := ((0 : Int), ["1", "3", "5", "7", "9"])
-    let __unpack_pair_1 := __unpack_value_1
-    let mut ans : Int := Prod.fst __unpack_pair_1
-    let mut odd : List String := Prod.snd __unpack_pair_1
+    let mut ans : Int := (0 : Int)
+    let mut odd : List String := ["1", "3", "5", "7", "9"]
     for num in (PastaLean.pyIter nums)do
       let _ := Libraries.passta.pyPassInvariant (decide (ans ≥ (0 : Int)))
       let _ := Libraries.passta.pyPassInvariant (decide (ans ≤ PastaLean.pyLen nums))
@@ -88,10 +86,8 @@ def specialFilter'rn := fun (nums : List Int) ↦
           specialFilter([33, -2, -3, 45, 21, 109]) => 2
           
       -/
-      let __unpack_value_1 := ((0 : Int), ["1", "3", "5", "7", "9"])
-      let __unpack_pair_1 := __unpack_value_1
-      let mut ans : Int := Prod.fst __unpack_pair_1
-      let mut odd : List String := Prod.snd __unpack_pair_1
+      let mut ans : Int := (0 : Int)
+      let mut odd : List String := ["1", "3", "5", "7", "9"]
       for num in (PastaLean.pyIter nums)do
         let _ := Libraries.passta.pyPassInvariant (decide (ans ≥ (0 : Int)))
         let _ := Libraries.passta.pyPassInvariant (decide (ans ≤ PastaLean.pyLen nums))

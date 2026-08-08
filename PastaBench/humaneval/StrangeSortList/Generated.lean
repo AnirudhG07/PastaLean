@@ -90,11 +90,9 @@ def strange_sort_list := fun (lst : PyAny) ↦
     let mut sorted_list : List PyAny := PastaLean.pySort lst
     let _ := Libraries.passta.pyPassAssert (PastaLean.pySort lst == sorted_list)
     let _ := Libraries.passta.pyPassAssert (PastaLean.pyLen sorted_list == PastaLean.pyLen lst)
-    let __unpack_value_1 := ([], ((0 : Int), PastaLean.pyLen sorted_list -ₚ (1 : Int)))
-    let __unpack_pair_1 := __unpack_value_1
-    let mut ans : List PyAny := Prod.fst __unpack_pair_1
-    let mut i : Int := Prod.fst (Prod.snd __unpack_pair_1)
-    let mut j : Int := Prod.snd (Prod.snd __unpack_pair_1)
+    let mut ans : List PyAny := []
+    let mut i : Int := (0 : Int)
+    let mut j : Int := PastaLean.pyLen sorted_list -ₚ (1 : Int)
     while (i < j) do
       -- Loop invariants capture the state of the partitioning:
       -- 1. Pointers `i` and `j` move inwards from the ends of `sorted_list`.
@@ -208,11 +206,9 @@ def strange_sort_list'rn := fun (lst : PyAny) ↦
       let mut sorted_list : List PyAny := PastaLean.pySort lst
       let _ := Libraries.passta.pyPassAssert (PastaLean.pySort lst == sorted_list)
       let _ := Libraries.passta.pyPassAssert (PastaLean.pyLen sorted_list == PastaLean.pyLen lst)
-      let __unpack_value_1 := ([], ((0 : Int), PastaLean.pyLen sorted_list -ₚ (1 : Int)))
-      let __unpack_pair_1 := __unpack_value_1
-      let mut ans : List PyAny := Prod.fst __unpack_pair_1
-      let mut i : Int := Prod.fst (Prod.snd __unpack_pair_1)
-      let mut j : Int := Prod.snd (Prod.snd __unpack_pair_1)
+      let mut ans : List PyAny := []
+      let mut i : Int := (0 : Int)
+      let mut j : Int := PastaLean.pyLen sorted_list -ₚ (1 : Int)
       while (i < j) do
         -- Loop invariants capture the state of the partitioning:
         -- 1. Pointers `i` and `j` move inwards from the ends of `sorted_list`.

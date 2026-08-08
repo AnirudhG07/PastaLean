@@ -56,10 +56,8 @@ namespace PastaBench.humaneval.SumProduct
 
 def sum_product := fun (numbers : List Int) ↦
   (do
-    let __unpack_value_1 := ((0 : Int), (1 : Int))
-    let __unpack_pair_1 := __unpack_value_1
-    let mut s : Int := Prod.fst __unpack_pair_1
-    let mut p : Int := Prod.snd __unpack_pair_1
+    let mut s : Int := (0 : Int)
+    let mut p : Int := (1 : Int)
     for _pair_1 in (PastaLean.pyIter (PastaLean.pyEnumerate numbers))do
       let i := Prod.fst _pair_1
       let number := Prod.snd _pair_1
@@ -81,7 +79,12 @@ theorem sum_product_spec :
       ⌜(result⦋(0 : Int)⦌ = PastaLean.pySum numbers ∧ result⦋(1 : Int)⦌ = Libraries.math.pyMathProd numbers) ∧
           (PastaLean.pyLen numbers > (0 : Int) ∨ result⦋(0 : Int)⦌ = (0 : Int) ∧ result⦋(1 : Int)⦌ = (1 : Int))⌝⦄ :=
   by
-  mvcgen [sum_product, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
+  try
+    mvcgen [sum_product, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · ⇓⟨cur, s, p⟩ =>
+      ⌜(((0 : Int) ≤ i ∧ i ≤ PastaLean.pyLen numbers) ∧
+            s = PastaLean.pySum (PastaLean.pySlice numbers none (some i) none)) ∧
+          p = Libraries.math.pyMathProd (PastaLean.pySlice numbers none (some i) none)⌝
   taste?
   all_goals sorry
 
@@ -109,10 +112,8 @@ def sum_product'rn := fun (numbers : List Int) ↦
       -- The two exact folds ...
       -- ... and the empty-input identities the problem calls out explicitly (0 for the empty sum,
       -- 1 for the empty product — the neutral element of each operation).
-      let __unpack_value_1 := ((0 : Int), (1 : Int))
-      let __unpack_pair_1 := __unpack_value_1
-      let mut s : Int := Prod.fst __unpack_pair_1
-      let mut p : Int := Prod.snd __unpack_pair_1
+      let mut s : Int := (0 : Int)
+      let mut p : Int := (1 : Int)
       -- The for-each loop is expressed with an explicit index `i` via `enumerate`
       -- to enable writing the index-style invariants required for verification.
       for _pair_1 in (PastaLean.pyIter (PastaLean.pyEnumerate numbers))do

@@ -35,7 +35,7 @@ attribute [simp] defangIPaddr
 
 @[taste_ingr]
 theorem defangIPaddr_correct :
-    ∀ (address : String), defangIPaddr address = PastaLean.pyStringReplace address "." "[.]" := by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]
+    ∀ (address : String), defangIPaddr address = PastaLean.pyStringReplace address "." "[.]" := by taste?
 
 def defangIPaddr'rn := fun (address : String) ↦ PastaLean.pyStringReplace address "." "[.]"
 

@@ -76,10 +76,8 @@ namespace PastaBench.humaneval.GetOddCollatz
 
 def get_odd_collatz := fun (n : Int) ↦
   (do
-    let __unpack_value_1 := ([], n)
-    let __unpack_pair_1 := __unpack_value_1
-    let mut ans : List Int := Prod.fst __unpack_pair_1
-    let mut x : Int := Prod.snd __unpack_pair_1
+    let mut ans : List Int := []
+    let mut x : Int := n
     while (x ≠ (1 : Int)) do
       let _ := Libraries.passta.pyPassInvariant (decide (x > (0 : Int)))
       let _ :=
@@ -157,10 +155,8 @@ def get_odd_collatz'rn := fun (n : Int) ↦
       -- 1 is in the list, everything is >= 1 and the list is sorted, so 1 is the head.
       -- The trajectory starts at n, so an odd input is itself a member — the only entry point
       -- into the sequence that can be named without unrolling it.
-      let __unpack_value_1 := ([], n)
-      let __unpack_pair_1 := __unpack_value_1
-      let mut ans : List Int := Prod.fst __unpack_pair_1
-      let mut x : Int := Prod.snd __unpack_pair_1
+      let mut ans : List Int := []
+      let mut x : Int := n
       -- Termination is equivalent to the Collatz conjecture, an open problem.
       -- The contracts below establish partial correctness: if the loop terminates,
       -- the result has the specified properties.

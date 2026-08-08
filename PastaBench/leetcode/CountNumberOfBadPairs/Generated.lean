@@ -71,8 +71,10 @@ def countBadPairs := fun (nums : List Int) ↦
 @[spec]
 theorem countBadPairs_spec : ⦃⌜True⌝⦄ countBadPairs nums ⦃⇓ans => ⌜ans ≥ (0 : Int)⌝⦄ :=
   by
-  mvcgen [countBadPairs, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  try
+    mvcgen [countBadPairs, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · ⇓⟨cur, ans⟩ => ⌜(((0 : Int) ≤ i ∧ i < PastaLean.pyLen nums) ∧ ans ≥ (0 : Int)) ∧ cnt⦋i -ₚ x⦌ ≤ i⌝
+  taste?
   all_goals sorry
 
 theorem countBadPairs_correct :

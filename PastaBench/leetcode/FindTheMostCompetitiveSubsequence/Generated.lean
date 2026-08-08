@@ -91,8 +91,10 @@ def mostCompetitive := fun (nums : List Int) ↦ fun (k : Int) ↦
 theorem mostCompetitive_spec :
     ⦃⌜(0 : Int) ≤ k ∧ k ≤ PastaLean.pyLen nums⌝⦄ mostCompetitive nums k ⦃⇓stk => ⌜PastaLean.pyLen stk = k⌝⦄ :=
   by
-  mvcgen [mostCompetitive, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  try
+    mvcgen [mostCompetitive, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · ⇓cur => ⌜(((0 : Int) ≤ i ∧ i ≤ n) ∧ PastaLean.pyLen stk ≤ k) ∧ PastaLean.pyLen stk +ₚ (n -ₚ i) ≥ k⌝
+  taste?
   all_goals sorry
 
 theorem mostCompetitive_correct :

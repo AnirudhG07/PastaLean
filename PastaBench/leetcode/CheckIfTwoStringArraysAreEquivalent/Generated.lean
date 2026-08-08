@@ -51,7 +51,7 @@ theorem arrayStringsAreEqual_correct :
     ∀ (word1 : List String),
       ∀ (word2 : List String),
         arrayStringsAreEqual word1 word2 = (PastaLean.pyStringJoin "" word1 = PastaLean.pyStringJoin "" word2) :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]
+  by taste?
 
 def arrayStringsAreEqual'rn := fun (word1 : List String) ↦ fun (word2 : List String) ↦
   PastaLean.pyStringJoin "" word1 == PastaLean.pyStringJoin "" word2

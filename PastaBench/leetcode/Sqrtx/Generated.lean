@@ -60,10 +60,8 @@ namespace PastaBench.leetcode.Sqrtx
 
 def mySqrt := fun (x : Int) ↦
   (do
-    let __unpack_value_1 := ((0 : Int), x)
-    let __unpack_pair_1 := __unpack_value_1
-    let mut l : Int := Prod.fst __unpack_pair_1
-    let mut r : Int := Prod.snd __unpack_pair_1
+    let mut l : Int := (0 : Int)
+    let mut r : Int := x
     while (l < r) do
       let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ l))
       let _ := Libraries.passta.pyPassInvariant (decide (l ≤ r))
@@ -84,7 +82,7 @@ def mySqrt := fun (x : Int) ↦
 theorem mySqrt_spec : ⦃⌜x ≥ (0 : Int)⌝⦄ mySqrt x ⦃⇓l => ⌜l *ₚ l ≤ x ∧ (l +ₚ (1 : Int)) *ₚ (l +ₚ (1 : Int)) > x⌝⦄ :=
   by
   mvcgen [mySqrt, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  taste?
   all_goals sorry
 
 theorem mySqrt_correct :
@@ -100,10 +98,8 @@ def mySqrt'rn := fun (x : Int) ↦
   Id.run
     (do
       let _ := Libraries.passta.pyPassRequires (decide (x ≥ (0 : Int)))
-      let __unpack_value_1 := ((0 : Int), x)
-      let __unpack_pair_1 := __unpack_value_1
-      let mut l : Int := Prod.fst __unpack_pair_1
-      let mut r : Int := Prod.snd __unpack_pair_1
+      let mut l : Int := (0 : Int)
+      let mut r : Int := x
       while (l < r) do
         let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ l))
         let _ := Libraries.passta.pyPassInvariant (decide (l ≤ r))

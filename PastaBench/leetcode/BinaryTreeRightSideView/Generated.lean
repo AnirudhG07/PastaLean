@@ -139,7 +139,7 @@ theorem rightSideView_spec :
       ⌜PastaLean.pyIsNone root ∨ PastaLean.pyLen ans ≥ (1 : Int) ∧ ans⦋(0 : Int)⦌ = ((root).getD default).val⌝⦄ :=
   by
   mvcgen [rightSideView, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry; sorry; sorry; pyany_cases <;> grind +locals; sorry; sorry; sorry; sorry; sorry; sorry; sorry; sorry; sorry
+  taste?
   all_goals sorry
 
 theorem rightSideView_correct :

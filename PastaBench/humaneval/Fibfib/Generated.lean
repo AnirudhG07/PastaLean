@@ -81,11 +81,9 @@ def fibfib := fun (n : Int) ↦
       else
         let _ := ()
     let _ := Libraries.passta.pyPassAssert (decide (n ≥ (3 : Int)))
-    let __unpack_value_1 := ((0 : Int), ((0 : Int), (1 : Int)))
-    let __unpack_pair_1 := __unpack_value_1
-    let mut a : Int := Prod.fst __unpack_pair_1
-    let mut b : Int := Prod.fst (Prod.snd __unpack_pair_1)
-    let mut c : Int := Prod.snd (Prod.snd __unpack_pair_1)
+    let mut a : Int := (0 : Int)
+    let mut b : Int := (0 : Int)
+    let mut c : Int := (1 : Int)
     for i in (PastaLean.pyRange (n +ₚ (1 : Int)) (3 : Int))do
       let _ := Libraries.passta.pyPassInvariant (decide ((3 : Int) ≤ i))
       let _ := Libraries.passta.pyPassInvariant (decide (i ≤ n +ₚ (1 : Int)))
@@ -99,11 +97,11 @@ def fibfib := fun (n : Int) ↦
       -- ... and the value it is about to become beats i - 2, which is what makes the previous
       -- invariant inductive (and, at exit i = n + 1, gives the Ensures).
       let _ := Libraries.passta.pyPassInvariant (decide (a +ₚ b +ₚ c ≥ i -ₚ (2 : Int)))
-      let __unpack_value_2 := (b, (c, a +ₚ b +ₚ c))
-      let __unpack_pair_2 := __unpack_value_2
-      a := Prod.fst __unpack_pair_2
-      b := Prod.fst (Prod.snd __unpack_pair_2)
-      c := Prod.snd (Prod.snd __unpack_pair_2)
+      let __unpack_value_1 := (b, (c, a +ₚ b +ₚ c))
+      let __unpack_pair_1 := __unpack_value_1
+      a := Prod.fst __unpack_pair_1
+      b := Prod.fst (Prod.snd __unpack_pair_1)
+      c := Prod.snd (Prod.snd __unpack_pair_1)
     let _ := Libraries.passta.pyPassAssert (decide (c ≥ n -ₚ (2 : Int)))
     let _ := Libraries.passta.pyPassAssert (decide (c ≥ (0 : Int)))
     return c : Id _)
@@ -113,7 +111,7 @@ theorem fibfib_spec : ⦃⌜n ≥ (0 : Int)⌝⦄ fibfib n ⦃⇓c => ⌜c ≥ n
   by
   try
     mvcgen [fibfib, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓cur =>
+    · ⇓⟨cur, a, b, c⟩ =>
       ⌜let i := (cur.prefix.length : Int);
         (((((((3 : Int) ≤ i ∧ i ≤ n +ₚ (1 : Int)) ∧ a ≥ (0 : Int)) ∧ b ≥ (0 : Int)) ∧ c ≥ (0 : Int)) ∧
               b +ₚ c ≥ (1 : Int)) ∧
@@ -162,11 +160,9 @@ def fibfib'rn := fun (n : Int) ↦
         else
           let _ := ()
       let _ := Libraries.passta.pyPassAssert (decide (n ≥ (3 : Int)))
-      let __unpack_value_1 := ((0 : Int), ((0 : Int), (1 : Int)))
-      let __unpack_pair_1 := __unpack_value_1
-      let mut a : Int := Prod.fst __unpack_pair_1
-      let mut b : Int := Prod.fst (Prod.snd __unpack_pair_1)
-      let mut c : Int := Prod.snd (Prod.snd __unpack_pair_1)
+      let mut a : Int := (0 : Int)
+      let mut b : Int := (0 : Int)
+      let mut c : Int := (1 : Int)
       for i in (PastaLean.pyRange (n +ₚ (1 : Int)) (3 : Int))do
         let _ := Libraries.passta.pyPassInvariant (decide ((3 : Int) ≤ i))
         let _ := Libraries.passta.pyPassInvariant (decide (i ≤ n +ₚ (1 : Int)))
@@ -180,11 +176,11 @@ def fibfib'rn := fun (n : Int) ↦
         -- ... and the value it is about to become beats i - 2, which is what makes the previous
         -- invariant inductive (and, at exit i = n + 1, gives the Ensures).
         let _ := Libraries.passta.pyPassInvariant (decide (a +ₚ b +ₚ c ≥ i -ₚ (2 : Int)))
-        let __unpack_value_2 := (b, (c, a +ₚ b +ₚ c))
-        let __unpack_pair_2 := __unpack_value_2
-        a := Prod.fst __unpack_pair_2
-        b := Prod.fst (Prod.snd __unpack_pair_2)
-        c := Prod.snd (Prod.snd __unpack_pair_2)
+        let __unpack_value_1 := (b, (c, a +ₚ b +ₚ c))
+        let __unpack_pair_1 := __unpack_value_1
+        a := Prod.fst __unpack_pair_1
+        b := Prod.fst (Prod.snd __unpack_pair_1)
+        c := Prod.snd (Prod.snd __unpack_pair_1)
       let _ := Libraries.passta.pyPassAssert (decide (c ≥ n -ₚ (2 : Int)))
       let _ := Libraries.passta.pyPassAssert (decide (c ≥ (0 : Int)))
       return c)

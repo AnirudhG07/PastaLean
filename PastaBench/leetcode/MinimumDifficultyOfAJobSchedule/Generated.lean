@@ -111,7 +111,7 @@ theorem minDifficulty_spec :
     · ⇓cur =>
       ⌜let i := (cur.prefix.length : Int);
         (1 : Int) ≤ i ∧ i ≤ n +ₚ (1 : Int)⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem minDifficulty_correct :

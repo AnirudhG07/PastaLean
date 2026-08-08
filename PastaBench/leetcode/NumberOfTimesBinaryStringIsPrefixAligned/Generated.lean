@@ -81,8 +81,12 @@ theorem numTimesAllBlue_spec :
           true⌝⦄
       numTimesAllBlue flips ⦃⇓ans => ⌜(0 : Int) ≤ ans ∧ ans ≤ PastaLean.pyLen flips⌝⦄ :=
   by
-  mvcgen [numTimesAllBlue, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  try
+    mvcgen [numTimesAllBlue, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · ⇓⟨cur, ans, mx⟩ =>
+      ⌜(((1 : Int) ≤ i ∧ i ≤ PastaLean.pyLen flips) ∧ (0 : Int) ≤ mx ∧ mx ≤ PastaLean.pyLen flips) ∧
+          (0 : Int) ≤ ans ∧ ans < i⌝
+  taste?
   all_goals sorry
 
 theorem numTimesAllBlue_correct :

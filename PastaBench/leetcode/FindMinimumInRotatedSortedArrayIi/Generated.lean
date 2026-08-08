@@ -59,10 +59,8 @@ namespace PastaBench.leetcode.FindMinimumInRotatedSortedArrayIi
 
 def findMin := fun (nums : List Int) ↦
   (do
-    let __unpack_value_1 := ((0 : Int), PastaLean.pyLen nums -ₚ (1 : Int))
-    let __unpack_pair_1 := __unpack_value_1
-    let mut left : Int := Prod.fst __unpack_pair_1
-    let mut right : Int := Prod.snd __unpack_pair_1
+    let mut left : Int := (0 : Int)
+    let mut right : Int := PastaLean.pyLen nums -ₚ (1 : Int)
     while (left < right) do
       let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ left))
       let _ := Libraries.passta.pyPassInvariant (decide (left ≤ right))
@@ -88,7 +86,7 @@ def findMin := fun (nums : List Int) ↦
 theorem findMin_spec : ⦃⌜PastaLean.pyLen nums > (0 : Int)⌝⦄ findMin nums ⦃⇓result => ⌜result = PastaLean.pyMin nums⌝⦄ :=
   by
   mvcgen [findMin, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  taste?
   all_goals sorry
 
 theorem findMin_correct :
@@ -104,10 +102,8 @@ def findMin'rn := fun (nums : List Int) ↦
   Id.run
     (do
       let _ := Libraries.passta.pyPassRequires (decide (PastaLean.pyLen nums > (0 : Int)))
-      let __unpack_value_1 := ((0 : Int), PastaLean.pyLen nums -ₚ (1 : Int))
-      let __unpack_pair_1 := __unpack_value_1
-      let mut left : Int := Prod.fst __unpack_pair_1
-      let mut right : Int := Prod.snd __unpack_pair_1
+      let mut left : Int := (0 : Int)
+      let mut right : Int := PastaLean.pyLen nums -ₚ (1 : Int)
       while (left < right) do
         let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ left))
         let _ := Libraries.passta.pyPassInvariant (decide (left ≤ right))

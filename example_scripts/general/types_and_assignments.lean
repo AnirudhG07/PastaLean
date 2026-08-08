@@ -24,15 +24,11 @@ def basic_types :=
     let mut d : Bool := Bool.true
     let mut e : List Int := [(1 : Int), (2 : Int)]
     let mut f : Int × String := ((1 : Int), "a")
-    let __unpack_value_1 := ((3 : Int), (4.5 : Rat))
-    let __unpack_pair_1 := __unpack_value_1
-    let mut g : Int := Prod.fst __unpack_pair_1
-    let mut h : Rat := ↑(Prod.snd __unpack_pair_1)
-    let __unpack_value_2 := ((5 : Int), ("world", Bool.false))
-    let __unpack_pair_2 := __unpack_value_2
-    let mut m : Int := Prod.fst __unpack_pair_2
-    let mut n : String := Prod.fst (Prod.snd __unpack_pair_2)
-    let mut p : Bool := Prod.snd (Prod.snd __unpack_pair_2)
+    let mut g : Int := (3 : Int)
+    let mut h := (4.5 : Rat)
+    let mut m : Int := (5 : Int)
+    let mut n : String := "world"
+    let mut p : Bool := Bool.false
     let mut tup1 : String × Int := ("foo", (42 : Int))
     let mut tup2 := (g, h)
 
@@ -46,15 +42,11 @@ def basic_types'rn :=
     let mut d : Bool := Bool.true
     let mut e : Array Int := #[(1 : Int), (2 : Int)]
     let mut f : Int × String := ((1 : Int), "a")
-    let __unpack_value_1 := ((3 : Int), (4.5 : Float))
-    let __unpack_pair_1 := __unpack_value_1
-    let mut g : Int := Prod.fst __unpack_pair_1
-    let mut h : Float := ↑(Prod.snd __unpack_pair_1)
-    let __unpack_value_2 := ((5 : Int), ("world", Bool.false))
-    let __unpack_pair_2 := __unpack_value_2
-    let mut m : Int := Prod.fst __unpack_pair_2
-    let mut n : String := Prod.fst (Prod.snd __unpack_pair_2)
-    let mut p : Bool := Prod.snd (Prod.snd __unpack_pair_2)
+    let mut g : Int := (3 : Int)
+    let mut h := (4.5 : Float)
+    let mut m : Int := (5 : Int)
+    let mut n : String := "world"
+    let mut p : Bool := Bool.false
     let mut tup1 : String × Int := ("foo", (42 : Int))
     let mut tup2 := (g, h)
 
@@ -349,7 +341,7 @@ def untyped_param_compare_and_div := fun (nums : PyAny) ↦
         let mut best : PyAny := (0 : Int)
         for x in (PastaLean.pyIter nums)do
           if h_1 : x > best then 
-            let mut best'rb0 := x +ₚ x %ₚ (3 : Int)
+            best := x +ₚ x %ₚ (3 : Int)
           else
             let _ := ()
         let __py_ret_1 := (best /ₚ (2 : Int) : PastaLean.PyAny)
@@ -366,7 +358,7 @@ def untyped_param_compare_and_div'rn := fun (nums : PyAny) ↦
         let mut best : PyAny := (0 : Int)
         for x in (PastaLean.pyIter nums)do
           if h_1 : x > best then 
-            let mut best'rb0 := x +ₚ x %ₚ (3 : Int)
+            best := x +ₚ x %ₚ (3 : Int)
           else
             let _ := ()
         let __py_ret_1 := (PastaLean.pyFloat best /ₚ (2 : Int) : PastaLean.PyAny)
@@ -379,7 +371,7 @@ def untyped_param_bitwise := fun (nums : PyAny) ↦
         -- Bitwise (`| & `), floor-div (`//`) and shift on boxed (`PyAny`) values.
         let mut r : PyAny := (0 : Int)
         for x in (PastaLean.pyIter nums)do
-          let mut r'rb0 := PastaLean.pyBitOr r (PastaLean.pyBitAnd x (1 : Int)) +ₚ PastaLean.pyFloorDiv x (2 : Int)
+          r := PastaLean.pyBitOr r (PastaLean.pyBitAnd x (1 : Int)) +ₚ PastaLean.pyFloorDiv x (2 : Int)
         let __py_ret_1 := (PastaLean.pyShiftLeft r (1 : Int) : PastaLean.PyAny)
         return __py_ret_1))
 
@@ -392,7 +384,7 @@ def untyped_param_bitwise'rn := fun (nums : PyAny) ↦
         -- Bitwise (`| & `), floor-div (`//`) and shift on boxed (`PyAny`) values.
         let mut r : PyAny := (0 : Int)
         for x in (PastaLean.pyIter nums)do
-          let mut r'rb0 := PastaLean.pyBitOr r (PastaLean.pyBitAnd x (1 : Int)) +ₚ PastaLean.pyFloorDiv x (2 : Int)
+          r := PastaLean.pyBitOr r (PastaLean.pyBitAnd x (1 : Int)) +ₚ PastaLean.pyFloorDiv x (2 : Int)
         let __py_ret_1 := (PastaLean.pyShiftLeft r (1 : Int) : PastaLean.PyAny)
         return __py_ret_1))
 

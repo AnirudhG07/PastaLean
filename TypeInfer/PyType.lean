@@ -140,10 +140,10 @@ def needsAscription : PyType → Bool
   -- The known-dynamic top type materialises as `PyAny`, which Lean cannot infer from a heterogeneous
   -- literal's first element — so a container wrapping it (`list[any]` → `List PyAny`) must be ascribed.
   | .any => true
-  -- A nullable node local (`curr = head` then `curr = curr.next`) is inferred `Option C` but, without
-  -- an ascription, `let mut curr := head` fixes it to the bare `C` — clashing with the `.getD`/`some`
-  -- the Option uses emit. Ascribe it `Option C` (a `Coe C (Option C)` lifts the bare initial value).
-  | .opt (.cls _) => true
+  -- A nullable local always needs its ascription: initialised from `None`, `let mut x := Option.none`
+  -- fixes the slot to `Option ?α` — a stuck metavariable a later `x = (l, r)` / `x = curr.next` cannot
+  -- back-pin. Ascribe `Option τ` for any fully-known inner `τ` (node class, pair, scalar, container).
+  | .opt e => isKnown e
   -- A function type must be ascribed whenever it is fully known: a heap `list` of closures builds up
   -- from an empty `allocM []`, which leaves the element's (function) domain universe stuck unless the
   -- local's type pins it — `list[Callable[[], str]]` → `List (Unit → String)`.

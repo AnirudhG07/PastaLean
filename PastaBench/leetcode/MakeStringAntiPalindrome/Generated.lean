@@ -120,14 +120,11 @@ def makeAntiPalindrome := fun (s : String) ↦
 theorem makeAntiPalindrome_spec :
     ⦃⌜PastaLean.pyLen s ≥ (2 : Int)⌝⦄ makeAntiPalindrome s ⦃⇓result =>
       ⌜result = "-1" ∨
-          PastaLean.pyTruthy
-              (PastaLean.pyAll
-                ((PastaLean.pyRange (PastaLean.pyFloorDiv (PastaLean.pyLen s) (2 : Int))).map fun k =>
-                  result⦋k⦌ != result⦋PastaLean.pyLen s -ₚ (1 : Int) -ₚ k⦌)) =
-            true⌝⦄ :=
+          ∀ k ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyFloorDiv (PastaLean.pyLen s) (2 : Int))),
+            result⦋k⦌ ≠ result⦋PastaLean.pyLen s -ₚ (1 : Int) -ₚ k⦌⌝⦄ :=
   by
   mvcgen [makeAntiPalindrome, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  taste?
   all_goals sorry
 
 theorem makeAntiPalindrome_correct :
@@ -135,11 +132,8 @@ theorem makeAntiPalindrome_correct :
       PastaLean.pyLen s ≥ (2 : Int) →
         let result := (makeAntiPalindrome s).run;
         result = "-1" ∨
-          PastaLean.pyTruthy
-              (PastaLean.pyAll
-                ((PastaLean.pyRange (PastaLean.pyFloorDiv (PastaLean.pyLen s) (2 : Int))).map fun k =>
-                  result⦋k⦌ != result⦋PastaLean.pyLen s -ₚ (1 : Int) -ₚ k⦌)) =
-            true :=
+          ∀ k ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyFloorDiv (PastaLean.pyLen s) (2 : Int))),
+            result⦋k⦌ ≠ result⦋PastaLean.pyLen s -ₚ (1 : Int) -ₚ k⦌ :=
   by
   intro s hpre
   exact makeAntiPalindrome_spec hpre

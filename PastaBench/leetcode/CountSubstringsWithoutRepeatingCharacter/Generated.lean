@@ -87,8 +87,13 @@ theorem numberOfSpecialSubstrings_spec :
       ⌜ans ≥ (0 : Int) ∧
           ans ≤ PastaLean.pyFloorDiv (PastaLean.pyLen s *ₚ (PastaLean.pyLen s +ₚ (1 : Int))) (2 : Int)⌝⦄ :=
   by
-  mvcgen [numberOfSpecialSubstrings, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  try
+    mvcgen [numberOfSpecialSubstrings, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · ⇓⟨cur, ans, j⟩ =>
+      ⌜((ans ≥ (0 : Int) ∧ ans ≤ PastaLean.pyFloorDiv ((i +ₚ (1 : Int)) *ₚ (i +ₚ (2 : Int))) (2 : Int)) ∧
+            (0 : Int) ≤ j) ∧
+          j ≤ i +ₚ (1 : Int)⌝
+  taste?
   all_goals sorry
 
 theorem numberOfSpecialSubstrings_correct :

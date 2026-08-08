@@ -60,7 +60,7 @@ theorem isReachable_correct :
             (PastaLean.pyBitAnd (Libraries.math.pyMathGcd targetX targetY)
                 (Libraries.math.pyMathGcd targetX targetY -ₚ (1 : Int)) =
               (0 : Int)) :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]
+  by taste?
 
 def isReachable'rn := fun (targetX : Int) ↦ fun (targetY : Int) ↦
   let x := Libraries.math.pyMathGcd targetX targetY

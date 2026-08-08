@@ -92,7 +92,13 @@ theorem has_close_elements_spec :
   by
   try
     mvcgen [has_close_elements, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · Invariant.withEarlyReturn (onReturn := fun _ _ => ⌜True⌝) (onContinue := fun _ _ => ⌜True⌝)
+    ·
+      Invariant.withEarlyReturn (onContinue := fun cur b =>
+        ⌜let i := (cur.prefix.length : Int);
+          ((0 : Int) ≤ i ∧ i ≤ PastaLean.pyLen sorted_numbers -ₚ (1 : Int)) ∧
+            ∀ k ∈ PastaLean.pyIter (PastaLean.pyRange i),
+              sorted_numbers⦋k +ₚ (1 : Int)⦌ -ₚ sorted_numbers⦋k⦌ ≥ threshold⌝)
+        (onReturn := fun _ _ => ⌜True⌝)
   taste?
   all_goals sorry
 

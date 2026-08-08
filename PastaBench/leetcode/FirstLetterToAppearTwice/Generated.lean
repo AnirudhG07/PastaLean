@@ -71,8 +71,10 @@ theorem repeatedCharacter_spec :
   by
   try
     mvcgen [repeatedCharacter, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · Invariant.withEarlyReturn (onReturn := fun _ _ => ⌜True⌝) (onContinue := fun _ _ => ⌜True⌝)
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+    ·
+      Invariant.withEarlyReturn (onContinue := fun cur b =>
+        ⌜∀ v ∈ PastaLean.pyIter (PastaLean.pyAnys cnt), v = (1 : Int)⌝) (onReturn := fun _ _ => ⌜True⌝)
+  taste?
   all_goals sorry
 
 theorem repeatedCharacter_correct :

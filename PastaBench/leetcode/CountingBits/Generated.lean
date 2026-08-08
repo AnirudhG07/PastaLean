@@ -52,11 +52,8 @@ theorem countBits_correct :
     ∀ (n : Int),
       n ≥ (0 : Int) →
         PastaLean.pyLen (countBits n) = n +ₚ (1 : Int) ∧
-          PastaLean.pyTruthy
-              (PastaLean.pyAll
-                ((PastaLean.pyRange (n +ₚ (1 : Int))).map fun i => (countBits n)⦋i⦌ == PastaLean.pyBitCount i)) =
-            true :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+          ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (n +ₚ (1 : Int))), (countBits n)⦋i⦌ = PastaLean.pyBitCount i :=
+  by taste?
 
 def countBits'rn := fun (n : Int) ↦ (PastaLean.pyRange (n +ₚ (1 : Int))).map fun i => PastaLean.pyBitCount i
 

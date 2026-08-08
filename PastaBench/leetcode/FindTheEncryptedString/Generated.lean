@@ -78,7 +78,7 @@ theorem getEncryptedString_spec :
       ⌜let i := (cur.prefix.length : Int);
         ((0 : Int) ≤ i ∧ i < PastaLean.pyLen s) ∧
           ∀ j ∈ PastaLean.pyIter (PastaLean.pyRange i), cs⦋j⦌ = s⦋(j +ₚ k) %ₚ PastaLean.pyLen s⦌⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem getEncryptedString_correct :

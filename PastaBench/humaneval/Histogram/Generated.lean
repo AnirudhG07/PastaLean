@@ -69,10 +69,8 @@ def histogram := fun (test : String) ↦
       return __py_ret_1
     else
       let _ := ()
-    let __unpack_value_1 := (Std.HashMap.ofList [], Std.HashMap.ofList [])
-    let __unpack_pair_1 := __unpack_value_1
-    let mut count : Std.HashMap String Int := Prod.fst __unpack_pair_1
-    let mut ans : Std.HashMap String Int := Prod.snd __unpack_pair_1
+    let mut count : Std.HashMap String Int := Std.HashMap.ofList []
+    let mut ans : Std.HashMap String Int := Std.HashMap.ofList []
     for word in (PastaLean.pyIter (PastaLean.pyStringSplit test " "))do
       if h_2 : word ≠ "" then 
         if h_3 : !(PastaLean.pyContains count word) then 
@@ -99,6 +97,7 @@ theorem histogram_spec :
   by
   try
     mvcgen [histogram, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · ⇓cur => ⌜True⌝
     · ⇓cur => ⌜True⌝
   taste?
   all_goals sorry
@@ -142,10 +141,8 @@ def histogram'rn := fun (test : String) ↦
         return __py_ret_1
       else
         let _ := ()
-      let __unpack_value_1 := (Std.HashMap.ofList [], Std.HashMap.ofList [])
-      let __unpack_pair_1 := __unpack_value_1
-      let mut count : Std.HashMap String Int := Prod.fst __unpack_pair_1
-      let mut ans : Std.HashMap String Int := Prod.snd __unpack_pair_1
+      let mut count : Std.HashMap String Int := Std.HashMap.ofList []
+      let mut ans : Std.HashMap String Int := Std.HashMap.ofList []
       for word in (PastaLean.pyIter (PastaLean.pyStringSplit test " "))do
         if h_2 : word != "" then 
           if h_3 : !(PastaLean.pyContains count word) then 

@@ -102,7 +102,14 @@ theorem cycpattern_check_spec :
   by
   try
     mvcgen [cycpattern_check, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · Invariant.withEarlyReturn (onReturn := fun _ _ => ⌜True⌝) (onContinue := fun _ _ => ⌜True⌝)
+    ·
+      Invariant.withEarlyReturn (onContinue := fun cur b =>
+        ⌜let i := (cur.prefix.length : Int);
+          ((0 : Int) ≤ i ∧ i ≤ PastaLean.pyLen b) ∧
+            ¬∃ k ∈ PastaLean.pyIter (PastaLean.pyRange i),
+                PastaLean.pyContains a
+                  (PastaLean.pySlice b (some k) none none +ₚ PastaLean.pySlice b none (some k) none)⌝)
+        (onReturn := fun _ _ => ⌜True⌝)
   taste?
   all_goals sorry
 

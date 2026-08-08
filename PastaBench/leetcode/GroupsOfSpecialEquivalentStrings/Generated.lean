@@ -68,14 +68,11 @@ theorem numSpecialEquivGroups_correct :
             PastaLean.pyStringJoin ""
               (PastaLean.pySort (PastaLean.pySlice word none none (some (2 : Int))) +ₚ
                 PastaLean.pySort (PastaLean.pySlice word (some (1 : Int)) none (some (2 : Int)))))
-      PastaLean.pyLen words = (0 : Int) ∨
-          PastaLean.pyTruthy
-              (PastaLean.pyAll
-                ((PastaLean.pyIter words).map fun w => PastaLean.pyLen w == PastaLean.pyLen words⦋(0 : Int)⦌)) =
-            true →
+      (PastaLean.pyLen words = (0 : Int) ∨
+          ∀ w ∈ PastaLean.pyIter words, PastaLean.pyLen w = PastaLean.pyLen words⦋(0 : Int)⦌) →
         (numSpecialEquivGroups words ≥ (0 : Int) ∧ numSpecialEquivGroups words ≤ PastaLean.pyLen words) ∧
           (PastaLean.pyLen words = (0 : Int) ∨ numSpecialEquivGroups words ≥ (1 : Int)) :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  by taste?
 
 def numSpecialEquivGroups'rn := fun (words : List String) ↦
   let s :=

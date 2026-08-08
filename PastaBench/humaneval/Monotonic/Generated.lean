@@ -52,10 +52,8 @@ namespace PastaBench.humaneval.Monotonic
 
 def monotonic := fun (l : List PyAny) ↦
   (do
-    let __unpack_value_1 := (Bool.true, Bool.true)
-    let __unpack_pair_1 := __unpack_value_1
-    let mut inc : Bool := Prod.fst __unpack_pair_1
-    let mut dec : Bool := Prod.snd __unpack_pair_1
+    let mut inc : Bool := Bool.true
+    let mut dec : Bool := Bool.true
     for i in (PastaLean.pyRange (PastaLean.pyLen l -ₚ (1 : Int)))do
       let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i))
       let _ := Libraries.passta.pyPassInvariant (decide (i ≤ PastaLean.pyLen l -ₚ (1 : Int)))
@@ -116,10 +114,8 @@ def monotonic'rn := fun (l : List PyAny) ↦
           True
           
       -/
-      let __unpack_value_1 := (Bool.true, Bool.true)
-      let __unpack_pair_1 := __unpack_value_1
-      let mut inc : Bool := Prod.fst __unpack_pair_1
-      let mut dec : Bool := Prod.snd __unpack_pair_1
+      let mut inc : Bool := Bool.true
+      let mut dec : Bool := Bool.true
       for i in (PastaLean.pyRange (PastaLean.pyLen l -ₚ (1 : Int)))do
         let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i))
         let _ := Libraries.passta.pyPassInvariant (decide (i ≤ PastaLean.pyLen l -ₚ (1 : Int)))

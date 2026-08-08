@@ -74,10 +74,8 @@ namespace PastaBench.leetcode.PeakIndexInAMountainArray
 
 def peakIndexInMountainArray := fun (arr : List Int) ↦
   (do
-    let __unpack_value_1 := ((1 : Int), PastaLean.pyLen arr -ₚ (2 : Int))
-    let __unpack_pair_1 := __unpack_value_1
-    let mut left : Int := Prod.fst __unpack_pair_1
-    let mut right : Int := Prod.snd __unpack_pair_1
+    let mut left : Int := (1 : Int)
+    let mut right : Int := PastaLean.pyLen arr -ₚ (2 : Int)
     while (left < right) do
       let _ := Libraries.passta.pyPassInvariant (decide ((1 : Int) ≤ left))
       let _ := Libraries.passta.pyPassInvariant (decide (left < right))
@@ -103,35 +101,27 @@ def peakIndexInMountainArray := fun (arr : List Int) ↦
 @[spec]
 theorem peakIndexInMountainArray_spec :
     ⦃⌜PastaLean.pyLen arr ≥ (3 : Int) ∧
-          PastaLean.pyStdAny
-            ((PastaLean.pyRange (PastaLean.pyLen arr)).map fun p =>
-              decide ((0 : Int) < p) && decide (p < PastaLean.pyLen arr -ₚ (1 : Int)) &&
-                  PastaLean.pyTruthy
-                    (PastaLean.pyAll ((PastaLean.pyRange p).map fun i => decide (arr⦋i⦌ < arr⦋i +ₚ (1 : Int)⦌))) &&
-                PastaLean.pyTruthy
-                  (PastaLean.pyAll
-                    ((PastaLean.pyRange (PastaLean.pyLen arr -ₚ (1 : Int)) p).map fun i =>
-                      decide (arr⦋i⦌ > arr⦋i +ₚ (1 : Int)⦌))))⌝⦄
+          ∃ p ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen arr)),
+            (((0 : Int) < p ∧ p < PastaLean.pyLen arr -ₚ (1 : Int)) ∧
+                ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange p), arr⦋i⦌ < arr⦋i +ₚ (1 : Int)⦌) ∧
+              ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen arr -ₚ (1 : Int)) p),
+                arr⦋i⦌ > arr⦋i +ₚ (1 : Int)⦌⌝⦄
       peakIndexInMountainArray arr ⦃⇓left =>
       ⌜(((0 : Int) < left ∧ left < PastaLean.pyLen arr -ₚ (1 : Int)) ∧ arr⦋left⦌ > arr⦋left -ₚ (1 : Int)⦌) ∧
           arr⦋left⦌ > arr⦋left +ₚ (1 : Int)⦌⌝⦄ :=
   by
   mvcgen [peakIndexInMountainArray, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  taste?
   all_goals sorry
 
 theorem peakIndexInMountainArray_correct :
     ∀ (arr : List Int),
-      PastaLean.pyLen arr ≥ (3 : Int) ∧
-          PastaLean.pyStdAny
-            ((PastaLean.pyRange (PastaLean.pyLen arr)).map fun p =>
-              decide ((0 : Int) < p) && decide (p < PastaLean.pyLen arr -ₚ (1 : Int)) &&
-                  PastaLean.pyTruthy
-                    (PastaLean.pyAll ((PastaLean.pyRange p).map fun i => decide (arr⦋i⦌ < arr⦋i +ₚ (1 : Int)⦌))) &&
-                PastaLean.pyTruthy
-                  (PastaLean.pyAll
-                    ((PastaLean.pyRange (PastaLean.pyLen arr -ₚ (1 : Int)) p).map fun i =>
-                      decide (arr⦋i⦌ > arr⦋i +ₚ (1 : Int)⦌)))) →
+      (PastaLean.pyLen arr ≥ (3 : Int) ∧
+          ∃ p ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen arr)),
+            (((0 : Int) < p ∧ p < PastaLean.pyLen arr -ₚ (1 : Int)) ∧
+                ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange p), arr⦋i⦌ < arr⦋i +ₚ (1 : Int)⦌) ∧
+              ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen arr -ₚ (1 : Int)) p),
+                arr⦋i⦌ > arr⦋i +ₚ (1 : Int)⦌) →
         let left := (peakIndexInMountainArray arr).run;
         (((0 : Int) < left ∧ left < PastaLean.pyLen arr -ₚ (1 : Int)) ∧ arr⦋left⦌ > arr⦋left -ₚ (1 : Int)⦌) ∧
           arr⦋left⦌ > arr⦋left +ₚ (1 : Int)⦌ :=
@@ -155,10 +145,8 @@ def peakIndexInMountainArray'rn := fun (arr : List Int) ↦
                   (PastaLean.pyAll
                     ((PastaLean.pyRange (PastaLean.pyLen arr -ₚ (1 : Int)) p).map fun i =>
                       decide (arr⦋i⦌ > arr⦋i +ₚ (1 : Int)⦌)))))
-      let __unpack_value_1 := ((1 : Int), PastaLean.pyLen arr -ₚ (2 : Int))
-      let __unpack_pair_1 := __unpack_value_1
-      let mut left : Int := Prod.fst __unpack_pair_1
-      let mut right : Int := Prod.snd __unpack_pair_1
+      let mut left : Int := (1 : Int)
+      let mut right : Int := PastaLean.pyLen arr -ₚ (2 : Int)
       while (left < right) do
         let _ := Libraries.passta.pyPassInvariant (decide ((1 : Int) ≤ left))
         let _ := Libraries.passta.pyPassInvariant (decide (left < right))

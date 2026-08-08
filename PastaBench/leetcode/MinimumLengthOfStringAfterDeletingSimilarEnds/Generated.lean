@@ -65,10 +65,8 @@ namespace PastaBench.leetcode.MinimumLengthOfStringAfterDeletingSimilarEnds
 
 def minimumLength := fun (s : String) ↦
   (do
-    let __unpack_value_1 := ((0 : Int), PastaLean.pyLen s -ₚ (1 : Int))
-    let __unpack_pair_1 := __unpack_value_1
-    let mut i : Int := Prod.fst __unpack_pair_1
-    let mut j : Int := Prod.snd __unpack_pair_1
+    let mut i : Int := (0 : Int)
+    let mut j : Int := PastaLean.pyLen s -ₚ (1 : Int)
     while (i < j ∧ s⦋i⦌ = s⦋j⦌) do
       let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i))
       let _ := Libraries.passta.pyPassInvariant (decide (j < PastaLean.pyLen s))
@@ -86,10 +84,10 @@ def minimumLength := fun (s : String) ↦
         let _ := Libraries.passta.pyPassInvariant (decide (j < PastaLean.pyLen s))
         let _ := Libraries.passta.pyPassDecreases (j -ₚ i)
         j := j -ₚ (1 : Int)
-      let __unpack_value_2 := (i +ₚ (1 : Int), j -ₚ (1 : Int))
-      let __unpack_pair_2 := __unpack_value_2
-      i := Prod.fst __unpack_pair_2
-      j := Prod.snd __unpack_pair_2
+      let __unpack_value_1 := (i +ₚ (1 : Int), j -ₚ (1 : Int))
+      let __unpack_pair_1 := __unpack_value_1
+      i := Prod.fst __unpack_pair_1
+      j := Prod.snd __unpack_pair_1
     let _ := Libraries.passta.pyPassAssert (decide (i ≤ j +ₚ (1 : Int)))
     let _ := Libraries.passta.pyPassAssert (decide (j -ₚ i +ₚ (1 : Int) ≤ PastaLean.pyLen s))
     let __py_ret_1 := PastaLean.pyMax [(0 : Int), j -ₚ i +ₚ (1 : Int)]
@@ -111,7 +109,7 @@ theorem minimumLength_spec : ⦃⌜True⌝⦄ minimumLength s ⦃⇓result => �
             let i := st |>.fst;
             ((0 : Int) ≤ i ∧ j < PastaLean.pyLen s) ∧ i ≤ j +ₚ (1 : Int))
           (fun _ => True) s⌝
-  sorry
+  taste?
   all_goals sorry
 
 theorem minimumLength_correct :
@@ -125,10 +123,8 @@ theorem minimumLength_correct :
 def minimumLength'rn := fun (s : String) ↦
   Id.run
     (do
-      let __unpack_value_1 := ((0 : Int), PastaLean.pyLen s -ₚ (1 : Int))
-      let __unpack_pair_1 := __unpack_value_1
-      let mut i : Int := Prod.fst __unpack_pair_1
-      let mut j : Int := Prod.snd __unpack_pair_1
+      let mut i : Int := (0 : Int)
+      let mut j : Int := PastaLean.pyLen s -ₚ (1 : Int)
       while (decide (i < j) && s⦋i⦌ == s⦋j⦌) do
         let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i))
         let _ := Libraries.passta.pyPassInvariant (decide (j < PastaLean.pyLen s))
@@ -146,10 +142,10 @@ def minimumLength'rn := fun (s : String) ↦
           let _ := Libraries.passta.pyPassInvariant (decide (j < PastaLean.pyLen s))
           let _ := Libraries.passta.pyPassDecreases (j -ₚ i)
           j := j -ₚ (1 : Int)
-        let __unpack_value_2 := (i +ₚ (1 : Int), j -ₚ (1 : Int))
-        let __unpack_pair_2 := __unpack_value_2
-        i := Prod.fst __unpack_pair_2
-        j := Prod.snd __unpack_pair_2
+        let __unpack_value_1 := (i +ₚ (1 : Int), j -ₚ (1 : Int))
+        let __unpack_pair_1 := __unpack_value_1
+        i := Prod.fst __unpack_pair_1
+        j := Prod.snd __unpack_pair_1
       let _ := Libraries.passta.pyPassAssert (decide (i ≤ j +ₚ (1 : Int)))
       let _ := Libraries.passta.pyPassAssert (decide (j -ₚ i +ₚ (1 : Int) ≤ PastaLean.pyLen s))
       let __py_ret_1 := PastaLean.pyMax [(0 : Int), j -ₚ i +ₚ (1 : Int)]

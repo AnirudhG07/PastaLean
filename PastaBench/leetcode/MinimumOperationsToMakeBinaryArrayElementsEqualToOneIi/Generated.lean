@@ -83,7 +83,7 @@ theorem minOperations_spec : ⦃⌜True⌝⦄ minOperations nums ⦃⇓ans => �
   try
     mvcgen [minOperations, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓⟨cur, ans, v⟩ => ⌜(ans ≥ (0 : Int) ∧ (v = (0 : Int) ∨ v = (1 : Int))) ∧ v = ans %ₚ (2 : Int)⌝
-  sorry
+  taste?
   all_goals sorry
 
 theorem minOperations_correct :

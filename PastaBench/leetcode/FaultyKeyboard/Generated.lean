@@ -68,7 +68,7 @@ theorem finalString_spec : ⦃⌜True⌝⦄ finalString s ⦃⇓result => ⌜∀
   try
     mvcgen [finalString, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓⟨cur, t⟩ => ⌜∀ tc ∈ PastaLean.pyIter t, tc ≠ "i"⌝
-  intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  taste?
   all_goals sorry
 
 theorem finalString_correct :

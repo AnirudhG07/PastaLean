@@ -61,7 +61,7 @@ theorem interpret_correct :
             PastaLean.pyCount (interpret command) "G" = PastaLean.pyCount command "G") ∧
           !(PastaLean.pyStrContainsSubstr (interpret command) "()")) ∧
         !(PastaLean.pyStrContainsSubstr (interpret command) "(al)") :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  by taste?
 
 def interpret'rn := fun (command : String) ↦
   PastaLean.pyStringReplace (PastaLean.pyStringReplace command "()" "o") "(al)" "al"

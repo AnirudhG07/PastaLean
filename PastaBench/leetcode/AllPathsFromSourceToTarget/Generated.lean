@@ -132,21 +132,15 @@ theorem allPathsSourceTarget_spec :
             ((PastaLean.pyIter graph).flatMap fun neighbors =>
               (PastaLean.pyIter neighbors).map fun v => decide ((0 : Int) ≤ v) && decide (v < n))⌝⦄
       allPathsSourceTarget graph ⦃⇓ans =>
-      ⌜PastaLean.pyAll
-          ((PastaLean.pyIter ans).map fun p =>
-            decide (PastaLean.pyLen p > (0 : Int)) && p⦋(0 : Int)⦌ == (0 : Int) &&
-                  p⦋(-1 : Int)⦌ == PastaLean.pyLen graph -ₚ (1 : Int) &&
-                PastaLean.pyTruthy
-                  (PastaLean.pyAll
-                    ((PastaLean.pyIter p).map fun node =>
-                      decide ((0 : Int) ≤ node) && decide (node < PastaLean.pyLen graph))) &&
-              PastaLean.pyTruthy
-                (PastaLean.pyAll
-                  ((PastaLean.pyRange (PastaLean.pyLen p -ₚ (1 : Int))).map fun i =>
-                    PastaLean.pyContains graph⦋p⦋i⦌⦌ p⦋i +ₚ (1 : Int)⦌)))⌝⦄ :=
+      ⌜∀ p ∈ PastaLean.pyIter ans,
+          (((PastaLean.pyLen p > (0 : Int) ∧ p⦋(0 : Int)⦌ = (0 : Int)) ∧
+                p⦋(-1 : Int)⦌ = PastaLean.pyLen graph -ₚ (1 : Int)) ∧
+              ∀ node ∈ PastaLean.pyIter p, (0 : Int) ≤ node ∧ node < PastaLean.pyLen graph) ∧
+            ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen p -ₚ (1 : Int))),
+              PastaLean.pyContains graph⦋p⦋i⦌⦌ p⦋i +ₚ (1 : Int)⦌⌝⦄ :=
   by
   mvcgen [allPathsSourceTarget, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  taste?
   all_goals sorry
 
 theorem allPathsSourceTarget_correct :
@@ -156,18 +150,12 @@ theorem allPathsSourceTarget_correct :
             ((PastaLean.pyIter graph).flatMap fun neighbors =>
               (PastaLean.pyIter neighbors).map fun v => decide ((0 : Int) ≤ v) && decide (v < n)) →
         let ans := (allPathsSourceTarget graph).run;
-        PastaLean.pyAll
-          ((PastaLean.pyIter ans).map fun p =>
-            decide (PastaLean.pyLen p > (0 : Int)) && p⦋(0 : Int)⦌ == (0 : Int) &&
-                  p⦋(-1 : Int)⦌ == PastaLean.pyLen graph -ₚ (1 : Int) &&
-                PastaLean.pyTruthy
-                  (PastaLean.pyAll
-                    ((PastaLean.pyIter p).map fun node =>
-                      decide ((0 : Int) ≤ node) && decide (node < PastaLean.pyLen graph))) &&
-              PastaLean.pyTruthy
-                (PastaLean.pyAll
-                  ((PastaLean.pyRange (PastaLean.pyLen p -ₚ (1 : Int))).map fun i =>
-                    PastaLean.pyContains graph⦋p⦋i⦌⦌ p⦋i +ₚ (1 : Int)⦌))) :=
+        ∀ p ∈ PastaLean.pyIter ans,
+          (((PastaLean.pyLen p > (0 : Int) ∧ p⦋(0 : Int)⦌ = (0 : Int)) ∧
+                p⦋(-1 : Int)⦌ = PastaLean.pyLen graph -ₚ (1 : Int)) ∧
+              ∀ node ∈ PastaLean.pyIter p, (0 : Int) ≤ node ∧ node < PastaLean.pyLen graph) ∧
+            ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen p -ₚ (1 : Int))),
+              PastaLean.pyContains graph⦋p⦋i⦌⦌ p⦋i +ₚ (1 : Int)⦌ :=
   by
   intro graph hpre
   exact allPathsSourceTarget_spec hpre

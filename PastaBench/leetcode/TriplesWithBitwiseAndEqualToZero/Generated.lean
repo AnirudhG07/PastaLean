@@ -68,7 +68,7 @@ theorem countTriplets_correct :
               (List.filter (fun z => PastaLean.pyBitAnd (PastaLean.pyBitAnd x y) z = (0 : Int))
                     (PastaLean.pyIter nums)).map
                 fun z => (1 : Int)) :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  by taste?
 
 def countTriplets'rn := fun (nums : List Int) ↦
   let cnt :=

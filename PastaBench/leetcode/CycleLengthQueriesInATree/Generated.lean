@@ -79,19 +79,19 @@ def cycleLengthQueries := fun (n : Int) ↦ fun (queries : List (List Int)) ↦
 @[spec]
 theorem cycleLengthQueries_spec :
     ⦃⌜True⌝⦄ cycleLengthQueries n queries ⦃⇓ans =>
-      ⌜PastaLean.pyLen ans = PastaLean.pyLen queries ∧
-          PastaLean.pyAll ((PastaLean.pyIter ans).map fun t => decide (t ≥ (1 : Int)))⌝⦄ :=
+      ⌜PastaLean.pyLen ans = PastaLean.pyLen queries ∧ ∀ t ∈ PastaLean.pyIter ans, t ≥ (1 : Int)⌝⦄ :=
   by
-  mvcgen [cycleLengthQueries, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  try
+    mvcgen [cycleLengthQueries, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · ⇓cur => ⌜True⌝
+  taste?
   all_goals sorry
 
 theorem cycleLengthQueries_correct :
     ∀ (n : Int),
       ∀ (queries : List (List Int)),
         let ans := (cycleLengthQueries n queries).run;
-        PastaLean.pyLen ans = PastaLean.pyLen queries ∧
-          PastaLean.pyAll ((PastaLean.pyIter ans).map fun t => decide (t ≥ (1 : Int))) :=
+        PastaLean.pyLen ans = PastaLean.pyLen queries ∧ ∀ t ∈ PastaLean.pyIter ans, t ≥ (1 : Int) :=
   by
   intro n queries
   exact cycleLengthQueries_spec True.intro

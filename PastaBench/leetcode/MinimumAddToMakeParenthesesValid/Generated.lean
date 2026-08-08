@@ -78,20 +78,20 @@ def minAddToMakeValid := fun (s : String) ↦
 
 @[spec]
 theorem minAddToMakeValid_spec :
-    ⦃⌜PastaLean.pyAll ((PastaLean.pyIter s).map fun c => PastaLean.pyContains ("(", ")") c)⌝⦄
-      minAddToMakeValid s ⦃⇓result => ⌜result ≥ (0 : Int) ∧ result ≤ PastaLean.pyLen s⌝⦄ :=
+    ⦃⌜∀ c ∈ PastaLean.pyIter s, PastaLean.pyContains ("(", ")") c⌝⦄ minAddToMakeValid s ⦃⇓result =>
+      ⌜result ≥ (0 : Int) ∧ result ≤ PastaLean.pyLen s⌝⦄ :=
   by
   try
     mvcgen [minAddToMakeValid, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓cur =>
-      ⌜PastaLean.pyAll ((PastaLean.pyIter stk).map fun p => PastaLean.pyContains ("(", ")") p) ∧
+      ⌜(∀ p ∈ PastaLean.pyIter stk, PastaLean.pyContains ("(", ")") p) ∧
           stk = PastaLean.pySortBy (fun (p : String) ↦ p = "(") false stk⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem minAddToMakeValid_correct :
     ∀ (s : String),
-      PastaLean.pyAll ((PastaLean.pyIter s).map fun c => PastaLean.pyContains ("(", ")") c) →
+      (∀ c ∈ PastaLean.pyIter s, PastaLean.pyContains ("(", ")") c) →
         let result := (minAddToMakeValid s).run;
         result ≥ (0 : Int) ∧ result ≤ PastaLean.pyLen s :=
   by

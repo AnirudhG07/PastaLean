@@ -76,7 +76,7 @@ theorem _minimumSize'check_spec :
             _minimumSize'check mx nums maxOperations =
               (PastaLean.pySum ((PastaLean.pyIter nums).map fun x => PastaLean.pyFloorDiv (x -ₚ (1 : Int)) mx) ≤
                 maxOperations) :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]
+  by taste?
 
 def minimumSize := fun (nums : List Int) ↦ fun (maxOperations : Int) ↦
   Libraries.bisect.pyBisectLeftRangeKey (1 : Int) (PastaLean.pyMax nums +ₚ (1 : Int)) (1 : Int) Bool.true (key :=
@@ -90,7 +90,7 @@ theorem minimumSize_correct :
     ∀ (nums : List Int),
       ∀ (maxOperations : Int),
         PastaLean.pyLen nums > (0 : Int) →
-          PastaLean.pyAll ((PastaLean.pyIter nums).map fun x => decide (x > (0 : Int))) →
+          (∀ x ∈ PastaLean.pyIter nums, x > (0 : Int)) →
             maxOperations ≥ (0 : Int) →
               ((PastaLean.pySum
                         ((PastaLean.pyIter nums).map fun x =>
@@ -103,7 +103,7 @@ theorem minimumSize_correct :
                         maxOperations)) ∧
                   (1 : Int) ≤ minimumSize nums maxOperations) ∧
                 minimumSize nums maxOperations ≤ PastaLean.pyMax nums :=
-  by sorry
+  by taste?
 
 private def _minimumSize'check'rn := fun (mx : Int) ↦ fun (nums : List Int) ↦ fun (maxOperations : Int) ↦
   decide

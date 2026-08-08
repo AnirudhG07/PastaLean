@@ -65,7 +65,7 @@ def longest := fun (strings : List String) ↦
         return s
       else
         let _ := ()
-    return default : Id _)
+    return default : Id (Option String))
 
 @[spec]
 theorem longest_spec :
@@ -79,7 +79,7 @@ theorem longest_spec :
   by
   try
     mvcgen [longest, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · Invariant.withEarlyReturn (onReturn := fun _ _ => ⌜True⌝) (onContinue := fun _ _ => ⌜True⌝)
+    · Invariant.withEarlyReturn (onContinue := fun cur b => ⌜True⌝) (onReturn := fun _ _ => ⌜True⌝)
   taste?
   all_goals sorry
 
@@ -97,33 +97,34 @@ theorem longest_correct :
   exact longest_spec True.intro
 
 def longest'rn := fun (strings : List String) ↦
-  Id.run
-    (do
-      /-
-       Out of list of strings, return the longest one. Return the first one in case of multiple
-          strings of the same length. Return None in case the input list is empty.
-          >>> longest([])
-      
-          >>> longest(['a', 'b', 'c'])
-          'a'
-          >>> longest(['a', 'bb', 'ccc'])
-          'ccc'
-          
-      -/
-      -- The result is None exactly when the input list is empty.
-      -- A non-None result is one of the input strings, and it is of maximal length.
-      -- The tie-break, and the real content: everything before the returned string is STRICTLY
-      -- shorter, so it is the FIRST string of maximal length, not merely one of them.
-      if h_1 : !PastaLean.pyTruthy strings then 
-        return Option.none
-      else
-        let _ := ()
-      let mut maxlen : Int := PastaLean.pyMax ((PastaLean.pyIter strings).map fun x => PastaLean.pyLen x)
-      for s in (PastaLean.pyIter strings)do
-        if h_2 : PastaLean.pyLen s == maxlen then 
-          return s
+  (show Option String from
+    Id.run
+      (do
+        /-
+         Out of list of strings, return the longest one. Return the first one in case of multiple
+            strings of the same length. Return None in case the input list is empty.
+            >>> longest([])
+        
+            >>> longest(['a', 'b', 'c'])
+            'a'
+            >>> longest(['a', 'bb', 'ccc'])
+            'ccc'
+            
+        -/
+        -- The result is None exactly when the input list is empty.
+        -- A non-None result is one of the input strings, and it is of maximal length.
+        -- The tie-break, and the real content: everything before the returned string is STRICTLY
+        -- shorter, so it is the FIRST string of maximal length, not merely one of them.
+        if h_1 : !PastaLean.pyTruthy strings then 
+          return Option.none
         else
           let _ := ()
-      return default)
+        let mut maxlen : Int := PastaLean.pyMax ((PastaLean.pyIter strings).map fun x => PastaLean.pyLen x)
+        for s in (PastaLean.pyIter strings)do
+          if h_2 : PastaLean.pyLen s == maxlen then 
+            return s
+          else
+            let _ := ()
+        return default))
 
 end PastaBench.humaneval.Longest

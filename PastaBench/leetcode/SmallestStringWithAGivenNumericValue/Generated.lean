@@ -64,10 +64,8 @@ namespace PastaBench.leetcode.SmallestStringWithAGivenNumericValue
 def getSmallestString := fun (n : Int) ↦ fun (k : Int) ↦
   (do
     let mut ans : List String := PastaLean.pyListRepeat ["a"] n
-    let __unpack_value_1 := (n -ₚ (1 : Int), k -ₚ n)
-    let __unpack_pair_1 := __unpack_value_1
-    let mut i : Int := Prod.fst __unpack_pair_1
-    let mut d : Int := Prod.snd __unpack_pair_1
+    let mut i : Int := n -ₚ (1 : Int)
+    let mut d : Int := k -ₚ n
     while (d > (25 : Int)) do
       let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i))
       let _ := Libraries.passta.pyPassInvariant (decide (i < n))
@@ -103,7 +101,7 @@ theorem getSmallestString_spec :
             let i := st |>.fst;
             (((0 : Int) ≤ i ∧ i < n) ∧ d ≥ (0 : Int)) ∧ d ≤ (25 : Int) *ₚ (i +ₚ (1 : Int)))
           (fun _ => True) s⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem getSmallestString_correct :
@@ -126,10 +124,8 @@ def getSmallestString'rn := fun (n : Int) ↦ fun (k : Int) ↦
       let _ := Libraries.passta.pyPassRequires (decide (k ≥ n))
       let _ := Libraries.passta.pyPassRequires (decide (k ≤ (26 : Int) *ₚ n))
       let mut ans : List String := PastaLean.pyListRepeat ["a"] n
-      let __unpack_value_1 := (n -ₚ (1 : Int), k -ₚ n)
-      let __unpack_pair_1 := __unpack_value_1
-      let mut i : Int := Prod.fst __unpack_pair_1
-      let mut d : Int := Prod.snd __unpack_pair_1
+      let mut i : Int := n -ₚ (1 : Int)
+      let mut d : Int := k -ₚ n
       while (d > (25 : Int)) do
         let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ i))
         let _ := Libraries.passta.pyPassInvariant (decide (i < n))

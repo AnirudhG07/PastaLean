@@ -749,7 +749,8 @@ def assignSyntax : (kind : SyntaxNodeKind) → Json →
                 -- `let mut` can't re-`let mut` it (Lean forbids shadowing a mut var) nor plain-reassign
                 -- (the types differ). Bind a fresh `let mut s'rbN` and SSA-rename every later `s`
                 -- reference, keeping concrete types (vs. widening the slot to PyAny).
-                if conflicting && (← hasVar nameIdent.getId) && (← isMutVar nameIdent.getId) then
+                if conflicting && (← hasVar nameIdent.getId) && (← isMutVar nameIdent.getId)
+                    && !(← isPyAnySlot nameIdent.getId) then
                   let fresh ← freshRenameName nameIdent.getId
                   addRename nameIdent.getId fresh
                   addVar fresh
@@ -769,6 +770,8 @@ def assignSyntax : (kind : SyntaxNodeKind) → Json →
                     if (← heapContainerRef? e).isSome then heapTupleOfRefs := true
                 let ty? ← if shadow || heapTupleOfRefs then pure none else stampedTypeSyntax? target
                 let bound ← bindOrAssignLocal nameIdent rhs ty? shadow
+                -- A `PyAny`-slotted mut var absorbs later cross-type reassignments by coercion (no rebind).
+                if conflicting then setPyAnySlot nameIdent.getId true
                 -- Track whether this name now holds a set, so later `==`/`<=` on it use set semantics
                 -- (order-independent) rather than the list-backed ones.
                 setSetVar nameIdent.getId (← jsonIsSetExpr value)

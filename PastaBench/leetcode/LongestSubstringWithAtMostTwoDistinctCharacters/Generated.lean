@@ -102,8 +102,12 @@ def lengthOfLongestSubstringTwoDistinct := fun (s : String) ↦
 theorem lengthOfLongestSubstringTwoDistinct_spec :
     ⦃⌜True⌝⦄ lengthOfLongestSubstringTwoDistinct s ⦃⇓ans => ⌜ans ≥ (0 : Int) ∧ ans ≤ PastaLean.pyLen s⌝⦄ :=
   by
-  mvcgen [lengthOfLongestSubstringTwoDistinct, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  try
+    mvcgen [lengthOfLongestSubstringTwoDistinct, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · ⇓⟨cur, ans, j⟩ =>
+      ⌜(((((0 : Int) ≤ i ∧ i ≤ PastaLean.pyLen s) ∧ (0 : Int) ≤ j ∧ j ≤ i) ∧ ans ≥ (0 : Int)) ∧ ans ≤ i) ∧
+          PastaLean.pyLen cnt ≤ (2 : Int)⌝
+  taste?
   all_goals sorry
 
 theorem lengthOfLongestSubstringTwoDistinct_correct :

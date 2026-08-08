@@ -122,8 +122,13 @@ theorem longestSubarray_spec :
     ⦃⌜limit ≥ (0 : Int)⌝⦄ longestSubarray nums limit ⦃⇓ans =>
       ⌜((0 : Int) ≤ ans ∧ ans ≤ PastaLean.pyLen nums) ∧ (PastaLean.pyLen nums = (0 : Int) ∨ ans ≥ (1 : Int))⌝⦄ :=
   by
-  mvcgen [longestSubarray, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  try
+    mvcgen [longestSubarray, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · ⇓⟨cur, ans, j⟩ =>
+      ⌜((((((0 : Int) ≤ i ∧ i ≤ PastaLean.pyLen nums) ∧ (0 : Int) ≤ j ∧ j ≤ i) ∧ ans ≥ (0 : Int)) ∧ ans ≤ i) ∧
+            PastaLean.pyLen sl = i -ₚ j) ∧
+          (i = j ∨ sl⦋(-1 : Int)⦌ -ₚ sl⦋(0 : Int)⦌ ≤ limit)⌝
+  taste?
   all_goals sorry
 
 theorem longestSubarray_correct :

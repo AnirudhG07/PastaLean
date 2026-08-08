@@ -73,7 +73,7 @@ theorem cellsInRange_correct :
                       PastaLean.pyLen (cellsInRange s) =
                         (PastaLean.pyOrd s⦋(-2 : Int)⦌ -ₚ PastaLean.pyOrd s⦋(0 : Int)⦌ +ₚ (1 : Int)) *ₚ
                           (PastaLean.pyInt s⦋(-1 : Int)⦌ -ₚ PastaLean.pyInt s⦋(1 : Int)⦌ +ₚ (1 : Int)) :=
-  by sorry
+  by taste?
 
 def cellsInRange'rn := fun (s : String) ↦
   (PastaLean.pyRange (PastaLean.pyOrd s⦋(-2 : Int)⦌ +ₚ (1 : Int)) (PastaLean.pyOrd s⦋(0 : Int)⦌)).flatMap fun i =>

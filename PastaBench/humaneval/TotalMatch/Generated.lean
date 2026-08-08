@@ -52,84 +52,33 @@ def total_match(lst1, lst2):
 namespace PastaBench.humaneval.TotalMatch
 
 def total_match := fun lst1 ↦ fun lst2 ↦
-  (do
-    let __unpack_value_1 :=
-      (PastaLean.pySum (PastaLean.pyMap (fun s ↦ PastaLean.pyLen s) lst1),
-        PastaLean.pySum (PastaLean.pyMap (fun s ↦ PastaLean.pyLen s) lst2))
-    let __unpack_pair_1 := __unpack_value_1
-    let mut c1 := Prod.fst __unpack_pair_1
-    let mut c2 := Prod.snd __unpack_pair_1
-    let _ :=
-      Libraries.passta.pyPassAssert (c1 == PastaLean.pySum ((PastaLean.pyIter lst1).map fun s => PastaLean.pyLen s))
-    let _ :=
-      Libraries.passta.pyPassAssert (c2 == PastaLean.pySum ((PastaLean.pyIter lst2).map fun s => PastaLean.pyLen s))
-    let __py_ret_1 := if c1 ≤ c2 then lst1 else lst2
-    return __py_ret_1 : Id _)
+  let c1 := PastaLean.pySum (PastaLean.pyMap (fun s ↦ PastaLean.pyLen s) lst1)
+  let c2 := PastaLean.pySum (PastaLean.pyMap (fun s ↦ PastaLean.pyLen s) lst2)
+  if c1 ≤ c2 then lst1 else lst2
 
-@[spec]
-theorem total_match_spec :
-    ⦃⌜True⌝⦄ total_match lst1 lst2 ⦃⇓result =>
-      ⌜(((result = lst1 ∨ result = lst2) ∧
-              PastaLean.pySum ((PastaLean.pyIter result).map fun s => PastaLean.pyLen s) ≤
-                PastaLean.pySum ((PastaLean.pyIter lst1).map fun s => PastaLean.pyLen s)) ∧
-            PastaLean.pySum ((PastaLean.pyIter result).map fun s => PastaLean.pyLen s) ≤
-              PastaLean.pySum ((PastaLean.pyIter lst2).map fun s => PastaLean.pyLen s)) ∧
-          (PastaLean.pySum ((PastaLean.pyIter lst1).map fun s => PastaLean.pyLen s) >
-              PastaLean.pySum ((PastaLean.pyIter lst2).map fun s => PastaLean.pyLen s) ∨
-            result = lst1)⌝⦄ :=
-  by
-  mvcgen [total_match, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  taste?
-  all_goals sorry
+attribute [simp] total_match
 
+@[taste_ingr]
 theorem total_match_correct :
     ∀ lst1,
       ∀ lst2,
-        let result := (total_match lst1 lst2).run;
-        (((result = lst1 ∨ result = lst2) ∧
-              PastaLean.pySum ((PastaLean.pyIter result).map fun s => PastaLean.pyLen s) ≤
-                PastaLean.pySum ((PastaLean.pyIter lst1).map fun s => PastaLean.pyLen s)) ∧
-            PastaLean.pySum ((PastaLean.pyIter result).map fun s => PastaLean.pyLen s) ≤
-              PastaLean.pySum ((PastaLean.pyIter lst2).map fun s => PastaLean.pyLen s)) ∧
-          (PastaLean.pySum ((PastaLean.pyIter lst1).map fun s => PastaLean.pyLen s) >
-              PastaLean.pySum ((PastaLean.pyIter lst2).map fun s => PastaLean.pyLen s) ∨
-            result = lst1) :=
-  by
-  intro lst1 lst2
-  exact total_match_spec True.intro
+        let c1 := PastaLean.pySum (PastaLean.pyMap (fun s ↦ PastaLean.pyLen s) lst1)
+        let c2 := PastaLean.pySum (PastaLean.pyMap (fun s ↦ PastaLean.pyLen s) lst2)
+        (((((total_match lst1 lst2 = lst1 ∨ total_match lst1 lst2 = lst2) ∧
+                  PastaLean.pySum ((PastaLean.pyIter (total_match lst1 lst2)).map fun s => PastaLean.pyLen s) ≤
+                    PastaLean.pySum ((PastaLean.pyIter lst1).map fun s => PastaLean.pyLen s)) ∧
+                PastaLean.pySum ((PastaLean.pyIter (total_match lst1 lst2)).map fun s => PastaLean.pyLen s) ≤
+                  PastaLean.pySum ((PastaLean.pyIter lst2).map fun s => PastaLean.pyLen s)) ∧
+              (PastaLean.pySum ((PastaLean.pyIter lst1).map fun s => PastaLean.pyLen s) >
+                  PastaLean.pySum ((PastaLean.pyIter lst2).map fun s => PastaLean.pyLen s) ∨
+                total_match lst1 lst2 = lst1)) ∧
+            c1 = PastaLean.pySum ((PastaLean.pyIter lst1).map fun s => PastaLean.pyLen s)) ∧
+          c2 = PastaLean.pySum ((PastaLean.pyIter lst2).map fun s => PastaLean.pyLen s) :=
+  by taste?
 
 def total_match'rn := fun lst1 ↦ fun lst2 ↦
-  Id.run
-    (do
-      /-
-      
-          Write a function that accepts two lists of strings and returns the list that has 
-          total number of chars in the all strings of the list less than the other list.
-      
-          if the two lists have the same number of chars, return the first list.
-      
-          Examples
-          total_match([], []) ➞ []
-          total_match(['hi', 'admin'], ['hI', 'Hi']) ➞ ['hI', 'Hi']
-          total_match(['hi', 'admin'], ['hi', 'hi', 'admin', 'project']) ➞ ['hi', 'admin']
-          total_match(['hi', 'admin'], ['hI', 'hi', 'hi']) ➞ ['hI', 'hi', 'hi']
-          total_match(['4'], ['1', '2', '3', '4', '5']) ➞ ['4']
-          
-      -/
-      -- 1. The result is one of the two inputs verbatim — nothing is built or reordered.
-      -- 2. It is the one with the *smaller* total character count: its own total is <= both.
-      -- 3. The stated tie-break: on a tie (indeed whenever lst1 is no longer) it is lst1.
-      let __unpack_value_1 :=
-        (PastaLean.pySum (PastaLean.pyMap (fun s ↦ PastaLean.pyLen s) lst1),
-          PastaLean.pySum (PastaLean.pyMap (fun s ↦ PastaLean.pyLen s) lst2))
-      let __unpack_pair_1 := __unpack_value_1
-      let mut c1 := Prod.fst __unpack_pair_1
-      let mut c2 := Prod.snd __unpack_pair_1
-      let _ :=
-        Libraries.passta.pyPassAssert (c1 == PastaLean.pySum ((PastaLean.pyIter lst1).map fun s => PastaLean.pyLen s))
-      let _ :=
-        Libraries.passta.pyPassAssert (c2 == PastaLean.pySum ((PastaLean.pyIter lst2).map fun s => PastaLean.pyLen s))
-      let __py_ret_1 := if c1 ≤ c2 then lst1 else lst2
-      return __py_ret_1)
+  let c1 := PastaLean.pySum (PastaLean.pyMap (fun s ↦ PastaLean.pyLen s) lst1)
+  let c2 := PastaLean.pySum (PastaLean.pyMap (fun s ↦ PastaLean.pyLen s) lst2)
+  if c1 ≤ c2 then lst1 else lst2
 
 end PastaBench.humaneval.TotalMatch

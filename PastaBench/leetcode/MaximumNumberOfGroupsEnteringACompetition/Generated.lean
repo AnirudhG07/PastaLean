@@ -76,7 +76,7 @@ theorem maximumGroups_correct :
             maximumGroups grades *ₚ (maximumGroups grades +ₚ (1 : Int)) ≤ (2 : Int) *ₚ PastaLean.pyLen grades) ∧
           (maximumGroups grades +ₚ (1 : Int)) *ₚ (maximumGroups grades +ₚ (2 : Int)) >
             (2 : Int) *ₚ PastaLean.pyLen grades :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  by taste?
 
 def maximumGroups'rn := fun (grades : List Int) ↦
   let n := (PastaLean.pyLen grades : Int)

@@ -38,7 +38,7 @@ theorem maxNumber_correct :
     ∀ (n : Int),
       n > (0 : Int) →
         maxNumber n = PastaLean.pyShiftLeft (1 : Int) (PastaLean.pyBitLength n -ₚ (1 : Int)) -ₚ (1 : Int) :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]
+  by taste?
 
 def maxNumber'rn := fun (n : Int) ↦ PastaLean.pyShiftLeft (1 : Int) (PastaLean.pyBitLength n -ₚ (1 : Int)) -ₚ (1 : Int)
 

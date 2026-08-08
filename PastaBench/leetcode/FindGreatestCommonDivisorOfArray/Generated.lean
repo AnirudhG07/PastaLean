@@ -51,7 +51,7 @@ theorem findGCD_correct :
     ∀ (nums : List Int),
       PastaLean.pyLen nums > (0 : Int) →
         findGCD nums = Libraries.math.pyMathGcd (PastaLean.pyMax nums) (PastaLean.pyMin nums) :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]
+  by taste?
 
 def findGCD'rn := fun (nums : List Int) ↦ Libraries.math.pyMathGcd (PastaLean.pyMax nums) (PastaLean.pyMin nums)
 

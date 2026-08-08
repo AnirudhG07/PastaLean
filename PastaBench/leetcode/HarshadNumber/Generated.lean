@@ -36,10 +36,8 @@ namespace PastaBench.leetcode.HarshadNumber
 
 def sumOfTheDigitsOfHarshadNumber := fun (x : Int) ↦
   (do
-    let __unpack_value_1 := ((0 : Int), x)
-    let __unpack_pair_1 := __unpack_value_1
-    let mut s : Int := Prod.fst __unpack_pair_1
-    let mut y : Int := Prod.snd __unpack_pair_1
+    let mut s : Int := (0 : Int)
+    let mut y : Int := x
     while (PastaLean.pyTruthy y) do
       let _ := Libraries.passta.pyPassInvariant (decide (y ≥ (0 : Int)))
       let _ := Libraries.passta.pyPassInvariant (decide (s ≥ (0 : Int)))
@@ -66,7 +64,7 @@ theorem sumOfTheDigitsOfHarshadNumber_spec :
             let s := st |>.fst;
             y ≥ (0 : Int) ∧ s ≥ (0 : Int))
           (fun _ => True) s⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals; pyany_cases <;> grind +locals; pyany_cases <;> grind +locals
+  taste?
   all_goals sorry
 
 theorem sumOfTheDigitsOfHarshadNumber_correct :
@@ -82,10 +80,8 @@ def sumOfTheDigitsOfHarshadNumber'rn := fun (x : Int) ↦
   Id.run
     (do
       let _ := Libraries.passta.pyPassRequires (decide (x > (0 : Int)))
-      let __unpack_value_1 := ((0 : Int), x)
-      let __unpack_pair_1 := __unpack_value_1
-      let mut s : Int := Prod.fst __unpack_pair_1
-      let mut y : Int := Prod.snd __unpack_pair_1
+      let mut s : Int := (0 : Int)
+      let mut y : Int := x
       while (PastaLean.pyTruthy y) do
         let _ := Libraries.passta.pyPassInvariant (decide (y ≥ (0 : Int)))
         let _ := Libraries.passta.pyPassInvariant (decide (s ≥ (0 : Int)))

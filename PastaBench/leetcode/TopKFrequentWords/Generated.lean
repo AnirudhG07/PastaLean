@@ -59,12 +59,8 @@ theorem topKFrequent_correct :
         k ≥ (0 : Int) →
           (PastaLean.pyLen (topKFrequent words k) = PastaLean.pyMin [k, PastaLean.pyLen (PastaLean.pySet words)] ∧
               PastaLean.pyLen (PastaLean.pySet (topKFrequent words k)) = PastaLean.pyLen (topKFrequent words k)) ∧
-            PastaLean.pyTruthy
-                (PastaLean.pyAll
-                  ((PastaLean.pyIter (topKFrequent words k)).map fun word =>
-                    PastaLean.pyContains (PastaLean.pySet words) word)) =
-              true :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+            ∀ word ∈ PastaLean.pyIter (topKFrequent words k), PastaLean.pyContains (PastaLean.pySet words) word :=
+  by taste?
 
 def topKFrequent'rn := fun (words : List String) ↦ fun (k : Int) ↦
   let cnt := (Libraries.collections.pyCounter words : Libraries.collections.PyDefaultDict String Int)

@@ -72,10 +72,8 @@ namespace PastaBench.leetcode.DetermineTheMinimumSumOfAKAvoidingArray
 
 def minimumSum := fun (n : Int) ↦ fun (k : Int) ↦
   (do
-    let __unpack_value_1 := ((0 : Int), (1 : Int))
-    let __unpack_pair_1 := __unpack_value_1
-    let mut s : Int := Prod.fst __unpack_pair_1
-    let mut i : Int := Prod.snd __unpack_pair_1
+    let mut s : Int := (0 : Int)
+    let mut i : Int := (1 : Int)
     let mut vis : List Int := PastaLean.pySetFromList []
     for _ in (PastaLean.pyRange n)do
       -- We use len(vis) as a proxy for the loop iteration counter, c, which goes from 0 to n-1.
@@ -131,7 +129,7 @@ theorem minimumSum_spec :
                 PastaLean.pyFloorDiv k (2 : Int) *ₚ (PastaLean.pyFloorDiv k (2 : Int) +ₚ (1 : Int)) +ₚ
                   (PastaLean.pyLen vis -ₚ PastaLean.pyFloorDiv k (2 : Int)) *ₚ
                     ((2 : Int) *ₚ k +ₚ PastaLean.pyLen vis -ₚ PastaLean.pyFloorDiv k (2 : Int) -ₚ (1 : Int)))⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem minimumSum_correct :
@@ -159,10 +157,8 @@ def minimumSum'rn := fun (n : Int) ↦ fun (k : Int) ↦
       -- Let m = k // 2.
       -- If n <= m, the sum is 1 + ... + n.
       -- If n > m, the sum is (1 + ... + m) + (k + ... + k + (n-m-1)).
-      let __unpack_value_1 := ((0 : Int), (1 : Int))
-      let __unpack_pair_1 := __unpack_value_1
-      let mut s : Int := Prod.fst __unpack_pair_1
-      let mut i : Int := Prod.snd __unpack_pair_1
+      let mut s : Int := (0 : Int)
+      let mut i : Int := (1 : Int)
       let mut vis : List Int := PastaLean.pySetFromList []
       for _ in (PastaLean.pyRange n)do
         -- We use len(vis) as a proxy for the loop iteration counter, c, which goes from 0 to n-1.

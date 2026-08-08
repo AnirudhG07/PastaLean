@@ -96,7 +96,7 @@ theorem largestMerge_spec :
             (((0 : Int) ≤ i ∧ i ≤ PastaLean.pyLen word1) ∧ (0 : Int) ≤ j ∧ j ≤ PastaLean.pyLen word2) ∧
               PastaLean.pyLen ans = i +ₚ j)
           (fun _ => True) s⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem largestMerge_correct :

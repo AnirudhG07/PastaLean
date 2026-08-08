@@ -64,7 +64,7 @@ theorem countDistinct_correct :
       let n := PastaLean.pyLen s
       countDistinct s ≥ PastaLean.pyLen s ∧
         (2 : Int) *ₚ countDistinct s ≤ PastaLean.pyLen s *ₚ (PastaLean.pyLen s +ₚ (1 : Int)) :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  by taste?
 
 def countDistinct'rn := fun (s : String) ↦
   let n := (PastaLean.pyLen s : Int)

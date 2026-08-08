@@ -68,10 +68,8 @@ namespace PastaBench.leetcode.NthDigit
 def findNthDigit := fun (n : Int) ↦
   (do
     let mut n := n
-    let __unpack_value_1 := ((1 : Int), (9 : Int))
-    let __unpack_pair_1 := __unpack_value_1
-    let mut k : Int := Prod.fst __unpack_pair_1
-    let mut cnt : Int := Prod.snd __unpack_pair_1
+    let mut k : Int := (1 : Int)
+    let mut cnt : Int := (9 : Int)
     while (k *ₚ cnt < n) do
       let _ := Libraries.passta.pyPassInvariant (decide (n > (0 : Int)))
       let _ := Libraries.passta.pyPassInvariant (decide (k > (0 : Int)))
@@ -96,7 +94,7 @@ def findNthDigit := fun (n : Int) ↦
 theorem findNthDigit_spec : ⦃⌜n ≥ (1 : Int)⌝⦄ findNthDigit n ⦃⇓result => ⌜(0 : Int) ≤ result ∧ result < (10 : Int)⌝⦄ :=
   by
   mvcgen [findNthDigit, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  taste?
   all_goals sorry
 
 theorem findNthDigit_correct :
@@ -113,10 +111,8 @@ def findNthDigit'rn := fun (n : Int) ↦
     (do
       let mut n := n
       let _ := Libraries.passta.pyPassRequires (decide (n ≥ (1 : Int)))
-      let __unpack_value_1 := ((1 : Int), (9 : Int))
-      let __unpack_pair_1 := __unpack_value_1
-      let mut k : Int := Prod.fst __unpack_pair_1
-      let mut cnt : Int := Prod.snd __unpack_pair_1
+      let mut k : Int := (1 : Int)
+      let mut cnt : Int := (9 : Int)
       while (k *ₚ cnt < n) do
         let _ := Libraries.passta.pyPassInvariant (decide (n > (0 : Int)))
         let _ := Libraries.passta.pyPassInvariant (decide (k > (0 : Int)))

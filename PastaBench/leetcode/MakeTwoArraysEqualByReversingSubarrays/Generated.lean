@@ -50,7 +50,7 @@ attribute [simp] canBeEqual
 theorem canBeEqual_correct :
     ∀ (target : List Int),
       ∀ (arr : List Int), canBeEqual target arr = (PastaLean.pySort target = PastaLean.pySort arr) :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]
+  by taste?
 
 def canBeEqual'rn := fun (target : List Int) ↦ fun (arr : List Int) ↦ PastaLean.pySort target == PastaLean.pySort arr
 

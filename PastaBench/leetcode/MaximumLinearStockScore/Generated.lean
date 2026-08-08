@@ -70,18 +70,19 @@ def maxScore := fun (prices : List Int) ↦
 
 @[spec]
 theorem maxScore_spec :
-    ⦃⌜PastaLean.pyLen prices > (0 : Int) ∧
-          PastaLean.pyAll ((PastaLean.pyIter prices).map fun p => decide (p ≥ (0 : Int)))⌝⦄
-      maxScore prices ⦃⇓result => ⌜result ≥ PastaLean.pyMax prices⌝⦄ :=
+    ⦃⌜PastaLean.pyLen prices > (0 : Int) ∧ ∀ p ∈ PastaLean.pyIter prices, p ≥ (0 : Int)⌝⦄ maxScore prices ⦃⇓result =>
+      ⌜result ≥ PastaLean.pyMax prices⌝⦄ :=
   by
-  mvcgen [maxScore, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  try
+    mvcgen [maxScore, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · ⇓cur =>
+      ⌜((0 : Int) ≤ i ∧ i ≤ PastaLean.pyLen prices) ∧ ∀ v ∈ PastaLean.pyIter (PastaLean.pyAnys cnt), v ≥ (0 : Int)⌝
+  taste?
   all_goals sorry
 
 theorem maxScore_correct :
     ∀ (prices : List Int),
-      PastaLean.pyLen prices > (0 : Int) ∧
-          PastaLean.pyAll ((PastaLean.pyIter prices).map fun p => decide (p ≥ (0 : Int))) →
+      (PastaLean.pyLen prices > (0 : Int) ∧ ∀ p ∈ PastaLean.pyIter prices, p ≥ (0 : Int)) →
         let result := (maxScore prices).run;
         result ≥ PastaLean.pyMax prices :=
   by

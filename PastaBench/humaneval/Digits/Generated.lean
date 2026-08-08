@@ -44,10 +44,8 @@ namespace PastaBench.humaneval.Digits
 
 def digits := fun (n : Int) ↦
   (do
-    let __unpack_value_1 := (Bool.false, (1 : Int))
-    let __unpack_pair_1 := __unpack_value_1
-    let mut has_odd : Bool := Prod.fst __unpack_pair_1
-    let mut prod : Int := Prod.snd __unpack_pair_1
+    let mut has_odd : Bool := Bool.false
+    let mut prod : Int := (1 : Int)
     for ch in (PastaLean.pyIter (PastaLean.pyStr n))do
       if h_1 : PastaLean.pyInt ch %ₚ (2 : Int) = (1 : Int) then 
         has_odd := Bool.true
@@ -91,10 +89,8 @@ def digits'rn := fun (n : Int) ↦
       -- A product of odd digits is itself odd; if there are none the result is 0. So the result is
       -- always either 0 or odd — never a nonzero even. (The naive "n even ⇒ result 0" is false: n=12
       -- is even yet has the odd digit 1, so digits(12) = 1.)
-      let __unpack_value_1 := (Bool.false, (1 : Int))
-      let __unpack_pair_1 := __unpack_value_1
-      let mut has_odd : Bool := Prod.fst __unpack_pair_1
-      let mut prod : Int := Prod.snd __unpack_pair_1
+      let mut has_odd : Bool := Bool.false
+      let mut prod : Int := (1 : Int)
       for ch in (PastaLean.pyIter (PastaLean.pyStr n))do
         if h_1 : PastaLean.pyInt ch %ₚ (2 : Int) == (1 : Int) then 
           has_odd := Bool.true

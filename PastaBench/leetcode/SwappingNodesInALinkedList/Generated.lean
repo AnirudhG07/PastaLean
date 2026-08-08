@@ -110,7 +110,7 @@ def swapNodes := fun (head : Option ListNode) ↦ fun (k : Int) ↦
     let __unpack_pair_1 := __unpack_value_1
     p := some { (p).getD default with val := Prod.fst __unpack_pair_1 }
     q := some { (q).getD default with val := Prod.snd __unpack_pair_1 }
-    return head : Id _)
+    return head : Id (Option ListNode))
 
 @[spec]
 theorem swapNodes_spec : ⦃⌜k ≥ (1 : Int) ∧ !PastaLean.pyIsNone head⌝⦄ swapNodes head k ⦃⇓head => ⌜head == head⌝⦄ :=
@@ -120,7 +120,7 @@ theorem swapNodes_spec : ⦃⌜k ≥ (1 : Int) ∧ !PastaLean.pyIsNone head⌝�
     · ⇓⟨cur, fast⟩ =>
       ⌜let _ := (cur.prefix.length : Int);
         !PastaLean.pyIsNone fast⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem swapNodes_correct :
@@ -134,31 +134,32 @@ theorem swapNodes_correct :
   exact swapNodes_spec hpre
 
 def swapNodes'rn : Option ListNode'rn → Int → Option ListNode'rn := fun (head : Option ListNode'rn) ↦ fun (k : Int) ↦
-  Id.run
-    (do
-      let _ := Libraries.passta.pyPassRequires (decide (k ≥ (1 : Int)))
-      let _ := Libraries.passta.pyPassRequires !PastaLean.pyIsNone head
-      let mut __chain_1 : Option ListNode'rn := head
-      let mut fast : Option ListNode'rn := __chain_1
-      let mut slow : Option ListNode'rn := __chain_1
-      for _ in (PastaLean.pyRange (k -ₚ (1 : Int)))do
-        let _ := Libraries.passta.pyPassInvariant !PastaLean.pyIsNone fast
-        fast := ((fast).getD default).next
-      let _ := Libraries.passta.pyPassAssert !PastaLean.pyIsNone fast
-      let mut p : Option ListNode'rn := fast
-      while (PastaLean.pyTruthy ((fast).getD default).next) do
-        let _ := Libraries.passta.pyPassInvariant !PastaLean.pyIsNone fast
-        let _ := Libraries.passta.pyPassInvariant !PastaLean.pyIsNone slow
-        let __unpack_value_1 := (((fast).getD default).next, ((slow).getD default).next)
+  (show Option ListNode'rn from
+    Id.run
+      (do
+        let _ := Libraries.passta.pyPassRequires (decide (k ≥ (1 : Int)))
+        let _ := Libraries.passta.pyPassRequires !PastaLean.pyIsNone head
+        let mut __chain_1 : Option ListNode'rn := head
+        let mut fast : Option ListNode'rn := __chain_1
+        let mut slow : Option ListNode'rn := __chain_1
+        for _ in (PastaLean.pyRange (k -ₚ (1 : Int)))do
+          let _ := Libraries.passta.pyPassInvariant !PastaLean.pyIsNone fast
+          fast := ((fast).getD default).next
+        let _ := Libraries.passta.pyPassAssert !PastaLean.pyIsNone fast
+        let mut p : Option ListNode'rn := fast
+        while (PastaLean.pyTruthy ((fast).getD default).next) do
+          let _ := Libraries.passta.pyPassInvariant !PastaLean.pyIsNone fast
+          let _ := Libraries.passta.pyPassInvariant !PastaLean.pyIsNone slow
+          let __unpack_value_1 := (((fast).getD default).next, ((slow).getD default).next)
+          let __unpack_pair_1 := __unpack_value_1
+          fast := ↑(Prod.fst __unpack_pair_1)
+          slow := ↑(Prod.snd __unpack_pair_1)
+        let _ := Libraries.passta.pyPassAssert !PastaLean.pyIsNone slow
+        let mut q : Option ListNode'rn := slow
+        let __unpack_value_1 := (((q).getD default).val, ((p).getD default).val)
         let __unpack_pair_1 := __unpack_value_1
-        fast := ↑(Prod.fst __unpack_pair_1)
-        slow := ↑(Prod.snd __unpack_pair_1)
-      let _ := Libraries.passta.pyPassAssert !PastaLean.pyIsNone slow
-      let mut q : Option ListNode'rn := slow
-      let __unpack_value_1 := (((q).getD default).val, ((p).getD default).val)
-      let __unpack_pair_1 := __unpack_value_1
-      p := some { (p).getD default with val := Prod.fst __unpack_pair_1 }
-      q := some { (q).getD default with val := Prod.snd __unpack_pair_1 }
-      return head)
+        p := some { (p).getD default with val := Prod.fst __unpack_pair_1 }
+        q := some { (q).getD default with val := Prod.snd __unpack_pair_1 }
+        return head))
 
 end PastaBench.leetcode.SwappingNodesInALinkedList

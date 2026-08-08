@@ -127,7 +127,7 @@ theorem numWays_spec :
         (((((1 : Int) ≤ i ∧ i < n) ∧ f⦋i -ₚ (1 : Int)⦌ ≥ (0 : Int)) ∧ g⦋i -ₚ (1 : Int)⦌ ≥ (0 : Int)) ∧
             f⦋i -ₚ (1 : Int)⦌ %ₚ k = (0 : Int)) ∧
           g⦋i -ₚ (1 : Int)⦌ %ₚ k = (0 : Int)⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem numWays_correct :

@@ -89,8 +89,7 @@ def maximumProduct := fun (nums : List Int) ↦ fun (k : Int) ↦
 
 @[spec]
 theorem maximumProduct_spec :
-    ⦃⌜(PastaLean.pyLen nums > (0 : Int) ∧ k ≥ (0 : Int)) ∧
-          PastaLean.pyAll ((PastaLean.pyIter nums).map fun x => decide (x ≥ (0 : Int)))⌝⦄
+    ⦃⌜(PastaLean.pyLen nums > (0 : Int) ∧ k ≥ (0 : Int)) ∧ ∀ x ∈ PastaLean.pyIter nums, x ≥ (0 : Int)⌝⦄
       maximumProduct nums k ⦃⇓result => ⌜PastaLean.pySum nums = PastaLean.pySum nums +ₚ k ∧ result ≥ (0 : Int)⌝⦄ :=
   by
   try
@@ -98,15 +97,14 @@ theorem maximumProduct_spec :
     · ⇓cur =>
       ⌜let i := (cur.prefix.length : Int);
         (((0 : Int) ≤ i ∧ i ≤ k) ∧ PastaLean.pySum nums = initial_sum +ₚ i) ∧
-          PastaLean.pyAll ((PastaLean.pyIter nums).map fun x => decide (x ≥ (0 : Int)))⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+          ∀ x ∈ PastaLean.pyIter nums, x ≥ (0 : Int)⌝
+  taste?
   all_goals sorry
 
 theorem maximumProduct_correct :
     ∀ (nums : List Int),
       ∀ (k : Int),
-        (PastaLean.pyLen nums > (0 : Int) ∧ k ≥ (0 : Int)) ∧
-            PastaLean.pyAll ((PastaLean.pyIter nums).map fun x => decide (x ≥ (0 : Int))) →
+        ((PastaLean.pyLen nums > (0 : Int) ∧ k ≥ (0 : Int)) ∧ ∀ x ∈ PastaLean.pyIter nums, x ≥ (0 : Int)) →
           let result := (maximumProduct nums k).run;
           PastaLean.pySum nums = PastaLean.pySum nums +ₚ k ∧ result ≥ (0 : Int) :=
   by

@@ -50,11 +50,11 @@ attribute [simp] finalValueAfterOperations
 @[taste_ingr]
 theorem finalValueAfterOperations_correct :
     ∀ (operations : List String),
-      PastaLean.pyAll ((PastaLean.pyIter operations).map fun s => decide (PastaLean.pyLen s ≥ (2 : Int))) →
+      (∀ s ∈ PastaLean.pyIter operations, PastaLean.pyLen s ≥ (2 : Int)) →
         finalValueAfterOperations operations =
           PastaLean.pySum
             ((PastaLean.pyIter operations).map fun s => if s⦋(1 : Int)⦌ = "+" then (1 : Int) else -(1 : Int)) :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]
+  by taste?
 
 def finalValueAfterOperations'rn := fun (operations : List String) ↦
   PastaLean.pySum ((PastaLean.pyIter operations).map fun s => if s⦋(1 : Int)⦌ == "+" then (1 : Int) else -(1 : Int))

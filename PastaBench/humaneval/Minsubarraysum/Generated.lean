@@ -82,10 +82,8 @@ def minSubArraySum := fun (nums : List Int) ↦
       let _ := ()
     let _ :=
       Libraries.passta.pyPassAssert (PastaLean.pyStdAny ((PastaLean.pyIter nums).map fun x => decide (x < (0 : Int))))
-    let __unpack_value_1 := ((0 : Int), (0 : Int))
-    let __unpack_pair_1 := __unpack_value_1
-    let mut s : Int := Prod.fst __unpack_pair_1
-    let mut ans : Int := Prod.snd __unpack_pair_1
+    let mut s : Int := (0 : Int)
+    let mut ans : Int := (0 : Int)
     for x in (PastaLean.pyIter nums)do
       -- The running sum `s` from the last reset point is always non-positive on entry.
       let _ := Libraries.passta.pyPassInvariant (decide (s ≤ (0 : Int)))
@@ -164,10 +162,8 @@ def minSubArraySum'rn := fun (nums : List Int) ↦
       let _ :=
         Libraries.passta.pyPassAssert
           (PastaLean.pyStdAny ((PastaLean.pyIter nums).map fun x => decide (x < (0 : Int))))
-      let __unpack_value_1 := ((0 : Int), (0 : Int))
-      let __unpack_pair_1 := __unpack_value_1
-      let mut s : Int := Prod.fst __unpack_pair_1
-      let mut ans : Int := Prod.snd __unpack_pair_1
+      let mut s : Int := (0 : Int)
+      let mut ans : Int := (0 : Int)
       for x in (PastaLean.pyIter nums)do
         -- The running sum `s` from the last reset point is always non-positive on entry.
         let _ := Libraries.passta.pyPassInvariant (decide (s ≤ (0 : Int)))

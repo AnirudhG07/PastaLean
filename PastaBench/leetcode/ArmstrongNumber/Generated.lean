@@ -57,10 +57,8 @@ namespace PastaBench.leetcode.ArmstrongNumber
 def isArmstrong := fun (n : Int) ↦
   (do
     let mut k : Int := PastaLean.pyLen (PastaLean.pyStr n)
-    let __unpack_value_1 := ((0 : Int), n)
-    let __unpack_pair_1 := __unpack_value_1
-    let mut s : Int := Prod.fst __unpack_pair_1
-    let mut x : Int := Prod.snd __unpack_pair_1
+    let mut s : Int := (0 : Int)
+    let mut x : Int := n
     while (PastaLean.pyTruthy x) do
       let _ := Libraries.passta.pyPassInvariant (decide (x ≥ (0 : Int)))
       let _ := Libraries.passta.pyPassInvariant (decide (s ≥ (0 : Int)))
@@ -70,7 +68,11 @@ def isArmstrong := fun (n : Int) ↦
     let __py_ret_1 := s == n
     return __py_ret_1 : Id _)
 
-theorem isArmstrong_spec : ⦃⌜n ≥ (0 : Int)⌝⦄ isArmstrong n ⦃⇓_ => ⌜True⌝⦄ := by sorry
+theorem isArmstrong_spec : ⦃⌜n ≥ (0 : Int)⌝⦄ isArmstrong n ⦃⇓_ => ⌜True⌝⦄ :=
+  by
+  try (apply Std.Do.Triple.of_entails_wp; intro _; exact True.intro)
+  all_goals sorry
+
 def isArmstrong'rn := fun (n : Int) ↦
   Id.run
     (do
@@ -81,10 +83,8 @@ def isArmstrong'rn := fun (n : Int) ↦
       -- is beyond the scope of simple arithmetic invariants.
       -- We can, however, prove basic properties like non-negativity and termination.
       let mut k : Int := PastaLean.pyLen (PastaLean.pyStr n)
-      let __unpack_value_1 := ((0 : Int), n)
-      let __unpack_pair_1 := __unpack_value_1
-      let mut s : Int := Prod.fst __unpack_pair_1
-      let mut x : Int := Prod.snd __unpack_pair_1
+      let mut s : Int := (0 : Int)
+      let mut x : Int := n
       while (PastaLean.pyTruthy x) do
         let _ := Libraries.passta.pyPassInvariant (decide (x ≥ (0 : Int)))
         let _ := Libraries.passta.pyPassInvariant (decide (s ≥ (0 : Int)))

@@ -69,40 +69,29 @@ def searchMatrix := fun (matrix : List (List Int)) ↦ fun (target : Int) ↦
 @[spec]
 theorem searchMatrix_spec :
     ⦃⌜(PastaLean.pyLen matrix = (0 : Int) ∨
-            PastaLean.pyTruthy
-                (PastaLean.pyAll
-                  ((PastaLean.pyIter matrix).map fun row => PastaLean.pyLen row == PastaLean.pyLen matrix⦋(0 : Int)⦌)) =
-              true) ∧
-          PastaLean.pyAll
-            ((PastaLean.pyIter matrix).map fun row =>
-              PastaLean.pyAll
-                ((PastaLean.pyRange (PastaLean.pyLen row -ₚ (1 : Int))).map fun i =>
-                  decide (row⦋i⦌ ≤ row⦋i +ₚ (1 : Int)⦌)))⌝⦄
+            ∀ row ∈ PastaLean.pyIter matrix, PastaLean.pyLen row = PastaLean.pyLen matrix⦋(0 : Int)⦌) ∧
+          ∀ row ∈ PastaLean.pyIter matrix,
+            ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen row -ₚ (1 : Int))),
+              row⦋i⦌ ≤ row⦋i +ₚ (1 : Int)⦌⌝⦄
       searchMatrix matrix target ⦃⇓result =>
-      ⌜result = PastaLean.pyStdAny ((PastaLean.pyIter matrix).map fun row => PastaLean.pyContains row target)⌝⦄ :=
+      ⌜result = ∃ row ∈ PastaLean.pyIter matrix, PastaLean.pyContains row target⌝⦄ :=
   by
   try
     mvcgen [searchMatrix, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · Invariant.withEarlyReturn (onReturn := fun _ _ => ⌜True⌝) (onContinue := fun _ _ => ⌜True⌝)
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+    · Invariant.withEarlyReturn (onContinue := fun cur b => ⌜True⌝) (onReturn := fun _ _ => ⌜True⌝)
+  taste?
   all_goals sorry
 
 theorem searchMatrix_correct :
     ∀ (matrix : List (List Int)),
       ∀ (target : Int),
-        (PastaLean.pyLen matrix = (0 : Int) ∨
-              PastaLean.pyTruthy
-                  (PastaLean.pyAll
-                    ((PastaLean.pyIter matrix).map fun row =>
-                      PastaLean.pyLen row == PastaLean.pyLen matrix⦋(0 : Int)⦌)) =
-                true) ∧
-            PastaLean.pyAll
-              ((PastaLean.pyIter matrix).map fun row =>
-                PastaLean.pyAll
-                  ((PastaLean.pyRange (PastaLean.pyLen row -ₚ (1 : Int))).map fun i =>
-                    decide (row⦋i⦌ ≤ row⦋i +ₚ (1 : Int)⦌))) →
+        ((PastaLean.pyLen matrix = (0 : Int) ∨
+              ∀ row ∈ PastaLean.pyIter matrix, PastaLean.pyLen row = PastaLean.pyLen matrix⦋(0 : Int)⦌) ∧
+            ∀ row ∈ PastaLean.pyIter matrix,
+              ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen row -ₚ (1 : Int))),
+                row⦋i⦌ ≤ row⦋i +ₚ (1 : Int)⦌) →
           let result := (searchMatrix matrix target).run;
-          result = PastaLean.pyStdAny ((PastaLean.pyIter matrix).map fun row => PastaLean.pyContains row target) :=
+          result = ∃ row ∈ PastaLean.pyIter matrix, PastaLean.pyContains row target :=
   by
   intro matrix target hpre
   exact searchMatrix_spec hpre

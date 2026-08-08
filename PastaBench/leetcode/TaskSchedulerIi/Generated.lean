@@ -76,8 +76,10 @@ def taskSchedulerII := fun (tasks : List Int) ↦ fun (space : Int) ↦
 theorem taskSchedulerII_spec :
     ⦃⌜space ≥ (0 : Int)⌝⦄ taskSchedulerII tasks space ⦃⇓ans => ⌜ans ≥ PastaLean.pyLen tasks⌝⦄ :=
   by
-  mvcgen [taskSchedulerII, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  try
+    mvcgen [taskSchedulerII, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · ⇓⟨cur, ans⟩ => ⌜((0 : Int) ≤ i ∧ i ≤ PastaLean.pyLen tasks) ∧ ans ≥ i⌝
+  taste?
   all_goals sorry
 
 theorem taskSchedulerII_correct :

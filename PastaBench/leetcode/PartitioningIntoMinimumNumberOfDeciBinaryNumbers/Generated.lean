@@ -50,7 +50,7 @@ attribute [simp] minPartitions
 
 @[taste_ingr]
 theorem minPartitions_correct :
-    ∀ (n : String), PastaLean.pyLen n > (0 : Int) → minPartitions n = PastaLean.pyInt (PastaLean.pyMax n) := by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]
+    ∀ (n : String), PastaLean.pyLen n > (0 : Int) → minPartitions n = PastaLean.pyInt (PastaLean.pyMax n) := by taste?
 
 def minPartitions'rn := fun (n : String) ↦ PastaLean.pyInt (PastaLean.pyMax n)
 

@@ -47,7 +47,7 @@ theorem constructRectangle_spec :
     ⦃⌜area ≥ (1 : Int)⌝⦄ constructRectangle area ⦃⇓result => ⌜result⦋(0 : Int)⦌ *ₚ result⦋(1 : Int)⦌ = area⌝⦄ :=
   by
   mvcgen [constructRectangle, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  taste?
   all_goals sorry
 
 theorem constructRectangle_correct :

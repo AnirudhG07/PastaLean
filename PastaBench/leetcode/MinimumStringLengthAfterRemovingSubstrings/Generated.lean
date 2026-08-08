@@ -75,7 +75,7 @@ theorem minLength_spec : ⦃⌜True⌝⦄ minLength s ⦃⇓result => ⌜result 
   try
     mvcgen [minLength, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓cur => ⌜PastaLean.pyLen stk ≥ (1 : Int)⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem minLength_correct :

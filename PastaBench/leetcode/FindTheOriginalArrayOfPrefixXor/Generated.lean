@@ -55,14 +55,11 @@ attribute [simp] findArray
 theorem findArray_correct :
     ∀ (pref : List Int),
       PastaLean.pyLen (findArray pref) = PastaLean.pyLen pref ∧
-        PastaLean.pyTruthy
-            (PastaLean.pyAll
-              ((PastaLean.pyRange (PastaLean.pyLen pref)).map fun i =>
-                Libraries.functools.pyReduce (PastaLean.pySlice (findArray pref) none (some (i +ₚ (1 : Int))) none)
-                    PastaLean.pyBitXor (some (0 : Int)) ==
-                  pref⦋i⦌)) =
-          true :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+        ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen pref)),
+          Libraries.functools.pyReduce (PastaLean.pySlice (findArray pref) none (some (i +ₚ (1 : Int))) none)
+              PastaLean.pyBitXor (some (0 : Int)) =
+            pref⦋i⦌ :=
+  by taste?
 
 def findArray'rn := fun (pref : List Int) ↦
   (PastaLean.pyIter (Libraries.itertools.pyPairwise ([(0 : Int)] +ₚ pref))).map fun (_pair_1 : Int × Int) =>

@@ -92,7 +92,11 @@ theorem correct_bracketing_spec :
   by
   try
     mvcgen [correct_bracketing, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · Invariant.withEarlyReturn (onReturn := fun _ _ => ⌜True⌝) (onContinue := fun _ _ => ⌜True⌝)
+    ·
+      Invariant.withEarlyReturn (onContinue := fun cur b =>
+        ⌜let cnt := b;
+          cnt ≥ (0 : Int) ∧ cnt ≤ PastaLean.pyLen brackets⌝)
+        (onReturn := fun _ _ => ⌜True⌝)
   taste?
   all_goals sorry
 

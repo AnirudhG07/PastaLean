@@ -94,8 +94,7 @@ def triangularSum := fun (nums : List Int) ↦
 
 @[spec]
 theorem triangularSum_spec :
-    ⦃⌜PastaLean.pyLen nums ≥ (1 : Int) ∧
-          PastaLean.pyAll ((PastaLean.pyIter nums).map fun x => decide ((0 : Int) ≤ x) && decide (x < (10 : Int)))⌝⦄
+    ⦃⌜PastaLean.pyLen nums ≥ (1 : Int) ∧ ∀ x ∈ PastaLean.pyIter nums, (0 : Int) ≤ x ∧ x < (10 : Int)⌝⦄
       triangularSum nums ⦃⇓result => ⌜(0 : Int) ≤ result ∧ result < (10 : Int)⌝⦄ :=
   by
   try
@@ -103,16 +102,13 @@ theorem triangularSum_spec :
     · ⇓cur =>
       ⌜let k := (cur.prefix.length : Int);
         ((1 : Int) ≤ k ∧ k < PastaLean.pyLen nums) ∧
-          PastaLean.pyAll
-            ((PastaLean.pyRange (k +ₚ (1 : Int))).map fun j =>
-              decide ((0 : Int) ≤ nums⦋j⦌) && decide (nums⦋j⦌ < (10 : Int)))⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+          ∀ j ∈ PastaLean.pyIter (PastaLean.pyRange (k +ₚ (1 : Int))), (0 : Int) ≤ nums⦋j⦌ ∧ nums⦋j⦌ < (10 : Int)⌝
+  taste?
   all_goals sorry
 
 theorem triangularSum_correct :
     ∀ (nums : List Int),
-      PastaLean.pyLen nums ≥ (1 : Int) ∧
-          PastaLean.pyAll ((PastaLean.pyIter nums).map fun x => decide ((0 : Int) ≤ x) && decide (x < (10 : Int))) →
+      (PastaLean.pyLen nums ≥ (1 : Int) ∧ ∀ x ∈ PastaLean.pyIter nums, (0 : Int) ≤ x ∧ x < (10 : Int)) →
         let result := (triangularSum nums).run;
         (0 : Int) ≤ result ∧ result < (10 : Int) :=
   by

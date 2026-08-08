@@ -101,10 +101,8 @@ def is_multiply_prime := fun (a : Int) ↦
           isprime := PastaLean.pySetItem isprime j Bool.false
       else
         let _ := ()
-    let __unpack_value_1 := ((0 : Int), a)
-    let __unpack_pair_1 := __unpack_value_1
-    let mut cnt : Int := Prod.fst __unpack_pair_1
-    let mut tmp : Int := Prod.snd __unpack_pair_1
+    let mut cnt : Int := (0 : Int)
+    let mut tmp : Int := a
     for i in (PastaLean.pyRange (a +ₚ (1 : Int)) (2 : Int))do
       let _ := Libraries.passta.pyPassInvariant (decide ((2 : Int) ≤ i) && decide (i ≤ a +ₚ (1 : Int)))
       let _ := Libraries.passta.pyPassInvariant (decide (cnt ≥ (0 : Int)))
@@ -202,10 +200,8 @@ def is_multiply_prime'rn := fun (a : Int) ↦
             isprime := PastaLean.pySetItem isprime j Bool.false
         else
           let _ := ()
-      let __unpack_value_1 := ((0 : Int), a)
-      let __unpack_pair_1 := __unpack_value_1
-      let mut cnt : Int := Prod.fst __unpack_pair_1
-      let mut tmp : Int := Prod.snd __unpack_pair_1
+      let mut cnt : Int := (0 : Int)
+      let mut tmp : Int := a
       for i in (PastaLean.pyRange (a +ₚ (1 : Int)) (2 : Int))do
         let _ := Libraries.passta.pyPassInvariant (decide ((2 : Int) ≤ i) && decide (i ≤ a +ₚ (1 : Int)))
         let _ := Libraries.passta.pyPassInvariant (decide (cnt ≥ (0 : Int)))

@@ -72,10 +72,8 @@ def maximumEnergy := fun (energy : List Int) ↦ fun (k : Int) ↦
     let mut ans : Int := -inf
     let mut n : Int := PastaLean.pyLen energy
     for i in (PastaLean.pyRange n (n -ₚ k))do
-      let __unpack_value_1 := (i, (0 : Int))
-      let __unpack_pair_1 := __unpack_value_1
-      let mut j : Int := Prod.fst __unpack_pair_1
-      let mut s : Int := Prod.snd __unpack_pair_1
+      let mut j : Int := i
+      let mut s : Int := (0 : Int)
       while (j ≥ (0 : Int)) do
         -- This invariant is crucial for proving memory safety of `energy[j]`.
         -- j >= 0 is the loop condition.
@@ -92,8 +90,10 @@ def maximumEnergy := fun (energy : List Int) ↦ fun (k : Int) ↦
     return ans : Id _)
 
 theorem maximumEnergy_spec :
-    ⦃⌜k > (0 : Int) ∧ PastaLean.pyLen energy > (0 : Int)⌝⦄ maximumEnergy energy k ⦃⇓_ => ⌜True⌝⦄ := by
-  apply Std.Do.Triple.of_entails_wp; intro _; exact True.intro
+    ⦃⌜k > (0 : Int) ∧ PastaLean.pyLen energy > (0 : Int)⌝⦄ maximumEnergy energy k ⦃⇓_ => ⌜True⌝⦄ :=
+  by
+  try (apply Std.Do.Triple.of_entails_wp; intro _; exact True.intro)
+  all_goals sorry
 
 def maximumEnergy'rn := fun (energy : List Int) ↦ fun (k : Int) ↦
   Id.run
@@ -106,10 +106,8 @@ def maximumEnergy'rn := fun (energy : List Int) ↦ fun (k : Int) ↦
       let mut ans : Int := -inf
       let mut n : Int := PastaLean.pyLen energy
       for i in (PastaLean.pyRange n (n -ₚ k))do
-        let __unpack_value_1 := (i, (0 : Int))
-        let __unpack_pair_1 := __unpack_value_1
-        let mut j : Int := Prod.fst __unpack_pair_1
-        let mut s : Int := Prod.snd __unpack_pair_1
+        let mut j : Int := i
+        let mut s : Int := (0 : Int)
         while (j ≥ (0 : Int)) do
           -- This invariant is crucial for proving memory safety of `energy[j]`.
           -- j >= 0 is the loop condition.

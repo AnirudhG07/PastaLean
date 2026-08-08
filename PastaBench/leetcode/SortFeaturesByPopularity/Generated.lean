@@ -62,7 +62,7 @@ theorem sortFeatures_spec :
   try
     mvcgen [sortFeatures, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓cur => ⌜True⌝
-  sorry
+  taste?
   all_goals sorry
 
 theorem sortFeatures_correct :

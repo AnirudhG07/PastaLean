@@ -49,10 +49,8 @@ namespace PastaBench.leetcode.FindTheLongestSemiRepetitiveSubstring
 
 def longestSemiRepetitiveSubstring := fun (s : String) ↦
   (do
-    let __unpack_value_1 := ((1 : Int), PastaLean.pyLen s)
-    let __unpack_pair_1 := __unpack_value_1
-    let mut ans : Int := Prod.fst __unpack_pair_1
-    let mut n : Int := Prod.snd __unpack_pair_1
+    let mut ans : Int := (1 : Int)
+    let mut n : Int := PastaLean.pyLen s
     let mut cnt : Int := (0 : Int)
     let mut j : Int := (0 : Int)
     for i in (PastaLean.pyRange n (1 : Int))do
@@ -86,7 +84,7 @@ theorem longestSemiRepetitiveSubstring_spec :
       ⌜let i := (cur.prefix.length : Int);
         ((((1 : Int) ≤ i ∧ i < n) ∧ (0 : Int) ≤ j ∧ j ≤ i) ∧ (0 : Int) ≤ cnt ∧ cnt ≤ (1 : Int)) ∧
           (1 : Int) ≤ ans ∧ ans ≤ n⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem longestSemiRepetitiveSubstring_correct :
@@ -102,10 +100,8 @@ def longestSemiRepetitiveSubstring'rn := fun (s : String) ↦
   Id.run
     (do
       let _ := Libraries.passta.pyPassRequires (decide (PastaLean.pyLen s ≥ (1 : Int)))
-      let __unpack_value_1 := ((1 : Int), PastaLean.pyLen s)
-      let __unpack_pair_1 := __unpack_value_1
-      let mut ans : Int := Prod.fst __unpack_pair_1
-      let mut n : Int := Prod.snd __unpack_pair_1
+      let mut ans : Int := (1 : Int)
+      let mut n : Int := PastaLean.pyLen s
       let mut cnt : Int := (0 : Int)
       let mut j : Int := (0 : Int)
       for i in (PastaLean.pyRange n (1 : Int))do

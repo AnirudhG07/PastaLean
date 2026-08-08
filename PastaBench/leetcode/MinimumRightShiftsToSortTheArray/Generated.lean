@@ -99,15 +99,11 @@ theorem minimumRightShifts_spec :
     ⦃⌜PastaLean.pyLen nums > (0 : Int)⌝⦄ minimumRightShifts nums ⦃⇓result =>
       ⌜result = -(1 : Int) ∨
           ((0 : Int) ≤ result ∧ result < PastaLean.pyLen nums) ∧
-            PastaLean.pyTruthy
-                (PastaLean.pyAll
-                  ((PastaLean.pyRange (PastaLean.pyLen nums) (1 : Int)).map fun j =>
-                    decide
-                      ((PastaLean.pySlice nums (some (-result)) none none +ₚ
-                            PastaLean.pySlice nums none (some (-result)) none)⦋j -ₚ (1 : Int)⦌ <
-                        (PastaLean.pySlice nums (some (-result)) none none +ₚ
-                            PastaLean.pySlice nums none (some (-result)) none)⦋j⦌))) =
-              true⌝⦄ :=
+            ∀ j ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen nums) (1 : Int)),
+              (PastaLean.pySlice nums (some (-result)) none none +ₚ
+                    PastaLean.pySlice nums none (some (-result)) none)⦋j -ₚ (1 : Int)⦌ <
+                (PastaLean.pySlice nums (some (-result)) none none +ₚ
+                    PastaLean.pySlice nums none (some (-result)) none)⦋j⦌⌝⦄ :=
   by
   try
     mvcgen [minimumRightShifts, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
@@ -119,7 +115,7 @@ theorem minimumRightShifts_spec :
           (fun st =>
             let i := st;
             ((1 : Int) ≤ i ∧ i ≤ n) ∧
-              PastaLean.pyAll ((PastaLean.pyRange i (1 : Int)).map fun j => decide (nums⦋j -ₚ (1 : Int)⦌ < nums⦋j⦌)))
+              ∀ j ∈ PastaLean.pyIter (PastaLean.pyRange i (1 : Int)), nums⦋j -ₚ (1 : Int)⦌ < nums⦋j⦌)
           (fun _ => True) s⌝
     · fun s =>
       let k := s;
@@ -129,11 +125,10 @@ theorem minimumRightShifts_spec :
           (fun st =>
             let k := st;
             (i +ₚ (1 : Int) ≤ k ∧ k ≤ n) ∧
-              PastaLean.pyAll
-                ((PastaLean.pyRange k (i +ₚ (1 : Int))).map fun j =>
-                  decide (nums⦋j -ₚ (1 : Int)⦌ < nums⦋j⦌) && decide (nums⦋j⦌ < nums⦋(0 : Int)⦌)))
+              ∀ j ∈ PastaLean.pyIter (PastaLean.pyRange k (i +ₚ (1 : Int))),
+                nums⦋j -ₚ (1 : Int)⦌ < nums⦋j⦌ ∧ nums⦋j⦌ < nums⦋(0 : Int)⦌)
           (fun _ => True) s⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem minimumRightShifts_correct :
@@ -142,15 +137,11 @@ theorem minimumRightShifts_correct :
         let result := (minimumRightShifts nums).run;
         result = -(1 : Int) ∨
           ((0 : Int) ≤ result ∧ result < PastaLean.pyLen nums) ∧
-            PastaLean.pyTruthy
-                (PastaLean.pyAll
-                  ((PastaLean.pyRange (PastaLean.pyLen nums) (1 : Int)).map fun j =>
-                    decide
-                      ((PastaLean.pySlice nums (some (-result)) none none +ₚ
-                            PastaLean.pySlice nums none (some (-result)) none)⦋j -ₚ (1 : Int)⦌ <
-                        (PastaLean.pySlice nums (some (-result)) none none +ₚ
-                            PastaLean.pySlice nums none (some (-result)) none)⦋j⦌))) =
-              true :=
+            ∀ j ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen nums) (1 : Int)),
+              (PastaLean.pySlice nums (some (-result)) none none +ₚ
+                    PastaLean.pySlice nums none (some (-result)) none)⦋j -ₚ (1 : Int)⦌ <
+                (PastaLean.pySlice nums (some (-result)) none none +ₚ
+                    PastaLean.pySlice nums none (some (-result)) none)⦋j⦌ :=
   by
   intro nums hpre
   exact minimumRightShifts_spec hpre

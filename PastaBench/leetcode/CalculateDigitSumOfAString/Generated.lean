@@ -70,7 +70,7 @@ def digitSum := fun (s : String) ↦ fun (k : Int) ↦
 theorem digitSum_spec : ⦃⌜k > (0 : Int) ∧ PastaLean.pyIsDecimal s⌝⦄ digitSum s k ⦃⇓s => ⌜PastaLean.pyLen s ≤ k⌝⦄ :=
   by
   mvcgen [digitSum, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  taste?
   all_goals sorry
 
 theorem digitSum_correct :

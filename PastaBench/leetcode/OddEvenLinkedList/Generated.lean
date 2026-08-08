@@ -120,13 +120,13 @@ def oddEvenList := fun (head : Option ListNode) ↦
       b := ((b).getD default).next
     let _ := Libraries.passta.pyPassAssert !PastaLean.pyIsNone a
     a := some { (a).getD default with next := c }
-    return head : Id _)
+    return head : Id (Option ListNode))
 
 @[spec]
 theorem oddEvenList_spec : ⦃⌜True⌝⦄ oddEvenList head ⦃⇓head => ⌜PastaLean.pyIsNone head ∨ head == head⌝⦄ :=
   by
   mvcgen [oddEvenList, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  taste?
   all_goals sorry
 
 theorem oddEvenList_correct :
@@ -138,33 +138,34 @@ theorem oddEvenList_correct :
   exact oddEvenList_spec True.intro
 
 def oddEvenList'rn : Option ListNode'rn → Option ListNode'rn := fun (head : Option ListNode'rn) ↦
-  Id.run
-    (do
-      -- The core correctness property of this function is structural and depends on
-      -- the list being acyclic, which is difficult to express without helper
-      -- functions for list traversal and properties. The contracts below focus on
-      -- memory safety (non-nullness) and the frame property that the head of the
-      -- list is preserved.
-      if h_1 : PastaLean.pyIsNone head then 
-        return Option.none
-      else
-        let _ := ()
-      let _ := Libraries.passta.pyPassAssert !PastaLean.pyIsNone head
-      let mut a : Option ListNode'rn := head
-      let mut __chain_1 : Option ListNode'rn := ((head).getD default).next
-      let mut b : Option ListNode'rn := __chain_1
-      let mut c : Option ListNode'rn := __chain_1
-      while (PastaLean.pyTruthy b && PastaLean.pyTruthy ((b).getD default).next) do
-        -- Invariants to ensure pointer dereferences in the loop are safe.
-        let _ := Libraries.passta.pyPassInvariant !PastaLean.pyIsNone a
-        let _ := Libraries.passta.pyPassInvariant !PastaLean.pyIsNone b
-        let _ := Libraries.passta.pyPassInvariant !PastaLean.pyIsNone ((b).getD default).next
-        a := some { (a).getD default with next := ((b).getD default).next }
-        a := ((a).getD default).next
-        b := some { (b).getD default with next := ((a).getD default).next }
-        b := ((b).getD default).next
-      let _ := Libraries.passta.pyPassAssert !PastaLean.pyIsNone a
-      a := some { (a).getD default with next := c }
-      return head)
+  (show Option ListNode'rn from
+    Id.run
+      (do
+        -- The core correctness property of this function is structural and depends on
+        -- the list being acyclic, which is difficult to express without helper
+        -- functions for list traversal and properties. The contracts below focus on
+        -- memory safety (non-nullness) and the frame property that the head of the
+        -- list is preserved.
+        if h_1 : PastaLean.pyIsNone head then 
+          return Option.none
+        else
+          let _ := ()
+        let _ := Libraries.passta.pyPassAssert !PastaLean.pyIsNone head
+        let mut a : Option ListNode'rn := head
+        let mut __chain_1 : Option ListNode'rn := ((head).getD default).next
+        let mut b : Option ListNode'rn := __chain_1
+        let mut c : Option ListNode'rn := __chain_1
+        while (PastaLean.pyTruthy b && PastaLean.pyTruthy ((b).getD default).next) do
+          -- Invariants to ensure pointer dereferences in the loop are safe.
+          let _ := Libraries.passta.pyPassInvariant !PastaLean.pyIsNone a
+          let _ := Libraries.passta.pyPassInvariant !PastaLean.pyIsNone b
+          let _ := Libraries.passta.pyPassInvariant !PastaLean.pyIsNone ((b).getD default).next
+          a := some { (a).getD default with next := ((b).getD default).next }
+          a := ((a).getD default).next
+          b := some { (b).getD default with next := ((a).getD default).next }
+          b := ((b).getD default).next
+        let _ := Libraries.passta.pyPassAssert !PastaLean.pyIsNone a
+        a := some { (a).getD default with next := c }
+        return head))
 
 end PastaBench.leetcode.OddEvenLinkedList

@@ -36,7 +36,7 @@ theorem smallestEvenMultiple_correct :
     ∀ (n : Int),
       n %ₚ (2 : Int) = (0 : Int) ∧ smallestEvenMultiple n = n ∨
         n %ₚ (2 : Int) ≠ (0 : Int) ∧ smallestEvenMultiple n = (2 : Int) *ₚ n :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals
+  by taste?
 
 def smallestEvenMultiple'rn := fun (n : Int) ↦ if n %ₚ (2 : Int) == (0 : Int) then n else n *ₚ (2 : Int)
 

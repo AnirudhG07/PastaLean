@@ -69,10 +69,8 @@ namespace PastaBench.humaneval.SpecialFactorial
 -- Factorial(k: int) -> int defined as k!
 def special_factorial := fun (n : Int) ↦
   (do
-    let __unpack_value_1 := ((1 : Int), (1 : Int))
-    let __unpack_pair_1 := __unpack_value_1
-    let mut fac : Int := Prod.fst __unpack_pair_1
-    let mut ans : Int := Prod.snd __unpack_pair_1
+    let mut fac : Int := (1 : Int)
+    let mut ans : Int := (1 : Int)
     for i in (PastaLean.pyRange (n +ₚ (1 : Int)) (2 : Int))do
       -- Standard loop counter bounds.
       let _ := Libraries.passta.pyPassInvariant (decide ((2 : Int) ≤ i) && decide (i ≤ n +ₚ (1 : Int)))
@@ -133,10 +131,8 @@ def special_factorial'rn := fun (n : Int) ↦
       -- We state a weaker, purely arithmetic postcondition.
       -- A stronger, but likely un-transpilable postcondition would be:
       -- Ensures(n == 0 or Result() % Factorial(n) == 0)
-      let __unpack_value_1 := ((1 : Int), (1 : Int))
-      let __unpack_pair_1 := __unpack_value_1
-      let mut fac : Int := Prod.fst __unpack_pair_1
-      let mut ans : Int := Prod.snd __unpack_pair_1
+      let mut fac : Int := (1 : Int)
+      let mut ans : Int := (1 : Int)
       for i in (PastaLean.pyRange (n +ₚ (1 : Int)) (2 : Int))do
         -- Standard loop counter bounds.
         let _ := Libraries.passta.pyPassInvariant (decide ((2 : Int) ≤ i) && decide (i ≤ n +ₚ (1 : Int)))

@@ -122,7 +122,7 @@ theorem mirrorReflection_spec :
             result = (2 : Int)⌝⦄ :=
   by
   mvcgen [mirrorReflection, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  taste?
   all_goals sorry
 
 theorem mirrorReflection_correct :

@@ -58,10 +58,8 @@ namespace PastaBench.leetcode.SingleElementInASortedArray
 
 def singleNonDuplicate := fun (nums : List Int) ↦
   (do
-    let __unpack_value_1 := ((0 : Int), PastaLean.pyLen nums -ₚ (1 : Int))
-    let __unpack_pair_1 := __unpack_value_1
-    let mut l : Int := Prod.fst __unpack_pair_1
-    let mut r : Int := Prod.snd __unpack_pair_1
+    let mut l : Int := (0 : Int)
+    let mut r : Int := PastaLean.pyLen nums -ₚ (1 : Int)
     while (l < r) do
       let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ l))
       let _ := Libraries.passta.pyPassInvariant (decide (l ≤ r))
@@ -86,7 +84,7 @@ theorem singleNonDuplicate_spec :
     ⦃⌜PastaLean.pyLen nums > (0 : Int)⌝⦄ singleNonDuplicate nums ⦃⇓result => ⌜PastaLean.pyContains nums result⌝⦄ :=
   by
   mvcgen [singleNonDuplicate, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  taste?
   all_goals sorry
 
 theorem singleNonDuplicate_correct :
@@ -102,10 +100,8 @@ def singleNonDuplicate'rn := fun (nums : List Int) ↦
   Id.run
     (do
       let _ := Libraries.passta.pyPassRequires (decide (PastaLean.pyLen nums > (0 : Int)))
-      let __unpack_value_1 := ((0 : Int), PastaLean.pyLen nums -ₚ (1 : Int))
-      let __unpack_pair_1 := __unpack_value_1
-      let mut l : Int := Prod.fst __unpack_pair_1
-      let mut r : Int := Prod.snd __unpack_pair_1
+      let mut l : Int := (0 : Int)
+      let mut r : Int := PastaLean.pyLen nums -ₚ (1 : Int)
       while (l < r) do
         let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ l))
         let _ := Libraries.passta.pyPassInvariant (decide (l ≤ r))

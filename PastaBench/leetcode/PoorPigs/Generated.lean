@@ -46,10 +46,8 @@ namespace PastaBench.leetcode.PoorPigs
 def poorPigs := fun (buckets : Int) ↦ fun (minutesToDie : Int) ↦ fun (minutesToTest : Int) ↦
   (do
     let mut base : Int := PastaLean.pyFloorDiv minutesToTest minutesToDie +ₚ (1 : Int)
-    let __unpack_value_1 := ((0 : Int), (1 : Int))
-    let __unpack_pair_1 := __unpack_value_1
-    let mut res : Int := Prod.fst __unpack_pair_1
-    let mut p : Int := Prod.snd __unpack_pair_1
+    let mut res : Int := (0 : Int)
+    let mut p : Int := (1 : Int)
     while (p < buckets) do
       let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ res))
       let _ := Libraries.passta.pyPassInvariant (p == base ^ₚ res)
@@ -79,7 +77,7 @@ theorem poorPigs_spec :
             let res := st |>.fst;
             ((0 : Int) ≤ res ∧ p = base ^ₚ res) ∧ p < buckets)
           (fun _ => True) s⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem poorPigs_correct :
@@ -100,10 +98,8 @@ def poorPigs'rn := fun (buckets : Int) ↦ fun (minutesToDie : Int) ↦ fun (min
       let _ := Libraries.passta.pyPassRequires (decide (minutesToDie > (0 : Int)))
       let _ := Libraries.passta.pyPassRequires (decide (minutesToTest ≥ minutesToDie))
       let mut base : Int := PastaLean.pyFloorDiv minutesToTest minutesToDie +ₚ (1 : Int)
-      let __unpack_value_1 := ((0 : Int), (1 : Int))
-      let __unpack_pair_1 := __unpack_value_1
-      let mut res : Int := Prod.fst __unpack_pair_1
-      let mut p : Int := Prod.snd __unpack_pair_1
+      let mut res : Int := (0 : Int)
+      let mut p : Int := (1 : Int)
       while (p < buckets) do
         let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ res))
         let _ := Libraries.passta.pyPassInvariant (p == base ^ₚ res)

@@ -90,7 +90,7 @@ theorem clearDigits_spec :
     · ⇓cur =>
       ⌜(∀ ch ∈ PastaLean.pyIter stk, ¬PastaLean.pyTruthy (PastaLean.pyIsDecimal ch) = true) ∧
           PastaLean.pyLen stk ≥ (0 : Int)⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem clearDigits_correct :

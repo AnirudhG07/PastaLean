@@ -50,11 +50,9 @@ def complex_branching'rn := fun (x : Int) ↦
 def cond_multi := fun (x : Int) ↦
   Id.run do
     let mut x := x
-    let __unpack_value_1 := ((1 : Int), ((2 : Int), (1 : Int)))
-    let __unpack_pair_1 := __unpack_value_1
-    let mut a : Int := Prod.fst __unpack_pair_1
-    let mut b : Int := Prod.fst (Prod.snd __unpack_pair_1)
-    let mut c : Int := Prod.snd (Prod.snd __unpack_pair_1)
+    let mut a : Int := (1 : Int)
+    let mut b : Int := (2 : Int)
+    let mut c : Int := (1 : Int)
     if h_1 : a < b ∧ b > c then 
       x := x +ₚ (1 : Int)
     else
@@ -65,11 +63,9 @@ attribute [simp, taste_ingr] cond_multi
 def cond_multi'rn := fun (x : Int) ↦
   Id.run do
     let mut x := x
-    let __unpack_value_1 := ((1 : Int), ((2 : Int), (1 : Int)))
-    let __unpack_pair_1 := __unpack_value_1
-    let mut a : Int := Prod.fst __unpack_pair_1
-    let mut b : Int := Prod.fst (Prod.snd __unpack_pair_1)
-    let mut c : Int := Prod.snd (Prod.snd __unpack_pair_1)
+    let mut a : Int := (1 : Int)
+    let mut b : Int := (2 : Int)
+    let mut c : Int := (1 : Int)
     if h_1 : decide (a < b) && decide (b > c) then 
       x := x +ₚ (1 : Int)
     else

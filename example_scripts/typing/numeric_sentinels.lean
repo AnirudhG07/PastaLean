@@ -95,10 +95,8 @@ def scaled'rn := fun (xs : List Float) ↦
 def max_profit := fun (prices : List Int) ↦
   Id.run
     (do
-      let __unpack_value_1 := ((0 : Int), inf)
-      let __unpack_pair_1 := __unpack_value_1
-      let mut ans : Int := Prod.fst __unpack_pair_1
-      let mut mi : Int := Prod.snd __unpack_pair_1
+      let mut ans : Int := (0 : Int)
+      let mut mi : Int := inf
       for v in (PastaLean.pyIter prices)do
         ans := PastaLean.pyMax [ans, v -ₚ mi]
         mi := PastaLean.pyMin [mi, v]
@@ -109,10 +107,8 @@ attribute [simp, taste_ingr] max_profit
 def max_profit'rn := fun (prices : List Int) ↦
   Id.run
     (do
-      let __unpack_value_1 := ((0 : Int), inf)
-      let __unpack_pair_1 := __unpack_value_1
-      let mut ans : Int := Prod.fst __unpack_pair_1
-      let mut mi : Int := Prod.snd __unpack_pair_1
+      let mut ans : Int := (0 : Int)
+      let mut mi : Int := inf
       for v in (PastaLean.pyIter prices)do
         ans := PastaLean.pyMax [ans, v -ₚ mi]
         mi := PastaLean.pyMin [mi, v]

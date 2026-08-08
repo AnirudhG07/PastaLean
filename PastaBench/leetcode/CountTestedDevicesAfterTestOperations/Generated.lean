@@ -70,7 +70,7 @@ theorem countTestedDevices_spec :
   try
     mvcgen [countTestedDevices, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓⟨cur, ans⟩ => ⌜ans = (cur.prefix.map (fun x => decide (x > ans))).sum⌝
-  sorry
+  taste?
   all_goals sorry
 
 theorem countTestedDevices_correct :

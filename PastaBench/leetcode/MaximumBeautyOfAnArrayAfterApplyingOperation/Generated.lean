@@ -83,21 +83,19 @@ def maximumBeauty := fun (nums : List Int) ↦ fun (k : Int) ↦
 
 @[spec]
 theorem maximumBeauty_spec :
-    ⦃⌜(PastaLean.pyLen nums > (0 : Int) ∧ k ≥ (0 : Int)) ∧
-          PastaLean.pyAll ((PastaLean.pyIter nums).map fun x => decide (x ≥ (0 : Int)))⌝⦄
+    ⦃⌜(PastaLean.pyLen nums > (0 : Int) ∧ k ≥ (0 : Int)) ∧ ∀ x ∈ PastaLean.pyIter nums, x ≥ (0 : Int)⌝⦄
       maximumBeauty nums k ⦃⇓res => ⌜(1 : Int) ≤ res ∧ res ≤ PastaLean.pyLen nums⌝⦄ :=
   by
   try
     mvcgen [maximumBeauty, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓cur => ⌜PastaLean.pySum d = (0 : Int)⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem maximumBeauty_correct :
     ∀ (nums : List Int),
       ∀ (k : Int),
-        (PastaLean.pyLen nums > (0 : Int) ∧ k ≥ (0 : Int)) ∧
-            PastaLean.pyAll ((PastaLean.pyIter nums).map fun x => decide (x ≥ (0 : Int))) →
+        ((PastaLean.pyLen nums > (0 : Int) ∧ k ≥ (0 : Int)) ∧ ∀ x ∈ PastaLean.pyIter nums, x ≥ (0 : Int)) →
           let res := (maximumBeauty nums k).run;
           (1 : Int) ≤ res ∧ res ≤ PastaLean.pyLen nums :=
   by

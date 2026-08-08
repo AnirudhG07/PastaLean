@@ -43,7 +43,7 @@ theorem countSubstrings_correct :
         let cnt := PastaLean.pyCount s c
         PastaLean.pyLen c > (0 : Int) →
           (2 : Int) *ₚ countSubstrings s c = PastaLean.pyCount s c *ₚ (PastaLean.pyCount s c +ₚ (1 : Int)) :=
-  by sorry
+  by taste?
 
 def countSubstrings'rn := fun (s : String) ↦ fun (c : String) ↦
   let cnt := (PastaLean.pyCount s c : Int)

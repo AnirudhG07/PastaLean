@@ -150,7 +150,14 @@ theorem move_one_ball_spec :
   by
   try
     mvcgen [move_one_ball, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · Invariant.withEarlyReturn (onReturn := fun _ _ => ⌜True⌝) (onContinue := fun _ _ => ⌜True⌝)
+    ·
+      Invariant.withEarlyReturn (onContinue := fun cur b =>
+        ⌜let i := (cur.prefix.length : Int);
+          ((1 : Int) ≤ i ∧ i ≤ PastaLean.pyLen arr) ∧
+            ¬∃ j ∈ PastaLean.pyIter (PastaLean.pyRange i),
+                PastaLean.pySlice arr (some j) none none +ₚ PastaLean.pySlice arr none (some j) none =
+                  sorted_arr⌝)
+        (onReturn := fun _ _ => ⌜True⌝)
   taste?
   all_goals sorry
 

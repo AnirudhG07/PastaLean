@@ -15,8 +15,8 @@ namespace PastaLean.User.Root
 
 def dict_get_variants :=
   let d := (Std.HashMap.ofList [("apple", (10 : Int)), ("banana", (20 : Int))] : Std.HashMap String Int)
-  let found := PastaLean.pyGetOpt? d "apple"
-  let missing := PastaLean.pyGetOpt? d "pear"
+  let found := (PastaLean.pyGetOpt? d "apple" : Option Int)
+  let missing := (PastaLean.pyGetOpt? d "pear" : Option Int)
   let fallback := (PastaLean.pyGetD d "pear" (999 : Int) : Int)
   (found, (missing, fallback))
 
@@ -24,8 +24,8 @@ attribute [simp, taste_ingr] dict_get_variants
 
 def dict_get_variants'rn :=
   let d := (Std.HashMap.ofList [("apple", (10 : Int)), ("banana", (20 : Int))] : Std.HashMap String Int)
-  let found := PastaLean.pyGetOpt? d "apple"
-  let missing := PastaLean.pyGetOpt? d "pear"
+  let found := (PastaLean.pyGetOpt? d "apple" : Option Int)
+  let missing := (PastaLean.pyGetOpt? d "pear" : Option Int)
   let fallback := (PastaLean.pyGetD d "pear" (999 : Int) : Int)
   (found, (missing, fallback))
 

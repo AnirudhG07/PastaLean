@@ -111,10 +111,9 @@ def buildArray := fun (target : List Int) ↦ fun (n : Int) ↦
 @[spec]
 theorem buildArray_spec :
     ⦃⌜(n ≥ (0 : Int) ∧
-            PastaLean.pyAll
-              ((PastaLean.pyRange (PastaLean.pyLen target -ₚ (1 : Int))).map fun i =>
-                decide (target⦋i⦌ < target⦋i +ₚ (1 : Int)⦌))) ∧
-          PastaLean.pyAll ((PastaLean.pyIter target).map fun x => decide ((1 : Int) ≤ x) && decide (x ≤ n))⌝⦄
+            ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen target -ₚ (1 : Int))),
+              target⦋i⦌ < target⦋i +ₚ (1 : Int)⦌) ∧
+          ∀ x ∈ PastaLean.pyIter target, (1 : Int) ≤ x ∧ x ≤ n⌝⦄
       buildArray target n ⦃⇓ans =>
       ⌜PastaLean.pyLen target = (0 : Int) ∧ PastaLean.pyLen ans = (0 : Int) ∨
           PastaLean.pyLen target > (0 : Int) ∧
@@ -123,17 +122,16 @@ theorem buildArray_spec :
   try
     mvcgen [buildArray, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓⟨cur, cur⟩ => ⌜cur ≥ (1 : Int) ∧ PastaLean.pyCount ans "Push" = cur -ₚ (1 : Int)⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem buildArray_correct :
     ∀ (target : List Int),
       ∀ (n : Int),
-        (n ≥ (0 : Int) ∧
-              PastaLean.pyAll
-                ((PastaLean.pyRange (PastaLean.pyLen target -ₚ (1 : Int))).map fun i =>
-                  decide (target⦋i⦌ < target⦋i +ₚ (1 : Int)⦌))) ∧
-            PastaLean.pyAll ((PastaLean.pyIter target).map fun x => decide ((1 : Int) ≤ x) && decide (x ≤ n)) →
+        ((n ≥ (0 : Int) ∧
+              ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen target -ₚ (1 : Int))),
+                target⦋i⦌ < target⦋i +ₚ (1 : Int)⦌) ∧
+            ∀ x ∈ PastaLean.pyIter target, (1 : Int) ≤ x ∧ x ≤ n) →
           let ans := (buildArray target n).run;
           PastaLean.pyLen target = (0 : Int) ∧ PastaLean.pyLen ans = (0 : Int) ∨
             PastaLean.pyLen target > (0 : Int) ∧

@@ -59,7 +59,7 @@ theorem minElements_correct :
           limit > (0 : Int) →
             minElements nums limit goal *ₚ limit ≥ PastaLean.pyAbs (PastaLean.pySum nums -ₚ goal) ∧
               (minElements nums limit goal -ₚ (1 : Int)) *ₚ limit < PastaLean.pyAbs (PastaLean.pySum nums -ₚ goal) :=
-  by sorry
+  by taste?
 
 def minElements'rn := fun (nums : List Int) ↦ fun (limit : Int) ↦ fun (goal : Int) ↦
   let d := (PastaLean.pyAbs (PastaLean.pySum nums -ₚ goal) : Int)

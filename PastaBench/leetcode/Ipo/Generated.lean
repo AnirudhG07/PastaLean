@@ -110,12 +110,12 @@ def findMaximizedCapital := fun (k : Int) ↦ fun (w : Int) ↦ fun (profits : L
 @[spec]
 theorem findMaximizedCapital_spec :
     ⦃⌜(((k ≥ (0 : Int) ∧ w ≥ (0 : Int)) ∧ PastaLean.pyLen profits = PastaLean.pyLen capital) ∧
-            PastaLean.pyAll ((PastaLean.pyIter profits).map fun p => decide (p ≥ (0 : Int)))) ∧
-          PastaLean.pyAll ((PastaLean.pyIter capital).map fun c => decide (c ≥ (0 : Int)))⌝⦄
+            ∀ p ∈ PastaLean.pyIter profits, p ≥ (0 : Int)) ∧
+          ∀ c ∈ PastaLean.pyIter capital, c ≥ (0 : Int)⌝⦄
       findMaximizedCapital k w profits capital ⦃⇓w => ⌜w ≥ w⌝⦄ :=
   by
   mvcgen [findMaximizedCapital, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  taste?
   all_goals sorry
 
 theorem findMaximizedCapital_correct :
@@ -123,9 +123,9 @@ theorem findMaximizedCapital_correct :
       ∀ (w : Int),
         ∀ (profits : List Int),
           ∀ (capital : List Int),
-            (((k ≥ (0 : Int) ∧ w ≥ (0 : Int)) ∧ PastaLean.pyLen profits = PastaLean.pyLen capital) ∧
-                  PastaLean.pyAll ((PastaLean.pyIter profits).map fun p => decide (p ≥ (0 : Int)))) ∧
-                PastaLean.pyAll ((PastaLean.pyIter capital).map fun c => decide (c ≥ (0 : Int))) →
+            ((((k ≥ (0 : Int) ∧ w ≥ (0 : Int)) ∧ PastaLean.pyLen profits = PastaLean.pyLen capital) ∧
+                  ∀ p ∈ PastaLean.pyIter profits, p ≥ (0 : Int)) ∧
+                ∀ c ∈ PastaLean.pyIter capital, c ≥ (0 : Int)) →
               let w := (findMaximizedCapital k w profits capital).run;
               w ≥ w :=
   by

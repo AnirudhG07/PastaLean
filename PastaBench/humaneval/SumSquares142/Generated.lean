@@ -104,7 +104,15 @@ theorem sum_squares_spec :
                 else if k %ₚ (4 : Int) = (0 : Int) then lst⦋k⦌ ^ₚ (3 : Int) else lst⦋k⦌) ∧
           (PastaLean.pyLen lst > (0 : Int) ∨ ans = (0 : Int))⌝⦄ :=
   by
-  mvcgen [sum_squares, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
+  try
+    mvcgen [sum_squares, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · ⇓⟨cur, ans⟩ =>
+      ⌜((0 : Int) ≤ i ∧ i ≤ PastaLean.pyLen lst) ∧
+          ans =
+            PastaLean.pySum
+              ((PastaLean.pyRange i).map fun k =>
+                if k %ₚ (3 : Int) = (0 : Int) then lst⦋k⦌ ^ₚ (2 : Int)
+                else if k %ₚ (4 : Int) = (0 : Int) then lst⦋k⦌ ^ₚ (3 : Int) else lst⦋k⦌)⌝
   taste?
   all_goals sorry
 

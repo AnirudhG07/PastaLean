@@ -33,7 +33,7 @@ attribute [simp] theMaximumAchievableX
 
 @[taste_ingr]
 theorem theMaximumAchievableX_correct :
-    ∀ (num : Int), ∀ (t : Int), t ≥ (0 : Int) → theMaximumAchievableX num t = num +ₚ (2 : Int) *ₚ t := by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals
+    ∀ (num : Int), ∀ (t : Int), t ≥ (0 : Int) → theMaximumAchievableX num t = num +ₚ (2 : Int) *ₚ t := by taste?
 
 def theMaximumAchievableX'rn := fun (num : Int) ↦ fun (t : Int) ↦ num +ₚ t *ₚ (2 : Int)
 

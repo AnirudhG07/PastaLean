@@ -127,14 +127,11 @@ def sortVowels := fun (s : String) ↦
 theorem sortVowels_spec :
     ⦃⌜True⌝⦄ sortVowels s ⦃⇓result =>
       ⌜((PastaLean.pyLen result = PastaLean.pyLen s ∧
-              PastaLean.pyAll
-                ((List.filter (fun i => !(PastaLean.pyContains "aeiou" (PastaLean.pyStringLower s⦋i⦌)))
-                      (PastaLean.pyRange (PastaLean.pyLen s))).map
-                  fun i => s⦋i⦌ == result⦋i⦌)) ∧
-            PastaLean.pyAll
-              ((PastaLean.pyRange (PastaLean.pyLen s)).map fun i =>
-                PastaLean.pyContains "aeiou" (PastaLean.pyStringLower s⦋i⦌) ==
-                  PastaLean.pyContains "aeiou" (PastaLean.pyStringLower result⦋i⦌))) ∧
+              ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen s)),
+                !(PastaLean.pyContains "aeiou" (PastaLean.pyStringLower s⦋i⦌)) → s⦋i⦌ = result⦋i⦌) ∧
+            ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen s)),
+              PastaLean.pyContains "aeiou" (PastaLean.pyStringLower s⦋i⦌) =
+                PastaLean.pyContains "aeiou" (PastaLean.pyStringLower result⦋i⦌)) ∧
           ((List.filter (fun c => PastaLean.pyContains "aeiou" (PastaLean.pyStringLower c))
                   (PastaLean.pyIter result)).map
               fun c => c) =
@@ -143,22 +140,33 @@ theorem sortVowels_spec :
                     (PastaLean.pyIter s)).map
                 fun c => c)⌝⦄ :=
   by
-  mvcgen [sortVowels, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  all_goals sorry
+  try
+    mvcgen [sortVowels, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · ⇓⟨cur, j⟩ =>
+      ⌜(((((0 : Int) ≤ i ∧ i ≤ PastaLean.pyLen s) ∧ (0 : Int) ≤ j ∧ j ≤ PastaLean.pyLen vs) ∧
+              j =
+                PastaLean.pyLen
+                  ((List.filter (fun char => PastaLean.pyContains "aeiou" (PastaLean.pyStringLower char))
+                        (PastaLean.pyIter (PastaLean.pySlice s none (some i) none))).map
+                    fun char => char)) ∧
+            ∀ k ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen s)),
+              !(PastaLean.pyContains "aeiou" (PastaLean.pyStringLower s⦋k⦌)) → cs⦋k⦌ = s⦋k⦌) ∧
+          ((List.filter (fun char => PastaLean.pyContains "aeiou" (PastaLean.pyStringLower char))
+                  (PastaLean.pyIter (PastaLean.pySlice cs none (some i) none))).map
+              fun char => char) =
+            PastaLean.pySlice vs none (some j) none⌝
+  taste?
   all_goals sorry
 
 theorem sortVowels_correct :
     ∀ (s : String),
       let result := (sortVowels s).run;
       ((PastaLean.pyLen result = PastaLean.pyLen s ∧
-            PastaLean.pyAll
-              ((List.filter (fun i => !(PastaLean.pyContains "aeiou" (PastaLean.pyStringLower s⦋i⦌)))
-                    (PastaLean.pyRange (PastaLean.pyLen s))).map
-                fun i => s⦋i⦌ == result⦋i⦌)) ∧
-          PastaLean.pyAll
-            ((PastaLean.pyRange (PastaLean.pyLen s)).map fun i =>
-              PastaLean.pyContains "aeiou" (PastaLean.pyStringLower s⦋i⦌) ==
-                PastaLean.pyContains "aeiou" (PastaLean.pyStringLower result⦋i⦌))) ∧
+            ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen s)),
+              !(PastaLean.pyContains "aeiou" (PastaLean.pyStringLower s⦋i⦌)) → s⦋i⦌ = result⦋i⦌) ∧
+          ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen s)),
+            PastaLean.pyContains "aeiou" (PastaLean.pyStringLower s⦋i⦌) =
+              PastaLean.pyContains "aeiou" (PastaLean.pyStringLower result⦋i⦌)) ∧
         ((List.filter (fun c => PastaLean.pyContains "aeiou" (PastaLean.pyStringLower c))
                 (PastaLean.pyIter result)).map
             fun c => c) =

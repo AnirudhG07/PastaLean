@@ -78,18 +78,16 @@ def divisibilityArray := fun (word : String) ↦ fun (m : Int) ↦
 theorem divisibilityArray_spec :
     ⦃⌜m > (0 : Int)⌝⦄ divisibilityArray word m ⦃⇓ans =>
       ⌜(PastaLean.pyLen ans = PastaLean.pyLen word ∧
-            PastaLean.pyAll
-              ((PastaLean.pyRange (PastaLean.pyLen word)).map fun i =>
-                PastaLean.pyContains ((0 : Int), (1 : Int)) ans⦋i⦌)) ∧
-          PastaLean.pyAll
-            ((PastaLean.pyRange (PastaLean.pyLen word)).map fun i =>
-              (ans⦋i⦌ == (1 : Int)) ==
-                (PastaLean.pyInt (PastaLean.pySlice word none (some (i +ₚ (1 : Int))) none) %ₚ m == (0 : Int)))⌝⦄ :=
+            ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen word)),
+              PastaLean.pyContains ((0 : Int), (1 : Int)) ans⦋i⦌) ∧
+          ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen word)),
+            (ans⦋i⦌ = (1 : Int)) =
+              (PastaLean.pyInt (PastaLean.pySlice word none (some (i +ₚ (1 : Int))) none) %ₚ m = (0 : Int))⌝⦄ :=
   by
   try
     mvcgen [divisibilityArray, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓⟨cur, x⟩ => ⌜(0 : Int) ≤ x ∧ x < m⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem divisibilityArray_correct :
@@ -98,13 +96,11 @@ theorem divisibilityArray_correct :
         m > (0 : Int) →
           let ans := (divisibilityArray word m).run;
           (PastaLean.pyLen ans = PastaLean.pyLen word ∧
-              PastaLean.pyAll
-                ((PastaLean.pyRange (PastaLean.pyLen word)).map fun i =>
-                  PastaLean.pyContains ((0 : Int), (1 : Int)) ans⦋i⦌)) ∧
-            PastaLean.pyAll
-              ((PastaLean.pyRange (PastaLean.pyLen word)).map fun i =>
-                (ans⦋i⦌ == (1 : Int)) ==
-                  (PastaLean.pyInt (PastaLean.pySlice word none (some (i +ₚ (1 : Int))) none) %ₚ m == (0 : Int))) :=
+              ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen word)),
+                PastaLean.pyContains ((0 : Int), (1 : Int)) ans⦋i⦌) ∧
+            ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen word)),
+              (ans⦋i⦌ = (1 : Int)) =
+                (PastaLean.pyInt (PastaLean.pySlice word none (some (i +ₚ (1 : Int))) none) %ₚ m = (0 : Int)) :=
   by
   intro word m hpre
   exact divisibilityArray_spec hpre

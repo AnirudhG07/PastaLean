@@ -90,7 +90,7 @@ theorem waysToBuyPensPencils_spec :
           ans =
             PastaLean.pySum
               ((PastaLean.pyRange x).map fun i => PastaLean.pyFloorDiv (total -ₚ i *ₚ cost1) cost2 +ₚ (1 : Int))⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry; sorry; pyany_cases <;> grind +locals
+  taste?
   all_goals sorry
 
 theorem waysToBuyPensPencils_correct :

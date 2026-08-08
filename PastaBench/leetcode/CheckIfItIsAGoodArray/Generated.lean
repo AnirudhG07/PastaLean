@@ -56,14 +56,11 @@ attribute [simp] isGoodArray
 theorem isGoodArray_correct :
     ∀ (nums : List Int),
       PastaLean.pyLen nums > (0 : Int) →
-        PastaLean.pyAll ((PastaLean.pyIter nums).map fun n => decide (n > (0 : Int))) →
+        (∀ n ∈ PastaLean.pyIter nums, n > (0 : Int)) →
           isGoodArray nums =
-            ¬PastaLean.pyTruthy
-                  (PastaLean.pyStdAny
-                    ((PastaLean.pyRange (PastaLean.pyMin nums +ₚ (1 : Int)) (2 : Int)).map fun d =>
-                      PastaLean.pyAll ((PastaLean.pyIter nums).map fun num => num %ₚ d == (0 : Int)))) =
-                true :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+            ¬∃ d ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyMin nums +ₚ (1 : Int)) (2 : Int)),
+                ∀ num ∈ PastaLean.pyIter nums, num %ₚ d = (0 : Int) :=
+  by taste?
 
 def isGoodArray'rn := fun (nums : List Int) ↦ Libraries.functools.pyReduce nums Libraries.math.pyMathGcd == (1 : Int)
 

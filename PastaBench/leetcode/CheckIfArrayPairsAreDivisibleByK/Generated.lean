@@ -72,14 +72,14 @@ theorem canArrange_correct :
           canArrange arr k =
             (fun {α β} [ToString α] [ToString β] (counts : α × β) ↦
                 (Prod.fst counts %ₚ (2 : Int) = (0 : Int) ∧
-                    PastaLean.pyTruthy
-                        (PastaLean.pyAll
-                          ((PastaLean.pyRange (PastaLean.pyFloorDiv (k +ₚ (1 : Int)) (2 : Int)) (1 : Int)).map fun i =>
-                            counts⦋i⦌ == counts⦋k -ₚ i⦌)) =
-                      true) ∧
+                    ∀
+                      i ∈
+                        PastaLean.pyIter
+                          (PastaLean.pyRange (PastaLean.pyFloorDiv (k +ₚ (1 : Int)) (2 : Int)) (1 : Int)),
+                      counts⦋i⦌ = counts⦋k -ₚ i⦌) ∧
                   (k %ₚ (2 : Int) ≠ (0 : Int) ∨ counts⦋PastaLean.pyFloorDiv k (2 : Int)⦌ %ₚ (2 : Int) = (0 : Int)))
               (Libraries.collections.pyCounter ((PastaLean.pyIter arr).map fun x => x %ₚ k)) :=
-  by sorry
+  by taste?
 
 def canArrange'rn := fun (arr : List Int) ↦ fun (k : Int) ↦
   let cnt :=

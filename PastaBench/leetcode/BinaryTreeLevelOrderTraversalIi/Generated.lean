@@ -145,7 +145,7 @@ theorem levelOrderBottom_spec :
           (PastaLean.pyIsNone root ∨ result⦋(-1 : Int)⦌ = [((root).getD default).val])⌝⦄ :=
   by
   mvcgen [levelOrderBottom, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry; sorry; sorry; pyany_cases <;> grind +locals; sorry; sorry; sorry; sorry; sorry; sorry; sorry; sorry; sorry
+  taste?
   all_goals sorry
 
 theorem levelOrderBottom_correct :

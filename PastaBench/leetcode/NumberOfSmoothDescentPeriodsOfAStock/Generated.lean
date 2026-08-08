@@ -94,7 +94,7 @@ def getDescentPeriods := fun (prices : List Int) ↦
 theorem getDescentPeriods_spec : ⦃⌜True⌝⦄ getDescentPeriods prices ⦃⇓ans => ⌜ans ≥ (0 : Int)⌝⦄ :=
   by
   mvcgen [getDescentPeriods, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  all_goals sorry
+  taste?
   all_goals sorry
 
 theorem getDescentPeriods_correct :

@@ -71,7 +71,7 @@ theorem minimumMoves_spec : ⦃⌜True⌝⦄ minimumMoves s ⦃⇓ans => ⌜ans 
             let ans := st |>.fst;
             ((0 : Int) ≤ i ∧ i ≤ PastaLean.pyLen s) ∧ ans ≥ (0 : Int))
           (fun _ => True) s⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  taste?
   all_goals sorry
 
 theorem minimumMoves_correct :

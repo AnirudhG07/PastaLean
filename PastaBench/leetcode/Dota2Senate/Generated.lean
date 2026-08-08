@@ -111,18 +111,18 @@ def predictPartyVictory := fun (senate : String) ↦
 
 @[spec]
 theorem predictPartyVictory_spec :
-    ⦃⌜PastaLean.pyLen senate > (0 : Int) ∧
-          PastaLean.pyAll ((PastaLean.pyIter senate).map fun c => PastaLean.pyContains ("R", "D") c)⌝⦄
+    ⦃⌜PastaLean.pyLen senate > (0 : Int) ∧ ∀ c ∈ PastaLean.pyIter senate, PastaLean.pyContains ("R", "D") c⌝⦄
       predictPartyVictory senate ⦃⇓result => ⌜result = "Radiant" ∨ result = "Dire"⌝⦄ :=
   by
-  mvcgen [predictPartyVictory, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry; sorry; sorry; sorry; sorry; sorry; sorry; sorry; sorry; sorry; pyany_cases <;> grind +locals
+  try
+    mvcgen [predictPartyVictory, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · ⇓cur => ⌜True⌝
+  taste?
   all_goals sorry
 
 theorem predictPartyVictory_correct :
     ∀ (senate : String),
-      PastaLean.pyLen senate > (0 : Int) ∧
-          PastaLean.pyAll ((PastaLean.pyIter senate).map fun c => PastaLean.pyContains ("R", "D") c) →
+      (PastaLean.pyLen senate > (0 : Int) ∧ ∀ c ∈ PastaLean.pyIter senate, PastaLean.pyContains ("R", "D") c) →
         let result := (predictPartyVictory senate).run;
         result = "Radiant" ∨ result = "Dire" :=
   by

@@ -106,7 +106,11 @@ theorem pluck_spec :
   by
   try
     mvcgen [pluck, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · Invariant.withEarlyReturn (onReturn := fun _ _ => ⌜True⌝) (onContinue := fun _ _ => ⌜True⌝)
+    ·
+      Invariant.withEarlyReturn (onContinue := fun cur b =>
+        ⌜let i := (cur.prefix.length : Int);
+          ((0 : Int) ≤ i ∧ i ≤ PastaLean.pyLen arr) ∧ ∀ j ∈ PastaLean.pyIter (PastaLean.pyRange i), arr⦋j⦌ ≠ min_even⌝)
+        (onReturn := fun _ _ => ⌜True⌝)
   taste?
   all_goals sorry
 

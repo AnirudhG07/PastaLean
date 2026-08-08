@@ -97,22 +97,20 @@ def scheduleCourse := fun (courses : List (List Int)) ↦
 
 @[spec]
 theorem scheduleCourse_spec :
-    ⦃⌜PastaLean.pyAll
-          ((PastaLean.pyIter courses).map fun c =>
-            PastaLean.pyLen c == (2 : Int) && decide (c⦋(0 : Int)⦌ > (0 : Int)) &&
-              decide (c⦋(1 : Int)⦌ > (0 : Int)))⌝⦄
+    ⦃⌜∀ c ∈ PastaLean.pyIter courses,
+          (PastaLean.pyLen c = (2 : Int) ∧ c⦋(0 : Int)⦌ > (0 : Int)) ∧ c⦋(1 : Int)⦌ > (0 : Int)⌝⦄
       scheduleCourse courses ⦃⇓result => ⌜(0 : Int) ≤ result ∧ result ≤ PastaLean.pyLen courses⌝⦄ :=
   by
-  mvcgen [scheduleCourse, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  try
+    mvcgen [scheduleCourse, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · ⇓⟨cur, s⟩ => ⌜s ≥ (0 : Int) ∧ (0 : Int) ≤ PastaLean.pyLen pq ∧ PastaLean.pyLen pq ≤ PastaLean.pyLen courses⌝
+  taste?
   all_goals sorry
 
 theorem scheduleCourse_correct :
     ∀ (courses : List (List Int)),
-      PastaLean.pyAll
-          ((PastaLean.pyIter courses).map fun c =>
-            PastaLean.pyLen c == (2 : Int) && decide (c⦋(0 : Int)⦌ > (0 : Int)) &&
-              decide (c⦋(1 : Int)⦌ > (0 : Int))) →
+      (∀ c ∈ PastaLean.pyIter courses,
+          (PastaLean.pyLen c = (2 : Int) ∧ c⦋(0 : Int)⦌ > (0 : Int)) ∧ c⦋(1 : Int)⦌ > (0 : Int)) →
         let result := (scheduleCourse courses).run;
         (0 : Int) ≤ result ∧ result ≤ PastaLean.pyLen courses :=
   by
