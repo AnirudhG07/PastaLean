@@ -93,7 +93,7 @@ theorem can_arrange_spec :
             ∀ j ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen arr) (i +ₚ (1 : Int))),
               arr⦋j⦌ ≥ arr⦋j -ₚ (1 : Int)⦌⌝)
         (onReturn := fun _ _ => ⌜True⌝)
-  taste?
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
 theorem can_arrange_correct :

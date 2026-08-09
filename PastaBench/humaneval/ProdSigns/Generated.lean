@@ -149,7 +149,7 @@ theorem prod_signs_spec :
                     PastaLean.pyFloorDiv y (PastaLean.pyAbs y))) ∧
             s ≥ (0 : Int)) ∧
           (sgn = (1 : Int) ∨ sgn = -(1 : Int))⌝
-  taste?
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
 theorem prod_signs_correct :

@@ -122,7 +122,7 @@ theorem get_closest_vowel_spec :
         ⌜let i := (cur.prefix.length : Int);
           (0 : Int) < i ∧ i < PastaLean.pyLen word -ₚ (1 : Int)⌝)
         (onReturn := fun _ _ => ⌜True⌝)
-  taste?
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
 theorem get_closest_vowel_correct :

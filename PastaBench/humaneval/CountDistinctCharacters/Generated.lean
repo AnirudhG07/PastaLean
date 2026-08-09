@@ -43,7 +43,7 @@ attribute [simp] count_distinct_characters
 theorem count_distinct_characters_correct :
     ∀ (string : String),
       (0 : Int) ≤ count_distinct_characters string ∧ count_distinct_characters string ≤ PastaLean.pyLen string :=
-  by taste?
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
 
 def count_distinct_characters'rn := fun (string : String) ↦
   PastaLean.pyLen (PastaLean.pySet (PastaLean.pyStringLower string))

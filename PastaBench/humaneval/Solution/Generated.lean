@@ -131,7 +131,7 @@ theorem solution_spec :
                       (PastaLean.pyRange i)).map
                   fun j => j) %ₚ
               (2 : Int)⌝
-  taste?
+  sorry
   all_goals sorry
 
 theorem solution_correct :

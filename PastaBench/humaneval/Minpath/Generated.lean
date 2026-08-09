@@ -244,7 +244,7 @@ theorem minPath_spec :
           ((∀ r ∈ PastaLean.pyIter (PastaLean.pyRange i),
               ∀ c ∈ PastaLean.pyIter (PastaLean.pyRange N), grid⦋r⦌⦋c⦌ ≠ (1 : Int)) ∨
             grid⦋x⦌⦋y⦌ = (1 : Int))⌝
-  taste?
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
 theorem minPath_correct :

@@ -80,7 +80,7 @@ theorem generate_integers_spec :
                 fun i => i)⌝⦄ :=
   by
   mvcgen [generate_integers, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  taste?
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
 theorem generate_integers_correct :

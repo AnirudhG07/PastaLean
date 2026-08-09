@@ -49,7 +49,7 @@ theorem common_correct :
               (PastaLean.pySetIntersection (PastaLean.pySet l1) (PastaLean.pySet l2)) =
             true ∧
           common l1 l2 = PastaLean.pySort (common l1 l2) :=
-  by taste?
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
 
 def common'rn := fun (l1 : List PyAny) ↦ fun (l2 : List PyAny) ↦
   PastaLean.pySort (PastaLean.pyList (PastaLean.pySetIntersection (PastaLean.pySet l1) (PastaLean.pySet l2)))

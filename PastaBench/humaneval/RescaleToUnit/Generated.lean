@@ -82,7 +82,7 @@ theorem rescale_to_unit_correct :
                       (numbers⦋i⦌ -ₚ PastaLean.pyMin numbers)) ≤
                   (OfScientific.ofScientific 1 true 9 : Rat) *ₚ (PastaLean.pyMax numbers -ₚ PastaLean.pyMin numbers)) ∧
             ma > mi :=
-  by taste?
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
 
 def rescale_to_unit'rn := fun (numbers : List Float) ↦
   let ma := PastaLean.pyMax numbers

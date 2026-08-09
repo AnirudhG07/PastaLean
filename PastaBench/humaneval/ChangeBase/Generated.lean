@@ -100,7 +100,7 @@ theorem change_base_spec :
           ∀ c ∈ PastaLean.pyIter ret, (0 : Int) ≤ PastaLean.pyInt c ∧ PastaLean.pyInt c < base⌝⦄ :=
   by
   mvcgen [change_base, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  taste?
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
 theorem change_base_correct :

@@ -81,7 +81,7 @@ theorem sort_even_spec :
                 l⦋i⦌)⌝⦄ :=
   by
   mvcgen [sort_even, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  taste?
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
 theorem sort_even_correct :

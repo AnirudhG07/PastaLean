@@ -158,7 +158,7 @@ theorem move_one_ball_spec :
                 PastaLean.pySlice arr (some j) none none +ₚ PastaLean.pySlice arr none (some j) none =
                   sorted_arr⌝)
         (onReturn := fun _ _ => ⌜True⌝)
-  taste?
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
 theorem move_one_ball_correct :

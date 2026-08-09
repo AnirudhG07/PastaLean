@@ -56,7 +56,7 @@ def string_to_md5 := fun (text : String) ↦
 theorem string_to_md5_spec : ⦃⌜True⌝⦄ string_to_md5 text ⦃⇓result => ⌜text ≠ "" ∨ PastaLean.pyIsNone result⌝⦄ :=
   by
   mvcgen [string_to_md5, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  taste?
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; decide; simp_all (config := { zetaDelta := true }) [taste_ingr]
   all_goals sorry
 
 theorem string_to_md5_correct :

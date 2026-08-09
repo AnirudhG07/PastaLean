@@ -142,7 +142,7 @@ theorem is_multiply_prime_spec :
     · ⇓⟨cur, cnt, tmp⟩ =>
       ⌜let i := (cur.prefix.length : Int);
         (((2 : Int) ≤ i ∧ i ≤ a +ₚ (1 : Int)) ∧ cnt ≥ (0 : Int)) ∧ (1 : Int) ≤ tmp ∧ tmp ≤ a⌝
-  taste?
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
 theorem is_multiply_prime_correct :

@@ -110,7 +110,7 @@ theorem cycpattern_check_spec :
                 PastaLean.pyContains a
                   (PastaLean.pySlice b (some k) none none +ₚ PastaLean.pySlice b none (some k) none)⌝)
         (onReturn := fun _ _ => ⌜True⌝)
-  taste?
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
 theorem cycpattern_check_correct :

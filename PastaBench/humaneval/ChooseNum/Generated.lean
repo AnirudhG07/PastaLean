@@ -89,7 +89,7 @@ theorem choose_num_spec :
       ⌜result = -(1 : Int) ∨ (result %ₚ (2 : Int) = (0 : Int) ∧ x ≤ result ∧ result ≤ y) ∧ result +ₚ (2 : Int) > y⌝⦄ :=
   by
   mvcgen [choose_num, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  taste?
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; omega; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
 theorem choose_num_correct :

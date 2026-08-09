@@ -103,7 +103,7 @@ theorem add_elements_spec :
     · ⇓⟨cur, total⟩ =>
       ⌜let i := (cur.prefix.length : Int);
         (((0 : Int) ≤ i ∧ i ≤ k) ∧ -(99 : Int) *ₚ i ≤ total) ∧ total ≤ (99 : Int) *ₚ i⌝
-  taste?
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry; grind; grind; grind
   all_goals sorry
 
 theorem add_elements_correct :

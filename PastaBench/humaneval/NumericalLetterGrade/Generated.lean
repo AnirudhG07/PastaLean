@@ -163,7 +163,7 @@ theorem to_letter_grade_correct :
               (score > (0.7 : Rat) ∧ score ≤ (1.0 : Rat)) ∧ to_letter_grade score = "D") ∨
             (score > (0.0 : Rat) ∧ score ≤ (0.7 : Rat)) ∧ to_letter_grade score = "D-") ∨
           score = (0.0 : Rat) ∧ to_letter_grade score = "E" :=
-  by taste?
+  by intros; sorry
 
 def to_letter_grade'rn := fun (score : Float) ↦
   if score == (4.0 : Float) then "A+"
@@ -221,7 +221,7 @@ theorem numerical_letter_grade_correct :
           ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen grades)),
             grades⦋i⦌ ≠ grades⦋(0 : Int)⦌ ∨
               (numerical_letter_grade grades)⦋i⦌ = (numerical_letter_grade grades)⦋(0 : Int)⦌ :=
-  by taste?
+  by intros; sorry
 
 def numerical_letter_grade'rn := fun (grades : List Float) ↦
   (PastaLean.pyIter grades).map fun x => to_letter_grade'rn x

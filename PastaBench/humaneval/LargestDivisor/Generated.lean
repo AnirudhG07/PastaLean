@@ -74,7 +74,7 @@ theorem largest_divisor_spec :
         ⌜let i := (cur.prefix.length : Int);
           (2 : Int) ≤ i ∧ i ≤ n⌝)
         (onReturn := fun _ _ => ⌜True⌝)
-  taste?
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; grind; sorry; sorry; sorry
   all_goals sorry
 
 theorem largest_divisor_correct :

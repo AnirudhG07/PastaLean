@@ -88,7 +88,7 @@ theorem monotonic_spec :
         (((0 : Int) ≤ i ∧ i ≤ PastaLean.pyLen l -ₚ (1 : Int)) ∧
             inc = ∀ j ∈ PastaLean.pyIter (PastaLean.pyRange i), l⦋j⦌ ≤ l⦋j +ₚ (1 : Int)⦌) ∧
           dec = ∀ j ∈ PastaLean.pyIter (PastaLean.pyRange i), l⦋j⦌ ≥ l⦋j +ₚ (1 : Int)⦌⌝
-  taste?
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
 theorem monotonic_correct :

@@ -67,7 +67,7 @@ theorem is_happy_spec : ⦃⌜True⌝⦄ is_happy s ⦃⇓result => ⌜result = 
         ⌜let i := (cur.prefix.length : Int);
           PastaLean.pyLen s ≥ (3 : Int)⌝)
         (onReturn := fun _ _ => ⌜True⌝)
-  taste?
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]
   all_goals sorry
 
 theorem is_happy_correct :

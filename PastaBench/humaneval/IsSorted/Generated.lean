@@ -109,7 +109,7 @@ theorem is_sorted_spec :
         ⌜(∀ c ∈ PastaLean.pyIter (PastaLean.pyAnys count), c ≤ (2 : Int)) ∧
             ∀ k ∈ PastaLean.pyIter (PastaLean.pyKeys count), k ≥ (0 : Int)⌝)
         (onReturn := fun _ _ => ⌜True⌝)
-  taste?
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
 theorem is_sorted_correct :

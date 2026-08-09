@@ -116,7 +116,7 @@ theorem skjkasdkd_spec :
   try
     mvcgen [skjkasdkd, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · Invariant.withEarlyReturn (onContinue := fun cur b => ⌜True⌝) (onReturn := fun _ _ => ⌜True⌝)
-  taste?
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
 theorem skjkasdkd_correct :

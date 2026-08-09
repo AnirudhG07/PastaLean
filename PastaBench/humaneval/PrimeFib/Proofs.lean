@@ -163,10 +163,8 @@ def prime_fib : Int → PastaLean.ProofMode.PyProofM Int := fun (n : Int) ↦ do
   -- The result is a prime, so it is 2, 3, or coprime to 6 — i.e. +/-1 mod 6.
   let _ := ()
   let mut c_prime : Int := (0 : Int)
-  let __unpack_value_1 := ((0 : Int), (1 : Int))
-  let __unpack_pair_1 := __unpack_value_1
-  let mut a : Int := Prod.fst __unpack_pair_1
-  let mut b : Int := Prod.snd __unpack_pair_1
+  let mut a : Int := (0 : Int)
+  let mut b : Int := (1 : Int)
   while (c_prime < n) do
     let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ c_prime))
     let _ := Libraries.passta.pyPassInvariant (decide (c_prime < n))
@@ -180,10 +178,10 @@ def prime_fib : Int → PastaLean.ProofMode.PyProofM Int := fun (n : Int) ↦ do
       Libraries.passta.pyPassInvariant
         (b *ₚ b -ₚ a *ₚ b -ₚ a *ₚ a == (1 : Int) || b *ₚ b -ₚ a *ₚ b -ₚ a *ₚ a == -(1 : Int))
     let _ := Libraries.passta.pyPassDecreases (n -ₚ c_prime)
-    let __unpack_value_2 := (b, a +ₚ b)
-    let __unpack_pair_2 := __unpack_value_2
-    a := Prod.fst __unpack_pair_2
-    b := Prod.snd __unpack_pair_2
+    let __unpack_value_1 := (b, a +ₚ b)
+    let __unpack_pair_1 := __unpack_value_1
+    a := Prod.fst __unpack_pair_1
+    b := Prod.snd __unpack_pair_1
     if h_1 : PastaLean.pyTruthy (← _prime_fib'miller_rabin b) then 
       c_prime := c_prime +ₚ (1 : Int)
     else
@@ -260,10 +258,8 @@ def prime_fib'rn : Int → IO Int := fun (n : Int) ↦ do
   -- The result is a prime, so it is 2, 3, or coprime to 6 — i.e. +/-1 mod 6.
   let _ := ()
   let mut c_prime : Int := (0 : Int)
-  let __unpack_value_1 := ((0 : Int), (1 : Int))
-  let __unpack_pair_1 := __unpack_value_1
-  let mut a : Int := Prod.fst __unpack_pair_1
-  let mut b : Int := Prod.snd __unpack_pair_1
+  let mut a : Int := (0 : Int)
+  let mut b : Int := (1 : Int)
   while (c_prime < n) do
     let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ c_prime))
     let _ := Libraries.passta.pyPassInvariant (decide (c_prime < n))
@@ -277,10 +273,10 @@ def prime_fib'rn : Int → IO Int := fun (n : Int) ↦ do
       Libraries.passta.pyPassInvariant
         (b *ₚ b -ₚ a *ₚ b -ₚ a *ₚ a == (1 : Int) || b *ₚ b -ₚ a *ₚ b -ₚ a *ₚ a == -(1 : Int))
     let _ := Libraries.passta.pyPassDecreases (n -ₚ c_prime)
-    let __unpack_value_2 := (b, a +ₚ b)
-    let __unpack_pair_2 := __unpack_value_2
-    a := Prod.fst __unpack_pair_2
-    b := Prod.snd __unpack_pair_2
+    let __unpack_value_1 := (b, a +ₚ b)
+    let __unpack_pair_1 := __unpack_value_1
+    a := Prod.fst __unpack_pair_1
+    b := Prod.snd __unpack_pair_1
     if h_1 : PastaLean.pyTruthy (← _prime_fib'miller_rabin'rn b) then 
       c_prime := c_prime +ₚ (1 : Int)
     else

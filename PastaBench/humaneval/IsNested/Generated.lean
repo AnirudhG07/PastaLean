@@ -147,7 +147,7 @@ theorem is_nested_spec :
     · ⇓cur =>
       ⌜let i := (cur.prefix.length : Int);
         (0 : Int) ≤ i ∧ i ≤ PastaLean.pyLen string⌝
-  taste?
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
 theorem is_nested_correct :

@@ -87,7 +87,7 @@ theorem modp_spec :
       ⌜((0 : Int) ≤ result ∧ result < p) ∧ (result -ₚ (2 : Int) ^ₚ n) %ₚ p = (0 : Int)⌝⦄ :=
   by
   mvcgen [modp, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  taste?
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
 theorem modp_correct :

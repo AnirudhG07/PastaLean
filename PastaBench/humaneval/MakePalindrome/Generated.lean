@@ -83,7 +83,7 @@ attribute [simp] is_palindrome
 @[taste_ingr]
 theorem is_palindrome_correct :
     ∀ (string : String), is_palindrome string = (string = PastaLean.pySlice string none none (some (-(1 : Int)))) :=
-  by taste?
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]
 
 def is_palindrome'rn := fun (string : String) ↦ string == PastaLean.pySlice string none none (some (-(1 : Int)))
 
@@ -144,7 +144,7 @@ theorem make_palindrome_spec :
         ⌜let i := (cur.prefix.length : Int);
           (0 : Int) ≤ i ∧ i ≤ PastaLean.pyLen string⌝)
         (onReturn := fun _ _ => ⌜True⌝)
-  taste?
+  sorry
   all_goals sorry
 
 theorem make_palindrome_correct :

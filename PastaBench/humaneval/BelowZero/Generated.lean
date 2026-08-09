@@ -94,7 +94,7 @@ theorem below_zero_spec :
             account ≤
               PastaLean.pySum ((List.filter (fun x => x > (0 : Int)) (PastaLean.pyIter operations)).map fun x => x)⌝)
         (onReturn := fun _ _ => ⌜True⌝)
-  taste?
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
 theorem below_zero_correct :

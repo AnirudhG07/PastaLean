@@ -51,7 +51,7 @@ theorem rolling_max_correct :
       PastaLean.pyLen (rolling_max numbers) = PastaLean.pyLen numbers ∧
         ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen numbers)),
           (rolling_max numbers)⦋i⦌ = PastaLean.pyMax (PastaLean.pySlice numbers none (some (i +ₚ (1 : Int))) none) :=
-  by taste?
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
 
 def rolling_max'rn := fun (numbers : List Int) ↦
   (PastaLean.pyRange (PastaLean.pyLen numbers)).map fun i =>

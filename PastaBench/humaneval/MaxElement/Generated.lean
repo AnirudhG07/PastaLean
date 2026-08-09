@@ -46,7 +46,7 @@ theorem max_element_correct :
     ∀ (l : List PyAny),
       PastaLean.pyLen l > (0 : Int) →
         PastaLean.pyContains l (max_element l) ∧ ∀ x ∈ PastaLean.pyIter l, x ≤ max_element l :=
-  by taste?
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
 
 def max_element'rn := fun (l : List PyAny) ↦ PastaLean.pyMax l
 

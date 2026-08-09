@@ -50,7 +50,7 @@ attribute [simp] same_chars
 theorem same_chars_correct :
     ∀ (s0 : String),
       ∀ (s1 : String), same_chars s0 s1 = (PastaLean.pySetEq (PastaLean.pySet s0) (PastaLean.pySet s1) = true) :=
-  by taste?
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]
 
 def same_chars'rn := fun (s0 : String) ↦ fun (s1 : String) ↦ PastaLean.pySetEq (PastaLean.pySet s0) (PastaLean.pySet s1)
 

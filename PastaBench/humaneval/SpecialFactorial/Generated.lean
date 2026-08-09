@@ -97,7 +97,7 @@ theorem special_factorial_spec : ⦃⌜n ≥ (0 : Int)⌝⦄ special_factorial n
     · ⇓⟨cur, fac, ans⟩ =>
       ⌜let i := (cur.prefix.length : Int);
         ((((2 : Int) ≤ i ∧ i ≤ n +ₚ (1 : Int)) ∧ fac ≥ (1 : Int)) ∧ ans ≥ (1 : Int)) ∧ ans %ₚ fac = (0 : Int)⌝
-  taste?
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry; sorry; omega
   all_goals sorry
 
 theorem special_factorial_correct :

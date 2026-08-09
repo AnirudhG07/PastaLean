@@ -128,7 +128,7 @@ theorem is_prime_spec :
           ((2 : Int) ≤ i ∧ i ≤ PastaLean.pyMin [n_sqrt +ₚ (1 : Int), n]) ∧
             ∀ d ∈ PastaLean.pyIter (PastaLean.pyRange i (2 : Int)), n %ₚ d ≠ (0 : Int)⌝)
         (onReturn := fun _ _ => ⌜True⌝)
-  taste?
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
 theorem is_prime_correct :

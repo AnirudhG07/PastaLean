@@ -91,7 +91,7 @@ theorem count_up_to_spec :
         (((((2 : Int) ≤ i ∧ i ≤ n) ∧ PastaLean.pyLen isprime = n +ₚ (1 : Int)) ∧ PastaLean.pyLen ans ≤ i) ∧
             ∀ p ∈ PastaLean.pyIter ans, (2 : Int) ≤ p) ∧
           ∀ p ∈ PastaLean.pyIter ans, p < i⌝
-  taste?
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
 theorem count_up_to_correct :

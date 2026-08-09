@@ -76,7 +76,7 @@ theorem smallest_change_spec :
     · ⇓⟨cur, cnt⟩ =>
       ⌜let i := (cur.prefix.length : Int);
         ((0 : Int) ≤ i ∧ i ≤ PastaLean.pyFloorDiv (PastaLean.pyLen arr) (2 : Int)) ∧ (0 : Int) ≤ cnt ∧ cnt ≤ i⌝
-  taste?
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; grind; grind; sorry; omega
   all_goals sorry
 
 theorem smallest_change_correct :

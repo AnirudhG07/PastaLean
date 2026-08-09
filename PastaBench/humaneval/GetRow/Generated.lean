@@ -127,7 +127,7 @@ theorem get_row_spec :
       ⌜((((0 : Int) ≤ i ∧ i < PastaLean.pyLen lst) ∧ l = lst⦋i⦌) ∧
             ∀ p ∈ PastaLean.pyIter res, lst⦋Prod.fst p⦌⦋Prod.snd p⦌ = x) ∧
           PastaLean.pyLen res = PastaLean.pySum ((PastaLean.pyRange i).map fun r => PastaLean.pyCount lst⦋r⦌ x)⌝
-  taste?
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
 theorem get_row_correct :

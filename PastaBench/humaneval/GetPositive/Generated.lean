@@ -43,7 +43,7 @@ theorem get_positive_correct :
     ∀ (l : List Int),
       (∀ x ∈ PastaLean.pyIter (get_positive l), x > (0 : Int)) ∧
         ∀ x ∈ PastaLean.pyIter (get_positive l), PastaLean.pyContains l x :=
-  by taste?
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
 
 def get_positive'rn := fun (l : List Int) ↦ PastaLean.pyList (PastaLean.pyFilter (fun x ↦ decide (x > (0 : Int))) l)
 

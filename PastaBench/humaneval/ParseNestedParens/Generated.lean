@@ -97,7 +97,7 @@ theorem count_depth_spec :
   try
     mvcgen [count_depth, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓⟨cur, max_depth, cnt⟩ => ⌜max_depth ≥ (0 : Int) ∧ cnt ≤ max_depth⌝
-  taste?
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; omega; sorry; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
 theorem count_depth_correct :
@@ -162,7 +162,7 @@ theorem parse_nested_parens_correct :
                 ((PastaLean.pyRange (PastaLean.pyLen g +ₚ (1 : Int))).map fun k =>
                   PastaLean.pyCount (PastaLean.pySlice g none (some k) none) "(" -ₚ
                     PastaLean.pyCount (PastaLean.pySlice g none (some k) none) ")") :=
-  by taste?
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
 
 def parse_nested_parens'rn := fun (paren_string : String) ↦
   (List.filter (fun s => s != "") (PastaLean.pyIter (PastaLean.pyStringSplit paren_string " "))).map fun s =>

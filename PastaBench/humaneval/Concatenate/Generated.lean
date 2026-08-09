@@ -43,7 +43,7 @@ theorem concatenate_correct :
     ∀ (strings : List String),
       PastaLean.pyLen (concatenate strings) =
         PastaLean.pySum ((PastaLean.pyIter strings).map fun s => PastaLean.pyLen s) :=
-  by taste?
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
 
 def concatenate'rn := fun (strings : List String) ↦ PastaLean.pyStringJoin "" strings
 

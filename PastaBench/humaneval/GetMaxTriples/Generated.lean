@@ -84,7 +84,7 @@ theorem get_max_triples_spec :
           result ≥ (0 : Int)⌝⦄ :=
   by
   mvcgen [get_max_triples, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  taste?
+  sorry
   all_goals sorry
 
 theorem get_max_triples_correct :

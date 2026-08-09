@@ -97,7 +97,7 @@ theorem correct_bracketing_spec :
         ⌜let cnt := b;
           cnt ≥ (0 : Int) ∧ cnt ≤ PastaLean.pyLen brackets⌝)
         (onReturn := fun _ _ => ⌜True⌝)
-  taste?
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry; simp_all (config := { zetaDelta := true }) [taste_ingr]; grind; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry; sorry
   all_goals sorry
 
 theorem correct_bracketing_correct :

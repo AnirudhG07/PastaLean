@@ -71,7 +71,7 @@ theorem decimal_to_binary_correct :
                 c = "0" ∨ c = "1") ∧
             decimal < (2 : Int) ^ₚ (PastaLean.pyLen (decimal_to_binary decimal) -ₚ (4 : Int))) ∧
           (decimal = (0 : Int) ∨ (2 : Int) ^ₚ (PastaLean.pyLen (decimal_to_binary decimal) -ₚ (5 : Int)) ≤ decimal) :=
-  by taste?
+  by sorry
 
 def decimal_to_binary'rn := fun (decimal : Int) ↦
   "db" +ₚ PastaLean.pySlice (PastaLean.pyBin decimal) (some (2 : Int)) none none +ₚ "db"

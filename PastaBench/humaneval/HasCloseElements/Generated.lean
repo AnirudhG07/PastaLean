@@ -99,7 +99,7 @@ theorem has_close_elements_spec :
             ∀ k ∈ PastaLean.pyIter (PastaLean.pyRange i),
               sorted_numbers⦋k +ₚ (1 : Int)⦌ -ₚ sorted_numbers⦋k⦌ ≥ threshold⌝)
         (onReturn := fun _ _ => ⌜True⌝)
-  taste?
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
 theorem has_close_elements_correct :

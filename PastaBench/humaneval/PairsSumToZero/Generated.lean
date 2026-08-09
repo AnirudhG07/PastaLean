@@ -114,7 +114,7 @@ theorem pairs_sum_to_zero_spec :
         ((0 : Int) ≤ i ∧ i ≤ PastaLean.pyLen l) ∧
           ¬∃ a ∈ PastaLean.pyIter (PastaLean.pyRange i),
               ∃ b ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen l)), a ≠ b ∧ l⦋a⦌ +ₚ l⦋b⦌ = (0 : Int)⌝
-  taste?
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
 theorem pairs_sum_to_zero_correct :

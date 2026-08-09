@@ -124,7 +124,7 @@ theorem intersection_spec :
                   (0 : Int))⌝⦄ :=
   by
   mvcgen [intersection, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  taste?
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
 theorem intersection_correct :

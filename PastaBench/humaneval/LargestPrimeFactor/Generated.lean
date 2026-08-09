@@ -121,7 +121,7 @@ theorem largest_prime_factor_spec :
         ⌜let i := (cur.prefix.length : Int);
           ((0 : Int) < i ∧ i < n) ∧ PastaLean.pyLen isprime = n +ₚ (1 : Int)⌝)
         (onReturn := fun _ _ => ⌜True⌝)
-  taste?
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
 theorem largest_prime_factor_correct :

@@ -114,7 +114,7 @@ theorem is_simple_power_spec :
             (∃ k ∈ PastaLean.pyIter (PastaLean.pyRange (63 : Int) (0 : Int)), p = n ^ₚ k) ∧
               PastaLean.pyAbs n ≥ (2 : Int))
           (fun _ => True) s⌝
-  taste?
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
 theorem is_simple_power_correct :

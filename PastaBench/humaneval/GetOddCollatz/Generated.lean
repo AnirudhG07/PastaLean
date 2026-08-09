@@ -111,7 +111,7 @@ theorem get_odd_collatz_spec :
           (n %ₚ (2 : Int) = (0 : Int) ∨ PastaLean.pyContains result n)⌝⦄ :=
   by
   mvcgen [get_odd_collatz, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  taste?
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
 theorem get_odd_collatz_correct :

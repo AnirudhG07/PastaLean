@@ -84,7 +84,7 @@ theorem make_a_pile_spec :
       ⌜let i := (cur.prefix.length : Int);
         ((((0 : Int) ≤ i ∧ i ≤ n) ∧ PastaLean.pyLen ans = i) ∧ num = n +ₚ (2 : Int) *ₚ i) ∧
           PastaLean.pySum ans = i *ₚ n +ₚ i *ₚ (i -ₚ (1 : Int))⌝
-  taste?
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
 theorem make_a_pile_correct :

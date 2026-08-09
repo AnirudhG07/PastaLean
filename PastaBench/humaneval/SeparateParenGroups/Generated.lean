@@ -114,7 +114,7 @@ theorem separate_paren_groups_spec :
               (PastaLean.pyStringJoin "" results +ₚ group) ∧
             cnt = PastaLean.pyCount group "(" -ₚ PastaLean.pyCount group ")") ∧
           ∀ s ∈ PastaLean.pyIter results, PastaLean.pyCount s "(" = PastaLean.pyCount s ")"⌝
-  taste?
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
 theorem separate_paren_groups_correct :

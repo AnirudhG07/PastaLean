@@ -70,7 +70,7 @@ theorem solve_correct :
                   PastaLean.pyInt (solve N)⦋i⦌ *ₚ (2 : Int) ^ₚ (PastaLean.pyLen (solve N) -ₚ (1 : Int) -ₚ i)) =
               PastaLean.pySum ((PastaLean.pyIter (PastaLean.pyStr N)).map fun ch => PastaLean.pyInt ch)) ∧
           s ≥ (0 : Int) :=
-  by taste?
+  by sorry
 
 def solve'rn := fun (N : Int) ↦
   let s := PastaLean.pySum (PastaLean.pyMap (fun x ↦ PastaLean.pyInt x) (PastaLean.pyStr N))

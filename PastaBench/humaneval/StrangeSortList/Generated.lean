@@ -166,7 +166,7 @@ theorem strange_sort_list_spec :
               ∀ k ∈ PastaLean.pyIter (PastaLean.pyRange i),
                 ans⦋(2 : Int) *ₚ k +ₚ (1 : Int)⦌ = sorted_list⦋PastaLean.pyLen sorted_list -ₚ (1 : Int) -ₚ k⦌)
           (fun _ => True) s⌝
-  taste?
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
 theorem strange_sort_list_correct :

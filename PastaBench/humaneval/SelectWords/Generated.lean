@@ -92,7 +92,7 @@ theorem select_words_spec :
               ((List.filter (fun ch => !(PastaLean.pyContains "aeiouAEIOU" ch)) (PastaLean.pyIter w)).map fun ch =>
                 ch) =
             n⌝
-  taste?
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
 theorem select_words_correct :

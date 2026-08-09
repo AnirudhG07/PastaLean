@@ -99,7 +99,7 @@ theorem sort_array_spec :
                 result⦋j⦌ ≤ result⦋j +ₚ (1 : Int)⦌⌝⦄ :=
   by
   mvcgen [sort_array, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  taste?
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
 theorem sort_array_correct :

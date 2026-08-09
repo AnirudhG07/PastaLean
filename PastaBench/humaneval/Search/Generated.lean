@@ -127,7 +127,7 @@ theorem search_spec :
     · ⇓cur => ⌜True⌝
     · ⇓⟨cur, ans⟩ =>
       ⌜ans ≥ -(1 : Int) ∧ (ans ≤ -(1 : Int) ∨ PastaLean.pyContains (PastaLean.pyKeys count) ans ∧ count⦋ans⦌ ≥ ans)⌝
-  taste?
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
 theorem search_correct :

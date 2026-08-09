@@ -64,7 +64,7 @@ theorem mean_absolute_deviation_correct :
                   PastaLean.pyAbs (v -ₚ PastaLean.pySum numbers /ₚ PastaLean.pyLen numbers)) ∧
             mean_absolute_deviation numbers ≥ (0.0 : Rat)) ∧
           mean_absolute_deviation numbers ≤ PastaLean.pyMax numbers -ₚ PastaLean.pyMin numbers :=
-  by taste?
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
 
 def mean_absolute_deviation'rn := fun (numbers : List Float) ↦
   (show Float from

@@ -99,7 +99,7 @@ theorem histogram_spec :
     mvcgen [histogram, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓cur => ⌜True⌝
     · ⇓cur => ⌜True⌝
-  taste?
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]
   all_goals sorry
 
 theorem histogram_correct :
