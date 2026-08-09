@@ -51,7 +51,7 @@ def total_match(lst1, lst2):
 
 namespace PastaBench.humaneval.TotalMatch
 
-def total_match := fun lst1 ↦ fun lst2 ↦
+def total_match := fun (lst1 : PyAny) ↦ fun (lst2 : PyAny) ↦
   let c1 := PastaLean.pySum (PastaLean.pyMap (fun s ↦ PastaLean.pyLen s) lst1)
   let c2 := PastaLean.pySum (PastaLean.pyMap (fun s ↦ PastaLean.pyLen s) lst2)
   if c1 ≤ c2 then lst1 else lst2
@@ -60,8 +60,8 @@ attribute [simp] total_match
 
 @[taste_ingr]
 theorem total_match_correct :
-    ∀ lst1,
-      ∀ lst2,
+    ∀ (lst1 : PyAny),
+      ∀ (lst2 : PyAny),
         let c1 := PastaLean.pySum (PastaLean.pyMap (fun s ↦ PastaLean.pyLen s) lst1)
         let c2 := PastaLean.pySum (PastaLean.pyMap (fun s ↦ PastaLean.pyLen s) lst2)
         (((((total_match lst1 lst2 = lst1 ∨ total_match lst1 lst2 = lst2) ∧
@@ -76,7 +76,7 @@ theorem total_match_correct :
           c2 = PastaLean.pySum ((PastaLean.pyIter lst2).map fun s => PastaLean.pyLen s) :=
   by taste?
 
-def total_match'rn := fun lst1 ↦ fun lst2 ↦
+def total_match'rn := fun (lst1 : PyAny) ↦ fun (lst2 : PyAny) ↦
   let c1 := PastaLean.pySum (PastaLean.pyMap (fun s ↦ PastaLean.pyLen s) lst1)
   let c2 := PastaLean.pySum (PastaLean.pyMap (fun s ↦ PastaLean.pyLen s) lst2)
   if c1 ≤ c2 then lst1 else lst2

@@ -75,7 +75,7 @@ private noncomputable def _skjkasdkd'is_prime := fun (a : Int) ↦
 
 attribute [simp] _skjkasdkd'is_prime
 
-def skjkasdkd := fun (lst : List Int) ↦
+noncomputable def skjkasdkd := fun (lst : List Int) ↦
   (do
     let mut sorted_list : List Int := PastaLean.pySlice (PastaLean.pySort lst) none none (some (-(1 : Int)))
     for x in (PastaLean.pyIter sorted_list)do

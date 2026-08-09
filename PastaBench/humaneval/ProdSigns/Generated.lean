@@ -77,7 +77,7 @@ def prod_signs(arr):
 
 namespace PastaBench.humaneval.ProdSigns
 
-def prod_signs := fun (arr : PyAny) ↦
+def prod_signs := fun (arr : List Int) ↦
   (do
     if h_1 : arr = [] then 
       return Option.none
@@ -153,7 +153,7 @@ theorem prod_signs_spec :
   all_goals sorry
 
 theorem prod_signs_correct :
-    ∀ (arr : PyAny),
+    ∀ (arr : List Int),
       let result := (prod_signs arr).run;
       result =
         if arr = [] then none
@@ -168,7 +168,7 @@ theorem prod_signs_correct :
   intro arr
   exact prod_signs_spec True.intro
 
-def prod_signs'rn := fun (arr : PyAny) ↦
+def prod_signs'rn := fun (arr : List Int) ↦
   (show Option Int from
     Id.run
       (do

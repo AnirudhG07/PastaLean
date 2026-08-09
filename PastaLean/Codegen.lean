@@ -548,6 +548,16 @@ def registerContainerField (className field : String) : PygenM Unit := do
 def isContainerField (className field : String) : PygenM Bool := do
   return ((← heapContainerFieldsRegistry.get).getD className []).contains field
 
+/-- Process-global registry of def names emitted `noncomputable` (they reach `ℝ`, e.g. `x ** 0.5`).
+A computable `def` cannot depend on a noncomputable one, so a function that CALLS a registered name
+must itself be `noncomputable`. Closure-converted helpers are emitted before their parent (module
+order), so this is populated in time. Names are the emitted (mangled) ids, so clashes are unlikely. -/
+initialize noncomputableDefRegistry : IO.Ref (Std.HashSet String) ←
+  IO.mkRef (Std.HashSet.emptyWithCapacity 16)
+
+def registerNoncomputableDef (name : String) : PygenM Unit := do
+  noncomputableDefRegistry.modify (·.insert name)
+
 /-- The class whose body is currently being lowered (`self`'s class), if any. -/
 def getCurrentClass : PygenM (Option String) := do
   return (← get).currentClass

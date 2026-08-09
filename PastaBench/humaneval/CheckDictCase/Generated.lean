@@ -60,7 +60,7 @@ def check_dict_case(dict):
 
 namespace PastaBench.humaneval.CheckDictCase
 
-def check_dict_case := fun (dict : PyAny) ↦
+def check_dict_case := fun (dict : Std.HashMap PyAny PyAny) ↦
   (do
     let mut keys := PastaLean.pyList (PastaLean.pyKeys dict)
     if h_1 : keys = [] then 
@@ -142,7 +142,7 @@ theorem check_dict_case_spec :
   all_goals sorry
 
 theorem check_dict_case_correct :
-    ∀ (dict : PyAny),
+    ∀ (dict : Std.HashMap PyAny PyAny),
       let result := (check_dict_case dict).run;
       result =
         (PastaLean.pyLen dict > (0 : Int) ∧
@@ -154,7 +154,7 @@ theorem check_dict_case_correct :
   intro dict
   exact check_dict_case_spec True.intro
 
-def check_dict_case'rn := fun (dict : PyAny) ↦
+def check_dict_case'rn := fun (dict : Std.HashMap PyAny PyAny) ↦
   Id.run
     (do
       /-

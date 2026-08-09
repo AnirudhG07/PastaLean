@@ -443,6 +443,17 @@ private partial def usageType (fuel : Nat) (name : String) (json : Json) : PyTyp
         else if ["add", "sub", "mul", "div", "floordiv", "pow"].contains op then
           if isSubscriptOf name left then (right.bind literalType?).elim .unknown .list
           else if isSubscriptOf name right then (left.bind literalType?).elim .unknown .list
+          -- `name + <str/list literal>` pins `name` to that type: `+` typechecks only between two
+          -- `str`s or two `list`s (`class_name + "."` ⇒ `class_name : str`), so a `str`/`list` literal
+          -- on the other side is decisive (`int + str` / `list + str` are `TypeError`s in Python).
+          else if op == "add" then
+            let concatType (lit : Option Json) : PyType := match lit.bind literalType? with
+              | some (.str) => .str
+              | some (.list e) => .list e
+              | _ => .unknown
+            if isName left then concatType right
+            else if isName right then concatType left
+            else .unknown
           else .unknown
         else .unknown
     -- `~p` (bitwise NOT) is int-only.
@@ -499,12 +510,23 @@ private partial def usageType (fuel : Nat) (name : String) (json : Json) : PyTyp
           else .unknown
         let fromRight : PyType :=
           if valueCmp && isName right then (left.bind literalType?).getD .unknown else .unknown
+        -- `<literal> in p` (name is the CONTAINER): `p` holds elements of the literal's type ⇒
+        -- `p : list[<literal>]` (`0 in arr` ⇒ `arr : list[int]`). Left as `list` since it is the common
+        -- array case; a competing dict/set signal joins this away to `unknown`/`any` as usual. A `str`
+        -- literal is EXCLUDED — `"a" in s` is ambiguous between substring (`s : str`) and membership
+        -- (`s : list[str]`); only a non-`str` literal makes `p` unambiguously a container.
+        let fromRightContainer : PyType :=
+          if membership && isName right then
+            match left.bind literalType? with
+            | some t => if t == .str then .unknown else .list t
+            | none => .unknown
+          else .unknown
         -- `p[i] <cmp> <literal>` pins the ELEMENT type ⇒ `p : list[<that>]`.
         let fromLeftElem : PyType :=
           if valueCmp && isSubscriptOf name left then (right.bind literalType?).elim .unknown .list else .unknown
         let fromRightElem : PyType :=
           if valueCmp && isSubscriptOf name right then (left.bind literalType?).elim .unknown .list else .unknown
-        fromLeft.join fromRight |>.join (fromLeftElem.join fromRightElem)
+        fromLeft.join fromRight |>.join (fromLeftElem.join fromRightElem) |>.join fromRightContainer
     | _ => .unknown
   let sub := match json with
     | .arr xs => PyType.joinAll (xs.toList.map (usageType fuel name))
@@ -797,8 +819,16 @@ partial def usedInPyAnyPosition (name : String) (json : Json) : Bool :=
       | some "BoolOp" =>
           ((json.getObjValAs? (Array Json) "values").toOption.getD #[]).any (fun v => nameId? v == some name)
       | some "Call" =>
-          (getField json "func").bind nameId? == some "len" &&
+          -- `len(x)` and the functional builtins that consume a container (`sum(x)`, `sorted(x)`,
+          -- `map(f, x)`, `filter(f, x)`, …) leave `x` stuck on `PyIterable ?m`/`PyLen ?m` if it stays an
+          -- un-inferred binder — box it as `PyAny` (which is iterable/lengthable) so they resolve.
+          let fn := ((getField json "func").bind nameId?).getD ""
+          let nameIsArg :=
             ((json.getObjValAs? (Array Json) "args").toOption.getD #[]).any (fun a => nameId? a == some name)
+          -- Only the builtins whose lambda/context does NOT pin the element type: `filter`/`any`/`all`
+          -- take a predicate that usually FIXES the element (`ch not in "aeiou"` ⇒ `String`), so boxing
+          -- would clobber a type Lean could infer — exclude them.
+          nameIsArg && ["len", "sum", "sorted", "map", "reversed", "enumerate"].contains fn
       -- `x is None` / `x is not None` on an otherwise-unknown `x`: box it so `pyIsNone x` resolves
       -- (`PyIsNone PyAny`) instead of leaving `x` an untyped binder that forces `Option _`.
       | some "Compare" =>
@@ -814,6 +844,20 @@ partial def usedInPyAnyPosition (name : String) (json : Json) : Bool :=
       | .arr xs => xs.any (usedInPyAnyPosition name)
       | .obj fs => fs.toList.any (fun (_, v) => usedInPyAnyPosition name v)
       | _ => false)
+
+/-- Fill an `unknown` element/key/value inside a KNOWN-shape container with `any` (→ `PyAny`), so a
+`list`/`set`/`dict`/`tuple`/`opt` whose shape we know but whose elements we don't emits `List PyAny`
+etc. — the structural ops (iterate, index, `len`, `==`) still resolve; only the elements stay
+dynamic. A bare `unknown`/`any` (no container shape) is left untouched for the caller to box. -/
+private partial def containerFillAny : PyType → PyType :=
+  let elemOrAny (e : PyType) : PyType := match e with | .unknown => .any | t => containerFillAny t
+  fun
+  | .list e => .list (elemOrAny e)
+  | .set e => .set (elemOrAny e)
+  | .dict k v => .dict (elemOrAny k) (elemOrAny v)
+  | .tuple es => .tuple (es.map elemOrAny)
+  | .opt e => .opt (elemOrAny e)
+  | t => t
 
 /-- Add `_ty` to each unannotated parameter we could type (a nested capture, or a rare
 un-hinted param). An explicit annotation, or an existing `_ty`, always wins. -/
@@ -881,7 +925,15 @@ private def stampParams (env : Env) (fn : Json) : Json :=
                         match toAnnotation? t with
                         | some ann => arg.setObjVal! "_ty" ann
                         | none => arg
-                      else boxIfStuck ()
+                      else
+                        -- A known-shape container with unknown elements (`arr == []` → `list unknown`)
+                        -- emits `List PyAny` etc. — better than the bare-`PyAny` fallback, keeping
+                        -- iterate/index/len/`==` structural. Only when the param is actually used in a
+                        -- dispatch position (else leave it bare for Lean's own unification).
+                        let filled := containerFillAny t
+                        match (if filled == t then none else toAnnotation? filled) with
+                        | some ann => if body.any (usedInPyAnyPosition name) then arg.setObjVal! "_ty" ann else arg
+                        | none => boxIfStuck ()
                   | none => boxIfStuck ()
             | _ => arg
           fn.setObjVal! "args" (args.setObjVal! "args" (Json.arr argsArr))

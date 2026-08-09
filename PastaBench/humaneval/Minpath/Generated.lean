@@ -134,7 +134,7 @@ def minPath(grid, k):
 
 namespace PastaBench.humaneval.Minpath
 
-def minPath := fun (grid : PyAny) ↦ fun (k : Int) ↦
+def minPath := fun (grid : List (List Int)) ↦ fun (k : Int) ↦
   (do
     let mut N : Int := PastaLean.pyLen grid
     let mut x : Int := (0 : Int)
@@ -171,7 +171,7 @@ def minPath := fun (grid : PyAny) ↦ fun (k : Int) ↦
     let _ := Libraries.passta.pyPassAssert (decide ((0 : Int) ≤ x) && decide (x < N))
     let _ := Libraries.passta.pyPassAssert (decide ((0 : Int) ≤ y) && decide (y < N))
     let _ := Libraries.passta.pyPassAssert (grid⦋x⦌⦋y⦌ == (1 : Int))
-    let mut mn : PyAny := N *ₚ N
+    let mut mn : Int := N *ₚ N
     if h_1 : x > (0 : Int) then 
       mn := PastaLean.pyMin [mn, grid⦋x -ₚ (1 : Int)⦌⦋y⦌]
     else
@@ -248,7 +248,7 @@ theorem minPath_spec :
   all_goals sorry
 
 theorem minPath_correct :
-    ∀ (grid : PyAny),
+    ∀ (grid : List (List Int)),
       ∀ (k : Int),
         ((((k ≥ (1 : Int) ∧ PastaLean.pyLen grid ≥ (2 : Int)) ∧
                 ∀ row ∈ PastaLean.pyIter grid, PastaLean.pyLen row = PastaLean.pyLen grid) ∧
@@ -294,7 +294,7 @@ theorem minPath_correct :
   intro grid k hpre
   exact minPath_spec hpre
 
-def minPath'rn := fun (grid : PyAny) ↦ fun (k : Int) ↦
+def minPath'rn := fun (grid : List (List Int)) ↦ fun (k : Int) ↦
   Id.run
     (do
       /-
@@ -385,7 +385,7 @@ def minPath'rn := fun (grid : PyAny) ↦ fun (k : Int) ↦
       let _ := Libraries.passta.pyPassAssert (decide ((0 : Int) ≤ x) && decide (x < N))
       let _ := Libraries.passta.pyPassAssert (decide ((0 : Int) ≤ y) && decide (y < N))
       let _ := Libraries.passta.pyPassAssert (grid⦋x⦌⦋y⦌ == (1 : Int))
-      let mut mn : PyAny := N *ₚ N
+      let mut mn : Int := N *ₚ N
       if h_1 : x > (0 : Int) then 
         mn := PastaLean.pyMin [mn, grid⦋x -ₚ (1 : Int)⦌⦋y⦌]
       else

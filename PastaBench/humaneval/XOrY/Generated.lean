@@ -57,7 +57,8 @@ private noncomputable def _x_or_y'is_prime := fun (a : Int) ↦
 
 attribute [simp] _x_or_y'is_prime
 
-def x_or_y := fun (n : Int) ↦ fun (x : Int) ↦ fun y ↦ if PastaLean.pyTruthy (_x_or_y'is_prime n) then x else y
+noncomputable def x_or_y := fun (n : Int) ↦ fun (x : Int) ↦ fun y ↦
+  if PastaLean.pyTruthy (_x_or_y'is_prime n) then x else y
 
 attribute [simp] x_or_y
 

@@ -268,6 +268,24 @@ def bodyNeedsNoncomputable (bodyElems : Array Json) : PygenM Bool := do
   else
     return false
 
+/-- Does `j` reference (as a `Name`) any id in `reg`? -/
+partial def jsonRefsRegistered (reg : Std.HashSet String) (j : Json) : Bool :=
+  (jsonNodeType? j == some "Name" &&
+    (match j.getObjValAs? String "id" with | .ok s => reg.contains s | _ => false))
+  || (match j with
+      | .arr a => a.any (jsonRefsRegistered reg)
+      | .obj kvs => kvs.toList.any (fun (_, v) => jsonRefsRegistered reg v)
+      | _ => false)
+
+/-- Whether the body calls a def already emitted `noncomputable` (a closure-converted helper reaching
+`ℝ`, e.g. `is_prime` computing `int(a ** 0.5)`). Such a caller must itself be `noncomputable`. Only in
+exact mode — the `'rn` run-twins are approx (`Float`, computable) and must never be marked. -/
+def bodyCallsNoncomputable (bodyElems : Array Json) : PygenM Bool := do
+  if (← getNumericMode) != .exact then return false
+  let reg ← noncomputableDefRegistry.get
+  if reg.isEmpty then return false
+  return bodyElems.any (jsonRefsRegistered reg)
+
 /-- Whether a type annotation mentions `float` anywhere (`float`, `list[float]`, `dict[_,float]`). -/
 partial def annotationMentionsFloat (json : Json) : Bool :=
   if json.getObjValAs? String "node_type" == .ok "Name" then
@@ -1127,9 +1145,16 @@ def funcDefSyntax : (kind : SyntaxNodeKind) → Json →
           -- noncomputable in exact mode — same rule as the monadic path below, which this pure path
           -- also needs (e.g. an unannotated `is_prime` helper that computes `int(a ** 0.5)`).
           let ncP ← (pure (json.getObjValAs? Bool "_real_fn" == .ok true)) <||>
-            bodyNeedsNoncomputable cleanBody
-          let defCmdP ← if ncP then `(command| noncomputable def $nameIdent := $valueStx)
-            else `(command| def $nameIdent := $valueStx)
+            bodyNeedsNoncomputable cleanBody <||> bodyCallsNoncomputable cleanBody
+          if ncP then registerNoncomputableDef name
+          -- A self-recursive contracted helper (`query_gcd(a,b) = … query_gcd(b, a%b)`) is not
+          -- structurally decreasing, so it must be `partial` (Lean can't infer termination here).
+          let isRecP := cleanBody.any (jsonReferencesName · baseName)
+          let defCmdP ← match ncP, isRecP with
+            | true,  true  => `(command| noncomputable partial def $nameIdent := $valueStx)
+            | true,  false => `(command| noncomputable def $nameIdent := $valueStx)
+            | false, true  => `(command| partial def $nameIdent := $valueStx)
+            | false, false => `(command| def $nameIdent := $valueStx)
           let finalDef ← applyPrivacy name defCmdP
           if (← getNumericMode) == .approx then
             return ⟨mkNullNode #[finalDef.raw]⟩
@@ -1138,6 +1163,8 @@ def funcDefSyntax : (kind : SyntaxNodeKind) → Json →
           let suffix := if pythonNameIsPrivate name then "_spec" else "_correct"
           let thmName := mkIdent (name ++ suffix).toName
           let thmCmd ← buildSpecTheorem thmName argInfos letJsons hypJsons conclJsons
+          -- A `partial def` has no equation lemmas, so it can't carry `@[simp]`.
+          if isRecP then return ⟨mkNullNode #[finalDef.raw, thmCmd.raw]⟩
           let attrCmd ← `(command| attribute [simp] $nameIdent)
           return ⟨mkNullNode #[finalDef.raw, attrCmd.raw, thmCmd.raw]⟩
         -- Track W: a `while`-loop contracted function (single straight-line `while` with `Invariant`
@@ -1195,7 +1222,8 @@ def funcDefSyntax : (kind : SyntaxNodeKind) → Json →
             -- additionally catches *transitive* ℝ — e.g. a function whose value comes from calling
             -- another ℝ-returning function (`euclidean_distance`), which the body scan can't see.
             let nc ← (pure (json.getObjValAs? Bool "_real_fn" == .ok true)) <||>
-              bodyNeedsNoncomputable info.cleanBody
+              bodyNeedsNoncomputable info.cleanBody <||> bodyCallsNoncomputable info.cleanBody
+            if nc then registerNoncomputableDef name
             let defCmd ← if nc then `(command| noncomputable def $nameIdent := $valueStx)
               else `(command| def $nameIdent := $valueStx)
             let finalDef ← applyPrivacy name defCmd
@@ -1240,7 +1268,8 @@ def funcDefSyntax : (kind : SyntaxNodeKind) → Json →
             return memoCmd
         let isRecursive := bodyElems.any (jsonReferencesName · baseName)
         -- A real-valued body (transcendental, directly or via a callee) forces `noncomputable`.
-        let nc := isReal || (← bodyNeedsNoncomputable bodyElems)
+        let nc := isReal || (← bodyNeedsNoncomputable bodyElems) || (← bodyCallsNoncomputable bodyElems)
+        if nc then registerNoncomputableDef name
         let cmd ← withBoxReturnContext boxReturn <| withRetFloatContext retFloat do match effectCmd? with
           | some cmd => pure cmd
           | none =>

@@ -53,14 +53,48 @@ Non-colliding problems keep the clean name (`HasCloseElements`, `TruncateNumber`
 HumanEval solutions are usually **unannotated** (`def digits(n):`), so PastaLean's type inference has
 no hint and defaults the parameter to the dynamic `PyAny` box — which then fails to elaborate for
 integer/string algorithms (e.g. `2 <= p` has no order on `PyAny`; a `HashMap PyAny` isn't decidable).
-Python's own type *is* determined by the operations, but until the `TypeInfer` pass tracks it through
-the body, the pragmatic fix is a one-word annotation on each affected parameter. The following had a
-type annotation added to their param(s) (in `solution.py`/`solution_contracts.py`), and nothing else:
+Python's own type *is* determined by the operations, and the `TypeInfer` pass now recovers many of
+these from usage, so an annotation is only needed where the type is genuinely undecidable from the
+body. The following had a type annotation added to their param(s) (in `solution.py`/
+`solution_contracts.py`), and nothing else:
 
 `count_up_to(n: int)`, `digits(n: int)`, `get_max_triples(n: int)`, `iscube(a: int)`,
 `cycpattern_check(a: str, b: str)`, `is_sorted(lst: List[int])`, `sort_array(arr: List[int])`,
 `unique_digits(x: List[int])`, `solve(s: str)`, `valid_date(date: str)`,
-`words_in_sentence(sentence: str)`, `get_row(lst: List[List[int]], x: int)`.
+`words_in_sentence(sentence: str)`, `get_row(lst: List[List[int]], x: int)`,
+`get_closest_vowel(word: str)` (see the str-vs-`list[str]` note below).
+
+### TypeInfer improvements that removed some annotations (2026-08-09)
+
+Two usage-inference fixes let previously-`PyAny` params resolve without a hint:
+
+- **Container shape known, elements unknown → `PyAny` elements.** A param inferred `list[unknown]`
+  (e.g. only from `arr == []`) used to fall back to bare `PyAny`; it now emits `List PyAny`, keeping
+  the structural ops (iterate / index / `len` / `==`) while only the elements stay dynamic.
+- **`<literal> in name` teaches the container's element.** `usageType` already handled `x in literal`;
+  it now also reads `0 in arr ⇒ arr : list[int]` (name is the *container*). A `str` literal is excluded
+  because `"a" in s` is ambiguous (substring on a `str` vs membership in a `list[str]`).
+
+Together these let e.g. `prod_signs(arr)` infer `arr : List Int` with no annotation.
+
+### A genuinely undecidable case: `str` vs `list[str]` — `get_closest_vowel` (HumanEval/118)
+
+This one is **not** an inference bug we can fix — it is impossible in principle without a hint, and is
+the clearest example of *why* some params must be annotated. `get_closest_vowel(word)` uses `word` only
+as `word[i]`, `word[i] in "aeiouAEIOU"`, `is_vowel(word[i])`, and `return word[i]` / `return ""`. Every
+one of these signals says the *element* `word[i]` is a `str` — but a Python **`str`** (indexed → 1-char
+string) and a **`list[str]`** (indexed → element string) are *behaviourally identical* under indexing,
+iteration, `len`, and element-string ops. Nothing in the body distinguishes them; even the return type
+and the `Result() in word` postcondition stay consistent with both. So the type is **genuinely
+ambiguous** — the same source is valid Python for either reading.
+
+There is no *sound* automatic resolution. One could **default the char-ambiguous case to `str`** (the
+overwhelming idiom, and what the test harness actually passes), but that silently mis-types a read-only
+unannotated `list[str]` param (`def f(words): return words[0].upper()` — first-word-upper becomes
+first-char-upper), trading a compile error for a *wrong answer*, which is worse. Name heuristics
+(`word` vs `words`) are unreliable. We therefore **do not guess**: the parameter is annotated
+`word: str`, which is the honest fix and exactly the information a real type checker would require. Flag
+any similarly char-indexed unannotated param as needing a `str` / `list[str]` hint.
 
 Known residual gaps (need the type-inference engine, not a param annotation):
 - **Comprehension/`map` variable types** — in `decode_cyclic`, `group` iterates a `List[str]` but the

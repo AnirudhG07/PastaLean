@@ -53,7 +53,7 @@ private noncomputable def _prime_length'is_prime := fun (a : Int) ↦
 
 attribute [simp] _prime_length'is_prime
 
-def prime_length := fun (string : PyAny) ↦ _prime_length'is_prime (PastaLean.pyLen string)
+noncomputable def prime_length := fun (string : PyAny) ↦ _prime_length'is_prime (PastaLean.pyLen string)
 
 attribute [simp] prime_length
 

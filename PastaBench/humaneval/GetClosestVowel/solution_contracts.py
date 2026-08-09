@@ -1,7 +1,7 @@
 from contracts import *
 
 
-def get_closest_vowel(word):
+def get_closest_vowel(word: str):
     """You are given a word. Your task is to find the closest vowel that stands between 
     two consonants from the right side of the word (case sensitive).
     

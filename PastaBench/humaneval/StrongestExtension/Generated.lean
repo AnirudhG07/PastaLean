@@ -17,6 +17,7 @@ set_option maxHeartbeats 800000
 
 /- Python source converted to produce the Lean below (the exact input to PastaLean):
 
+from typing import *
 from contracts import *
 
 
@@ -31,7 +32,7 @@ def strength(s: str) -> int:
     return CAP - SM
 
 
-def Strongest_Extension(class_name, extensions):
+def Strongest_Extension(class_name, extensions: List[str]):
     """You will be given the name of a class (a string) and a list of extensions.
     The extensions are to be used to load additional classes to the class. The
     strength of the extension is as follows: Let CAP be the number of the uppercase
@@ -117,7 +118,7 @@ def strength'rn := fun (s : String) ↦
       let __py_ret_1 := CAP -ₚ SM
       return __py_ret_1)
 
-def Strongest_Extension := fun (class_name : PyAny) ↦ fun (extensions : PyAny) ↦
+def Strongest_Extension := fun (class_name : String) ↦ fun (extensions : List String) ↦
   (do
     let mut max_strength := PastaLean.pyMax (PastaLean.pyMap strength extensions)
     for e in (PastaLean.pyIter extensions)do
@@ -156,8 +157,8 @@ theorem Strongest_Extension_spec :
   all_goals sorry
 
 theorem Strongest_Extension_correct :
-    ∀ (class_name : PyAny),
-      ∀ (extensions : PyAny),
+    ∀ (class_name : String),
+      ∀ (extensions : List String),
         PastaLean.pyLen extensions > (0 : Int) →
           let result := (Strongest_Extension class_name extensions).run;
           ((PastaLean.pyStringStartswith result (class_name +ₚ ".") ∧
@@ -177,46 +178,45 @@ theorem Strongest_Extension_correct :
   intro class_name extensions hpre
   exact Strongest_Extension_spec hpre
 
-def Strongest_Extension'rn := fun (class_name : PyAny) ↦ fun (extensions : PyAny) ↦
-  (show PastaLean.PyAny from
-    Id.run
-      (do
-        /-
-        You will be given the name of a class (a string) and a list of extensions.
-            The extensions are to be used to load additional classes to the class. The
-            strength of the extension is as follows: Let CAP be the number of the uppercase
-            letters in the extension's name, and let SM be the number of lowercase letters 
-            in the extension's name, the strength is given by the fraction CAP - SM. 
-            You should find the strongest extension and return a string in this 
-            format: ClassName.StrongestExtensionName.
-            If there are two or more extensions with the same strength, you should
-            choose the one that comes first in the list.
-            For example, if you are given "Slices" as the class and a list of the
-            extensions: ['SErviNGSliCes', 'Cheese', 'StuFfed'] then you should
-            return 'Slices.SErviNGSliCes' since 'SErviNGSliCes' is the strongest extension 
-            (its strength is -1).
-            Example:
-            for Strongest_Extension('my_class', ['AA', 'Be', 'CC']) == 'my_class.AA'
-            
-        -/
-        let _ := Libraries.passta.pyPassRequires (decide (PastaLean.pyLen extensions > (0 : Int)))
-        -- The chosen extension is everything after the first `len(class_name) + 1` characters --
-        -- splitting on '.' would be wrong, since an extension may itself contain a dot.
-        -- THE POINT (a): it attains the maximum CAP - SM strength over the whole list.
-        -- THE POINT (b): the documented tie-break -- every extension before the chosen one is
-        -- strictly weaker, so the FIRST maximiser is the one returned.
-        let mut max_strength := PastaLean.pyMax (PastaLean.pyMap strength extensions)
-        for e in (PastaLean.pyIter extensions)do
-          if h_1 : strength'rn e == max_strength then 
-            -- Bridge assertion: By finding an `e` where `strength(e) == max_strength`,
-            -- we have found an element whose strength is equal to the overall maximum.
-            -- This fact is needed to prove the postcondition.
-            let _ :=
-              Libraries.passta.pyPassAssert (strength'rn e == PastaLean.pyMax (PastaLean.pyMap strength extensions))
-            let __py_ret_1 := (class_name +ₚ "." +ₚ e : PastaLean.PyAny)
-            return __py_ret_1
-          else
-            let _ := ()
-        return default))
+def Strongest_Extension'rn := fun (class_name : String) ↦ fun (extensions : List String) ↦
+  Id.run
+    (do
+      /-
+      You will be given the name of a class (a string) and a list of extensions.
+          The extensions are to be used to load additional classes to the class. The
+          strength of the extension is as follows: Let CAP be the number of the uppercase
+          letters in the extension's name, and let SM be the number of lowercase letters 
+          in the extension's name, the strength is given by the fraction CAP - SM. 
+          You should find the strongest extension and return a string in this 
+          format: ClassName.StrongestExtensionName.
+          If there are two or more extensions with the same strength, you should
+          choose the one that comes first in the list.
+          For example, if you are given "Slices" as the class and a list of the
+          extensions: ['SErviNGSliCes', 'Cheese', 'StuFfed'] then you should
+          return 'Slices.SErviNGSliCes' since 'SErviNGSliCes' is the strongest extension 
+          (its strength is -1).
+          Example:
+          for Strongest_Extension('my_class', ['AA', 'Be', 'CC']) == 'my_class.AA'
+          
+      -/
+      let _ := Libraries.passta.pyPassRequires (decide (PastaLean.pyLen extensions > (0 : Int)))
+      -- The chosen extension is everything after the first `len(class_name) + 1` characters --
+      -- splitting on '.' would be wrong, since an extension may itself contain a dot.
+      -- THE POINT (a): it attains the maximum CAP - SM strength over the whole list.
+      -- THE POINT (b): the documented tie-break -- every extension before the chosen one is
+      -- strictly weaker, so the FIRST maximiser is the one returned.
+      let mut max_strength := PastaLean.pyMax (PastaLean.pyMap strength extensions)
+      for e in (PastaLean.pyIter extensions)do
+        if h_1 : strength'rn e == max_strength then 
+          -- Bridge assertion: By finding an `e` where `strength(e) == max_strength`,
+          -- we have found an element whose strength is equal to the overall maximum.
+          -- This fact is needed to prove the postcondition.
+          let _ :=
+            Libraries.passta.pyPassAssert (strength'rn e == PastaLean.pyMax (PastaLean.pyMap strength extensions))
+          let __py_ret_1 := class_name +ₚ "." +ₚ e
+          return __py_ret_1
+        else
+          let _ := ()
+      return default)
 
 end PastaBench.humaneval.StrongestExtension

@@ -83,7 +83,7 @@ private noncomputable def _intersection'is_prime := fun (a : Int) ↦
 
 attribute [simp] _intersection'is_prime
 
-def intersection := fun (interval1 : List Int) ↦ fun (interval2 : List Int) ↦
+noncomputable def intersection := fun (interval1 : List Int) ↦ fun (interval2 : List Int) ↦
   (do
     let mut interval1 := interval1
     let mut interval2 := interval2

@@ -90,7 +90,7 @@ def is_prime'rn := fun (a : Int) ↦
         ((PastaLean.pyRange (PastaLean.pyInt (a ^ₚ (0.5 : Float)) +ₚ (1 : Int)) (2 : Int)).map fun x =>
           a %ₚ x == (0 : Int))
 
-def words_in_sentence := fun (sentence : String) ↦
+noncomputable def words_in_sentence := fun (sentence : String) ↦
   PastaLean.pyStringJoin " "
     (PastaLean.pyList
       (PastaLean.pyFilter (fun word ↦ is_prime (PastaLean.pyLen word)) (PastaLean.pyStringSplit sentence " ")))

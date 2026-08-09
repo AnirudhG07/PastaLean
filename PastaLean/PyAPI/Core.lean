@@ -2,6 +2,20 @@ import PastaLean.Imports
 
 namespace PastaLean
 
+/-! ### Seeing through `Id`
+
+A loop+`Invariant` function is emitted `Id`-typed (`String → Id ℤ`) so it can carry an `mvcgen`
+Hoare-triple spec. When such a function is then used as a first-class value or in a value comparison
+by another function (`max(map(strength, xs))`, `strength(e) == m`), the `Id` wrapper leaks into the
+element/operand type. `Id α` is *definitionally* `α`, but instance synthesis does not unfold `Id`, so
+`Ord (Id ℤ)` / `BEq (Id ℤ)` / `DecidableEq (Id ℤ)` go stuck. These forwarding instances close that gap
+(each is `inferInstanceAs` on the reduced `α`); they only ever *add* resolutions, never change one. -/
+instance {α : Type u} [Ord α] : Ord (Id α) := inferInstanceAs (Ord α)
+instance {α : Type u} [BEq α] : BEq (Id α) := inferInstanceAs (BEq α)
+instance {α : Type u} [DecidableEq α] : DecidableEq (Id α) := inferInstanceAs (DecidableEq α)
+instance {α : Type u} [LT α] : LT (Id α) := inferInstanceAs (LT α)
+instance {α : Type u} [LE α] : LE (Id α) := inferInstanceAs (LE α)
+
 /-- Minimal runtime value for translated Python exceptions. -/
 structure PyException where
   kind : String

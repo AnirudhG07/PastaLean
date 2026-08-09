@@ -1,3 +1,4 @@
+from typing import *
 from contracts import *
 
 
@@ -12,7 +13,7 @@ def strength(s: str) -> int:
     return CAP - SM
 
 
-def Strongest_Extension(class_name, extensions):
+def Strongest_Extension(class_name, extensions: List[str]):
     """You will be given the name of a class (a string) and a list of extensions.
     The extensions are to be used to load additional classes to the class. The
     strength of the extension is as follows: Let CAP be the number of the uppercase

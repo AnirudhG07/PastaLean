@@ -67,7 +67,7 @@ private def _sorted_list_sum'cmp := fun (s : String) ↦ fun (t : String) ↦
 
 attribute [simp, taste_ingr] _sorted_list_sum'cmp
 
-def sorted_list_sum := fun lst ↦
+def sorted_list_sum := fun (lst : PyAny) ↦
   (do
     let _ := ()
     let __py_ret_1 :=
@@ -95,7 +95,7 @@ theorem sorted_list_sum_spec :
   all_goals sorry
 
 theorem sorted_list_sum_correct :
-    ∀ lst,
+    ∀ (lst : PyAny),
       let result := (sorted_list_sum lst).run;
       ((((∀ s ∈ PastaLean.pyIter result, PastaLean.pyLen s %ₚ (2 : Int) = (0 : Int)) ∧
               ∀ s ∈ PastaLean.pyIter result, PastaLean.pyContains lst s) ∧
@@ -115,7 +115,7 @@ private def _sorted_list_sum'cmp'rn := fun (s : String) ↦ fun (t : String) ↦
   if PastaLean.pyLen s != PastaLean.pyLen t then PastaLean.pyLen s -ₚ PastaLean.pyLen t
   else if s < t then -(1 : Int) else (1 : Int)
 
-def sorted_list_sum'rn := fun lst ↦
+def sorted_list_sum'rn := fun (lst : PyAny) ↦
   /-
   Write a function that accepts a list of strings as a parameter,
       deletes the strings that have odd lengths from it,

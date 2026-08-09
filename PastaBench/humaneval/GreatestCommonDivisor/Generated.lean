@@ -41,10 +41,8 @@ def greatest_common_divisor(a: int, b: int) -> int:
 
 namespace PastaBench.humaneval.GreatestCommonDivisor
 
-private def _greatest_common_divisor'query_gcd := fun (a : Int) ↦ fun (b : Int) ↦
+private partial def _greatest_common_divisor'query_gcd := fun (a : Int) ↦ fun (b : Int) ↦
   if b = (0 : Int) then a else _greatest_common_divisor'query_gcd b (a %ₚ b)
-
-attribute [simp] _greatest_common_divisor'query_gcd
 
 @[taste_ingr]
 theorem _greatest_common_divisor'query_gcd_spec :
@@ -74,7 +72,7 @@ theorem greatest_common_divisor_correct :
           else b = (0 : Int) :=
   by taste?
 
-private def _greatest_common_divisor'query_gcd'rn := fun (a : Int) ↦ fun (b : Int) ↦
+private partial def _greatest_common_divisor'query_gcd'rn := fun (a : Int) ↦ fun (b : Int) ↦
   if b == (0 : Int) then a else _greatest_common_divisor'query_gcd'rn b (a %ₚ b)
 
 def greatest_common_divisor'rn := fun (a : Int) ↦ fun (b : Int) ↦ _greatest_common_divisor'query_gcd'rn a b

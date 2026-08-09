@@ -20,7 +20,7 @@ set_option maxHeartbeats 800000
 from contracts import *
 
 
-def get_closest_vowel(word):
+def get_closest_vowel(word: str):
     """You are given a word. Your task is to find the closest vowel that stands between 
     two consonants from the right side of the word (case sensitive).
     
@@ -76,7 +76,7 @@ private def _get_closest_vowel'is_vowel := fun (ch : String) ↦ PastaLean.pyCon
 
 attribute [simp, taste_ingr] _get_closest_vowel'is_vowel
 
-def get_closest_vowel := fun (word : PyAny) ↦
+def get_closest_vowel := fun (word : String) ↦
   (do
     for i in (PastaLean.pyRange (0 : Int) (PastaLean.pyLen word -ₚ (2 : Int)) (-(1 : Int)))do
       -- These invariants establish that the indices i, i-1, and i+1 are always valid,
@@ -126,7 +126,7 @@ theorem get_closest_vowel_spec :
   all_goals sorry
 
 theorem get_closest_vowel_correct :
-    ∀ (word : PyAny),
+    ∀ (word : String),
       let result := (get_closest_vowel word).run;
       ((result = "" ∨
             (PastaLean.pyLen result = (1 : Int) ∧ PastaLean.pyContains "aeiouAEIOU" result) ∧
@@ -151,45 +151,44 @@ theorem get_closest_vowel_correct :
 
 private def _get_closest_vowel'is_vowel'rn := fun (ch : String) ↦ PastaLean.pyContains "aeiouAEIOU" ch
 
-def get_closest_vowel'rn := fun (word : PyAny) ↦
-  (show PastaLean.PyAny from
-    Id.run
-      (do
-        /-
-        You are given a word. Your task is to find the closest vowel that stands between 
-            two consonants from the right side of the word (case sensitive).
-            
-            Vowels in the beginning and ending doesn't count. Return empty string if you didn't
-            find any vowel met the above condition. 
-        
-            You may assume that the given string contains English letter only.
-        
-            Example:
-            get_closest_vowel("yogurt") ==> "u"
-            get_closest_vowel("FULL") ==> "U"
-            get_closest_vowel("quick") ==> ""
-            get_closest_vowel("ab") ==> ""
-            
-        -/
-        -- Shape of the answer: either empty or a single vowel taken from the word.
-        -- THE POINT (a): "" is returned exactly when NO interior position is a vowel flanked by
-        -- two consonants -- i.e. the search really was exhaustive over 1 .. len(word)-2.
-        -- THE POINT (b): a non-empty answer is the RIGHTMOST such position -- it qualifies, and
-        -- no position strictly to its right qualifies.
-        for i in (PastaLean.pyRange (0 : Int) (PastaLean.pyLen word -ₚ (2 : Int)) (-(1 : Int)))do
-          -- These invariants establish that the indices i, i-1, and i+1 are always valid,
-          -- which is crucial for proving memory safety of the lookups.
-          let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) < i))
-          let _ := Libraries.passta.pyPassInvariant (decide (i < PastaLean.pyLen word -ₚ (1 : Int)))
-          if h_1 :
-              PastaLean.pyTruthy (_get_closest_vowel'is_vowel'rn word⦋i⦌) &&
-                  !PastaLean.pyTruthy (_get_closest_vowel'is_vowel'rn word⦋i -ₚ (1 : Int)⦌) &&
-                !PastaLean.pyTruthy (_get_closest_vowel'is_vowel'rn word⦋i +ₚ (1 : Int)⦌) then
-            
-            let __py_ret_1 := (word⦋i⦌ : PastaLean.PyAny)
-            return __py_ret_1
-          else
-            let _ := ()
-        return ("" : PastaLean.PyAny)))
+def get_closest_vowel'rn := fun (word : String) ↦
+  Id.run
+    (do
+      /-
+      You are given a word. Your task is to find the closest vowel that stands between 
+          two consonants from the right side of the word (case sensitive).
+          
+          Vowels in the beginning and ending doesn't count. Return empty string if you didn't
+          find any vowel met the above condition. 
+      
+          You may assume that the given string contains English letter only.
+      
+          Example:
+          get_closest_vowel("yogurt") ==> "u"
+          get_closest_vowel("FULL") ==> "U"
+          get_closest_vowel("quick") ==> ""
+          get_closest_vowel("ab") ==> ""
+          
+      -/
+      -- Shape of the answer: either empty or a single vowel taken from the word.
+      -- THE POINT (a): "" is returned exactly when NO interior position is a vowel flanked by
+      -- two consonants -- i.e. the search really was exhaustive over 1 .. len(word)-2.
+      -- THE POINT (b): a non-empty answer is the RIGHTMOST such position -- it qualifies, and
+      -- no position strictly to its right qualifies.
+      for i in (PastaLean.pyRange (0 : Int) (PastaLean.pyLen word -ₚ (2 : Int)) (-(1 : Int)))do
+        -- These invariants establish that the indices i, i-1, and i+1 are always valid,
+        -- which is crucial for proving memory safety of the lookups.
+        let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) < i))
+        let _ := Libraries.passta.pyPassInvariant (decide (i < PastaLean.pyLen word -ₚ (1 : Int)))
+        if h_1 :
+            PastaLean.pyTruthy (_get_closest_vowel'is_vowel'rn word⦋i⦌) &&
+                !PastaLean.pyTruthy (_get_closest_vowel'is_vowel'rn word⦋i -ₚ (1 : Int)⦌) &&
+              !PastaLean.pyTruthy (_get_closest_vowel'is_vowel'rn word⦋i +ₚ (1 : Int)⦌) then
+          
+          let __py_ret_1 := word⦋i⦌
+          return __py_ret_1
+        else
+          let _ := ()
+      return "")
 
 end PastaBench.humaneval.GetClosestVowel
