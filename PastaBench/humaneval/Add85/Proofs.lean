@@ -73,13 +73,9 @@ def add := fun (lst : List Int) ↦
 @[spec]
 theorem add_spec : ⦃⌜PastaLean.pyLen lst > (0 : Int)⌝⦄ add lst ⦃⇓s => ⌜s %ₚ (2 : Int) = (0 : Int)⌝⦄ :=
   by
-  try
-    mvcgen [add, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓⟨cur, s⟩ =>
-      ⌜let i := (cur.prefix.length : Int);
-        ((s %ₚ (2 : Int) = (0 : Int) ∧ (1 : Int) ≤ i) ∧ i < PastaLean.pyLen lst) ∧ i %ₚ (2 : Int) = (1 : Int)⌝
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry; sorry; sorry; pyany_cases <;> grind +locals
-  all_goals sorry
+  mvcgen [add, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · ⇓⟨cur, s⟩ => ⌜s %ₚ (2 : Int) = (0 : Int)⌝
+  all_goals (simp_all (config := { zetaDelta := true }) [taste_ingr, pyTruthy, PyTruthy.truthy] <;> (first | omega | grind | (split_ifs <;> omega) | grind +locals))
 
 theorem add_correct :
     ∀ (lst : List Int),

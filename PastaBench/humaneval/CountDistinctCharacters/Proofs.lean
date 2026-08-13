@@ -39,11 +39,32 @@ def count_distinct_characters := fun (string : String) ↦
 
 attribute [simp] count_distinct_characters
 
+private theorem pySetFromList_len_le {α} [BEq α] (xs : List α) : (PastaLean.pySetFromList xs).length ≤ xs.length := by
+  have gen : ∀ (ys acc : List α),
+      (ys.foldl (fun acc x => if acc.contains x then acc else acc ++ [x]) acc).length ≤ acc.length + ys.length := by
+    intro ys
+    induction ys with
+    | nil => intro acc; simp
+    | cons y ys ih =>
+      intro acc
+      simp only [List.foldl_cons, List.length_cons]
+      by_cases h : acc.contains y = true
+      · rw [if_pos h]; have := ih acc; omega
+      · rw [if_neg h]; have := ih (acc ++ [y]); simp only [List.length_append, List.length_cons, List.length_nil] at this; omega
+  have := gen xs []; simpa [PastaLean.pySetFromList] using this
+
 @[taste_ingr]
 theorem count_distinct_characters_correct :
     ∀ (string : String),
-      (0 : Int) ≤ count_distinct_characters string ∧ count_distinct_characters string ≤ PastaLean.pyLen string :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+      (0 : Int) ≤ count_distinct_characters string ∧ count_distinct_characters string ≤ PastaLean.pyLen string := by
+  intro string
+  refine ⟨pyLen_list_nonneg _, ?_⟩
+  simp only [count_distinct_characters, pyLen, PyLen.pyLen, pySet]
+  have h1 := pySetFromList_len_le (pyIter (pyStringLower string))
+  have h2 : (pyIter (pyStringLower string)).length = string.length := by
+    simp only [pyIter, PyIterable.toPyList, List.length_map, String.length_toList, pyLower_length_invariant]
+  have : (pySetFromList (pyIter (pyStringLower string))).length ≤ string.length := by omega
+  exact_mod_cast this
 
 def count_distinct_characters'rn := fun (string : String) ↦
   PastaLean.pyLen (PastaLean.pySet (PastaLean.pyStringLower string))

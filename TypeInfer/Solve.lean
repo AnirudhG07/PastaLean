@@ -828,7 +828,13 @@ partial def usedInPyAnyPosition (name : String) (json : Json) : Bool :=
           -- Only the builtins whose lambda/context does NOT pin the element type: `filter`/`any`/`all`
           -- take a predicate that usually FIXES the element (`ch not in "aeiou"` ⇒ `String`), so boxing
           -- would clobber a type Lean could infer — exclude them.
-          nameIsArg && ["len", "sum", "sorted", "map", "reversed", "enumerate"].contains fn
+          -- `type(x)` / `isinstance(x, …)` inspect the runtime tag, so an un-inferred `x` must be `PyAny`
+          -- (`PyTyped ?m` is otherwise stuck). For `isinstance` only the FIRST arg is the value.
+          let isTypeIntrospect :=
+            (fn == "type" && nameIsArg) ||
+            (fn == "isinstance" &&
+              ((json.getObjValAs? (Array Json) "args").toOption.getD #[])[0]?.any (nameId? · == some name))
+          isTypeIntrospect || (nameIsArg && ["len", "sum", "sorted", "map", "reversed", "enumerate"].contains fn)
       -- `x is None` / `x is not None` on an otherwise-unknown `x`: box it so `pyIsNone x` resolves
       -- (`PyIsNone PyAny`) instead of leaving `x` an untyped binder that forces `Option _`.
       | some "Compare" =>

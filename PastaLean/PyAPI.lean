@@ -10,6 +10,7 @@ import PastaLean.PyAPI.Dicts
 import PastaLean.PyAPI.Sets
 import PastaLean.PyAPI.CommonProtocols
 import PastaLean.PyAPI.PyAny
+import PastaLean.PyAPI.Types
 import PastaLean.PyAPI.Heap
 import PastaLean.PyAPI.Closures
 import PastaLean.PyAPI.ProofMode.IOStream

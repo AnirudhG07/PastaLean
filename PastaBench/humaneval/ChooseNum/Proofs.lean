@@ -88,9 +88,11 @@ theorem choose_num_spec :
     ⦃⌜True⌝⦄ choose_num x y ⦃⇓result =>
       ⌜result = -(1 : Int) ∨ (result %ₚ (2 : Int) = (0 : Int) ∧ x ≤ result ∧ result ≤ y) ∧ result +ₚ (2 : Int) > y⌝⦄ :=
   by
-  mvcgen [choose_num, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  taste?
-  all_goals sorry
+  mvcgen [choose_num]
+  all_goals
+    first
+      | (simp_all (config := { zetaDelta := true }) [taste_ingr] <;> omega)
+      | (simp_all (config := { zetaDelta := true }) [taste_ingr] <;> pyany_cases <;> grind +locals)
 
 theorem choose_num_correct :
     ∀ x,

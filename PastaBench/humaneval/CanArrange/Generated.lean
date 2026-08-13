@@ -18,8 +18,9 @@ set_option maxHeartbeats 800000
 /- Python source converted to produce the Lean below (the exact input to PastaLean):
 
 from contracts import *
+from typing import *
 
-def can_arrange(arr):
+def can_arrange(arr: List[int]):
     """Create a function which returns the largest index of an element which
     is not greater than or equal to the element immediately preceding it. If
     no such element exists then return -1. The given array will not contain
@@ -52,7 +53,7 @@ def can_arrange(arr):
 
 namespace PastaBench.humaneval.CanArrange
 
-def can_arrange := fun (arr : PyAny) ↦
+def can_arrange := fun (arr : List Int) ↦
   (do
     for i in (PastaLean.pyRange (0 : Int) (PastaLean.pyLen arr -ₚ (1 : Int)) (-(1 : Int)))do
       let _ := Libraries.passta.pyPassInvariant (decide ((1 : Int) ≤ i))
@@ -93,11 +94,11 @@ theorem can_arrange_spec :
             ∀ j ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen arr) (i +ₚ (1 : Int))),
               arr⦋j⦌ ≥ arr⦋j -ₚ (1 : Int)⦌⌝)
         (onReturn := fun _ _ => ⌜True⌝)
-  simp_all (config := { zetaDelta := true }) [taste_ingr]; simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
+  taste?
   all_goals sorry
 
 theorem can_arrange_correct :
-    ∀ (arr : PyAny),
+    ∀ (arr : List Int),
       let result := (can_arrange arr).run;
       (((-(1 : Int) ≤ result ∧ result < PastaLean.pyLen arr) ∧
             (result = -(1 : Int) ∨ (1 : Int) ≤ result ∧ arr⦋result⦌ < arr⦋result -ₚ (1 : Int)⦌)) ∧
@@ -110,7 +111,7 @@ theorem can_arrange_correct :
   intro arr
   exact can_arrange_spec True.intro
 
-def can_arrange'rn := fun (arr : PyAny) ↦
+def can_arrange'rn := fun (arr : List Int) ↦
   Id.run
     (do
       /-

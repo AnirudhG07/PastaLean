@@ -77,6 +77,11 @@ def tasteProfile : Profile where
       ← `(tactic| decide),
       -- `if`-laden goals (floored `pyMod`/`pyFloorDiv` after unfolding) split then close arithmetically.
       ← `(tactic| split_ifs <;> omega),
+      -- A branch whose body needs `taste_ingr` reductions only AFTER the split (e.g. `return [a,b]`
+      -- whose `[a,b]⦋i⦌` is blocked by the enclosing `if`): split first, THEN simp+arith each branch.
+      ← `(tactic| split_ifs <;> simp_all (config := { zetaDelta := true }) [taste_ingr] <;> omega),
+      -- `taste_ingr` normalises `/ₚ` (true division) to `ℚ` division, so `ring` closes area/mean goals.
+      ← `(tactic| simp only [taste_ingr] <;> ring),
       ← `(tactic| ring),
       ← `(tactic| positivity),
       ← `(tactic| linarith),

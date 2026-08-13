@@ -28,6 +28,8 @@ structure TreeNode where
 
 instance : PastaLean.PyTruthy TreeNode where truthy _ := true
 
+instance : PastaLean.PyTyped TreeNode where pyTypeOf _ := TypeInfer.PyType.cls "TreeNode"
+
 instance : Coe TreeNode (Option TreeNode) :=
   ⟨some⟩
 
@@ -43,6 +45,8 @@ structure TreeNode'rn where
 
 instance : PastaLean.PyTruthy TreeNode'rn where truthy _ := true
 
+instance : PastaLean.PyTyped TreeNode'rn where pyTypeOf _ := TypeInfer.PyType.cls "TreeNode"
+
 instance : Coe TreeNode'rn (Option TreeNode'rn) :=
   ⟨some⟩
 
@@ -57,6 +61,8 @@ structure ListNode where
 
 instance : PastaLean.PyTruthy ListNode where truthy _ := true
 
+instance : PastaLean.PyTyped ListNode where pyTypeOf _ := TypeInfer.PyType.cls "ListNode"
+
 instance : Coe ListNode (Option ListNode) :=
   ⟨some⟩
 
@@ -69,6 +75,8 @@ structure ListNode'rn where
   deriving Inhabited, Repr, BEq
 
 instance : PastaLean.PyTruthy ListNode'rn where truthy _ := true
+
+instance : PastaLean.PyTyped ListNode'rn where pyTypeOf _ := TypeInfer.PyType.cls "ListNode"
 
 instance : Coe ListNode'rn (Option ListNode'rn) :=
   ⟨some⟩

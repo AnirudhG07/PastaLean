@@ -832,6 +832,28 @@ def pyNumpyNorm {α} [PyNumpyScalar α] (xs : List α) : Float :=
 :::::
 ::::::
 
+# Achievements
+
+Transpiled, compiled, and **run** across two full benchmarks — the Lean twin's answers matched against the reference test cases.
+
+*LeetCode* — all *2,589* problems:
+
+```html
+<div class="stats">
+  <div class="stat">&gt;90%<small>~2,370 problems compile</small></div>
+  <div class="stat">&gt;95%<small>test cases pass</small></div>
+</div>
+```
+
+*HumanEval+* — all *164* problems:
+
+```html
+<div class="stats">
+  <div class="stat">98.9%<small>test cases pass · 4,773 / 4,827</small></div>
+  <div class="stat">95<small>solutions fully correct</small></div>
+</div>
+```
+
 # Showcases
 
 %%%

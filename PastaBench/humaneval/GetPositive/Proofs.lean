@@ -43,7 +43,12 @@ theorem get_positive_correct :
     ∀ (l : List Int),
       (∀ x ∈ PastaLean.pyIter (get_positive l), x > (0 : Int)) ∧
         ∀ x ∈ PastaLean.pyIter (get_positive l), PastaLean.pyContains l x :=
-  by taste?
+  by
+  intro l
+  simp only [get_positive, pyList, pyFilter, pyIter_list, List.mem_filter, decide_eq_true_eq]
+  refine ⟨fun x hx => hx.2, fun x hx => ?_⟩
+  simp only [pyContains, PyContains.contains]
+  exact List.elem_eq_true_of_mem hx.1
 
 def get_positive'rn := fun (l : List Int) ↦ PastaLean.pyList (PastaLean.pyFilter (fun x ↦ decide (x > (0 : Int))) l)
 

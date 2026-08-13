@@ -69,10 +69,8 @@ namespace PastaBench.humaneval.SpecialFactorial
 -- Factorial(k: int) -> int defined as k!
 def special_factorial := fun (n : Int) ↦
   (do
-    let __unpack_value_1 := ((1 : Int), (1 : Int))
-    let __unpack_pair_1 := __unpack_value_1
-    let mut fac : Int := Prod.fst __unpack_pair_1
-    let mut ans : Int := Prod.snd __unpack_pair_1
+    let mut fac : Int := (1 : Int)
+    let mut ans : Int := (1 : Int)
     for i in (PastaLean.pyRange (n +ₚ (1 : Int)) (2 : Int))do
       -- Standard loop counter bounds.
       let _ := Libraries.passta.pyPassInvariant (decide ((2 : Int) ≤ i) && decide (i ≤ n +ₚ (1 : Int)))
@@ -91,16 +89,28 @@ def special_factorial := fun (n : Int) ↦
       ans := ans *ₚ fac
     return ans : Id _)
 
+private theorem step_pos (a b : Int) (c : Nat) (ha : 1 ≤ a) (hb : 1 ≤ b) :
+    1 ≤ a * (b * (2 + (c : Int))) ∧ 1 ≤ b * (2 + (c : Int)) := by
+  have hc : (0 : Int) ≤ (c : Int) := Int.ofNat_nonneg c
+  have h1 : (1 : Int) ≤ 2 + (c : Int) := by omega
+  have hb2 : 1 ≤ b * (2 + (c : Int)) := by
+    have := mul_le_mul hb h1 (by norm_num) (by linarith); linarith
+  have ha2 : 1 ≤ a * (b * (2 + (c : Int))) := by
+    have := mul_le_mul ha hb2 (by norm_num) (by linarith); linarith
+  exact ⟨ha2, hb2⟩
+
 @[spec]
 theorem special_factorial_spec : ⦃⌜n ≥ (0 : Int)⌝⦄ special_factorial n ⦃⇓ans => ⌜ans ≥ (1 : Int)⌝⦄ :=
   by
-  try
-    mvcgen [special_factorial, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+  mvcgen [special_factorial, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓⟨cur, fac, ans⟩ =>
-      ⌜let i := (cur.prefix.length : Int);
-        ((((2 : Int) ≤ i ∧ i ≤ n +ₚ (1 : Int)) ∧ fac ≥ (1 : Int)) ∧ ans ≥ (1 : Int)) ∧ ans %ₚ fac = (0 : Int)⌝
-  taste?
-  all_goals sorry
+      ⌜fac ≥ (1 : Int) ∧ ans ≥ (1 : Int)⌝
+  all_goals
+    simp_all (config := { zetaDelta := true }) [taste_ingr, PyHMul.hMul]
+  all_goals
+    first
+    | omega
+    | exact step_pos _ _ _ ‹(1 : Int) ≤ _ ∧ (1 : Int) ≤ _›.1 ‹(1 : Int) ≤ _ ∧ (1 : Int) ≤ _›.2
 
 theorem special_factorial_correct :
     ∀ (n : Int),
@@ -133,10 +143,8 @@ def special_factorial'rn := fun (n : Int) ↦
       -- We state a weaker, purely arithmetic postcondition.
       -- A stronger, but likely un-transpilable postcondition would be:
       -- Ensures(n == 0 or Result() % Factorial(n) == 0)
-      let __unpack_value_1 := ((1 : Int), (1 : Int))
-      let __unpack_pair_1 := __unpack_value_1
-      let mut fac : Int := Prod.fst __unpack_pair_1
-      let mut ans : Int := Prod.snd __unpack_pair_1
+      let mut fac : Int := (1 : Int)
+      let mut ans : Int := (1 : Int)
       for i in (PastaLean.pyRange (n +ₚ (1 : Int)) (2 : Int))do
         -- Standard loop counter bounds.
         let _ := Libraries.passta.pyPassInvariant (decide ((2 : Int) ≤ i) && decide (i ≤ n +ₚ (1 : Int)))

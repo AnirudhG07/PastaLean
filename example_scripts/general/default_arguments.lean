@@ -40,6 +40,8 @@ structure Counter where
 
 instance : PastaLean.PyTruthy Counter where truthy _ := true
 
+instance : PastaLean.PyTyped Counter where pyTypeOf _ := TypeInfer.PyType.cls "Counter"
+
 instance : Coe Counter (Option Counter) :=
   ⟨some⟩
 
@@ -58,6 +60,8 @@ structure Counter'rn where
 
 instance : PastaLean.PyTruthy Counter'rn where truthy _ := true
 
+instance : PastaLean.PyTyped Counter'rn where pyTypeOf _ := TypeInfer.PyType.cls "Counter"
+
 instance : Coe Counter'rn (Option Counter'rn) :=
   ⟨some⟩
 
@@ -75,6 +79,8 @@ structure TreeNode where
 
 instance : PastaLean.PyTruthy TreeNode where truthy _ := true
 
+instance : PastaLean.PyTyped TreeNode where pyTypeOf _ := TypeInfer.PyType.cls "TreeNode"
+
 instance : Coe TreeNode (Option TreeNode) :=
   ⟨some⟩
 
@@ -89,6 +95,8 @@ structure TreeNode'rn where
   deriving Inhabited, Repr, BEq
 
 instance : PastaLean.PyTruthy TreeNode'rn where truthy _ := true
+
+instance : PastaLean.PyTyped TreeNode'rn where pyTypeOf _ := TypeInfer.PyType.cls "TreeNode"
 
 instance : Coe TreeNode'rn (Option TreeNode'rn) :=
   ⟨some⟩

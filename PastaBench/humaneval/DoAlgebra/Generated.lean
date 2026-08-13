@@ -104,7 +104,7 @@ def do_algebra := fun (operator : List String) ↦ fun (operand : List Int) ↦
           PastaLean.pyStringJoin ""
               ((PastaLean.pyRange (PastaLean.pyLen operator)).map fun j => PastaLean.pyStr operand⦋j⦌ +ₚ operator⦋j⦌) +ₚ
             PastaLean.pyStr operand⦋PastaLean.pyLen operand -ₚ (1 : Int)⦌)
-    let __py_ret_1 := eval exp
+    let __py_ret_1 := PastaLean.pyEval exp
     return __py_ret_1 : Id _)
 
 @[spec]
@@ -221,7 +221,7 @@ def do_algebra'rn := fun (operator : List String) ↦ fun (operand : List Int) �
                 ((PastaLean.pyRange (PastaLean.pyLen operator)).map fun j =>
                   PastaLean.pyStr operand⦋j⦌ +ₚ operator⦋j⦌) +ₚ
               PastaLean.pyStr operand⦋PastaLean.pyLen operand -ₚ (1 : Int)⦌)
-      let __py_ret_1 := eval exp
+      let __py_ret_1 := PastaLean.pyEval exp
       return __py_ret_1)
 
 end PastaBench.humaneval.DoAlgebra

@@ -50,6 +50,8 @@ def pythonBuiltinMap? (name : String) : Option Lean.Name :=
   | "map" => some ``pyMap
   | "filter" => some ``pyFilter
   | "list" => some ``pyList
+  | "type" => some ``pyType
+  | "eval" => some ``pyEval
   | _ => none
 
 /-- Exact-mode overrides for builtins whose numeric result type changes when `float` lowers to

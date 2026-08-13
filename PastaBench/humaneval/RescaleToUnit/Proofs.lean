@@ -54,82 +54,188 @@ def rescale_to_unit(numbers: List[float]) -> List[float]:
 namespace PastaBench.humaneval.RescaleToUnit
 
 def rescale_to_unit := fun (numbers : List Rat) ↦
-  (do
-    let __unpack_value_1 := (PastaLean.pyMax numbers, PastaLean.pyMin numbers)
-    let __unpack_pair_1 := __unpack_value_1
-    let mut ma : Rat := ↑(Prod.fst __unpack_pair_1)
-    let mut mi : Rat := ↑(Prod.snd __unpack_pair_1)
-    let _ := Libraries.passta.pyPassAssert (decide (ma > mi))
-    let mut k := (1 : Int) /ₚ (ma -ₚ mi)
-    let __py_ret_1 := PastaLean.pyList (PastaLean.pyMap (fun x ↦ (x -ₚ mi) *ₚ k) numbers)
-    return __py_ret_1 : Id _)
+  let ma := PastaLean.pyMax numbers
+  let mi := PastaLean.pyMin numbers
+  let k := (1 : Int) /ₚ (ma -ₚ mi)
+  PastaLean.pyList (PastaLean.pyMap (fun x ↦ (x -ₚ mi) *ₚ k) numbers)
 
-@[spec]
-theorem rescale_to_unit_spec :
-    ⦃⌜PastaLean.pyLen numbers > (0 : Int) ∧ PastaLean.pyMax numbers > PastaLean.pyMin numbers⌝⦄
-      rescale_to_unit numbers ⦃⇓result =>
-      ⌜(((PastaLean.pyLen result = PastaLean.pyLen numbers ∧
-                ∀ v ∈ PastaLean.pyIter result,
-                  -(OfScientific.ofScientific 1 true 9 : Rat) ≤ v ∧
-                    v ≤ (1.0 : Rat) +ₚ (OfScientific.ofScientific 1 true 9 : Rat)) ∧
-              ∃ v ∈ PastaLean.pyIter result, v = (0.0 : Rat)) ∧
-            ∃ v ∈ PastaLean.pyIter result,
-              PastaLean.pyAbs (v -ₚ (1.0 : Rat)) ≤ (OfScientific.ofScientific 1 true 9 : Rat)) ∧
-          ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen numbers)),
-            PastaLean.pyAbs
-                (result⦋i⦌ *ₚ (PastaLean.pyMax numbers -ₚ PastaLean.pyMin numbers) -ₚ
-                  (numbers⦋i⦌ -ₚ PastaLean.pyMin numbers)) ≤
-              (OfScientific.ofScientific 1 true 9 : Rat) *ₚ (PastaLean.pyMax numbers -ₚ PastaLean.pyMin numbers)⌝⦄ :=
-  by
-  mvcgen [rescale_to_unit, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  taste?
-  all_goals sorry
+attribute [simp] rescale_to_unit
 
+private theorem maxfold_spec (x : ℚ) (xs : List ℚ) :
+    (xs.foldl (fun best y => if compare y best == Ordering.gt then y else best) x ∈ x :: xs) ∧
+    ∀ y ∈ x :: xs, y ≤ xs.foldl (fun best y => if compare y best == Ordering.gt then y else best) x := by
+  induction xs generalizing x with
+  | nil => simp
+  | cons z zs ih =>
+    simp only [List.foldl_cons]
+    have hval : (if (compare z x == Ordering.gt) = true then z else x) = z ∨
+                (if (compare z x == Ordering.gt) = true then z else x) = x := by
+      by_cases hc : compare z x = Ordering.gt <;> simp [hc]
+    have hb : x ≤ (if (compare z x == Ordering.gt) = true then z else x) ∧
+              z ≤ (if (compare z x == Ordering.gt) = true then z else x) := by
+      by_cases hc : compare z x = Ordering.gt
+      · have hlt : x < z := compare_gt_iff_gt.mp hc
+        simp only [hc, beq_self_eq_true, if_true]
+        exact ⟨le_of_lt hlt, le_refl z⟩
+      · have hnlt : ¬ x < z := fun h => hc (compare_gt_iff_gt.mpr h)
+        simp only [beq_iff_eq, hc, if_false]
+        exact ⟨le_refl x, not_lt.mp hnlt⟩
+    obtain ⟨hmem, hall⟩ := ih (if (compare z x == Ordering.gt) = true then z else x)
+    refine ⟨?_, ?_⟩
+    · rw [List.mem_cons] at hmem ⊢
+      rcases hmem with h | h
+      · rcases hval with hv | hv <;> rw [h, hv] <;> simp
+      · right; rw [List.mem_cons]; right; exact h
+    · intro y hy
+      rw [List.mem_cons, List.mem_cons] at hy
+      rcases hy with rfl | rfl | hy
+      · exact le_trans hb.1 (hall _ (by simp))
+      · exact le_trans hb.2 (hall _ (by simp))
+      · exact hall y (by rw [List.mem_cons]; right; exact hy)
+
+private theorem minfold_spec (x : ℚ) (xs : List ℚ) :
+    (xs.foldl (fun best y => if compare y best == Ordering.lt then y else best) x ∈ x :: xs) ∧
+    ∀ y ∈ x :: xs, xs.foldl (fun best y => if compare y best == Ordering.lt then y else best) x ≤ y := by
+  induction xs generalizing x with
+  | nil => simp
+  | cons z zs ih =>
+    simp only [List.foldl_cons]
+    have hval : (if (compare z x == Ordering.lt) = true then z else x) = z ∨
+                (if (compare z x == Ordering.lt) = true then z else x) = x := by
+      by_cases hc : compare z x = Ordering.lt <;> simp [hc]
+    have hb : (if (compare z x == Ordering.lt) = true then z else x) ≤ x ∧
+              (if (compare z x == Ordering.lt) = true then z else x) ≤ z := by
+      by_cases hc : compare z x = Ordering.lt
+      · have hlt : z < x := compare_lt_iff_lt.mp hc
+        simp only [hc, beq_self_eq_true, if_true]
+        exact ⟨le_of_lt hlt, le_refl z⟩
+      · have hnlt : ¬ z < x := fun h => hc (compare_lt_iff_lt.mpr h)
+        simp only [beq_iff_eq, hc, if_false]
+        exact ⟨le_refl x, not_lt.mp hnlt⟩
+    obtain ⟨hmem, hall⟩ := ih (if (compare z x == Ordering.lt) = true then z else x)
+    refine ⟨?_, ?_⟩
+    · rw [List.mem_cons] at hmem ⊢
+      rcases hmem with h | h
+      · rcases hval with hv | hv <;> rw [h, hv] <;> simp
+      · right; rw [List.mem_cons]; right; exact h
+    · intro y hy
+      rw [List.mem_cons, List.mem_cons] at hy
+      rcases hy with rfl | rfl | hy
+      · exact le_trans (hall _ (by simp)) hb.1
+      · exact le_trans (hall _ (by simp)) hb.2
+      · exact hall y (by rw [List.mem_cons]; right; exact hy)
+
+private theorem pyMax_props (l : List ℚ) (h : l ≠ []) :
+    PastaLean.pyMax l ∈ l ∧ ∀ y ∈ l, y ≤ PastaLean.pyMax l := by
+  cases l with
+  | nil => exact absurd rfl h
+  | cons a t =>
+    have he : PastaLean.pyMax (a :: t) = t.foldl (fun best y => if compare y best == Ordering.gt then y else best) a := rfl
+    rw [he]; exact maxfold_spec a t
+
+private theorem pyMin_props (l : List ℚ) (h : l ≠ []) :
+    PastaLean.pyMin l ∈ l ∧ ∀ y ∈ l, PastaLean.pyMin l ≤ y := by
+  cases l with
+  | nil => exact absurd rfl h
+  | cons a t =>
+    have he : PastaLean.pyMin (a :: t) = t.foldl (fun best y => if compare y best == Ordering.lt then y else best) a := rfl
+    rw [he]; exact minfold_spec a t
+
+private theorem map_pyGetItem {α β : Type} [Inhabited α] [Inhabited β] (f : α → β) (l : List α) (i : Int)
+    (h0 : 0 ≤ i) (h2 : i < (l.length : Int)) : (l.map f)⦋i⦌ = f (l⦋i⦌) := by
+  have hi : i.toNat < l.length := by omega
+  simp only [pyGetItem, PyGetItem.getItem, pyListGetItem, List.length_map,
+    show (l.length == 0) = false from by simp only [beq_eq_false_iff_ne]; omega,
+    show (i < 0) = False from by simp only [eq_iff_iff, iff_false, not_lt]; omega,
+    decide_false, Bool.false_or, Bool.false_eq_true, if_false,
+    show (decide (i ≥ (l.length:Int))) = false from by simp only [decide_eq_false_iff_not, not_le]; omega]
+  rw [List.getElem?_map, List.getElem?_eq_getElem hi]
+  simp only [Option.map_some]
+
+@[taste_ingr]
 theorem rescale_to_unit_correct :
     ∀ (numbers : List Rat),
-      PastaLean.pyLen numbers > (0 : Int) ∧ PastaLean.pyMax numbers > PastaLean.pyMin numbers →
-        let result := (rescale_to_unit numbers).run;
-        (((PastaLean.pyLen result = PastaLean.pyLen numbers ∧
-                ∀ v ∈ PastaLean.pyIter result,
-                  -(OfScientific.ofScientific 1 true 9 : Rat) ≤ v ∧
-                    v ≤ (1.0 : Rat) +ₚ (OfScientific.ofScientific 1 true 9 : Rat)) ∧
-              ∃ v ∈ PastaLean.pyIter result, v = (0.0 : Rat)) ∧
-            ∃ v ∈ PastaLean.pyIter result,
-              PastaLean.pyAbs (v -ₚ (1.0 : Rat)) ≤ (OfScientific.ofScientific 1 true 9 : Rat)) ∧
-          ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen numbers)),
-            PastaLean.pyAbs
-                (result⦋i⦌ *ₚ (PastaLean.pyMax numbers -ₚ PastaLean.pyMin numbers) -ₚ
-                  (numbers⦋i⦌ -ₚ PastaLean.pyMin numbers)) ≤
-              (OfScientific.ofScientific 1 true 9 : Rat) *ₚ (PastaLean.pyMax numbers -ₚ PastaLean.pyMin numbers) :=
+      let ma := PastaLean.pyMax numbers
+      let mi := PastaLean.pyMin numbers
+      let k := (1 : Int) /ₚ (ma -ₚ mi)
+      PastaLean.pyLen numbers > (0 : Int) →
+        PastaLean.pyMax numbers > PastaLean.pyMin numbers →
+          ((((PastaLean.pyLen (rescale_to_unit numbers) = PastaLean.pyLen numbers ∧
+                    ∀ v ∈ PastaLean.pyIter (rescale_to_unit numbers),
+                      -(OfScientific.ofScientific 1 true 9 : Rat) ≤ v ∧
+                        v ≤ (1.0 : Rat) +ₚ (OfScientific.ofScientific 1 true 9 : Rat)) ∧
+                  ∃ v ∈ PastaLean.pyIter (rescale_to_unit numbers), v = (0.0 : Rat)) ∧
+                ∃ v ∈ PastaLean.pyIter (rescale_to_unit numbers),
+                  PastaLean.pyAbs (v -ₚ (1.0 : Rat)) ≤ (OfScientific.ofScientific 1 true 9 : Rat)) ∧
+              ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen numbers)),
+                PastaLean.pyAbs
+                    ((rescale_to_unit numbers)⦋i⦌ *ₚ (PastaLean.pyMax numbers -ₚ PastaLean.pyMin numbers) -ₚ
+                      (numbers⦋i⦌ -ₚ PastaLean.pyMin numbers)) ≤
+                  (OfScientific.ofScientific 1 true 9 : Rat) *ₚ (PastaLean.pyMax numbers -ₚ PastaLean.pyMin numbers)) ∧
+            ma > mi :=
   by
-  intro numbers hpre
-  exact rescale_to_unit_spec hpre
+  intro numbers ma mi k hlen hpos
+  have hne : numbers ≠ [] := by
+    rintro rfl; simp only [pyLen_nil] at hlen; exact absurd hlen (by norm_num)
+  obtain ⟨hMmem, hMub⟩ := pyMax_props numbers hne
+  obtain ⟨hmmem, hmlb⟩ := pyMin_props numbers hne
+  have hlt : PastaLean.pyMin numbers < PastaLean.pyMax numbers := hpos
+  have hd : (0:ℚ) < PastaLean.pyMax numbers - PastaLean.pyMin numbers := by linarith
+  have hdne : PastaLean.pyMax numbers - PastaLean.pyMin numbers ≠ 0 := ne_of_gt hd
+  have hKpos : (0:ℚ) < (1:ℚ)/(PastaLean.pyMax numbers - PastaLean.pyMin numbers) := div_pos one_pos hd
+  have hDK : (PastaLean.pyMax numbers - PastaLean.pyMin numbers) * ((1:ℚ)/(PastaLean.pyMax numbers - PastaLean.pyMin numbers)) = 1 :=
+    mul_one_div_cancel hdne
+  have hkmul : ((1:ℚ)/(PastaLean.pyMax numbers - PastaLean.pyMin numbers)) * (PastaLean.pyMax numbers - PastaLean.pyMin numbers) = 1 :=
+    one_div_mul_cancel hdne
+  have hres : rescale_to_unit numbers
+      = numbers.map (fun x => (x - PastaLean.pyMin numbers) * ((1:ℚ)/(PastaLean.pyMax numbers - PastaLean.pyMin numbers))) := by
+    simp only [rescale_to_unit, PastaLean.pyList, PastaLean.pyMap, pyIter_list, taste_ingr]; rfl
+  refine ⟨⟨⟨⟨⟨?_, ?_⟩, ?_⟩, ?_⟩, ?_⟩, hpos⟩
+  · -- length
+    simp only [hres, pyLen, PyLen.pyLen, List.length_map]
+  · -- bounds
+    intro v hv
+    rw [pyIter_list, hres, List.mem_map] at hv
+    obtain ⟨x, hxmem, rfl⟩ := hv
+    have hxlb : PastaLean.pyMin numbers ≤ x := hmlb x hxmem
+    have hxub : x ≤ PastaLean.pyMax numbers := hMub x hxmem
+    have hv0 : 0 ≤ (x - PastaLean.pyMin numbers) * ((1:ℚ)/(PastaLean.pyMax numbers - PastaLean.pyMin numbers)) :=
+      mul_nonneg (by linarith) (le_of_lt hKpos)
+    have hv1 : (x - PastaLean.pyMin numbers) * ((1:ℚ)/(PastaLean.pyMax numbers - PastaLean.pyMin numbers)) ≤ 1 := by
+      have := mul_le_mul_of_nonneg_right (show x - PastaLean.pyMin numbers ≤ PastaLean.pyMax numbers - PastaLean.pyMin numbers by linarith) (le_of_lt hKpos)
+      rw [hDK] at this; exact this
+    have he9 : (0:ℚ) ≤ (OfScientific.ofScientific 1 true 9 : Rat) := by norm_num
+    have h10 : (1.0:ℚ) = 1 := by norm_num
+    constructor
+    · linarith
+    · simp only [taste_ingr]; linarith
+  · -- ∃ v = 0
+    rw [pyIter_list, hres]
+    refine ⟨0, List.mem_map.mpr ⟨PastaLean.pyMin numbers, hmmem, by simp⟩, by norm_num⟩
+  · -- ∃ |v - 1| ≤ 1e-9
+    rw [pyIter_list, hres]
+    refine ⟨1, List.mem_map.mpr ⟨PastaLean.pyMax numbers, hMmem, hDK⟩, ?_⟩
+    have h0 : ((1:ℚ) -ₚ (1.0:Rat)) = 0 := by simp only [taste_ingr]; norm_num
+    rw [h0]
+    simp only [pyAbs, PyAbs.pyAbs]
+    norm_num
+  · -- affine relation
+    intro i hi
+    rw [pyIter_list, pyRange_mem] at hi
+    obtain ⟨hi0, hilt⟩ := hi
+    have hilt' : i < (numbers.length : Int) := by simpa [pyLen, PyLen.pyLen] using hilt
+    rw [hres, map_pyGetItem _ numbers i hi0 hilt']
+    simp only [taste_ingr]
+    have harg : (numbers⦋i⦌ - PastaLean.pyMin numbers) * ((1:ℚ)/(PastaLean.pyMax numbers - PastaLean.pyMin numbers)) * (PastaLean.pyMax numbers - PastaLean.pyMin numbers) - (numbers⦋i⦌ - PastaLean.pyMin numbers) = 0 := by
+      linear_combination (numbers⦋i⦌ - PastaLean.pyMin numbers) * hkmul
+    rw [harg]
+    simp only [pyAbs, PyAbs.pyAbs]
+    exact mul_nonneg (by norm_num) (le_of_lt hd)
 
 def rescale_to_unit'rn := fun (numbers : List Float) ↦
-  Id.run
-    (do
-      /-
-       Given list of numbers (of at least two elements), apply a linear transform to that list,
-          such that the smallest number will become 0 and the largest will become 1
-          >>> rescale_to_unit([1.0, 2.0, 3.0, 4.0, 5.0])
-          [0.0, 0.25, 0.5, 0.75, 1.0]
-          
-      -/
-      let _ := Libraries.passta.pyPassRequires (decide (PastaLean.pyLen numbers > (0 : Int)))
-      let _ := Libraries.passta.pyPassRequires (decide (PastaLean.pyMax numbers > PastaLean.pyMin numbers))
-      -- The point: the output is the affine image of the input that maps min -> 0 and max -> 1.
-      -- Stated over floats, so the two "hits the endpoint" facts and the affine law are given with a
-      -- tolerance: `(ma - mi) * (1 / (ma - mi))` is not exactly 1.0 in IEEE-754 (see the recorded
-      -- case [1.0, 2.0, 3.0, 4.88337557029465], whose maximum comes out as 0.9999999999999999).
-      -- `min -> 0` IS exact ((mi - mi) * k == 0.0), so no tolerance is needed there.
-      -- Affine relation, division-free: Result()[i] * (ma - mi) == numbers[i] - mi.
-      let __unpack_value_1 := (PastaLean.pyMax numbers, PastaLean.pyMin numbers)
-      let __unpack_pair_1 := __unpack_value_1
-      let mut ma : Float := ↑(Prod.fst __unpack_pair_1)
-      let mut mi : Float := ↑(Prod.snd __unpack_pair_1)
-      let _ := Libraries.passta.pyPassAssert (decide (ma > mi))
-      let mut k := PastaLean.pyFloat (1 : Int) /ₚ (ma -ₚ mi)
-      let __py_ret_1 := PastaLean.pyList (PastaLean.pyMap (fun x ↦ (x -ₚ mi) *ₚ k) numbers)
-      return __py_ret_1)
+  let ma := PastaLean.pyMax numbers
+  let mi := PastaLean.pyMin numbers
+  let k := PastaLean.pyFloat (1 : Int) /ₚ (ma -ₚ mi)
+  PastaLean.pyList (PastaLean.pyMap (fun x ↦ (x -ₚ mi) *ₚ k) numbers)
 
 end PastaBench.humaneval.RescaleToUnit

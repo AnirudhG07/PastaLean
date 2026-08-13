@@ -36,9 +36,35 @@ def flip_case := fun (string : String) ↦
 
 attribute [simp] flip_case
 
+private theorem interc_cons : ∀ (rest : List String) (x : String),
+    String.intercalate "" (x :: rest) = x ++ String.intercalate "" rest := by
+  intro rest
+  induction rest with
+  | nil => intro x; simp
+  | cons b bs ih =>
+    intro x
+    have step : String.intercalate "" (x :: b :: bs) = String.intercalate "" ((x ++ "" ++ b) :: bs) := rfl
+    rw [step, ih (x ++ "" ++ b), ih b]; simp [String.append_assoc]
+
+private theorem interc_len (l : List String) :
+    (String.intercalate "" l).length = (l.map String.length).sum := by
+  induction l with
+  | nil => simp
+  | cons a rest ih => rw [interc_cons, String.length_append, ih]; simp
+
+private theorem swap_len_one (c : Char) : (PastaLean.pyStringSwapcase c.toString).length = 1 := by
+  simp only [pyStringSwapcase, String.length_ofList, List.length_map, String.length_toList,
+    Char.length_toString]
+
 @[taste_ingr]
 theorem flip_case_correct : ∀ (string : String), PastaLean.pyLen (flip_case string) = PastaLean.pyLen string := by
-  taste?
+  intro s
+  simp only [flip_case, pyStringJoin, pyMap, pyIter, PyIterable.toPyList,
+    PyStringJoin.toJoinString, id_eq, pyLen, PyLen.pyLen]
+  rw [interc_len]
+  simp only [List.map_map, Function.comp_def, id_eq]
+  rw [List.map_congr_left (fun c _ => swap_len_one c)]
+  simp [String.length_toList]
 
 def flip_case'rn := fun (string : String) ↦
   PastaLean.pyStringJoin "" (PastaLean.pyMap (fun x ↦ PastaLean.pyStringSwapcase x) string)

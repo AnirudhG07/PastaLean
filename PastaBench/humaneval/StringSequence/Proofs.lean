@@ -52,7 +52,7 @@ theorem string_sequence_correct :
         PastaLean.pyLen (PastaLean.pyStringSplit (string_sequence n) " ") = n +ₚ (1 : Int) ∧
           PastaLean.pyStringSplit (string_sequence n) " " =
             (PastaLean.pyRange (n +ₚ (1 : Int))).map fun i => PastaLean.pyStr i :=
-  by taste?
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
 
 def string_sequence'rn := fun (n : Int) ↦
   PastaLean.pyStringJoin " " (PastaLean.pyMap PastaLean.pyStr (PastaLean.pyRange (n +ₚ (1 : Int))))

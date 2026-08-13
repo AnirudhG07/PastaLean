@@ -17,10 +17,11 @@ set_option maxHeartbeats 800000
 
 /- Python source converted to produce the Lean below (the exact input to PastaLean):
 
+from typing import *
 from contracts import *
 import math
 
-def max_fill(grid, capacity):
+def max_fill(grid: List[List[int]], capacity: int):
     """
     You are given a rectangular grid of wells. Each row represents a single well,
     and each 1 in a row represents a single unit of water.
@@ -88,7 +89,7 @@ def max_fill(grid, capacity):
 
 namespace PastaBench.humaneval.MaxFill
 
-def max_fill := fun (grid : PyAny) ↦ fun (capacity : Int) ↦
+def max_fill := fun (grid : List (List Int)) ↦ fun (capacity : Int) ↦
   (do
     let mut ans : Int := (0 : Int)
     for l in (PastaLean.pyIter grid)do
@@ -124,11 +125,11 @@ theorem max_fill_spec :
   try
     mvcgen [max_fill, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓⟨cur, ans⟩ => ⌜ans ≥ (0 : Int) ∧ ans ≤ PastaLean.pySum ((PastaLean.pyIter grid).map fun r => PastaLean.pySum r)⌝
-  taste?
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; all_goals sorry
   all_goals sorry
 
 theorem max_fill_correct :
-    ∀ (grid : PyAny),
+    ∀ (grid : List (List Int)),
       ∀ (capacity : Int),
         ((capacity ≥ (1 : Int) ∧ PastaLean.pyLen grid ≥ (1 : Int)) ∧
             ∀ l ∈ PastaLean.pyIter grid, ∀ x ∈ PastaLean.pyIter l, x = (0 : Int) ∨ x = (1 : Int)) →
@@ -146,7 +147,7 @@ theorem max_fill_correct :
   intro grid capacity hpre
   exact max_fill_spec hpre
 
-def max_fill'rn := fun (grid : PyAny) ↦ fun (capacity : Int) ↦
+def max_fill'rn := fun (grid : List (List Int)) ↦ fun (capacity : Int) ↦
   Id.run
     (do
       /-

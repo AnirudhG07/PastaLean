@@ -53,7 +53,7 @@ private noncomputable def _prime_length'is_prime := fun (a : Int) ↦
 
 attribute [simp] _prime_length'is_prime
 
-def prime_length := fun (string : PyAny) ↦ _prime_length'is_prime (PastaLean.pyLen string)
+noncomputable def prime_length := fun (string : PyAny) ↦ _prime_length'is_prime (PastaLean.pyLen string)
 
 attribute [simp] prime_length
 
@@ -64,7 +64,7 @@ theorem prime_length_correct :
         (PastaLean.pyLen string > (1 : Int) ∧
           ∀ d ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen string) (2 : Int)),
             PastaLean.pyLen string %ₚ d ≠ (0 : Int)) :=
-  by taste?
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; intros; sorry
 
 private def _prime_length'is_prime'rn := fun (a : Int) ↦
   !if PastaLean.pyTruthy (decide (a < (2 : Int))) then decide (a < (2 : Int))

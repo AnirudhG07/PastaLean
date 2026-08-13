@@ -87,7 +87,7 @@ theorem eat_correct :
                       remaining -ₚ if need ≤ remaining then need else remaining) ∧
                   (eat number need remaining)⦋(0 : Int)⦌ +ₚ (eat number need remaining)⦋(1 : Int)⦌ =
                     number +ₚ remaining :=
-  by taste?
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; split_ifs <;> simp_all (config := { zetaDelta := true }) [taste_ingr] <;> omega
 
 def eat'rn := fun (number : Int) ↦ fun (need : Int) ↦ fun (remaining : Int) ↦
   if need ≤ remaining then [number +ₚ need, remaining -ₚ need] else [number +ₚ remaining, (0 : Int)]

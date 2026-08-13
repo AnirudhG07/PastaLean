@@ -17,11 +17,12 @@ set_option maxHeartbeats 800000
 
 /- Python source converted to produce the Lean below (the exact input to PastaLean):
 
+from typing import *
 from contracts import *
 import math
 
 
-def sum_squares(lst):
+def sum_squares(lst: List[float]):
     """You are given a list of numbers.
     You need to return the sum of squared numbers in the given list,
     round each element in thelist to the upper int(Ceiling) first.
@@ -48,7 +49,7 @@ def sum_squares(lst):
 
 namespace PastaBench.humaneval.SumSquares133
 
-def sum_squares := fun (lst : PyAny) ↦
+def sum_squares := fun (lst : List Rat) ↦
   (do
     let _ := ()
     let __py_ret_1 := PastaLean.pySum (PastaLean.pyMap (fun x ↦ Libraries.math.pyMathCeil x ^ₚ (2 : Int)) lst)
@@ -67,7 +68,7 @@ theorem sum_squares_spec :
   all_goals sorry
 
 theorem sum_squares_correct :
-    ∀ (lst : PyAny),
+    ∀ (lst : List Rat),
       let result := (sum_squares lst).run;
       ((result = PastaLean.pySum ((PastaLean.pyIter lst).map fun v => Libraries.math.pyMathCeil v ^ₚ (2 : Int)) ∧
             ∀ v ∈ PastaLean.pyIter lst, result ≥ Libraries.math.pyMathCeil v ^ₚ (2 : Int)) ∧
@@ -77,7 +78,7 @@ theorem sum_squares_correct :
   intro lst
   exact sum_squares_spec True.intro
 
-def sum_squares'rn := fun (lst : PyAny) ↦
+def sum_squares'rn := fun (lst : List Float) ↦
   /-
   You are given a list of numbers.
       You need to return the sum of squared numbers in the given list,

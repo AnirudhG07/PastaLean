@@ -29,6 +29,8 @@ structure UnionFind where
 
 instance : PastaLean.PyTruthy UnionFind where truthy _ := true
 
+instance : PastaLean.PyTyped UnionFind where pyTypeOf _ := TypeInfer.PyType.cls "UnionFind"
+
 instance : Coe UnionFind (Option UnionFind) :=
   ⟨some⟩
 
@@ -74,6 +76,8 @@ structure UnionFind'rn where
 
 instance : PastaLean.PyTruthy UnionFind'rn where truthy _ := true
 
+instance : PastaLean.PyTyped UnionFind'rn where pyTypeOf _ := TypeInfer.PyType.cls "UnionFind"
+
 instance : Coe UnionFind'rn (Option UnionFind'rn) :=
   ⟨some⟩
 
@@ -116,6 +120,8 @@ structure Bag where
 
 instance : PastaLean.PyTruthy Bag where truthy _ := true
 
+instance : PastaLean.PyTyped Bag where pyTypeOf _ := TypeInfer.PyType.cls "Bag"
+
 instance : Coe Bag (Option Bag) :=
   ⟨some⟩
 
@@ -132,6 +138,8 @@ structure Bag'rn where
   deriving Inhabited, Repr, BEq
 
 instance : PastaLean.PyTruthy Bag'rn where truthy _ := true
+
+instance : PastaLean.PyTyped Bag'rn where pyTypeOf _ := TypeInfer.PyType.cls "Bag"
 
 instance : Coe Bag'rn (Option Bag'rn) :=
   ⟨some⟩

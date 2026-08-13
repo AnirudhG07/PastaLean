@@ -17,11 +17,12 @@ set_option maxHeartbeats 800000
 
 /- Python source converted to produce the Lean below (the exact input to PastaLean):
 
+from typing import *
 from contracts import *
 import math
 
 
-def sum_squares(lst):
+def sum_squares(lst: List[float]):
     """You are given a list of numbers.
     You need to return the sum of squared numbers in the given list,
     round each element in thelist to the upper int(Ceiling) first.
@@ -48,11 +49,24 @@ def sum_squares(lst):
 
 namespace PastaBench.humaneval.SumSquares133
 
-def sum_squares := fun (lst : PyAny) ↦
+def sum_squares := fun (lst : List Rat) ↦
   (do
     let _ := ()
     let __py_ret_1 := PastaLean.pySum (PastaLean.pyMap (fun x ↦ Libraries.math.pyMathCeil x ^ₚ (2 : Int)) lst)
     return __py_ret_1 : Id _)
+
+private theorem foldl_padd (L : List Int) (s : Int) :
+    L.foldl (fun acc x => acc +ₚ x) s = s + L.sum := by
+  induction L generalizing s with
+  | nil => simp
+  | cons a t ih =>
+    rw [List.foldl_cons, ih (s +ₚ a), List.sum_cons]
+    show (s + a) + t.sum = s + (a + t.sum)
+    ring
+
+private theorem pySum_int (L : List Int) : PastaLean.pySum L = L.sum := by
+  show L.foldl (fun acc x => acc +ₚ PySummand.toSummand x) 0 = L.sum
+  simp only [show ∀ x : Int, PySummand.toSummand x = x from fun _ => rfl, foldl_padd, zero_add]
 
 @[spec]
 theorem sum_squares_spec :
@@ -62,12 +76,23 @@ theorem sum_squares_spec :
             result ≥ (0 : Int)) ∧
           (PastaLean.pyLen lst > (0 : Int) ∨ result = (0 : Int))⌝⦄ :=
   by
-  mvcgen [sum_squares, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  taste?
-  all_goals sorry
+  mvcgen [sum_squares]
+  simp (config := { zetaDelta := true }) only [PastaLean.pyMap, PastaLean.pyIter_list, pySum_int]
+  have hnn : ∀ z ∈ lst.map (fun v => Libraries.math.pyMathCeil v ^ₚ (2 : Int)), (0 : Int) ≤ z := by
+    intro z hz
+    rw [List.mem_map] at hz
+    obtain ⟨v, _, rfl⟩ := hz
+    rw [pyHPow_two]; positivity
+  refine ⟨⟨⟨trivial, ?_⟩, ?_⟩, ?_⟩
+  · intro v hv
+    exact List.single_le_sum hnn _ (List.mem_map_of_mem hv)
+  · exact List.sum_nonneg hnn
+  · rcases lst with _ | ⟨a, t⟩
+    · right; rfl
+    · left; simp only [PastaLean.pyLen, PyLen.pyLen, List.length_cons]; omega
 
 theorem sum_squares_correct :
-    ∀ (lst : PyAny),
+    ∀ (lst : List Rat),
       let result := (sum_squares lst).run;
       ((result = PastaLean.pySum ((PastaLean.pyIter lst).map fun v => Libraries.math.pyMathCeil v ^ₚ (2 : Int)) ∧
             ∀ v ∈ PastaLean.pyIter lst, result ≥ Libraries.math.pyMathCeil v ^ₚ (2 : Int)) ∧
@@ -77,7 +102,7 @@ theorem sum_squares_correct :
   intro lst
   exact sum_squares_spec True.intro
 
-def sum_squares'rn := fun (lst : PyAny) ↦
+def sum_squares'rn := fun (lst : List Float) ↦
   /-
   You are given a list of numbers.
       You need to return the sum of squared numbers in the given list,

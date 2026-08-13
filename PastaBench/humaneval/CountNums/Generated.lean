@@ -18,8 +18,9 @@ set_option maxHeartbeats 800000
 /- Python source converted to produce the Lean below (the exact input to PastaLean):
 
 from contracts import *
+from typing import *
 
-def count_nums(arr):
+def count_nums(arr: List[int]):
     """
     Write a function count_nums which takes an array of integers and returns
     the number of elements which has a sum of digits > 0.
@@ -62,13 +63,13 @@ private def _count_nums'judge := fun (x : Int) ↦
 
 attribute [simp, taste_ingr] _count_nums'judge
 
-def count_nums := fun (arr : PyAny) ↦ PastaLean.pySum (PastaLean.pyMap _count_nums'judge arr)
+def count_nums := fun (arr : List Int) ↦ PastaLean.pySum (PastaLean.pyMap _count_nums'judge arr)
 
 attribute [simp] count_nums
 
 @[taste_ingr]
-theorem count_nums_correct : ∀ (arr : PyAny), (0 : Int) ≤ count_nums arr ∧ count_nums arr ≤ PastaLean.pyLen arr := by
-  taste?
+theorem count_nums_correct : ∀ (arr : List Int), (0 : Int) ≤ count_nums arr ∧ count_nums arr ≤ PastaLean.pyLen arr :=
+  by taste?
 
 private def _count_nums'judge'rn := fun (x : Int) ↦
   Id.run
@@ -83,6 +84,6 @@ private def _count_nums'judge'rn := fun (x : Int) ↦
       let __py_ret_1 := if PastaLean.pySum l > (0 : Int) then (1 : Int) else (0 : Int)
       return __py_ret_1)
 
-def count_nums'rn := fun (arr : PyAny) ↦ PastaLean.pySum (PastaLean.pyMap _count_nums'judge arr)
+def count_nums'rn := fun (arr : List Int) ↦ PastaLean.pySum (PastaLean.pyMap _count_nums'judge arr)
 
 end PastaBench.humaneval.CountNums

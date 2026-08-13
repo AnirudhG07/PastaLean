@@ -116,6 +116,20 @@ function returning a pair (Python `return x, y`), which lowers to `result⦋0⦌
 @[taste_ingr] theorem pyLen_string_nonneg (s : String) : 0 ≤ pyLen s := by
   simp [pyLen, PyLen.pyLen]
 
+/-- Indexing a returned 2-element LIST literal (`return [x, y]`, e.g. `eat` returning `[a, b]`): the
+list analogue of `pyGetItem_pair_*`. `[x,y][0] = x`, `[x,y][1] = y`. -/
+@[taste_ingr] theorem pyGetItem_list_two_zero {α : Type} [Inhabited α] (a b : α) :
+    [a, b]⦋(0 : Int)⦌ = a := by
+  simp [pyGetItem, PyGetItem.getItem, pyListGetItem]
+@[taste_ingr] theorem pyGetItem_list_two_one {α : Type} [Inhabited α] (a b : α) :
+    [a, b]⦋(1 : Int)⦌ = b := by
+  simp [pyGetItem, PyGetItem.getItem, pyListGetItem]
+
+/-- Python TRUE division `a / b` on ints lowers to `a /ₚ b : ℚ` (the `PyHDiv Int Int Rat` instance,
+`↑a / ↑b`). `ring`/`field_simp`/`push_cast` don't see through the `/ₚ` notation, so normalise it to
+plain `ℚ` division — then the float/rational contract goals (`triangle_area`, variance, means) close. -/
+@[taste_ingr] theorem pyDiv_int_int_rat (a b : Int) : (a /ₚ b : Rat) = (a : Rat) / (b : Rat) := rfl
+
 /-- `append` (Python `list.append`) grows the length by one — the key rewrite for any loop whose
 invariant tracks the length of an accumulator built with `pyAppend`. `@[taste_ingr]` so it fires in
 the standard closer. -/

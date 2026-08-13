@@ -44,10 +44,8 @@ namespace PastaBench.humaneval.Digits
 
 def digits := fun (n : Int) ↦
   (do
-    let __unpack_value_1 := (Bool.false, (1 : Int))
-    let __unpack_pair_1 := __unpack_value_1
-    let mut has_odd : Bool := Prod.fst __unpack_pair_1
-    let mut prod : Int := Prod.snd __unpack_pair_1
+    let mut has_odd : Bool := Bool.false
+    let mut prod : Int := (1 : Int)
     for ch in (PastaLean.pyIter (PastaLean.pyStr n))do
       if h_1 : PastaLean.pyInt ch %ₚ (2 : Int) = (1 : Int) then 
         has_odd := Bool.true
@@ -57,14 +55,31 @@ def digits := fun (n : Int) ↦
     let __py_ret_1 := if ¬PastaLean.pyTruthy has_odd = true then (0 : Int) else prod
     return __py_ret_1 : Id _)
 
+private theorem pyMod_two (x : Int) : x %ₚ (2:Int) = x % 2 := by
+  show pyMod x 2 = x % 2
+  have h := Int.emod_nonneg x (by decide : (2:Int) ≠ 0)
+  unfold pyMod
+  simp only [show ((2:Int) == 0) = false from by decide, Bool.false_eq_true, if_false]
+  split_ifs with hc <;>
+    simp only [Bool.or_eq_true, Bool.and_eq_true, decide_eq_true_eq] at hc <;> omega
+
+private theorem mul_odd (a b : Int) (ha : a %ₚ (2:Int) = 1) (hb : b %ₚ (2:Int) = 1) :
+    a * b %ₚ (2:Int) = 1 := by
+  rw [pyMod_two] at *
+  rw [Int.mul_emod, ha, hb]; rfl
+
 @[spec]
 theorem digits_spec : ⦃⌜n ≥ (0 : Int)⌝⦄ digits n ⦃⇓result => ⌜result = (0 : Int) ∨ result %ₚ (2 : Int) = (1 : Int)⌝⦄ :=
   by
-  try
-    mvcgen [digits, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓⟨cur, has_odd, prod⟩ => ⌜True⌝
-  taste?
-  all_goals sorry
+  mvcgen [digits, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · ⇓⟨cur, has_odd, prod⟩ => ⌜prod %ₚ (2 : Int) = 1⌝
+  all_goals
+    simp_all (config := { zetaDelta := true }) only [pyMod_two, PyHMul.hMul]
+  all_goals
+    first
+    | omega
+    | (rw [Int.mul_emod]; simp_all)
+    | (split_ifs <;> simp_all <;> omega)
 
 theorem digits_correct :
     ∀ (n : Int),
@@ -91,10 +106,8 @@ def digits'rn := fun (n : Int) ↦
       -- A product of odd digits is itself odd; if there are none the result is 0. So the result is
       -- always either 0 or odd — never a nonzero even. (The naive "n even ⇒ result 0" is false: n=12
       -- is even yet has the odd digit 1, so digits(12) = 1.)
-      let __unpack_value_1 := (Bool.false, (1 : Int))
-      let __unpack_pair_1 := __unpack_value_1
-      let mut has_odd : Bool := Prod.fst __unpack_pair_1
-      let mut prod : Int := Prod.snd __unpack_pair_1
+      let mut has_odd : Bool := Bool.false
+      let mut prod : Int := (1 : Int)
       for ch in (PastaLean.pyIter (PastaLean.pyStr n))do
         if h_1 : PastaLean.pyInt ch %ₚ (2 : Int) == (1 : Int) then 
           has_odd := Bool.true

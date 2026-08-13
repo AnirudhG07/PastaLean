@@ -96,7 +96,7 @@ theorem maximum_correct :
               (k = (0 : Int) ∨
                 ∀ x ∈ PastaLean.pyIter arr,
                   PastaLean.pyCount arr x > PastaLean.pyCount (maximum arr k) x → x ≤ (maximum arr k)⦋(0 : Int)⦌) :=
-  by taste?
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
 
 def maximum'rn := fun (arr : PyAny) ↦ fun (k : Int) ↦
   PastaLean.pySort

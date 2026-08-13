@@ -18,6 +18,7 @@ set_option maxHeartbeats 800000
 /- Python source converted to produce the Lean below (the exact input to PastaLean):
 
 from contracts import *
+from typing import *
 
 
 # Hoisted to module scope: it captures nothing from `order_by_points`, and a nested `def`
@@ -33,7 +34,7 @@ def weight(x):
     return sum(x_list)
 
 
-def order_by_points(nums):
+def order_by_points(nums: List[int]):
     """
     Write a function which sorts the given list of integers
     in ascending order according to the sum of their digits.
@@ -65,7 +66,7 @@ namespace PastaBench.humaneval.OrderByPoints
 
 -- Hoisted to module scope: it captures nothing from `order_by_points`, and a nested `def`
 -- would make the contracts below reference a name that is not yet bound.
-def weight := fun x ↦
+def weight := fun (x : Int) ↦
   Id.run
     (do
       let mut x_list : List String := PastaLean.pyList (PastaLean.pyStr x)
@@ -80,7 +81,7 @@ def weight := fun x ↦
 
 attribute [simp, taste_ingr] weight
 
-def weight'rn := fun x ↦
+def weight'rn := fun (x : Int) ↦
   Id.run
     (do
       let mut x_list : List String := PastaLean.pyList (PastaLean.pyStr x)
@@ -93,13 +94,13 @@ def weight'rn := fun x ↦
       let __py_ret_1 := PastaLean.pySum x_list
       return __py_ret_1)
 
-def order_by_points := fun (nums : PyAny) ↦ PastaLean.pySortBy weight false nums
+def order_by_points := fun (nums : List Int) ↦ PastaLean.pySortBy weight false nums
 
 attribute [simp] order_by_points
 
 @[taste_ingr]
 theorem order_by_points_correct :
-    ∀ (nums : PyAny),
+    ∀ (nums : List Int),
       ((PastaLean.pyLen (order_by_points nums) = PastaLean.pyLen nums ∧
             ∀ v ∈ PastaLean.pyIter nums, PastaLean.pyCount (order_by_points nums) v = PastaLean.pyCount nums v) ∧
           ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen (order_by_points nums) -ₚ (1 : Int))),
@@ -109,6 +110,6 @@ theorem order_by_points_correct :
             (List.filter (fun y => weight y = weight x) (PastaLean.pyIter nums)).map fun y => y :=
   by taste?
 
-def order_by_points'rn := fun (nums : PyAny) ↦ PastaLean.pySortBy weight false nums
+def order_by_points'rn := fun (nums : List Int) ↦ PastaLean.pySortBy weight false nums
 
 end PastaBench.humaneval.OrderByPoints

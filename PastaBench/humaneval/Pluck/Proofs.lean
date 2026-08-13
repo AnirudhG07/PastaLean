@@ -17,10 +17,11 @@ set_option maxHeartbeats 800000
 
 /- Python source converted to produce the Lean below (the exact input to PastaLean):
 
+from typing import *
 from contracts import *
 
 
-def pluck(arr):
+def pluck(arr: List[int]):
     """
     "Given an array representing a branch of a tree that has non-negative integer nodes
     your task is to pluck one of the nodes and return it.
@@ -65,7 +66,7 @@ def pluck(arr):
 
 namespace PastaBench.humaneval.Pluck
 
-def pluck := fun (arr : PyAny) ↦
+def pluck := fun (arr : List Int) ↦
   (do
     if h_1 : PastaLean.pyTruthy (∀ val ∈ PastaLean.pyIter arr, val %ₚ (2 : Int) = (1 : Int)) then 
       let __py_ret_1 := []
@@ -106,12 +107,16 @@ theorem pluck_spec :
   by
   try
     mvcgen [pluck, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · Invariant.withEarlyReturn (onReturn := fun _ _ => ⌜True⌝) (onContinue := fun _ _ => ⌜True⌝)
-  taste?
+    ·
+      Invariant.withEarlyReturn (onContinue := fun cur b =>
+        ⌜let i := (cur.prefix.length : Int);
+          ((0 : Int) ≤ i ∧ i ≤ PastaLean.pyLen arr) ∧ ∀ j ∈ PastaLean.pyIter (PastaLean.pyRange i), arr⦋j⦌ ≠ min_even⌝)
+        (onReturn := fun _ _ => ⌜True⌝)
+  sorry
   all_goals sorry
 
 theorem pluck_correct :
-    ∀ (arr : PyAny),
+    ∀ (arr : List Int),
       let result := (pluck arr).run;
       (result = [] ∧ ∀ val ∈ PastaLean.pyIter arr, val %ₚ (2 : Int) = (1 : Int)) ∨
         (((((PastaLean.pyLen result = (2 : Int) ∧ result⦋(0 : Int)⦌ %ₚ (2 : Int) = (0 : Int)) ∧
@@ -124,7 +129,7 @@ theorem pluck_correct :
   intro arr
   exact pluck_spec True.intro
 
-def pluck'rn := fun (arr : PyAny) ↦
+def pluck'rn := fun (arr : List Int) ↦
   Id.run
     (do
       /-

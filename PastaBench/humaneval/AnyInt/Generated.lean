@@ -51,13 +51,19 @@ def any_int(x, y, z):
 
 namespace PastaBench.humaneval.AnyInt
 
-def any_int := fun x ↦ fun y ↦ fun z ↦
+def any_int := fun (x : PyAny) ↦ fun (y : PyAny) ↦ fun (z : PyAny) ↦
   (do
-    if h_1 : (type x ≠ int ∨ type y ≠ int) ∨ type z ≠ int then 
+    if h_1 :
+        (PastaLean.pyType x != TypeInfer.PyType.int ∨ PastaLean.pyType y != TypeInfer.PyType.int) ∨
+          PastaLean.pyType z != TypeInfer.PyType.int then
+      
       return Bool.false
     else
       let _ := ()
-    let _ := Libraries.passta.pyPassAssert (type x == int && type y == int && type z == int)
+    let _ :=
+      Libraries.passta.pyPassAssert
+        (PastaLean.pyType x == TypeInfer.PyType.int && PastaLean.pyType y == TypeInfer.PyType.int &&
+          PastaLean.pyType z == TypeInfer.PyType.int)
     let __py_ret_1 :=
       if PastaLean.pyTruthy (x == y +ₚ z) then x == y +ₚ z
       else if PastaLean.pyTruthy (y == x +ₚ z) then y == x +ₚ z else z == y +ₚ x
@@ -66,23 +72,29 @@ def any_int := fun x ↦ fun y ↦ fun z ↦
 @[spec]
 theorem any_int_spec :
     ⦃⌜True⌝⦄ any_int x y z ⦃⇓result =>
-      ⌜result = (((type x = int ∧ type y = int) ∧ type z = int) ∧ ((x = y +ₚ z ∨ y = x +ₚ z) ∨ z = x +ₚ y))⌝⦄ :=
+      ⌜result =
+          (((PastaLean.pyType x == TypeInfer.PyType.int ∧ PastaLean.pyType y == TypeInfer.PyType.int) ∧
+              PastaLean.pyType z == TypeInfer.PyType.int) ∧
+            ((x = y +ₚ z ∨ y = x +ₚ z) ∨ z = x +ₚ y))⌝⦄ :=
   by
   mvcgen [any_int, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
   taste?
   all_goals sorry
 
 theorem any_int_correct :
-    ∀ x,
-      ∀ y,
-        ∀ z,
+    ∀ (x : PyAny),
+      ∀ (y : PyAny),
+        ∀ (z : PyAny),
           let result := (any_int x y z).run;
-          result = (((type x = int ∧ type y = int) ∧ type z = int) ∧ ((x = y +ₚ z ∨ y = x +ₚ z) ∨ z = x +ₚ y)) :=
+          result =
+            (((PastaLean.pyType x == TypeInfer.PyType.int ∧ PastaLean.pyType y == TypeInfer.PyType.int) ∧
+                PastaLean.pyType z == TypeInfer.PyType.int) ∧
+              ((x = y +ₚ z ∨ y = x +ₚ z) ∨ z = x +ₚ y)) :=
   by
   intro x y z
   exact any_int_spec True.intro
 
-def any_int'rn := fun x ↦ fun y ↦ fun z ↦
+def any_int'rn := fun (x : PyAny) ↦ fun (y : PyAny) ↦ fun (z : PyAny) ↦
   Id.run
     (do
       /-
@@ -107,11 +119,17 @@ def any_int'rn := fun x ↦ fun y ↦ fun z ↦
       -- THE POINT: the result is exactly the conjunction of the two stated requirements —
       -- all three arguments are integers AND one of them is the sum of the other two.
       -- Both halves matter: on (1.5, 5, 3.5) the sum condition holds yet the answer is False.
-      if h_1 : type x != int || type y != int || type z != int then 
+      if h_1 :
+          PastaLean.pyType x != TypeInfer.PyType.int || PastaLean.pyType y != TypeInfer.PyType.int ||
+            PastaLean.pyType z != TypeInfer.PyType.int then
+        
         return Bool.false
       else
         let _ := ()
-      let _ := Libraries.passta.pyPassAssert (type x == int && type y == int && type z == int)
+      let _ :=
+        Libraries.passta.pyPassAssert
+          (PastaLean.pyType x == TypeInfer.PyType.int && PastaLean.pyType y == TypeInfer.PyType.int &&
+            PastaLean.pyType z == TypeInfer.PyType.int)
       let __py_ret_1 :=
         if PastaLean.pyTruthy (x == y +ₚ z) then x == y +ₚ z
         else if PastaLean.pyTruthy (y == x +ₚ z) then y == x +ₚ z else z == y +ₚ x

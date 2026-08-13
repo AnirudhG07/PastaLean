@@ -18,8 +18,9 @@ set_option maxHeartbeats 800000
 /- Python source converted to produce the Lean below (the exact input to PastaLean):
 
 from contracts import *
+from typing import *
 
-def exchange(lst1, lst2):
+def exchange(lst1: List[int], lst2: List[int]):
     """In this problem, you will implement a function that takes two lists of numbers,
     and determines whether it is possible to perform an exchange of elements
     between them to make lst1 a list of only even numbers.
@@ -55,7 +56,7 @@ def exchange(lst1, lst2):
 
 namespace PastaBench.humaneval.Exchange
 
-def exchange := fun (lst1 : PyAny) ↦ fun (lst2 : PyAny) ↦
+def exchange := fun (lst1 : List Int) ↦ fun (lst2 : List Int) ↦
   let cnt_odd :=
     (PastaLean.pyLen (PastaLean.pyList (PastaLean.pyFilter (fun x ↦ x %ₚ (2 : Int) == (1 : Int)) lst1)) : Int)
   let cnt_even :=
@@ -66,8 +67,8 @@ attribute [simp] exchange
 
 @[taste_ingr]
 theorem exchange_correct :
-    ∀ (lst1 : PyAny),
-      ∀ (lst2 : PyAny),
+    ∀ (lst1 : List Int),
+      ∀ (lst2 : List Int),
         let cnt_odd :=
           PastaLean.pyLen (PastaLean.pyList (PastaLean.pyFilter (fun x ↦ x %ₚ (2 : Int) == (1 : Int)) lst1))
         let cnt_even :=
@@ -94,7 +95,7 @@ theorem exchange_correct :
               cnt_even ≤ PastaLean.pyLen lst2 :=
   by taste?
 
-def exchange'rn := fun (lst1 : PyAny) ↦ fun (lst2 : PyAny) ↦
+def exchange'rn := fun (lst1 : List Int) ↦ fun (lst2 : List Int) ↦
   let cnt_odd :=
     (PastaLean.pyLen (PastaLean.pyList (PastaLean.pyFilter (fun x ↦ x %ₚ (2 : Int) == (1 : Int)) lst1)) : Int)
   let cnt_even :=

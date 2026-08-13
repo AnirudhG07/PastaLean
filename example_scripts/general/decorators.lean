@@ -123,6 +123,8 @@ structure Vec where
 
 instance : PastaLean.PyTruthy Vec where truthy _ := true
 
+instance : PastaLean.PyTyped Vec where pyTypeOf _ := TypeInfer.PyType.cls "Vec"
+
 instance : Coe Vec (Option Vec) :=
   ⟨some⟩
 
@@ -147,6 +149,8 @@ structure Vec'rn where
   deriving Inhabited, Repr, BEq
 
 instance : PastaLean.PyTruthy Vec'rn where truthy _ := true
+
+instance : PastaLean.PyTyped Vec'rn where pyTypeOf _ := TypeInfer.PyType.cls "Vec"
 
 instance : Coe Vec'rn (Option Vec'rn) :=
   ⟨some⟩

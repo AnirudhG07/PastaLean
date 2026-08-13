@@ -109,7 +109,7 @@ theorem circular_shift_spec :
             result = PastaLean.pySlice (PastaLean.pyStr x) none none (some (-(1 : Int))))⌝⦄ :=
   by
   mvcgen [circular_shift, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  taste?
+  sorry
   all_goals sorry
 
 theorem circular_shift_correct :

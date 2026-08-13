@@ -40,7 +40,7 @@ attribute [simp] triangle_area
 
 @[taste_ingr]
 theorem triangle_area_correct :
-    ∀ (a : Int), ∀ (h : Int), a ≥ (0 : Int) → h ≥ (0 : Int) → (2 : Int) *ₚ triangle_area a h = a *ₚ h := by taste?
+    ∀ (a : Int), ∀ (h : Int), a ≥ (0 : Int) → h ≥ (0 : Int) → (2 : Int) *ₚ triangle_area a h = a *ₚ h := by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; ring
 
 def triangle_area'rn := fun (a : Int) ↦ fun (h : Int) ↦ (show Float from PastaLean.pyFloat (a *ₚ h) /ₚ (2 : Int))
 

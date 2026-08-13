@@ -69,7 +69,7 @@ theorem anti_shuffle_correct :
         ∀ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen (PastaLean.pyStringSplit s " "))),
           PastaLean.pySort (PastaLean.pyStringSplit (anti_shuffle s) " ")⦋i⦌ =
             PastaLean.pySort (PastaLean.pyStringSplit s " ")⦋i⦌ :=
-  by taste?
+  by sorry
 
 def anti_shuffle'rn := fun (s : String) ↦
   let words := (PastaLean.pyStringSplit s " " : List String)

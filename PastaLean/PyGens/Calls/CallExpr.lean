@@ -702,6 +702,22 @@ def callSyntaxTerm (json : Json) : PygenM (TSyntax `term) := do
             return ← buildIOPureApplicationFromArgs argsArray argsCodes fun resolvedArgs => do
               let arg0 := resolvedArgs[0]!
               `($pyListIdent $arg0)
+        | .ok "Name", .ok "isinstance" => do
+            unless argsArray.size == 2 do
+              throwError "isinstance() expects exactly two positional arguments."
+            let xCode ← getCode argsArray[0]! `term
+            let tJson := argsArray[1]!
+            -- `isinstance(x, (t₁, …, tₙ))` — a tuple of types means "any of".
+            if tJson.getObjValAs? String "node_type" == .ok "Tuple" then
+              let elts := (tJson.getObjValAs? (Array Json) "elts").toOption.getD #[]
+              let tags ← elts.filterMapM pyTypeNameTag?
+              unless tags.size == elts.size do
+                throwError "isinstance(): only builtin types (int/float/str/bool/list/dict/tuple/set) are supported."
+              return ← `($(mkIdent ``PastaLean.pyIsInstanceAny) $xCode [$tags,*])
+            match ← pyTypeNameTag? tJson with
+            | some tag => return ← `($(mkIdent ``PastaLean.pyIsInstance) $xCode $tag)
+            | none =>
+                throwError "isinstance(): only builtin types (int/float/str/bool/list/dict/tuple/set) are supported."
         | .ok "Name", .ok "map" => do
             unless keyWordsMap.isEmpty do
               throwError "map() keyword arguments are not supported yet."

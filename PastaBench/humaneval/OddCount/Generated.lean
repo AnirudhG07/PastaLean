@@ -17,10 +17,11 @@ set_option maxHeartbeats 800000
 
 /- Python source converted to produce the Lean below (the exact input to PastaLean):
 
+from typing import *
 from contracts import *
 
 
-def odd_count(lst):
+def odd_count(lst: List[str]):
     """Given a list of strings, where each string consists of only digits, return a list.
     Each element i of the output should be "the number of odd elements in the
     string i of the input." where all the i's should be replaced by the number
@@ -78,7 +79,7 @@ def odd_count(lst):
 
 namespace PastaBench.humaneval.OddCount
 
-def odd_count := fun (lst : PyAny) ↦
+def odd_count := fun (lst : List String) ↦
   (do
     let mut ans : List String := []
     let mut template : String := "the number of odd elements in the string i of the input."
@@ -139,11 +140,11 @@ theorem odd_count_spec :
                   (PastaLean.pyLen
                     (PastaLean.pyList
                       (PastaLean.pyFilter (fun ch ↦ PastaLean.pyInt ch %ₚ (2 : Int) = (1 : Int)) lst⦋k⦌))))⌝
-  taste?
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
 theorem odd_count_correct :
-    ∀ (lst : PyAny),
+    ∀ (lst : List String),
       PastaLean.pyAll
           ((PastaLean.pyIter lst).flatMap fun s => (PastaLean.pyIter s).map fun c => PastaLean.pyIsDecimal c) →
         let ans := (odd_count lst).run;
@@ -159,7 +160,7 @@ theorem odd_count_correct :
   intro lst hpre
   exact odd_count_spec hpre
 
-def odd_count'rn := fun (lst : PyAny) ↦
+def odd_count'rn := fun (lst : List String) ↦
   Id.run
     (do
       /-

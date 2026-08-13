@@ -18,8 +18,9 @@ set_option maxHeartbeats 800000
 /- Python source converted to produce the Lean below (the exact input to PastaLean):
 
 from contracts import *
+from typing import *
 
-def can_arrange(arr):
+def can_arrange(arr: List[int]):
     """Create a function which returns the largest index of an element which
     is not greater than or equal to the element immediately preceding it. If
     no such element exists then return -1. The given array will not contain
@@ -52,7 +53,7 @@ def can_arrange(arr):
 
 namespace PastaBench.humaneval.CanArrange
 
-def can_arrange := fun (arr : PyAny) ↦
+def can_arrange := fun (arr : List Int) ↦
   (do
     for i in (PastaLean.pyRange (0 : Int) (PastaLean.pyLen arr -ₚ (1 : Int)) (-(1 : Int)))do
       let _ := Libraries.passta.pyPassInvariant (decide ((1 : Int) ≤ i))
@@ -72,6 +73,43 @@ def can_arrange := fun (arr : PyAny) ↦
     let __py_ret_1 := -(1 : Int)
     return __py_ret_1 : Id _)
 
+private theorem desc_eq (n : Int) : pyRange 0 (n - 1) (-1)
+    = (List.range' 0 (n - 1).toNat 1).map (fun i : Nat => (n - 1) - (i : Int)) := by
+  unfold pyRange
+  simp only [gt_iff_lt, Int.reduceLT, ↓reduceIte, Int.reduceNeg, neg_neg,
+    List.pure_def, List.bind_eq_flatMap, List.flatMap_singleton, List.map_map]
+  norm_num
+  rfl
+
+private theorem mem_desc {n x : Int} : x ∈ pyRange 0 (n - 1) (-1) ↔ 1 ≤ x ∧ x < n := by
+  rw [desc_eq]
+  simp only [List.mem_map, List.mem_range']
+  constructor
+  · rintro ⟨i, hi, rfl⟩; omega
+  · rintro ⟨h1, h2⟩; exact ⟨(n - 1 - x).toNat, by omega, by omega⟩
+
+private theorem desc_pairwise (n : Int) : (pyRange 0 (n - 1) (-1)).Pairwise (· > ·) := by
+  rw [desc_eq, List.pairwise_map]
+  apply List.Pairwise.imp _ (List.pairwise_lt_range' (s := 0) (n := (n - 1).toNat) (step := 1))
+  intro a b _; simp only [gt_iff_lt]; omega
+
+/-- Structural stability of the descending scan: any index `j` strictly above the split point `c`
+lies in the already-scanned prefix. -/
+private theorem desc_split_mem {n : Int} {pref suff : List Int} {c j : Int}
+    (hL : pyRange 0 (n - 1) (-1) = pref ++ c :: suff)
+    (hj : c < j) (hjn : j < n) (hj1 : 1 ≤ j) : j ∈ pref := by
+  have hjmem : j ∈ pyRange 0 (n - 1) (-1) := mem_desc.mpr ⟨hj1, hjn⟩
+  have hp := desc_pairwise n
+  rw [hL] at hjmem hp
+  rw [List.mem_append, List.mem_cons] at hjmem
+  rcases hjmem with h | h | h
+  · exact h
+  · omega
+  · exfalso
+    rw [List.pairwise_append, List.pairwise_cons] at hp
+    obtain ⟨_, ⟨hcs, _⟩, _⟩ := hp
+    have := hcs j h; simp only [gt_iff_lt] at this; omega
+
 @[spec]
 theorem can_arrange_spec :
     ⦃⌜True⌝⦄ can_arrange arr ⦃⇓result =>
@@ -84,14 +122,69 @@ theorem can_arrange_spec :
             ∀ j ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen arr) (1 : Int)),
               arr⦋j⦌ ≥ arr⦋j -ₚ (1 : Int)⦌)⌝⦄ :=
   by
-  try
-    mvcgen [can_arrange, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · Invariant.withEarlyReturn (onReturn := fun _ _ => ⌜True⌝) (onContinue := fun _ _ => ⌜True⌝)
-  taste?
-  all_goals sorry
+  mvcgen [can_arrange, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+  ·
+    Invariant.withEarlyReturn
+      (onContinue := fun cur b =>
+        ⌜∀ j ∈ cur.prefix, ((1 : Int) ≤ j ∧ j < PastaLean.pyLen arr) ∧ arr⦋j⦌ ≥ arr⦋j -ₚ (1 : Int)⦌⌝)
+      (onReturn := fun r _ =>
+        ⌜(((-(1 : Int) ≤ r ∧ r < PastaLean.pyLen arr) ∧
+              (r = -(1 : Int) ∨ (1 : Int) ≤ r ∧ arr⦋r⦌ < arr⦋r -ₚ (1 : Int)⦌)) ∧
+            (r = -(1 : Int) ∨
+              ∀ j ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen arr) (r +ₚ (1 : Int))),
+                arr⦋j⦌ ≥ arr⦋j -ₚ (1 : Int)⦌)) ∧
+          (r ≠ -(1 : Int) ∨
+            ∀ j ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen arr) (1 : Int)),
+              arr⦋j⦌ ≥ arr⦋j -ₚ (1 : Int)⦌)⌝)
+  all_goals simp only [pySub_int, pyAdd_int, pyIter_list, gt_iff_lt, ge_iff_le, not_le,
+    not_lt, not_not] at *
+  · -- vc1: descent found, return `cur`
+    rename_i pref cur suff hL b hguard hinv
+    have hcur : 1 ≤ cur ∧ cur < pyLen arr := mem_desc.mp (by rw [hL]; simp)
+    have hmax : ∀ j ∈ pref, (1 ≤ j ∧ j < pyLen arr) ∧ arr⦋j - 1⦌ ≤ arr⦋j⦌ := by
+      rcases hinv with ⟨_, h⟩ | ⟨a, _, hnil, _⟩
+      · exact h
+      · exact absurd hnil (by simp)
+    refine Or.inr ⟨cur, rfl, trivial, ⟨⟨⟨⟨by omega, hcur.2⟩, Or.inr ⟨hcur.1, hguard⟩⟩,
+      Or.inr ?_⟩, Or.inl (by omega)⟩⟩
+    intro j hj
+    rw [pyRange_mem_start] at hj
+    exact (hmax j (desc_split_mem hL (by omega) hj.2 (by omega))).2
+  · -- vc2: no descent, continue
+    rename_i pref cur suff hL b hguard hinv
+    have hcur : 1 ≤ cur ∧ cur < pyLen arr := mem_desc.mp (by rw [hL]; simp)
+    have hmax : ∀ j ∈ pref, (1 ≤ j ∧ j < pyLen arr) ∧ arr⦋j - 1⦌ ≤ arr⦋j⦌ := by
+      rcases hinv with ⟨_, h⟩ | ⟨a, _, hnil, _⟩
+      · exact h
+      · exact absurd hnil (by simp)
+    refine Or.inl ⟨trivial, ?_⟩
+    intro j hj
+    rw [List.mem_append, List.mem_singleton] at hj
+    rcases hj with hj | rfl
+    · exact hmax j hj
+    · exact ⟨hcur, hguard⟩
+  · -- vc3: initial
+    exact Or.inl ⟨trivial, by simp⟩
+  · -- vc4: loop finished, return -1
+    rename_i r jp hx pyret hinv
+    have hlen : 0 ≤ pyLen arr := pyLen_list_nonneg arr
+    have hmax : ∀ j ∈ pyRange 0 (pyLen arr - 1) (-1),
+        (1 ≤ j ∧ j < pyLen arr) ∧ arr⦋j - 1⦌ ≤ arr⦋j⦌ := by
+      rcases hinv with ⟨_, h⟩ | ⟨a, hsome, _⟩
+      · exact h
+      · rw [hx] at hsome; exact absurd hsome.symm (by simp)
+    refine ⟨⟨⟨by omega, by omega⟩, Or.inl (by omega)⟩, Or.inl (by omega)⟩, Or.inr ?_⟩
+    intro j hj
+    rw [pyRange_mem_start] at hj
+    exact (hmax j (mem_desc.mpr ⟨hj.1, hj.2⟩)).2
+  · -- vc5: early return with value `a`
+    rename_i r jp a hx hinv
+    rcases hinv with ⟨hnone, _⟩ | ⟨a', hsome, _, hpost⟩
+    · rw [hx] at hnone; exact absurd hnone (by simp)
+    · rw [hx] at hsome; injection hsome with e; subst e; exact hpost
 
 theorem can_arrange_correct :
-    ∀ (arr : PyAny),
+    ∀ (arr : List Int),
       let result := (can_arrange arr).run;
       (((-(1 : Int) ≤ result ∧ result < PastaLean.pyLen arr) ∧
             (result = -(1 : Int) ∨ (1 : Int) ≤ result ∧ arr⦋result⦌ < arr⦋result -ₚ (1 : Int)⦌)) ∧
@@ -104,7 +197,7 @@ theorem can_arrange_correct :
   intro arr
   exact can_arrange_spec True.intro
 
-def can_arrange'rn := fun (arr : PyAny) ↦
+def can_arrange'rn := fun (arr : List Int) ↦
   Id.run
     (do
       /-

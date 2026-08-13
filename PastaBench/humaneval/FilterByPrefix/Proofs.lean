@@ -52,7 +52,14 @@ theorem filter_by_prefix_correct :
               ((List.filter (fun s => PastaLean.pyTruthy (PastaLean.pyStringStartswith s «prefix»))
                     (PastaLean.pyIter strings)).map
                 fun s => s) :=
-  by taste?
+  by
+  intro strings pfx
+  simp only [filter_by_prefix, pyList, pyFilter, pyIter_list, List.mem_filter]
+  refine ⟨⟨fun s hs => hs.2, fun s hs => ?_⟩, ?_⟩
+  · simp only [pyContains, PyContains.contains]
+    exact List.elem_eq_true_of_mem hs.1
+  · simp only [pyLen, PyLen.pyLen, List.length_map]
+    rfl
 
 def filter_by_prefix'rn := fun (strings : List String) ↦ fun («prefix» : String) ↦
   PastaLean.pyList (PastaLean.pyFilter (fun x ↦ PastaLean.pyStringStartswith x «prefix») strings)

@@ -653,6 +653,10 @@ def classDefSyntax : (kind : SyntaxNodeKind) → Json → PygenM (TSyntax kind)
         -- the `none` case. Without this, `if node:` on a bare-typed `ListNode`/`TreeNode` has no instance.
         members := members.push
           (← `(command| instance : PastaLean.PyTruthy $nameId where truthy _ := true))
+        -- `type(instance)` / `isinstance(instance, C)` report the class: `PyType.cls "C"`.
+        members := members.push
+          (← `(command| instance : PastaLean.PyTyped $nameId where
+                 pyTypeOf _ := TypeInfer.PyType.cls $(Syntax.mkStrLit rawName)))
         -- Lift a bare node into `Option C` so a nullable cursor (`curr = head`, later `curr = curr.next`)
         -- ascribed `Option C` takes its bare initial value, and `curr = ListNode(...)` reassignments fit.
         members := members.push

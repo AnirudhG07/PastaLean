@@ -1,5 +1,5 @@
 
-def order_by_points(nums):
+def order_by_points(nums: List[int]):
     """
     Write a function which sorts the given list of integers
     in ascending order according to the sum of their digits.

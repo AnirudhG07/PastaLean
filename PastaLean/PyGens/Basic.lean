@@ -726,6 +726,33 @@ def boolOpSyntax : (kind : SyntaxNodeKind) → Json →
     `(doElem| if $guard then $[$effects:doElem]*)
   | _, _ => throwError s!"Unsupported syntax category for BoolOp node"
 
+/-- A bare Python type-name `Name` node → its `TypeInfer.PyType` tag syntax, for `type(x) == int` and
+`isinstance(x, int)`. Builtin types map to element-less `PyType` heads (Python's `list`/`dict`/… type
+objects carry no element); a registered user class `Trie` maps to `PyType.cls "Trie"`. `none` for
+anything that is not a type name. -/
+def pyTypeNameTag? (json : Json) : PygenM (Option (TSyntax `term)) := do
+  if json.getObjValAs? String "node_type" != .ok "Name" then return none
+  match json.getObjValAs? String "id" with
+  | .ok "int"   => return some (← `(TypeInfer.PyType.int))
+  | .ok "float" => return some (← `(TypeInfer.PyType.float))
+  | .ok "str"   => return some (← `(TypeInfer.PyType.str))
+  | .ok "bool"  => return some (← `(TypeInfer.PyType.bool))
+  | .ok "list"  => return some (← `(TypeInfer.PyType.list TypeInfer.PyType.unknown))
+  | .ok "dict"  => return some (← `(TypeInfer.PyType.dict TypeInfer.PyType.unknown TypeInfer.PyType.unknown))
+  | .ok "tuple" => return some (← `(TypeInfer.PyType.tuple []))
+  | .ok "set"   => return some (← `(TypeInfer.PyType.set TypeInfer.PyType.unknown))
+  | .ok other   =>
+      -- A user class used as a type (`type(x) == Trie`, `isinstance(x, Trie)`) → its `.cls` tag.
+      if ← isRegisteredClass other then
+        return some (← `(TypeInfer.PyType.cls $(Syntax.mkStrLit other)))
+      return none
+  | _ => return none
+
+/-- Is `json` a call to the builtin `type(...)`? -/
+def isTypeCall (json : Json) : Bool :=
+  json.getObjValAs? String "node_type" == .ok "Call" &&
+    ((json.getObjVal? "func").toOption.bind (·.getObjValAs? String "id" |>.toOption)) == some "type"
+
 @[pygen "Compare"]
 def compareSyntax : (kind : SyntaxNodeKind) → Json →
     PygenM (TSyntax kind)
@@ -736,8 +763,20 @@ def compareSyntax : (kind : SyntaxNodeKind) → Json →
       s!"Compare node does not have a 'left' field or it is not a JSON value: {json}"
     let .ok rightJson := json.getObjValAs? Json "right" | throwError
       s!"Compare node does not have a 'right' field or it is not a JSON value: {json}"
-    let leftCode ← getCode leftJson `term
-    let rightCode ← getCode rightJson `term
+    -- `type(x) == int` / `type(x) != int`: when one operand is a `type(...)` call, the bare type-name
+    -- on the other side lowers to its `PyTypeName` tag (so `pyType x == PyTypeName.int` compares).
+    let typeCmp := isTypeCall leftJson || isTypeCall rightJson
+    let sideCode (j : Json) : PygenM (TSyntax `term) := do
+      if typeCmp then
+        match ← pyTypeNameTag? j with | some t => pure t | none => getCode j `term
+      else getCode j `term
+    let leftCode ← sideCode leftJson
+    let rightCode ← sideCode rightJson
+    -- A `type(x) == T` check is a runtime `Bool` (never a proof goal), and `PyType` has `BEq` but no
+    -- `DecidableEq`, so force the Bool `==`/`!=` form rather than the prop `=`/`≠` exact mode would emit.
+    if typeCmp then
+      return ← withPropCondition false (compareApplyTerm op leftJson leftCode rightCode
+        (rightJson := some rightJson))
     let classCmp := json.getObjValAs? Bool "_class_cmp" == .ok true
     compareApplyTerm op leftJson leftCode rightCode (rightJson := some rightJson) (classCmp := classCmp)
   | _, _ => throwError s!"Unsupported syntax category for Compare node"

@@ -1,8 +1,9 @@
+from typing import *
 from contracts import *
 import math
 
 
-def sum_squares(lst):
+def sum_squares(lst: List[float]):
     """You are given a list of numbers.
     You need to return the sum of squared numbers in the given list,
     round each element in thelist to the upper int(Ceiling) first.

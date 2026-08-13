@@ -94,6 +94,61 @@ def sum_squares := fun (lst : List Int) ↦
               else if k %ₚ (4 : Int) = (0 : Int) then lst⦋k⦌ ^ₚ (3 : Int) else lst⦋k⦌))
     return ans : Id _)
 
+open PastaLean in
+/-- Bridge: Python indexing at a nonnegative in-bounds index equals native `getElem!`. -/
+private theorem pyGetItem_ofNat (l : List Int) (k : Nat) (h : k < l.length) :
+    l⦋(Int.ofNat k)⦌ = l[k]! := by
+  simp only [pyGetItem, PyGetItem.getItem, pyListGetItem, Int.ofNat_eq_natCast]
+  rw [if_neg (show ¬((l.length == 0) = true) by simp only [beq_iff_eq]; omega)]
+  rw [if_neg (show ¬ ((k : Int) < 0) by omega)]
+  rw [if_neg (show ¬((decide ((k : Int) < 0) || decide ((k : Int) ≥ (↑l.length : Int))) = true) by simp only [decide_eq_true_eq, Bool.or_eq_true]; omega)]
+  rw [show ((k : Int)).toNat = k by simp]
+  simp [getElem!_def, List.getElem?_eq_getElem h]
+
+open PastaLean in
+/-- `enumerate`-fold reindexed as a `range`-fold: mapping a binary body over the enumerated pairs
+equals mapping over `range` with the element pulled by index. -/
+private theorem enum_map (f : Int → Int → Int) :
+    ∀ (l : List Int) (s : Int),
+      (pyEnumerate l s).map (fun p => f p.1 p.2)
+        = (List.range l.length).map (fun k => f (s + Int.ofNat k) (l[k]!)) := by
+  intro l
+  induction l with
+  | nil => intro s; rfl
+  | cons x xs ih =>
+    intro s
+    have hcons : pyEnumerate (x :: xs) s = (s, x) :: pyEnumerate xs (s + 1) := rfl
+    rw [hcons, List.map_cons, List.length_cons, List.range_succ_eq_map, List.map_cons,
+      List.map_map, ih (s + 1)]
+    congr 1
+    · simp
+    · apply List.map_congr_left
+      intro k _
+      simp only [Function.comp, List.getElem!_cons_succ]
+      congr 1
+      simp only [Int.ofNat_eq_natCast, Nat.succ_eq_add_one, Nat.cast_add, Nat.cast_one]
+      ring
+
+open PastaLean in
+private theorem enum_sum_list_eq (lst : List Int) :
+    ((pyEnumerate lst).map fun p : Int × Int =>
+        if p.1 %ₚ (3 : Int) = (0 : Int) then p.2 ^ₚ (2 : Int)
+        else if p.1 %ₚ (4 : Int) = (0 : Int) then p.2 ^ₚ (3 : Int) else p.2)
+      = (pyRange (pyLen lst)).map fun k =>
+          if k %ₚ (3 : Int) = (0 : Int) then lst⦋k⦌ ^ₚ (2 : Int)
+          else if k %ₚ (4 : Int) = (0 : Int) then lst⦋k⦌ ^ₚ (3 : Int) else lst⦋k⦌ := by
+  have hlen : (pyLen lst).toNat = lst.length := by simp [pyLen, PyLen.pyLen]
+  rw [show pyEnumerate lst = pyEnumerate lst 0 from rfl]
+  rw [enum_map (fun i x =>
+    if i %ₚ (3 : Int) = (0 : Int) then x ^ₚ (2 : Int)
+    else if i %ₚ (4 : Int) = (0 : Int) then x ^ₚ (3 : Int) else x) lst 0]
+  rw [pyRange_eq_ofNat, List.map_map, hlen]
+  apply List.map_congr_left
+  intro k hk
+  rw [List.mem_range] at hk
+  simp only [Function.comp, zero_add]
+  rw [pyGetItem_ofNat lst k hk]
+
 @[spec]
 theorem sum_squares_spec :
     ⦃⌜True⌝⦄ sum_squares lst ⦃⇓ans =>
@@ -104,9 +159,24 @@ theorem sum_squares_spec :
                 else if k %ₚ (4 : Int) = (0 : Int) then lst⦋k⦌ ^ₚ (3 : Int) else lst⦋k⦌) ∧
           (PastaLean.pyLen lst > (0 : Int) ∨ ans = (0 : Int))⌝⦄ :=
   by
-  mvcgen [sum_squares, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  taste?
-  all_goals sorry
+  mvcgen [sum_squares, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · ⇓⟨cur, ans⟩ =>
+      ⌜ans =
+          PastaLean.pySum
+            ((cur.prefix).map fun p : Int × Int =>
+              if p.1 %ₚ (3 : Int) = (0 : Int) then p.2 ^ₚ (2 : Int)
+              else if p.1 %ₚ (4 : Int) = (0 : Int) then p.2 ^ₚ (3 : Int) else p.2)⌝
+  case vc5.post.success =>
+    rename_i h
+    simp only [PastaLean.pyIter_list] at h
+    rw [enum_sum_list_eq] at h
+    refine ⟨h, ?_⟩
+    rcases lst with _ | ⟨x, xs⟩
+    · right; simp [PastaLean.pySum] at h ⊢; exact h
+    · left; simp [PastaLean.pyLen, PastaLean.PyLen.pyLen]
+  all_goals
+    simp_all (config := { zetaDelta := true })
+      [taste_ingr, pySum, PastaLean.PySummand.toSummand, List.map_append, List.foldl_append]
 
 theorem sum_squares_correct :
     ∀ (lst : List Int),

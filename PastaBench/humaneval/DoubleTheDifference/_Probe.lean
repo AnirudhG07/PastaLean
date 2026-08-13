@@ -68,36 +68,6 @@ def double_the_difference := fun (lst : List Int) ↦
     let _ := Libraries.passta.pyPassAssert (decide (ans ≥ (0 : Int)))
     return ans : Id _)
 
-private theorem pyMod_two (a : Int) : a %ₚ (2 : Int) = a % 2 := by
-  show PastaLean.pyMod a 2 = a % 2
-  have h1 : 0 ≤ a % 2 := Int.emod_nonneg a (by decide)
-  unfold PastaLean.pyMod; split_ifs <;> simp_all
-
-private theorem foldl_padd_shift (l : List Int) (s : Int) :
-    l.foldl (fun acc x => acc +ₚ x) s = s + l.foldl (fun acc x => acc +ₚ x) 0 := by
-  induction l generalizing s with
-  | nil => simp
-  | cons h t ih =>
-    simp only [List.foldl_cons]
-    rw [ih (s +ₚ h), ih (0 +ₚ h)]
-    simp only [show ∀ x y : Int, x +ₚ y = x + y from fun _ _ => rfl]
-    ring
-
-private theorem pySum_int_append (a b : List Int) :
-    PastaLean.pySum (a ++ b) = PastaLean.pySum a + PastaLean.pySum b := by
-  simp only [PastaLean.pySum, PastaLean.pyIter_list, PySummand.toSummand, id_eq, List.foldl_append]
-  rw [foldl_padd_shift b (a.foldl (fun acc x => acc +ₚ x) 0)]
-
-private theorem pySum_int_singleton (x : Int) : PastaLean.pySum [x] = x := by
-  simp only [PastaLean.pySum, PastaLean.pyIter_list, PySummand.toSummand, id_eq,
-    List.foldl_cons, List.foldl_nil]
-  rw [show (0 : Int) +ₚ x = 0 + x from rfl, zero_add]
-
-private theorem sq_odd_emod_two {c : Int} (h : c % 2 = 1) : c * c % 2 = 1 := by
-  rw [Int.mul_emod, h]; decide
-
-private theorem pySum_int_nil : PastaLean.pySum ([] : List Int) = 0 := rfl
-
 @[spec]
 theorem double_the_difference_spec :
     ⦃⌜True⌝⦄ double_the_difference lst ⦃⇓ans =>
@@ -140,32 +110,7 @@ theorem double_the_difference_spec :
                     fun v => v) %ₚ
                 (2 : Int)) ∧
           ans ≥ (0 : Int)⌝
-  all_goals
-    simp only [PastaLean.pyIter_list, List.filter_append, List.map_append, pySum_int_append,
-      List.filter_cons, List.filter_nil, List.map_cons, List.map_nil, List.append_nil,
-      pySum_int_singleton, pyHPow_two, PastaLean.pyLen, PastaLean.PyLen.pyLen,
-      List.length_append, List.length_cons, List.length_nil, List.length_map, pyMod_two,
-      show ∀ x y : Int, x +ₚ y = x + y from fun _ _ => rfl,
-      show ∀ x y : Int, x *ₚ y = x * y from fun _ _ => rfl] at *
-  · -- vc1.step.isTrue: contributing element
-    obtain ⟨⟨hsum, hpar⟩, hpos⟩ := ‹(_ = PastaLean.pySum _ ∧ _) ∧ _ ≥ (0:Int)›
-    have hg := ‹(((_:Int) % 2 = 1 ∧ (_:Int) > 0) ∧
-      (!PastaLean.pyStrContainsSubstr (PastaLean.pyStr (_:Int)) ".") = true)›
-    have hsq := sq_odd_emod_two hg.1.1
-    simp (config := { zetaDelta := true }) only [decide_eq_true_eq, hg, and_self, true_and,
-      and_true, if_true, List.map_cons, List.map_nil, pySum_int_singleton, List.length_cons,
-      List.length_nil, pyHPow_two, pow_two,
-      show ∀ x y : Int, x +ₚ y = x + y from fun _ _ => rfl,
-      show ∀ x y : Int, x *ₚ y = x * y from fun _ _ => rfl] at *
-    refine ⟨⟨by omega, by omega⟩, by nlinarith [hpos]⟩
-  · -- vc2.step.isFalse: non-contributing element
-    obtain ⟨⟨hsum, hpar⟩, hpos⟩ := ‹(_ = PastaLean.pySum _ ∧ _) ∧ _ ≥ (0:Int)›
-    have hg := ‹¬(((_:Int) % 2 = 1 ∧ (_:Int) > 0) ∧
-      (!PastaLean.pyStrContainsSubstr (PastaLean.pyStr (_:Int)) ".") = true)›
-    simp (config := { zetaDelta := true }) only [decide_eq_true_eq, hg, and_false, false_and,
-      if_false, List.append_nil, List.map_nil, pySum_int_nil, add_zero, List.length_nil,
-      Nat.add_zero] at *
-    exact ⟨⟨hsum, hpar⟩, hpos⟩
+  all_goals (simp only [PastaLean.pyIter_list] at *)
 
 theorem double_the_difference_correct :
     ∀ (lst : List Int),

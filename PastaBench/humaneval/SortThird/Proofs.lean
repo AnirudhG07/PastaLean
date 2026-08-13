@@ -68,6 +68,96 @@ def sort_third := fun (l : List PyAny) ↦
         if i %ₚ (3 : Int) = (0 : Int) then third⦋PastaLean.pyFloorDiv i (3 : Int)⦌ else l⦋i⦌
     return __py_ret_1 : Id _)
 
+private theorem pyMod_three (x : Int) : x %ₚ (3:Int) = x % 3 := by
+  show pyMod x 3 = x % 3
+  have h := Int.emod_nonneg x (by decide : (3:Int) ≠ 0)
+  unfold pyMod
+  simp only [show ((3:Int) == 0) = false from by decide, Bool.false_eq_true, if_false]
+  split_ifs with hc <;>
+    simp only [Bool.or_eq_true, Bool.and_eq_true, decide_eq_true_eq] at hc <;> omega
+
+open PastaLean in
+private theorem getItem_map_pyRange {β : Type} [Inhabited β] (n : Int) (f : Int → β) (i : Int)
+    (h0 : 0 ≤ i) (hn : i < n) : ((pyRange n).map f)⦋i⦌ = f i := by
+  rw [pyRange_eq_ofNat]
+  simp only [List.map_map, pyGetItem, PyGetItem.getItem, pyListGetItem, List.length_map, List.length_range]
+  have hlt : i.toNat < n.toNat := by omega
+  rw [if_neg (show ¬((n.toNat == 0) = true) by simp; omega)]
+  rw [if_neg (by omega : ¬ i < 0)]
+  rw [if_neg (show ¬((decide (i<0) || decide (i ≥ (↑n.toNat : Int)))=true) by simp; omega)]
+  simp only [List.getElem?_map, List.getElem?_range, hlt, if_true, Option.map_some, Function.comp]
+  rw [show Int.ofNat i.toNat = i from Int.toNat_of_nonneg h0]
+
+open PastaLean in
+private theorem pyLen_map_pyRange {β : Type} (n : Int) (f : Int → β) (hn : 0 ≤ n) :
+    pyLen ((pyRange n).map f) = n := by
+  simp only [pyLen, PyLen.pyLen, List.length_map]
+  rw [pyRange_eq_ofNat]; simp only [List.length_map, List.length_range]
+  omega
+
+private theorem getItem_ofNat {α : Type} [Inhabited α] (S : List α) (j : Nat) (hj : j < S.length) :
+    S⦋(j : Int)⦌ = S[j] := by
+  have hi : ((j : Int)).toNat < S.length := by simp only [Int.toNat_natCast]; omega
+  simp only [pyGetItem, PyGetItem.getItem, pyListGetItem,
+    show (S.length == 0) = false from by simp only [beq_eq_false_iff_ne]; omega,
+    show (((j : Int)) < 0) = False from by simp only [eq_iff_iff, iff_false, not_lt]; omega,
+    decide_false, Bool.false_or, Bool.false_eq_true, if_false,
+    show (decide (((j : Int)) ≥ (S.length : Int))) = false from by
+      simp only [decide_eq_false_iff_not, not_le]; omega]
+  rw [Int.toNat_natCast, List.getElem?_eq_getElem hj]
+
+private theorem fthird_nat (N : Nat) :
+    (List.filter (fun i => decide (i %ₚ (3:Int) = (0:Int))) ((List.range N).map (fun (k : Nat) => (k : Int))))
+      = (List.range ((N + 2) / 3)).map (fun (j : Nat) => (3 * (j:Int))) := by
+  induction N with
+  | zero => simp
+  | succ n ih =>
+    rw [List.range_succ, List.map_append, List.filter_append, ih, List.map_cons, List.map_nil]
+    by_cases hpar : n % 3 = 0
+    · have hb : decide (((n : Int)) %ₚ (3:Int) = (0:Int)) = true := by
+        rw [pyMod_three]; simp only [decide_eq_true_eq]; omega
+      rw [List.filter_cons_of_pos (by exact hb), List.filter_nil]
+      have hk : (n + 1 + 2) / 3 = (n + 2) / 3 + 1 := by omega
+      have hval : ((n : Int)) = 3 * (((n + 2) / 3 : Nat) : Int) := by omega
+      rw [hk, List.range_succ, List.map_append, List.map_cons, List.map_nil, hval]
+    · have hb : decide (((n : Int)) %ₚ (3:Int) = (0:Int)) = false := by
+        rw [pyMod_three]; simp only [decide_eq_false_iff_not]; omega
+      rw [List.filter_cons_of_neg (by rw [hb]; simp), List.filter_nil, List.append_nil]
+      have hk : (n + 1 + 2) / 3 = (n + 2) / 3 := by omega
+      rw [hk]
+
+private theorem fthird_eq (m : Int) :
+    (List.filter (fun i => i %ₚ (3 : Int) = (0 : Int)) (pyRange m))
+      = (List.range ((m.toNat + 2) / 3)).map (fun (j : Nat) => (3 * (j:Int))) := by
+  rw [pyRange_eq_ofNat]; exact fthird_nat m.toNat
+
+private theorem floordiv_three_mul (j : Nat) : pyFloorDiv (3 * (j:Int)) (3:Int) = (j:Int) := by
+  simp only [pyFloorDiv, PyFloorDiv.floorDiv, show ((3:Int) == 0) = false from by decide,
+    Bool.false_eq_true, if_false]
+  rw [Int.mul_comm, Int.mul_fdiv_cancel _ (by decide : (3:Int) ≠ 0)]
+
+private theorem map_range_get {α : Type} [Inhabited α] (S : List α) :
+    (List.range S.length).map (fun (j : Nat) => S⦋(j:Int)⦌) = S := by
+  apply List.ext_getElem
+  · simp
+  · intro n h1 h2
+    simp only [List.getElem_map, List.getElem_range]
+    exact getItem_ofNat S n (by simpa using h2)
+
+private theorem fmap_key {α : Type} [Inhabited α] (m : Int) (S : List α)
+    (hlen : S.length = (m.toNat + 2) / 3) :
+    (List.filter (fun i => i %ₚ (3 : Int) = (0 : Int)) (pyRange m)).map
+        (fun i => S⦋pyFloorDiv i (3:Int)⦌) = S := by
+  rw [fthird_eq, List.map_map]
+  have hfun : (fun (j : Nat) => S⦋pyFloorDiv (3 * (j:Int)) (3:Int)⦌) = (fun (j : Nat) => S⦋(j:Int)⦌) := by
+    funext j; rw [floordiv_three_mul]
+  simp only [Function.comp_def, hfun]
+  rw [← hlen]
+  exact map_range_get S
+
+private theorem pysort_length {α : Type} [Ord α] (E : List α) : (pySort E).length = E.length := by
+  simp only [pySort, PySort.pySort, List.length_mergeSort]
+
 @[spec]
 theorem sort_third_spec :
     ⦃⌜True⌝⦄ sort_third l ⦃⇓result =>
@@ -80,9 +170,26 @@ theorem sort_third_spec :
               ((List.filter (fun i => i %ₚ (3 : Int) = (0 : Int)) (PastaLean.pyRange (PastaLean.pyLen l))).map fun i =>
                 l⦋i⦌)⌝⦄ :=
   by
-  mvcgen [sort_third, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  taste?
-  all_goals sorry
+  intro _
+  simp only [sort_third, Id.run, bind, pure]
+  have hn : (0:Int) ≤ pyLen l := pyLen_list_nonneg l
+  set E := (List.filter (fun i => i %ₚ (3 : Int) = (0 : Int)) (pyRange (pyLen l))).map fun i => l⦋i⦌ with hE
+  have hSlen : (pySort E).length = ((pyLen l).toNat + 2) / 3 := by
+    rw [pysort_length, hE, List.length_map, fthird_eq, List.length_map, List.length_range]
+  set R := List.map (fun i => if i %ₚ (3 : Int) = (0 : Int) then (pySort E)⦋pyFloorDiv i (3 : Int)⦌ else l⦋i⦌)
+      (pyRange (pyLen l)) with hR
+  have hstrip : Id.run (α := List PyAny) R = R := rfl
+  refine ⟨⟨?_, ?_⟩, ?_⟩
+  · rw [hstrip, hR]; exact pyLen_map_pyRange _ _ hn
+  · intro i hi hodd
+    rw [pyIter_list, pyRange_mem] at hi
+    rw [hstrip, hR, getItem_map_pyRange _ _ i hi.1 hi.2, if_neg hodd]
+  · refine Eq.trans ?_ (fmap_key (pyLen l) (pySort E) hSlen)
+    apply List.map_congr_left
+    intro i hi
+    rw [List.mem_filter, pyRange_mem] at hi
+    have heven : i %ₚ (3 : Int) = (0 : Int) := by simpa using hi.2
+    rw [hstrip, hR, getItem_map_pyRange _ _ i hi.1.1 hi.1.2, if_pos heven]
 
 theorem sort_third_correct :
     ∀ (l : List PyAny),

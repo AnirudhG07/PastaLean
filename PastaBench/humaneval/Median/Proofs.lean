@@ -89,7 +89,7 @@ theorem median_correct :
                     (PastaLean.pySort l)⦋PastaLean.pyFloorDiv (PastaLean.pyLen l) (2 : Int)⦌)) ∧
             (∃ x ∈ PastaLean.pyIter l, x ≤ median l) ∧ ∃ x ∈ PastaLean.pyIter l, x ≥ median l) ∧
           PastaLean.pyLen sorted_l = PastaLean.pyLen l :=
-  by taste?
+  by sorry
 
 def median'rn := fun (l : List PyAny) ↦
   Id.run

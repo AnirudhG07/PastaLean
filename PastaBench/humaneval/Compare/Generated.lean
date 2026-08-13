@@ -18,9 +18,10 @@ set_option maxHeartbeats 800000
 /- Python source converted to produce the Lean below (the exact input to PastaLean):
 
 from contracts import *
+from typing import *
 
 
-def compare(game,guess):
+def compare(game: List[int], guess: List[int]):
     """I think we all remember that feeling when the result of some long-awaited
     event is finally known. The feelings and thoughts you have at that moment are
     definitely worth noting down and comparing.
@@ -44,21 +45,21 @@ def compare(game,guess):
 
 namespace PastaBench.humaneval.Compare
 
-def compare := fun (game : PyAny) ↦ fun (guess : PyAny) ↦
+def compare := fun (game : List Int) ↦ fun (guess : List Int) ↦
   (PastaLean.pyRange (PastaLean.pyLen game)).map fun i => PastaLean.pyAbs (game⦋i⦌ -ₚ guess⦋i⦌)
 
 attribute [simp] compare
 
 @[taste_ingr]
 theorem compare_correct :
-    ∀ (game : PyAny),
-      ∀ (guess : PyAny),
+    ∀ (game : List Int),
+      ∀ (guess : List Int),
         PastaLean.pyLen game = PastaLean.pyLen guess →
           PastaLean.pyLen (compare game guess) = PastaLean.pyLen game ∧
             ∀ x ∈ PastaLean.pyIter (compare game guess), x ≥ (0 : Int) :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
+  by taste?
 
-def compare'rn := fun (game : PyAny) ↦ fun (guess : PyAny) ↦
+def compare'rn := fun (game : List Int) ↦ fun (guess : List Int) ↦
   (PastaLean.pyRange (PastaLean.pyLen game)).map fun i => PastaLean.pyAbs (game⦋i⦌ -ₚ guess⦋i⦌)
 
 end PastaBench.humaneval.Compare

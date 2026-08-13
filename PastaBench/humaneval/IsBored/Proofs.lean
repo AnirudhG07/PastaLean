@@ -61,7 +61,17 @@ theorem is_bored_correct :
         is_bored S ≤
           PastaLean.pyLen
             (PastaLean.pyStringSplit (PastaLean.pyStringReplace (PastaLean.pyStringReplace S "?" ".") "!" ".") ".") :=
-  by taste?
+  by
+    intro S
+    refine ⟨PastaLean.pyLen_list_nonneg _, ?_⟩
+    simp only [is_bored, PastaLean.pyMap, PastaLean.pyIter_list, PastaLean.pyLen,
+      PastaLean.PyLen.pyLen, List.length_map]
+    have h := List.length_filter_le
+      (fun s => PastaLean.pyTruthy (PastaLean.pyStringStartswith s "I "))
+      ((PastaLean.pyStringSplit (PastaLean.pyStringReplace (PastaLean.pyStringReplace S "?" ".") "!" ".") ".").map
+        (fun x => PastaLean.pyStringStrip x))
+    simp only [List.length_map] at h
+    omega
 
 def is_bored'rn := fun (S : String) ↦
   let sentences :=

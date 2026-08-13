@@ -79,20 +79,53 @@ def count_up_to := fun (n : Int) ↦
         let _ := ()
     return ans : Id _)
 
+private theorem range_split_val {m : Nat} {pref suff : List Nat} {cur : Nat}
+    (h : List.range m = pref ++ cur :: suff) : cur = pref.length := by
+  have h2 : (List.range m)[pref.length]? = some cur := by
+    rw [h, List.getElem?_append_right (by omega)]; simp
+  have h3 : pref.length < m := by
+    have := congrArg List.length h; simp at this; omega
+  rw [List.getElem?_range h3] at h2; simp at h2; omega
+
 @[spec]
 theorem count_up_to_spec :
     ⦃⌜n ≥ (0 : Int)⌝⦄ count_up_to n ⦃⇓ans =>
       ⌜(PastaLean.pyLen ans ≤ n ∧ ∀ p ∈ PastaLean.pyIter ans, (2 : Int) ≤ p) ∧ ∀ p ∈ PastaLean.pyIter ans, p < n⌝⦄ :=
   by
-  try
-    mvcgen [count_up_to, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓cur =>
-      ⌜let i := (cur.prefix.length : Int);
-        (((((2 : Int) ≤ i ∧ i ≤ n) ∧ PastaLean.pyLen isprime = n +ₚ (1 : Int)) ∧ PastaLean.pyLen ans ≤ i) ∧
-            ∀ p ∈ PastaLean.pyIter ans, (2 : Int) ≤ p) ∧
-          ∀ p ∈ PastaLean.pyIter ans, p < i⌝
-  taste?
-  all_goals sorry
+  mvcgen [count_up_to, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+  · ⇓⟨cur, ans, isprime⟩ =>
+    ⌜(PastaLean.pyLen ans ≤ (cur.prefix.length : Int)) ∧
+      (∀ p ∈ PastaLean.pyIter ans, (2 : Int) ≤ p) ∧
+      (∀ p ∈ PastaLean.pyIter ans, p < (2 : Int) + (cur.prefix.length : Int))⌝
+  · ⇓⟨cur, isprime⟩ => ⌜True⌝
+  all_goals (try (simp_all (config := { zetaDelta := true }) [taste_ingr, PastaLean.pyAppend, PastaLean.pyListAppend]))
+  case vc3.step.isTrue.post.success =>
+    have hcur := range_split_val ‹List.range _ = _ ++ _ :: _›
+    obtain ⟨hlen, h2, h3⟩ := ‹PastaLean.pyLen _ ≤ _ ∧ _›
+    simp only [PastaLean.pyLen, PastaLean.PyLen.pyLen, List.length_append,
+      List.length_cons, List.length_nil] at hlen ⊢
+    refine ⟨by omega, ?_, ?_⟩
+    · rintro p (hp | rfl)
+      · exact h2 p hp
+      · omega
+    · rintro p (hp | rfl)
+      · have := h3 p hp; omega
+      · omega
+  case vc4.step.isFalse =>
+    obtain ⟨hlen, h2, h3⟩ := ‹PastaLean.pyLen _ ≤ _ ∧ _›
+    simp only [PastaLean.pyLen, PastaLean.PyLen.pyLen] at hlen ⊢
+    refine ⟨by omega, ?_⟩
+    intro p hp; have := h3 p hp; omega
+  case vc6.post.success =>
+    obtain ⟨hlen, h2, h3⟩ := ‹(PastaLean.pyLen _ ≤ _ ∨ _) ∧ _›
+    refine ⟨?_, ?_⟩
+    · rcases hlen with h | h <;>
+        simp only [PastaLean.pyLen, PastaLean.PyLen.pyLen] at h ⊢ <;> omega
+    · intro p hp
+      have hp3 := h3 p hp
+      have hpos := List.length_pos_of_mem hp
+      rcases hlen with h | h <;>
+        simp only [PastaLean.pyLen, PastaLean.PyLen.pyLen] at h <;> omega
 
 theorem count_up_to_correct :
     ∀ (n : Int),

@@ -1,6 +1,7 @@
+from typing import *
 import math
 
-def max_fill(grid, capacity):
+def max_fill(grid: List[List[int]], capacity: int):
     """
     You are given a rectangular grid of wells. Each row represents a single well,
     and each 1 in a row represents a single unit of water.

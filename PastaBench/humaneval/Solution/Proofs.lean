@@ -100,6 +100,38 @@ def solution := fun (lst : List Int) ↦
               fun i => lst⦋i⦌))
     return total : Id _)
 
+private theorem sol_pySum_int_eq (l : List Int) (s : Int) : PastaLean.pySum l s = l.foldl (· + ·) s := by
+  simp only [PastaLean.pySum, PastaLean.pyIter_list]; rfl
+
+private theorem sol_foldl_add_int (l : List Int) (s : Int) :
+    l.foldl (· + ·) s = s + l.foldl (· + ·) 0 := by
+  induction l generalizing s with
+  | nil => simp
+  | cons h t ih => simp only [List.foldl_cons]; rw [ih (s+h), ih (0+h)]; ring
+
+private theorem sol_pySum_int_append (a b : List Int) :
+    PastaLean.pySum (a ++ b) (0:Int) = PastaLean.pySum a 0 + PastaLean.pySum b 0 := by
+  rw [sol_pySum_int_eq, sol_pySum_int_eq, sol_pySum_int_eq, List.foldl_append,
+    sol_foldl_add_int b (a.foldl (·+·) 0)]
+
+private theorem sol_pySum_int_singleton (x : Int) : PastaLean.pySum [x] (0:Int) = x := by
+  rw [sol_pySum_int_eq]; simp
+
+private theorem sol_pyRange_succ (k : Nat) :
+    PastaLean.pyRange ((k:Int)+1) = PastaLean.pyRange (k:Int) ++ [(k:Int)] := by
+  rw [PastaLean.pyRange_eq_ofNat, PastaLean.pyRange_eq_ofNat]
+  have h1 : ((k:Int)+1).toNat = k+1 := by omega
+  have h2 : ((k:Int)).toNat = k := by omega
+  rw [h1, h2, List.range_succ, List.map_append]; simp
+
+private theorem sol_range_split_val {m : Nat} {pref suff : List Nat} {cur : Nat}
+    (h : List.range m = pref ++ cur :: suff) : cur = pref.length := by
+  have h2 : (List.range m)[pref.length]? = some cur := by
+    rw [h, List.getElem?_append_right (by omega)]; simp
+  have h3 : pref.length < m := by
+    have := congrArg List.length h; simp at this; omega
+  rw [List.getElem?_range h3] at h2; simp at h2; omega
+
 @[spec]
 theorem solution_spec :
     ⦃⌜PastaLean.pyLen lst > (0 : Int)⌝⦄ solution lst ⦃⇓total =>
@@ -115,24 +147,73 @@ theorem solution_spec :
                   fun i => i) %ₚ
               (2 : Int)⌝⦄ :=
   by
-  try
-    mvcgen [solution, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
-    · ⇓⟨cur, total⟩ =>
-      ⌜let i := (cur.prefix.length : Int);
-        (((0 : Int) ≤ i ∧ i ≤ PastaLean.pyLen lst) ∧
+  mvcgen [solution, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+  · ⇓⟨cur, total⟩ =>
+      ⌜(((0 : Int) ≤ (cur.prefix.length : Int) ∧ (cur.prefix.length : Int) ≤ PastaLean.pyLen lst) ∧
             total =
               PastaLean.pySum
                 ((List.filter (fun j => j %ₚ (2 : Int) = (0 : Int) ∧ lst⦋j⦌ %ₚ (2 : Int) = (1 : Int))
-                      (PastaLean.pyRange i)).map
+                      (PastaLean.pyRange (cur.prefix.length : Int))).map
                   fun j => lst⦋j⦌)) ∧
           total %ₚ (2 : Int) =
             PastaLean.pyLen
                 ((List.filter (fun j => j %ₚ (2 : Int) = (0 : Int) ∧ lst⦋j⦌ %ₚ (2 : Int) = (1 : Int))
-                      (PastaLean.pyRange i)).map
+                      (PastaLean.pyRange (cur.prefix.length : Int))).map
                   fun j => j) %ₚ
               (2 : Int)⌝
-  taste?
-  all_goals sorry
+  all_goals (try (simp_all (config := { zetaDelta := true }) [taste_ingr]))
+  case vc3.pre =>
+    refine ⟨?_, ?_⟩ <;>
+      simp [PastaLean.pyRange_eq_ofNat, sol_pySum_int_eq, PastaLean.pyLen, PastaLean.PyLen.pyLen]
+  case vc4.post.success =>
+    obtain ⟨rfl, h2⟩ := ‹_ ∧ _›
+    exact h2
+  case vc1.step.isTrue =>
+    rename_i pref cur suff b tot hpos hsplit hguard hinv
+    have hcur := sol_range_split_val hsplit
+    subst cur
+    obtain ⟨⟨hle, hbeq⟩, hpareq⟩ := hinv
+    rw [sol_pyRange_succ]
+    simp only [List.filter_append, List.map_append, List.filter_cons, List.filter_nil,
+      hguard.1, hguard.2, decide_true, Bool.and_self, if_true, List.map_cons, List.map_nil,
+      List.append_nil]
+    rw [sol_pySum_int_append, sol_pySum_int_singleton]
+    simp only [PastaLean.pyLen, PastaLean.PyLen.pyLen, List.length_append, List.length_cons,
+      List.length_nil, zero_add] at hpareq ⊢
+    have hodd := hguard.2
+    refine ⟨⟨?_, trivial⟩, ?_⟩
+    · have hl := congrArg List.length hsplit
+      simp only [List.length_range, List.length_append, List.length_cons,
+        PastaLean.pyLen, PastaLean.PyLen.pyLen] at hl ⊢
+      omega
+    · omega
+  case vc2.step.isFalse =>
+    rename_i pref cur suff b hpos hsplit hguard hinv
+    have hcur := sol_range_split_val hsplit
+    subst cur
+    obtain ⟨⟨hle, hbeq⟩, hpareq⟩ := hinv
+    have hbool : (decide ((if (↑pref.length:Int) % 2 < 0 then (↑pref.length:Int) % 2 + 2
+          else (↑pref.length:Int) % 2) = 0) &&
+        decide ((if lst⦋(↑pref.length:Int)⦌ % 2 < 0 then lst⦋(↑pref.length:Int)⦌ % 2 + 2
+          else lst⦋(↑pref.length:Int)⦌ % 2) = 1)) = false := by
+      by_contra h
+      simp only [Bool.not_eq_false, Bool.and_eq_true, decide_eq_true_eq] at h
+      exact hguard h.1 h.2
+    have hfnil : List.filter (fun j => decide ((if j % 2 < 0 then j % 2 + 2 else j % 2) = (0:Int)) &&
+        decide ((if lst⦋j⦌ % 2 < 0 then lst⦋j⦌ % 2 + 2 else lst⦋j⦌ % 2) = (1:Int)))
+        [(↑pref.length:Int)] = [] := by
+      rw [List.filter_cons]; simp only [hbool, List.filter_nil]; rfl
+    rw [sol_pyRange_succ]
+    simp only [List.filter_append, hfnil, List.append_nil, List.map_append, List.map_nil,
+      PastaLean.pyLen, PastaLean.PyLen.pyLen, List.length_append, List.length_cons,
+      List.length_nil, zero_add] at hpareq ⊢
+    refine ⟨⟨?_, ?_⟩, ?_⟩
+    · have hl := congrArg List.length hsplit
+      simp only [List.length_range, List.length_append, List.length_cons,
+        PastaLean.pyLen, PastaLean.PyLen.pyLen] at hl ⊢
+      omega
+    · first | trivial | omega
+    · rw [← hbeq]; exact hpareq
 
 theorem solution_correct :
     ∀ (lst : List Int),

@@ -87,7 +87,12 @@ theorem int_to_mini_roman_correct :
             (0 : Int) ≤ PastaLean.pyFloorDiv (number %ₚ (100 : Int)) (10 : Int) ∧
               PastaLean.pyFloorDiv (number %ₚ (100 : Int)) (10 : Int) < PastaLean.pyLen x) ∧
           (0 : Int) ≤ number %ₚ (10 : Int) ∧ number %ₚ (10 : Int) < PastaLean.pyLen i :=
-  by taste?
+  by
+    intro number
+    simp only [pyLen, PyLen.pyLen, List.length_cons, List.length_nil]
+    intro h
+    simp_all (config := { zetaDelta := true, decide := true }) [taste_ingr, Int.fdiv_eq_ediv]
+    omega
 
 def int_to_mini_roman'rn := fun (number : Int) ↦
   let m := (#["", "m"] : Array String)

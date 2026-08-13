@@ -58,10 +58,8 @@ namespace PastaBench.humaneval.EvenOddCount
 def even_odd_count := fun (num : Int) ↦
   (do
     let mut s : String := PastaLean.pyStr num
-    let __unpack_value_1 := ((0 : Int), (0 : Int))
-    let __unpack_pair_1 := __unpack_value_1
-    let mut even : Int := Prod.fst __unpack_pair_1
-    let mut odd : Int := Prod.snd __unpack_pair_1
+    let mut even : Int := (0 : Int)
+    let mut odd : Int := (0 : Int)
     for _pair_1 in (PastaLean.pyIter (PastaLean.pyEnumerate s))do
       let i := Prod.fst _pair_1
       let ch := Prod.snd _pair_1
@@ -96,7 +94,12 @@ theorem even_odd_count_spec :
             if num < (0 : Int) then PastaLean.pyLen (PastaLean.pyStr num) -ₚ (1 : Int)
             else PastaLean.pyLen (PastaLean.pyStr num)⌝⦄ :=
   by
-  mvcgen [even_odd_count, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
+  try
+    mvcgen [even_odd_count, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
+    · ⇓⟨cur, even, odd⟩ =>
+      ⌜((((0 : Int) ≤ i ∧ i ≤ PastaLean.pyLen s) ∧ even ≥ (0 : Int)) ∧ odd ≥ (0 : Int)) ∧
+          (num ≥ (0 : Int) ∧ even +ₚ odd = i ∨
+            num < (0 : Int) ∧ even +ₚ odd = if i > (0 : Int) then i -ₚ (1 : Int) else (0 : Int))⌝
   taste?
   all_goals sorry
 
@@ -123,10 +126,8 @@ def even_odd_count'rn := fun (num : Int) ↦
           
       -/
       let mut s : String := PastaLean.pyStr num
-      let __unpack_value_1 := ((0 : Int), (0 : Int))
-      let __unpack_pair_1 := __unpack_value_1
-      let mut even : Int := Prod.fst __unpack_pair_1
-      let mut odd : Int := Prod.snd __unpack_pair_1
+      let mut even : Int := (0 : Int)
+      let mut odd : Int := (0 : Int)
       -- The loop is changed to use `enumerate` to expose the loop counter `i`,
       -- which is necessary for writing an effective loop invariant.
       for _pair_1 in (PastaLean.pyIter (PastaLean.pyEnumerate s))do

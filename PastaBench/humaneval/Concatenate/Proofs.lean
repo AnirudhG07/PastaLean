@@ -38,12 +38,40 @@ def concatenate := fun (strings : List String) ↦ PastaLean.pyStringJoin "" str
 
 attribute [simp] concatenate
 
+private theorem interc_cons : ∀ (rest : List String) (x : String),
+    String.intercalate "" (x :: rest) = x ++ String.intercalate "" rest := by
+  intro rest
+  induction rest with
+  | nil => intro x; simp
+  | cons b bs ih =>
+    intro x
+    have step : String.intercalate "" (x :: b :: bs) = String.intercalate "" ((x ++ "" ++ b) :: bs) := rfl
+    rw [step, ih (x ++ "" ++ b), ih b]; simp [String.append_assoc]
+
+private theorem foldl_add (l : List Int) (b : Int) :
+    l.foldl (· + ·) b = b + l.foldl (· + ·) 0 := by
+  induction l generalizing b with
+  | nil => simp
+  | cons x xs ih => simp only [List.foldl_cons]; rw [ih (b + x), ih (0 + x)]; omega
+
 @[taste_ingr]
 theorem concatenate_correct :
     ∀ (strings : List String),
       PastaLean.pyLen (concatenate strings) =
-        PastaLean.pySum ((PastaLean.pyIter strings).map fun s => PastaLean.pyLen s) :=
-  by taste?
+        PastaLean.pySum ((PastaLean.pyIter strings).map fun s => PastaLean.pyLen s) := by
+  intro strings
+  simp only [concatenate, pyStringJoin, pyIter_list, PyStringJoin.toJoinString, id_eq,
+    List.map_id, pySum, PySummand.toSummand, pyLen, PyLen.pyLen]
+  induction strings with
+  | nil => simp
+  | cons a rest ih =>
+    rw [interc_cons, String.length_append]
+    have hadd : ∀ (u v : Int), u +ₚ v = u + v := fun _ _ => rfl
+    simp only [List.map_cons, List.foldl_cons, hadd] at ih ⊢
+    rw [foldl_add]
+    push_cast
+    rw [ih]
+    ring
 
 def concatenate'rn := fun (strings : List String) ↦ PastaLean.pyStringJoin "" strings
 

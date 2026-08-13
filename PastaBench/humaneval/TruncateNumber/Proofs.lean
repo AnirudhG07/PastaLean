@@ -44,7 +44,14 @@ attribute [simp] truncate_number
 @[taste_ingr]
 theorem truncate_number_correct :
     ∀ (number : Rat), number ≥ (0 : Int) → (0 : Int) ≤ truncate_number number ∧ truncate_number number < (1 : Int) := by
-  taste?
+  intro number _
+  simp only [truncate_number, taste_ingr]
+  show (0:Rat) ≤ number - (↑⌊number⌋ : Rat) ∧ number - (↑⌊number⌋ : Rat) < (1:Rat)
+  constructor
+  · show (0:Rat) ≤ Int.fract number
+    exact Int.fract_nonneg number
+  · show Int.fract number < (1:Rat)
+    exact Int.fract_lt_one number
 
 def truncate_number'rn := fun (number : Float) ↦ (show Float from number -ₚ PastaLean.pyInt number)
 

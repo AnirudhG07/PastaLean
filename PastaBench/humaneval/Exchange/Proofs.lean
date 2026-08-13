@@ -18,8 +18,9 @@ set_option maxHeartbeats 800000
 /- Python source converted to produce the Lean below (the exact input to PastaLean):
 
 from contracts import *
+from typing import *
 
-def exchange(lst1, lst2):
+def exchange(lst1: List[int], lst2: List[int]):
     """In this problem, you will implement a function that takes two lists of numbers,
     and determines whether it is possible to perform an exchange of elements
     between them to make lst1 a list of only even numbers.
@@ -55,7 +56,7 @@ def exchange(lst1, lst2):
 
 namespace PastaBench.humaneval.Exchange
 
-def exchange := fun (lst1 : PyAny) ↦ fun (lst2 : PyAny) ↦
+def exchange := fun (lst1 : List Int) ↦ fun (lst2 : List Int) ↦
   let cnt_odd :=
     (PastaLean.pyLen (PastaLean.pyList (PastaLean.pyFilter (fun x ↦ x %ₚ (2 : Int) == (1 : Int)) lst1)) : Int)
   let cnt_even :=
@@ -66,8 +67,8 @@ attribute [simp] exchange
 
 @[taste_ingr]
 theorem exchange_correct :
-    ∀ (lst1 : PyAny),
-      ∀ (lst2 : PyAny),
+    ∀ (lst1 : List Int),
+      ∀ (lst2 : List Int),
         let cnt_odd :=
           PastaLean.pyLen (PastaLean.pyList (PastaLean.pyFilter (fun x ↦ x %ₚ (2 : Int) == (1 : Int)) lst1))
         let cnt_even :=
@@ -91,10 +92,24 @@ theorem exchange_correct :
                     PastaLean.pyLen
                       ((List.filter (fun x => x %ₚ (2 : Int) = (0 : Int)) (PastaLean.pyIter lst2)).map fun x => x)) ∧
                 (0 : Int) ≤ cnt_even) ∧
-              cnt_even ≤ PastaLean.pyLen lst2 :=
-  by taste?
+              cnt_even ≤ PastaLean.pyLen lst2 := by
+  intro lst1 lst2 cnt_odd cnt_even _ _
+  simp only [exchange, PastaLean.pyList, PastaLean.pyFilter, PastaLean.pyIter_list,
+    PastaLean.pyLen, PyLen.pyLen, List.map_id', List.length_map,
+    beq_iff_eq, decide_eq_true_eq, cnt_odd, cnt_even]
+  refine ⟨⟨⟨⟨⟨⟨?_, ?_⟩, ?_⟩, ?_⟩, ?_⟩, ?_⟩, ?_⟩
+  · rw [eq_iff_iff]
+    split
+    · exact iff_of_true rfl ‹_›
+    · exact iff_of_false (by decide) ‹_›
+  · rfl
+  · positivity
+  · exact Int.ofNat_le.mpr (List.length_filter_le _ _)
+  · rfl
+  · positivity
+  · exact Int.ofNat_le.mpr (List.length_filter_le _ _)
 
-def exchange'rn := fun (lst1 : PyAny) ↦ fun (lst2 : PyAny) ↦
+def exchange'rn := fun (lst1 : List Int) ↦ fun (lst2 : List Int) ↦
   let cnt_odd :=
     (PastaLean.pyLen (PastaLean.pyList (PastaLean.pyFilter (fun x ↦ x %ₚ (2 : Int) == (1 : Int)) lst1)) : Int)
   let cnt_even :=

@@ -52,7 +52,16 @@ theorem filter_by_substring_correct :
             PastaLean.pyContains s substring ∧ PastaLean.pyContains strings s) ∧
           ∀ s ∈ PastaLean.pyIter strings,
             PastaLean.pyContains s substring → PastaLean.pyContains (filter_by_substring strings substring) s :=
-  by taste?
+  by
+  intro strings sub
+  simp only [filter_by_substring, pyList, pyFilter, pyIter_list, List.mem_filter]
+  refine ⟨fun s hs => ⟨hs.2, ?_⟩, fun s hs hc => ?_⟩
+  · simp only [pyContains, PyContains.contains]
+    exact List.elem_eq_true_of_mem hs.1
+  · simp only [pyContains, PyContains.contains]
+    apply List.elem_eq_true_of_mem
+    rw [List.mem_filter]
+    exact ⟨hs, hc⟩
 
 def filter_by_substring'rn := fun (strings : List String) ↦ fun (substring : String) ↦
   PastaLean.pyList (PastaLean.pyFilter (fun s ↦ PastaLean.pyContains s substring) strings)

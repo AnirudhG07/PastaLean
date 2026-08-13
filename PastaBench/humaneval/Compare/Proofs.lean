@@ -18,9 +18,10 @@ set_option maxHeartbeats 800000
 /- Python source converted to produce the Lean below (the exact input to PastaLean):
 
 from contracts import *
+from typing import *
 
 
-def compare(game,guess):
+def compare(game: List[int], guess: List[int]):
     """I think we all remember that feeling when the result of some long-awaited
     event is finally known. The feelings and thoughts you have at that moment are
     definitely worth noting down and comparing.
@@ -44,21 +45,38 @@ def compare(game,guess):
 
 namespace PastaBench.humaneval.Compare
 
-def compare := fun (game : PyAny) ↦ fun (guess : PyAny) ↦
+def compare := fun (game : List Int) ↦ fun (guess : List Int) ↦
   (PastaLean.pyRange (PastaLean.pyLen game)).map fun i => PastaLean.pyAbs (game⦋i⦌ -ₚ guess⦋i⦌)
 
 attribute [simp] compare
 
+open PastaLean in
+private theorem pyLen_map_pyRange {β : Type} (n : Int) (f : Int → β) (hn : 0 ≤ n) :
+    pyLen ((pyRange n).map f) = n := by
+  simp only [pyLen, PyLen.pyLen, List.length_map]
+  rw [pyRange_eq_ofNat]; simp only [List.length_map, List.length_range]
+  omega
+
+private theorem pyAbs_int_nonneg (a : Int) : PastaLean.pyAbs a ≥ (0 : Int) := by
+  simp only [pyAbs, PyAbs.pyAbs]; split <;> omega
+
 @[taste_ingr]
 theorem compare_correct :
-    ∀ (game : PyAny),
-      ∀ (guess : PyAny),
+    ∀ (game : List Int),
+      ∀ (guess : List Int),
         PastaLean.pyLen game = PastaLean.pyLen guess →
           PastaLean.pyLen (compare game guess) = PastaLean.pyLen game ∧
-            ∀ x ∈ PastaLean.pyIter (compare game guess), x ≥ (0 : Int) :=
-  by taste?
+            ∀ x ∈ PastaLean.pyIter (compare game guess), x ≥ (0 : Int) := by
+  intro game guess _
+  have hn : 0 ≤ PastaLean.pyLen game := PastaLean.pyLen_list_nonneg game
+  refine ⟨pyLen_map_pyRange _ _ hn, ?_⟩
+  intro x hx
+  rw [PastaLean.pyIter_list] at hx
+  simp only [compare, List.mem_map] at hx
+  obtain ⟨i, _, rfl⟩ := hx
+  exact pyAbs_int_nonneg _
 
-def compare'rn := fun (game : PyAny) ↦ fun (guess : PyAny) ↦
+def compare'rn := fun (game : List Int) ↦ fun (guess : List Int) ↦
   (PastaLean.pyRange (PastaLean.pyLen game)).map fun i => PastaLean.pyAbs (game⦋i⦌ -ₚ guess⦋i⦌)
 
 end PastaBench.humaneval.Compare

@@ -1,4 +1,5 @@
 from contracts import *
+from typing import *
 
 
 # Hoisted to module scope: it captures nothing from `order_by_points`, and a nested `def`
@@ -14,7 +15,7 @@ def weight(x):
     return sum(x_list)
 
 
-def order_by_points(nums):
+def order_by_points(nums: List[int]):
     """
     Write a function which sorts the given list of integers
     in ascending order according to the sum of their digits.

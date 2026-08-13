@@ -117,10 +117,8 @@ attribute [simp, taste_ingr] _by_length'to_word
 
 def by_length := fun (arr : List Int) ↦
   (do
-    let __unpack_value_1 := (PastaLean.pySlice (PastaLean.pySort arr) none none (some (-(1 : Int))), [])
-    let __unpack_pair_1 := __unpack_value_1
-    let mut sorted_list : List Int := Prod.fst __unpack_pair_1
-    let mut ans := Prod.snd __unpack_pair_1
+    let mut sorted_list : List Int := PastaLean.pySlice (PastaLean.pySort arr) none none (some (-(1 : Int)))
+    let mut ans := []
     for x in (PastaLean.pyIter sorted_list)do
       if h_1 : (1 : Int) ≤ x ∧ x ≤ (9 : Int) then 
         ans := PastaLean.pyAppend ans (_by_length'to_word x)
@@ -150,7 +148,7 @@ theorem by_length_spec :
   try
     mvcgen [by_length, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start] invariants
     · ⇓cur => ⌜True⌝
-  taste?
+  simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
   all_goals sorry
 
 theorem by_length_correct :
@@ -234,10 +232,8 @@ def by_length'rn := fun (arr : List Int) ↦
       -- Full functional specification, stated without reference to the nested `to_word`:
       -- the result has exactly one entry per in-range element of `arr`, and entry i is the
       -- name of the i-th largest such element (descending order).
-      let __unpack_value_1 := (PastaLean.pySlice (PastaLean.pySort arr) none none (some (-(1 : Int))), [])
-      let __unpack_pair_1 := __unpack_value_1
-      let mut sorted_list : List Int := Prod.fst __unpack_pair_1
-      let mut ans := Prod.snd __unpack_pair_1
+      let mut sorted_list : List Int := PastaLean.pySlice (PastaLean.pySort arr) none none (some (-(1 : Int)))
+      let mut ans := []
       for x in (PastaLean.pyIter sorted_list)do
         if h_1 : decide ((1 : Int) ≤ x) && decide (x ≤ (9 : Int)) then 
           ans := PastaLean.pyAppend ans (_by_length'to_word'rn x)

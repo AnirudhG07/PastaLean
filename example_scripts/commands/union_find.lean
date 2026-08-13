@@ -24,6 +24,8 @@ structure DSU where
 
 instance : PastaLean.PyTruthy DSU where truthy _ := true
 
+instance : PastaLean.PyTyped DSU where pyTypeOf _ := TypeInfer.PyType.cls "DSU"
+
 instance : Coe DSU (Option DSU) :=
   ⟨some⟩
 
@@ -77,6 +79,8 @@ structure DSU'rn where
   deriving Inhabited, Repr, BEq
 
 instance : PastaLean.PyTruthy DSU'rn where truthy _ := true
+
+instance : PastaLean.PyTyped DSU'rn where pyTypeOf _ := TypeInfer.PyType.cls "DSU"
 
 instance : Coe DSU'rn (Option DSU'rn) :=
   ⟨some⟩

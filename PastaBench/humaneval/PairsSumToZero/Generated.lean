@@ -17,10 +17,11 @@ set_option maxHeartbeats 800000
 
 /- Python source converted to produce the Lean below (the exact input to PastaLean):
 
+from typing import *
 from contracts import *
 
 
-def pairs_sum_to_zero(l):
+def pairs_sum_to_zero(l: List[int]):
     """
     pairs_sum_to_zero takes a list of integers as an input.
     it returns True if there are two distinct elements in the list that
@@ -67,7 +68,7 @@ def pairs_sum_to_zero(l):
 
 namespace PastaBench.humaneval.PairsSumToZero
 
-def pairs_sum_to_zero := fun (l : PyAny) ↦
+def pairs_sum_to_zero := fun (l : List Int) ↦
   (do
     for i in (PastaLean.pyRange (PastaLean.pyLen l))do
       -- No pair drawn entirely from the first `i` outer positions summed to zero, else we returned.
@@ -118,7 +119,7 @@ theorem pairs_sum_to_zero_spec :
   all_goals sorry
 
 theorem pairs_sum_to_zero_correct :
-    ∀ (l : PyAny),
+    ∀ (l : List Int),
       let result := (pairs_sum_to_zero l).run;
       ((result =
             ∃ i ∈ PastaLean.pyIter (PastaLean.pyRange (PastaLean.pyLen l)),
@@ -133,7 +134,7 @@ theorem pairs_sum_to_zero_correct :
   intro l
   exact pairs_sum_to_zero_spec True.intro
 
-def pairs_sum_to_zero'rn := fun (l : PyAny) ↦
+def pairs_sum_to_zero'rn := fun (l : List Int) ↦
   Id.run
     (do
       /-

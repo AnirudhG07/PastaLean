@@ -37,19 +37,23 @@ def filter_integers(values: List[Any]) -> List[int]:
 
 namespace PastaBench.humaneval.FilterIntegers
 
-def filter_integers := fun values ↦ PastaLean.pyList (PastaLean.pyFilter (fun x ↦ type x == int) values)
+def filter_integers := fun values ↦
+  PastaLean.pyList (PastaLean.pyFilter (fun x ↦ PastaLean.pyType x == TypeInfer.PyType.int) values)
 
 attribute [simp] filter_integers
 
 @[taste_ingr]
 theorem filter_integers_correct :
     ∀ values,
-      ((∀ x ∈ PastaLean.pyIter (filter_integers values), type x = int) ∧
+      ((∀ x ∈ PastaLean.pyIter (filter_integers values), PastaLean.pyType x == TypeInfer.PyType.int) ∧
           ∀ x ∈ PastaLean.pyIter (filter_integers values), PastaLean.pyContains values x) ∧
         PastaLean.pyLen (filter_integers values) =
-          PastaLean.pySum ((List.filter (fun v => type v = int) (PastaLean.pyIter values)).map fun v => (1 : Int)) :=
+          PastaLean.pySum
+            ((List.filter (fun v => PastaLean.pyType v == TypeInfer.PyType.int) (PastaLean.pyIter values)).map
+              fun v => (1 : Int)) :=
   by taste?
 
-def filter_integers'rn := fun values ↦ PastaLean.pyList (PastaLean.pyFilter (fun x ↦ type x == int) values)
+def filter_integers'rn := fun values ↦
+  PastaLean.pyList (PastaLean.pyFilter (fun x ↦ PastaLean.pyType x == TypeInfer.PyType.int) values)
 
 end PastaBench.humaneval.FilterIntegers
