@@ -13,10 +13,10 @@ set_option maxHeartbeats 200000
 
 namespace PastaLean.User.Root
 
-def exp := fun n ↦ n ^ₚ (4 : Int)
+def exp := fun (n : Int) ↦ n ^ₚ (4 : Int)
 
 attribute [simp, taste_ingr] exp
 
-def exp'rn := fun n ↦ n ^ₚ (4 : Int)
+def exp'rn := fun (n : Int) ↦ n ^ₚ (4 : Int)
 
 end PastaLean.User.Root

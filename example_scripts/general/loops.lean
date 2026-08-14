@@ -81,7 +81,7 @@ def while_in_for'rn := fun n ↦
           j := j -ₚ (1 : Int)
       return count)
 
-def breakable_loop := fun n ↦
+def breakable_loop := fun (n : Int) ↦
   Id.run
     (do
       let mut total : Int := (0 : Int)
@@ -103,7 +103,7 @@ def breakable_loop := fun n ↦
 
 attribute [simp, taste_ingr] breakable_loop
 
-def breakable_loop'rn := fun n ↦
+def breakable_loop'rn := fun (n : Int) ↦
   Id.run
     (do
       let mut total : Int := (0 : Int)

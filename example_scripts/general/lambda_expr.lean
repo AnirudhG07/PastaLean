@@ -55,7 +55,7 @@ attribute [simp, taste_ingr] nested_lmbda
 
 def nested_lmbda'rn := fun () ↦ fun x ↦ x *ₚ x
 
-private def _lmbda_with_function_call'add_one := fun x ↦ x +ₚ (1 : Int)
+private def _lmbda_with_function_call'add_one := fun (x : Int) ↦ x +ₚ (1 : Int)
 
 attribute [simp, taste_ingr] _lmbda_with_function_call'add_one
 
@@ -63,7 +63,7 @@ def lmbda_with_function_call := fun x ↦ _lmbda_with_function_call'add_one x
 
 attribute [simp, taste_ingr] lmbda_with_function_call
 
-private def _lmbda_with_function_call'add_one'rn := fun x ↦ x +ₚ (1 : Int)
+private def _lmbda_with_function_call'add_one'rn := fun (x : Int) ↦ x +ₚ (1 : Int)
 
 def lmbda_with_function_call'rn := fun x ↦ _lmbda_with_function_call'add_one'rn x
 
