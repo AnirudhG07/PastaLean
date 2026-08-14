@@ -1,0 +1,4 @@
+import PastaBench.leetcode.NumberOfSubArraysOfSizeKAndAverageGreaterThanOrEqualToThreshold.Generated
+namespace PastaBench.leetcode.NumberOfSubArraysOfSizeKAndAverageGreaterThanOrEqualToThreshold
+-- TODO.
+end PastaBench.leetcode.NumberOfSubArraysOfSizeKAndAverageGreaterThanOrEqualToThreshold

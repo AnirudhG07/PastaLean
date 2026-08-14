@@ -1,0 +1,4 @@
+import PastaBench.leetcode.LargestRectangleInHistogram.Generated
+namespace PastaBench.leetcode.LargestRectangleInHistogram
+-- TODO.
+end PastaBench.leetcode.LargestRectangleInHistogram

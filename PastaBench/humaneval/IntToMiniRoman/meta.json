@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/156",
+  "problem": "int-to-mini-roman",
+  "module": "IntToMiniRoman",
+  "method": "int_to_mini_roman",
+  "params": [
+    "number"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

@@ -9,7 +9,9 @@ open Std.Do
 set_option linter.all false
 set_option mvcgen.warning false
 
-set_option maxHeartbeats 0
+set_option maxHeartbeats 200000
+
+namespace PastaLean.User.Root
 
 -- Regression: a user-defined `_main` helper must not collide with the renamed entry point.
 -- Python's `main()` is renamed to `main'` (not `_main`) when it coexists with a `__main__`
@@ -37,7 +39,7 @@ def main : IO Unit := do
   let inputLines := String.splitOn inputText "\n"
   let inputStream : PastaLean.ProofMode.IOStream :=
     ⟨0, fun i => PastaLean.ProofMode.IOResult.success (List.getD inputLines i "")⟩
-  let initState : PastaLean.ProofMode.IOState := ⟨inputStream, []⟩
+  let initState : PastaLean.ProofMode.IOState := { input := inputStream, output := [] }
   let (result, finalState) :=
     (((do
           let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg (main')]
@@ -56,3 +58,5 @@ def main : IO Unit := do
 def main'rn : IO Unit := do
   let _ ← pyPrintIO [pyPrintArg (main''rn)]
   pure ()
+
+end PastaLean.User.Root

@@ -1,0 +1,14 @@
+{
+  "problem": "distance-between-bus-stops",
+  "module": "DistanceBetweenBusStops",
+  "method": "distanceBetweenBusStops",
+  "params": [
+    "distance",
+    "start",
+    "destination"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 73
+}

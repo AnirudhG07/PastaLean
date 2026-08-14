@@ -9,13 +9,16 @@ open Std.Do
 set_option linter.all false
 set_option mvcgen.warning false
 
-set_option maxHeartbeats 0
+set_option maxHeartbeats 200000
+
+namespace PastaLean.User.Root
 
 noncomputable def sigmoid := fun (x : Real) ↦ (1.0 : Rat) /ₚ ((1.0 : Rat) +ₚ Libraries.math.pyMathExpR (-x))
 
 attribute [simp] sigmoid
 
-def sigmoid'rn := fun (x : Float) ↦ PastaLean.pyFloat (1.0 : Float) /ₚ ((1.0 : Float) +ₚ Libraries.math.pyMathExp (-x))
+def sigmoid'rn := fun (x : Float) ↦
+  (show Float from PastaLean.pyFloat (1.0 : Float) /ₚ ((1.0 : Float) +ₚ Libraries.math.pyMathExp (-x)))
 
 noncomputable def predict := fun (x : List Rat) ↦ fun (w1 : List (List Real)) ↦ fun (b1 : List Real) ↦
   fun (w2 : List (List Real)) ↦ fun (b2 : List Real) ↦
@@ -29,11 +32,12 @@ attribute [simp] predict
 
 def predict'rn := fun (x : List Float) ↦ fun (w1 : List (List Float)) ↦ fun (b1 : List Float) ↦
   fun (w2 : List (List Float)) ↦ fun (b2 : List Float) ↦
-  -- Forward pass through a 2 -> 2 -> 1 network.
-  let h0 := sigmoid'rn (Libraries.numpy.pyNumpyDot x w1⦋(0 : Int)⦌ +ₚ b1⦋(0 : Int)⦌)
-  let h1 := sigmoid'rn (Libraries.numpy.pyNumpyDot x w1⦋(1 : Int)⦌ +ₚ b1⦋(1 : Int)⦌)
-  let hidden := [h0, h1]
-  sigmoid'rn (Libraries.numpy.pyNumpyDot hidden w2⦋(0 : Int)⦌ +ₚ b2⦋(0 : Int)⦌)
+  (show Float from
+    -- Forward pass through a 2 -> 2 -> 1 network.
+    let h0 := sigmoid'rn (Libraries.numpy.pyNumpyDot x w1⦋(0 : Int)⦌ +ₚ b1⦋(0 : Int)⦌)
+    let h1 := sigmoid'rn (Libraries.numpy.pyNumpyDot x w1⦋(1 : Int)⦌ +ₚ b1⦋(1 : Int)⦌)
+    let hidden := [h0, h1]
+    sigmoid'rn (Libraries.numpy.pyNumpyDot hidden w2⦋(0 : Int)⦌ +ₚ b2⦋(0 : Int)⦌))
 
 noncomputable def mean_squared_error := fun (xs : List (List Rat)) ↦ fun (ys : List Rat) ↦
   fun (w1 : List (List Real)) ↦ fun (b1 : List Real) ↦ fun (w2 : List (List Real)) ↦ fun (b2 : List Real) ↦
@@ -43,21 +47,22 @@ noncomputable def mean_squared_error := fun (xs : List (List Rat)) ↦ fun (ys :
       for i in (PastaLean.pyRange (PastaLean.pyLen xs))do
         let mut diff := predict xs⦋i⦌ w1 b1 w2 b2 -ₚ ys⦋i⦌
         total := total +ₚ diff *ₚ diff
-      let __py_ret_1 := total /ₚ PastaLean.pyLen xs
-      return __py_ret_1)
+      let p'_ret_1 := total /ₚ PastaLean.pyLen xs
+      return p'_ret_1)
 
 attribute [simp] mean_squared_error
 
 def mean_squared_error'rn := fun (xs : List (List Float)) ↦ fun (ys : List Float) ↦ fun (w1 : List (List Float)) ↦
   fun (b1 : List Float) ↦ fun (w2 : List (List Float)) ↦ fun (b2 : List Float) ↦
-  Id.run
-    (do
-      let mut total := (0.0 : Float)
-      for i in (PastaLean.pyRange (PastaLean.pyLen xs))do
-        let mut diff := predict'rn xs⦋i⦌ w1 b1 w2 b2 -ₚ ys⦋i⦌
-        total := total +ₚ diff *ₚ diff
-      let __py_ret_1 := PastaLean.pyFloat total /ₚ PastaLean.pyLen xs
-      return __py_ret_1)
+  (show Float from
+    Id.run
+      (do
+        let mut total := (0.0 : Float)
+        for i in (PastaLean.pyRange (PastaLean.pyLen xs))do
+          let mut diff := predict'rn xs⦋i⦌ w1 b1 w2 b2 -ₚ ys⦋i⦌
+          total := total +ₚ diff *ₚ diff
+        let p'_ret_1 := PastaLean.pyFloat total /ₚ PastaLean.pyLen xs
+        return p'_ret_1))
 
 noncomputable def main' :=
   ((do
@@ -185,3 +190,5 @@ noncomputable def main : IO Unit := do
 def main'rn : IO Unit := do
   let _ := main''rn
   pure ()
+
+end PastaLean.User.Root

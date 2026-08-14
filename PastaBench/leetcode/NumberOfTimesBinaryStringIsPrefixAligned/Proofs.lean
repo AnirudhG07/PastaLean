@@ -1,0 +1,4 @@
+import PastaBench.leetcode.NumberOfTimesBinaryStringIsPrefixAligned.Generated
+namespace PastaBench.leetcode.NumberOfTimesBinaryStringIsPrefixAligned
+-- TODO.
+end PastaBench.leetcode.NumberOfTimesBinaryStringIsPrefixAligned

@@ -1,0 +1,13 @@
+{
+  "problem": "minimized-maximum-of-products-distributed-to-any-store",
+  "module": "MinimizedMaximumOfProductsDistributedToAnyStore",
+  "method": "minimizedMaximum",
+  "params": [
+    "n",
+    "quantities"
+  ],
+  "difficulty": "Medium",
+  "bucket": "term",
+  "feature": "term",
+  "n_tests": 131
+}

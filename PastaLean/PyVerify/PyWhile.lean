@@ -1,4 +1,4 @@
-import Mathlib
+import PastaLean.Imports
 
 /-!
 # `pyWhile` — the total `while` combinator, its Hoare rule, and the `while → for` bridge

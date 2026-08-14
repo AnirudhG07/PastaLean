@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/136",
+  "problem": "largest-smallest-integers",
+  "module": "LargestSmallestIntegers",
+  "method": "largest_smallest_integers",
+  "params": [
+    "lst"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

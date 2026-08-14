@@ -1,0 +1,4 @@
+import PastaBench.leetcode.LastSubstringInLexicographicalOrder.Generated
+namespace PastaBench.leetcode.LastSubstringInLexicographicalOrder
+-- TODO.
+end PastaBench.leetcode.LastSubstringInLexicographicalOrder

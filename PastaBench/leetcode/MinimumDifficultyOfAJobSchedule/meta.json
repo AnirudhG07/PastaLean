@@ -1,0 +1,13 @@
+{
+  "problem": "minimum-difficulty-of-a-job-schedule",
+  "module": "MinimumDifficultyOfAJobSchedule",
+  "method": "minDifficulty",
+  "params": [
+    "jobDifficulty",
+    "d"
+  ],
+  "difficulty": "Hard",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 111
+}

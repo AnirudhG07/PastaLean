@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/138",
+  "problem": "is-equal-to-sum-even",
+  "module": "IsEqualToSumEven",
+  "method": "is_equal_to_sum_even",
+  "params": [
+    "n"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

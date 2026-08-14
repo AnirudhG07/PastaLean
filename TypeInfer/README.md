@@ -270,6 +270,44 @@ Because the engine is written in Lean, we don't just test it — we **prove** it
 The universal laws are proved on a faithful model; the same facts are then checked on the *actual*
 production functions with `native_decide`.
 
+## Algorithm, complexity & prior art
+
+The engine is a **monotone dataflow fixpoint over a type lattice** — the same shape as PyPy's
+**RPython annotator** (reflow the whole function until nothing changes, and because `join` only ever
+climbs the lattice, it provably settles). Types are recovered three ways, in a fixed precedence
+(annotations > enclosing captures > call-site hints > body usage):
+
+1. **Forward propagation** — literals, operator/builtin result types, assignment flow (Hindley–Milner
+   in spirit, though monomorphic and unification-free — closer to abstract interpretation).
+2. **Usage-based back-inference** — an *unannotated* parameter is pinned by how it is *used*:
+   `p.split()`→str, `p << 1`→int, `ord(p)`→str, `p[k]` fixes a dict key, and **`p == <literal>` /
+   `p in <literal>` pins `p` to that literal's type across every PyAny subtype** (int/bool/str/float/
+   list/set/tuple). The *element* of an inferred list is recovered the same way, propagating **down
+   through nested arithmetic**: `p[i] + 1`→`list[int]`, `p[i].upper()`→`list[str]`, and an int-only
+   op anywhere over an element — `(p[0] + p[-1]) % 2`→`list[int]` — so `p == []` un-boxes fully, not
+   just to `list[unknown]`. This is the flow-/usage-driven inference of **Shed Skin** and Agesen's
+   **Cartesian Product Algorithm** (Starkiller), specialised to the shapes PastaLean emits.
+3. **Gradual fallback** — a slot that stays `unknown` boxes to `PyAny`, the *Dynamic* type of **Siek &
+   Taha**'s gradual typing; `consistent` (proved non-transitive in `Lattice.lean`) is its consistency
+   relation.
+
+**Complexity is deliberately linear-ish and cheap.** The reflow is capped at a small constant number
+of passes (8) — sound because the lattice height is tiny, so a fixed cap is a floor, not an
+approximation — giving `O(passes × body)` per function. The usage-based seed runs **once** before the
+fixpoint at `O(params × body)`. There is no worklist or union-find because the lattice is shallow
+enough that naive reflow already converges in ~2 passes in practice (measured: a full module infers in
+tens of milliseconds). The one rule to keep it honest: usage inference must never fight a
+type-*changing* reassignment (`m = "1"; m = int(m)`) — conflicting evidence `join`s up to `unknown`
+(→ `PyAny`), and codegen's per-segment rebind-shadow re-types each segment, so back-inference only ever
+*refines a single-typed* binding.
+
+References: R. Milner, *A Theory of Type Polymorphism in Programming* (1978); O. Agesen, *The Cartesian
+Product Algorithm* (ECOOP 1995) and M. Salib, *Starkiller: A Static Type Inferencer and Compiler for
+Python* (MIT, 2004); M. Dufour, *Shed Skin: An Optimizing Python-to-C++ Compiler* (2006); the PyPy
+**RPython annotator** (Rigo & Pedroni, *PyPy's Approach to Virtual Machine Construction*, 2006);
+J. Palsberg & M. Schwartzbach, *Object-Oriented Type Inference* (OOPSLA 1991); and J. Siek & W. Taha,
+*Gradual Typing for Functional Languages* (2006).
+
 ## The files
 
 | file | what's in it |

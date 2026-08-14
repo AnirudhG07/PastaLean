@@ -1,0 +1,202 @@
+[
+  {
+    "input": "string = '[[]]'",
+    "output": "True"
+  },
+  {
+    "input": "string = '[]]]]]]][[[[[]'",
+    "output": "False"
+  },
+  {
+    "input": "string = '[][]'",
+    "output": "False"
+  },
+  {
+    "input": "string = '[]'",
+    "output": "False"
+  },
+  {
+    "input": "string = '[[[[]]]]'",
+    "output": "True"
+  },
+  {
+    "input": "string = '[]]]]]]]]]]'",
+    "output": "False"
+  },
+  {
+    "input": "string = '[][][[]]'",
+    "output": "True"
+  },
+  {
+    "input": "string = '[[]'",
+    "output": "False"
+  },
+  {
+    "input": "string = '[]]'",
+    "output": "False"
+  },
+  {
+    "input": "string = '[[]][['",
+    "output": "True"
+  },
+  {
+    "input": "string = '[[][]]'",
+    "output": "True"
+  },
+  {
+    "input": "string = ''",
+    "output": "False"
+  },
+  {
+    "input": "string = '[[[[[[[['",
+    "output": "False"
+  },
+  {
+    "input": "string = ']]]]]]]]'",
+    "output": "False"
+  },
+  {
+    "input": "string = '[[]][]'",
+    "output": "True"
+  },
+  {
+    "input": "string = '[[]]]'",
+    "output": "True"
+  },
+  {
+    "input": "string = '[]][[]'",
+    "output": "False"
+  },
+  {
+    "input": "string = '[][][]'",
+    "output": "False"
+  },
+  {
+    "input": "string = '[[][]['",
+    "output": "False"
+  },
+  {
+    "input": "string = '[[[]]]]'",
+    "output": "True"
+  },
+  {
+    "input": "string = '[[[][]]]'",
+    "output": "True"
+  },
+  {
+    "input": "string = '[][][][[][]][]'",
+    "output": "True"
+  },
+  {
+    "input": "string = '][[][]['",
+    "output": "False"
+  },
+  {
+    "input": "string = '[[[[[[]]]]]]'",
+    "output": "True"
+  },
+  {
+    "input": "string = '[[][[]['",
+    "output": "False"
+  },
+  {
+    "input": "string = '][]][[]'",
+    "output": "False"
+  },
+  {
+    "input": "string = '[[[[][]]]][]'",
+    "output": "True"
+  },
+  {
+    "input": "string = '[[[[][]]]]][]'",
+    "output": "True"
+  },
+  {
+    "input": "string = '][]][][]][[][]'",
+    "output": "False"
+  },
+  {
+    "input": "string = ']][[][[[]]]]['",
+    "output": "True"
+  },
+  {
+    "input": "string = ']][[][[]]]]['",
+    "output": "True"
+  },
+  {
+    "input": "string = '[[[][]][[][][]]]]][]'",
+    "output": "True"
+  },
+  {
+    "input": "string = ']][[][[]]]][[[[[[][]]]]][][]]]][]['",
+    "output": "True"
+  },
+  {
+    "input": "string = '[[[]]]'",
+    "output": "True"
+  },
+  {
+    "input": "string = '[[[[[[]]]]]]][[][[]]]][[[[[[][]]]]][][]]]][][]'",
+    "output": "True"
+  },
+  {
+    "input": "string = '][]][[[]]'",
+    "output": "True"
+  },
+  {
+    "input": "string = '][]][]'",
+    "output": "False"
+  },
+  {
+    "input": "string = '][][]['",
+    "output": "False"
+  },
+  {
+    "input": "string = '][]][[[]'",
+    "output": "False"
+  },
+  {
+    "input": "string = '][]][[[][]]]]]][[][[]]]][[[[[[][]]]]][][]]]][]['",
+    "output": "True"
+  },
+  {
+    "input": "string = '[[[[[[]]]]]]]'",
+    "output": "True"
+  },
+  {
+    "input": "string = '[[]]]]]]][]'",
+    "output": "True"
+  },
+  {
+    "input": "string = '[[[]]]][]][][]][[][]]'",
+    "output": "True"
+  },
+  {
+    "input": "string = '][][]][[[]]][[[]'",
+    "output": "True"
+  },
+  {
+    "input": "string = '][]]][[][]'",
+    "output": "False"
+  },
+  {
+    "input": "string = '[[[[[[]]]]]]][[][[]]]][[[[[[][]]]]][][]]]][]['",
+    "output": "True"
+  },
+  {
+    "input": "string = '][][[[]'",
+    "output": "False"
+  },
+  {
+    "input": "string = '][][][][]][[][]'",
+    "output": "False"
+  },
+  {
+    "input": "string = '][][][[[]'",
+    "output": "False"
+  },
+  {
+    "input": "string = '[[]]]]][[][[]]]]['",
+    "output": "True"
+  }
+]

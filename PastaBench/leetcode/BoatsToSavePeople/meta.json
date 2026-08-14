@@ -1,0 +1,13 @@
+{
+  "problem": "boats-to-save-people",
+  "module": "BoatsToSavePeople",
+  "method": "numRescueBoats",
+  "params": [
+    "people",
+    "limit"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 89
+}

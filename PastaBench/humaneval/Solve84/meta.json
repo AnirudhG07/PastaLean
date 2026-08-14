@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/84",
+  "problem": "solve",
+  "module": "Solve84",
+  "method": "solve",
+  "params": [
+    "N"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

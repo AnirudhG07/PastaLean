@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/27",
+  "problem": "flip-case",
+  "module": "FlipCase",
+  "method": "flip_case",
+  "params": [
+    "string"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

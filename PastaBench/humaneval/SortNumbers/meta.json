@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/19",
+  "problem": "sort-numbers",
+  "module": "SortNumbers",
+  "method": "sort_numbers",
+  "params": [
+    "numbers"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

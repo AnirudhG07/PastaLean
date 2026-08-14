@@ -1,0 +1,4 @@
+import PastaBench.leetcode.NumberOfFlowersInFullBloom.Generated
+namespace PastaBench.leetcode.NumberOfFlowersInFullBloom
+-- TODO.
+end PastaBench.leetcode.NumberOfFlowersInFullBloom

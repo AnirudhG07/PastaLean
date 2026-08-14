@@ -35,7 +35,14 @@ def exprSyntax : (kind : SyntaxNodeKind) → Json →
     | `doElem, json => do
         let .ok valueJson := json.getObjValAs? Json "value" | throwError
           s!"Expr node does not have a 'value' field or it is not a JSON value: {json}"
-        exprStmtDoElemSyntax valueJson
+        -- A bare string-literal statement is a docstring in non-leading position (e.g. after a
+        -- `Requires`); it is a no-op, and has no `doElem` value form, so emit a no-op rather than
+        -- trying to lower it (which degrades to `pyUnsupported`).
+        if valueJson.getObjValAs? String "node_type" == .ok "Constant"
+            && (valueJson.getObjVal? "value" |>.toOption.bind (·.getStr?.toOption)).isSome then
+          `(doElem| let _ := ())
+        else
+          exprStmtDoElemSyntax valueJson
     | `command, json => do
         let .ok valueJson := json.getObjValAs? Json "value" | throwError
           s!"Expr node does not have a 'value' field or it is not a JSON value: {json}"
@@ -141,6 +148,14 @@ def augAssignSyntax : (kind : SyntaxNodeKind) → Json →
           -- the pointer. Value-mode / non-heap-object targets fall through to the paths below.
           else if let some w ← heapAttrWriteTargetDoElem? targetJson updated then
             pure w
+          -- `obj.field += v` for a non-`self` receiver (a local node/record): rebuild via record
+          -- update (`obj := { obj with field := updated }`), like the `Assign` path — a direct
+          -- `obj.field := …` is invalid for an immutable structure field.
+          else if jsonNodeType? targetJson == some "Attribute" then
+            let .ok recv := targetJson.getObjVal? "value" | throwError s!"Attribute target missing 'value': {targetJson}"
+            let .ok attr := targetJson.getObjValAs? String "attr" | throwError s!"Attribute target missing 'attr': {targetJson}"
+            attrRecordUpdateDoElem recv attr updated
+              (targetJson.getObjValAs? Bool "_unwrap_opt" == .ok true)
           else match ← nestedSubscriptSetDoElem? targetJson updated with
             | some setStx =>
                 -- `s[i] += v` (and nested `g[i][j] += v`) rebuild the container with the new element.
@@ -196,6 +211,100 @@ partial def bodyReassignsName (target : String) (json : Json) : Bool :=
     | .arr elems => elems.any (bodyReassignsName target)
     | .obj fields => fields.toList.any (fun (_, v) => bodyReassignsName target v)
     | _ => false
+
+/-- Does the loop body GROW `name` — `name.append(x)` / `name.extend(xs)` / `name += …` — so Python's
+`for x in name` would visit the appended items (the BFS/topological-sort idiom)? Such a loop must be
+lowered as an index `while` that re-reads the list, since a Lean `for` snapshots the iterable. -/
+partial def bodyGrowsListVar (name : String) (json : Json) : Bool :=
+  let attrGrows (f : Json) : Bool :=
+    jsonNodeType? f == some "Attribute"
+      && ((f.getObjValAs? String "attr").toOption.any (["append", "extend"].contains ·))
+      && ((f.getObjVal? "value").toOption.bind (·.getObjValAs? String "id" |>.toOption) == some name)
+  let here :=
+    match jsonNodeType? json with
+    | some "Call" => (json.getObjVal? "func").toOption.any attrGrows
+    | some "AugAssign" =>
+        (json.getObjVal? "target").toOption.bind (·.getObjValAs? String "id" |>.toOption) == some name
+    | _ => false
+  here || (match json with
+    | .arr xs => xs.any (bodyGrowsListVar name)
+    | .obj fs => fs.toList.any (fun (_, v) => bodyGrowsListVar name v)
+    | _ => false)
+
+/-- The root `Name` of an assignment target (`row[i][j]` / `row.attr` → `row`), if any. -/
+partial def targetRootName? (t : Json) : Option String :=
+  match jsonNodeType? t with
+  | some "Name" => (t.getObjValAs? String "id").toOption
+  | some "Subscript" | some "Attribute" => (t.getObjVal? "value").toOption.bind targetRootName?
+  | _ => none
+
+/-- Does `json` MUTATE `name` in place — `name[i] = v`, `name.sort()`/`.append(x)`/…, `name += xs`?
+A `for x in container` whose body mutates `x` in place loses the mutation under value semantics (the
+loop var is a copy), so it must write the element back into `container`. A plain rebind (`x = …`) is
+NOT an in-place mutation. -/
+partial def bodyMutatesElemInPlace (name : String) (json : Json) : Bool :=
+  let mutMethods := ["append", "sort", "extend", "insert", "pop", "remove", "reverse", "clear",
+    "add", "discard", "update", "appendleft", "popleft", "setdefault"]
+  let here :=
+    match jsonNodeType? json with
+    | some "Assign" =>
+        -- `name[i] = v` (subscript/attribute target rooted at `name`); a plain `name = …` is a rebind.
+        (json.getObjVal? "target").toOption.any fun t =>
+          (jsonNodeType? t == some "Subscript" || jsonNodeType? t == some "Attribute")
+            && targetRootName? t == some name
+    | some "AugAssign" =>
+        (json.getObjVal? "target").toOption.any (targetRootName? · == some name)
+    | some "Call" =>
+        (json.getObjVal? "func").toOption.any fun f =>
+          jsonNodeType? f == some "Attribute"
+            && ((f.getObjValAs? String "attr").toOption.any mutMethods.contains)
+            && ((f.getObjVal? "value").toOption.bind (·.getObjValAs? String "id" |>.toOption) == some name)
+    | _ => false
+  here || (match json with
+    | .arr xs => xs.any (bodyMutatesElemInPlace name)
+    | .obj fs => fs.toList.any (fun (_, v) => bodyMutatesElemInPlace name v)
+    | _ => false)
+
+/-- Does the body REBIND `name` with a plain `name = …` (a `Name`-target assign, not a subscript/
+attribute/aug mutation)? Such a rebind gives the loop variable a fresh (possibly differently-typed)
+value, so it is NOT an in-place element mutation — writing it back into the container is wrong. -/
+partial def bodyReboundsName (name : String) (json : Json) : Bool :=
+  let here := match jsonNodeType? json with
+    | some "Assign" => (json.getObjVal? "target").toOption.any fun t =>
+        jsonNodeType? t == some "Name" && (t.getObjValAs? String "id").toOption == some name
+    | _ => false
+  here || (match json with
+    | .arr xs => xs.any (bodyReboundsName name)
+    | .obj fs => fs.toList.any (fun (_, v) => bodyReboundsName name v)
+    | _ => false)
+
+def forElemWriteback? (iterJson targetJson : Json) (bodyElems : Array Json) : Option String :=
+  if jsonNodeType? iterJson != some "Name" || jsonNodeType? targetJson != some "Name" then none
+  else do
+    let iterName ← (iterJson.getObjValAs? String "id").toOption
+    let tgtName ← (targetJson.getObjValAs? String "id").toOption
+    guard (bodyElems.any (bodyMutatesElemInPlace tgtName))
+    -- A `w = …` rebind of the loop var (`w = len(w)`) makes the writeback write a fresh value/type
+    -- back into the container — not an in-place mutation. Fall back to a plain iteration.
+    guard (!bodyElems.any (bodyReboundsName tgtName))
+    guard (!bodyElems.any (jsonContainsNodeType · ["Break", "Continue"]))
+    guard (!bodyElems.any (bodyGrowsListVar iterName))
+    pure iterName
+
+/-- `for i, x in enumerate(C):` whose body mutates `C` by subscript (`C[i+1] ^= 1`). Python's
+`enumerate` reads `C[i]` live, so a later mutation of `C` is seen by subsequent iterations; a snapshot
+`for` misses it. Returns `C`'s Name when the re-reading index form applies (`C` a Name, body mutates
+`C` in place, no break/continue). -/
+def forEnumerateContainerMut? (iterJson : Json) (bodyElems : Array Json) : Option String := do
+  guard (jsonNodeType? iterJson == some "Call")
+  let f ← (iterJson.getObjVal? "func").toOption
+  guard ((f.getObjValAs? String "id").toOption == some "enumerate")
+  let args ← (iterJson.getObjValAs? (Array Json) "args").toOption
+  guard (args.size == 1 && jsonNodeType? args[0]! == some "Name")
+  let cName ← (args[0]!.getObjValAs? String "id").toOption
+  guard (bodyElems.any (bodyMutatesElemInPlace cName))
+  guard (!bodyElems.any (jsonContainsNodeType · ["Break", "Continue"]))
+  pure cName
 
 /-- Lower a for-loop target into a binder and optional destructuring prelude. A target name the
 `bodyElems` reassign gets a mutable shadow (`let mut`) instead of an immutable binder, so the
@@ -258,7 +367,12 @@ def forTargetBinder (targetJson : Json) (bodyElems : Array Json := #[]) :
         -- the rebind introduce its own `let mut` over it.
         let eltConflicts := (jsonFieldOption elts[i]! "_ty").any
           (fun t => t.getObjValAs? String "id" == .ok "PyAny")
-        if bodyElems.any (bodyReassignsName idents[i]!.getId.toString) then
+        -- Mirrors the Name case: a target already a `let mut` in scope (function-scope hoisted, or a
+        -- name reused as a loop target) is assigned into, not shadowed — Lean forbids a `for` binder
+        -- from shadowing an enclosing `let mut`.
+        if ← hasVar idents[i]!.getId then
+          prelude := prelude.push (← `(doElem| $(idents[i]!):ident := $acc))
+        else if bodyElems.any (bodyReassignsName idents[i]!.getId.toString) then
           if eltConflicts then
             prelude := prelude.push (← `(doElem| let $(idents[i]!) := $acc))
           else
@@ -365,7 +479,7 @@ def stateRunBlock (prelude : Array (TSyntax `doElem)) (bodyElems : Array Json)
     (names : Array String) : PygenM (TSyntax `term) := do
   let mut doElems := prelude
   for elem in bodyElems do
-    doElems := appendDoElems doElems (← getCode elem `doElem)
+    doElems := appendDoElems doElems (← getStmtDoElem elem)
   let returnTuple ← buildNameTuple (names.map (mkIdent ·.toName))
   doElems := doElems.push (← `(doElem| return $returnTuple))
   let idRunIdent := mkIdent ``Id.run
@@ -413,7 +527,7 @@ def topLevelForCommands (json : Json) (names : Array String) : PygenM (Array (TS
   let prelude ← stateMutPrelude stateIdent names
   let foldBody ← stateRunBlock prelude bodyElems names
   let iterCode ← rangeIterSyntax iterJson
-  let resultIdent ← blockResultIdent json "__py_for"
+  let resultIdent ← blockResultIdent json "p'_for"
   let foldlIdent := mkIdent ``List.foldl
   let foldDef ← `(command|
     def $resultIdent := $foldlIdent (fun $stateIdent $loopVarIdent => $foldBody) $initTuple $iterCode)
@@ -466,7 +580,7 @@ def loopWithElseDoElem (breakFlag? : Option Name) (coreElems : Array (TSyntax `d
       let elseStxArray ← withFixedVariables do
         let mut arr : Array (TSyntax `doElem) := #[]
         for elem in orelseElems do
-          arr := appendDoElems arr (← getCode elem `doElem)
+          arr := appendDoElems arr (← getStmtDoElem elem)
         pure arr
       let noop ← noopDoElemSyntax
       let elseCheck ← `(doElem| if (!$flagIdent) then
@@ -506,7 +620,14 @@ def whileSyntax : (kind : SyntaxNodeKind) → Json →
     | `doElem, json => do
         let .ok test := json.getObjVal? "test" | throwError
           s!"While node does not have a 'test' field or it is not a JSON value: {json}"
-        let testStx ← truthyConditionTerm test (← withPropCondition true (getCode test `term))
+        -- An effectful loop condition is lowered through the effect-inlining path, so its awaits (`←`)
+        -- are emitted inline and re-run by the `do`-`while` each iteration (matching Python, which
+        -- re-evaluates the test every pass); a pure condition keeps its provable `Prop` form.
+        let testStx ←
+          if jsonUsesMonadicEffect test then
+            truthyConditionTerm test (← inlineEffectfulTerm test)
+          else
+            truthyConditionTerm test (← withPropCondition true (getCode test `term))
         let .ok bodyElems := json.getObjValAs? (Array Json) "body" | throwError
           s!"While node does not have a 'body' field or it is not a JSON array: {json}"
         let .ok orelseElems := json.getObjValAs? (Array Json) "orelse" | throwError
@@ -523,7 +644,7 @@ def whileSyntax : (kind : SyntaxNodeKind) → Json →
         let bodyStxArray ← withFixedVariables do withBreakFlag breakFlag? do
           let mut bodyStxArray := #[]
           for elem in bodyElems do
-              let elemStx ← getCode elem `doElem
+              let elemStx ← getStmtDoElem elem
               bodyStxArray := appendDoElems bodyStxArray elemStx
           pure bodyStxArray
         -- Parenthesize the test so its last token never glues to the `do` keyword.
@@ -539,7 +660,7 @@ def whileSyntax : (kind : SyntaxNodeKind) → Json →
         -- It lowers like `if`/`match`: `Id.run do let mut n := n₀; while ...; return (n...)`.
         match blockMutatedNames? json with
         | some names =>
-            let cmds ← topLevelStmtCommands json names "__py_while" "while-loop"
+            let cmds ← topLevelStmtCommands json names "p'_while" "while-loop"
             return ⟨mkNullNode (cmds.map TSyntax.raw)⟩
         | none =>
             throwError "Top-level `while` is only supported when it mutates a module global \
@@ -572,7 +693,7 @@ def forSyntax : (kind : SyntaxNodeKind) → Json →
           let (targetIdent, preludeElems) ← forTargetBinder targetJson bodyElems
           let mut bodyStxArray := preludeElems
           for elem in bodyElems do
-            let elemStx ← getCode elem `doElem
+            let elemStx ← getStmtDoElem elem
             bodyStxArray := appendDoElems bodyStxArray elemStx
           pure (targetIdent, bodyStxArray)
         -- Parenthesize the iterable so its last token never glues to the `do` keyword
@@ -594,13 +715,73 @@ def forSyntax : (kind : SyntaxNodeKind) → Json →
                 $[$bodyStxArray:doElem]*)
             pure #[bindIt, forLoop]
           else
-            -- Under `--heap`, a container held by reference is dereferenced before iterating.
-            let iterCode ← match ← heapContainerDeref? iterJson with
-              | some deref => `($(mkIdent ``pyIter) $deref)
-              | none => rangeIterSyntax iterJson
-            let forLoop ← `(doElem| for $targetIdent:ident in ($iterCode) do
-                $[$bodyStxArray:doElem]*)
-            pure #[forLoop]
+            -- Under `--heap`, a container held by reference is dereferenced before iterating;
+            -- otherwise the value-semantics grow/writeback/enumerate loop below.
+            if (← getHeapMode) then
+              -- Under `--heap`, a container held by reference is dereferenced before iterating.
+              let iterCode ← match ← heapContainerDeref? iterJson with
+                | some deref => `($(mkIdent ``pyIter) $deref)
+                | none => rangeIterSyntax iterJson
+              let forLoop ← `(doElem| for $targetIdent:ident in ($iterCode) do
+                  $[$bodyStxArray:doElem]*)
+              pure #[forLoop]
+            else
+              -- `for x in q` where the body GROWS `q` (`q.append(...)`, the BFS/topological idiom):
+              -- Python re-reads the list each step and visits appended items, but a Lean `for` snapshots
+              -- the iterable. Lower to an index `while` that re-reads `pyLen q`. Advance at the TOP so a
+              -- `continue` re-checks the (grown) length instead of skipping the bump and spinning.
+              let growVar? := if jsonNodeType? iterJson == some "Name" then
+                  (iterJson.getObjValAs? String "id").toOption.filter (bodyElems.any <| bodyGrowsListVar ·)
+                else none
+              let pyLenId := mkIdent ``PastaLean.pyLen
+              let getId := mkIdent ``PastaLean.pyGetItem
+              let setId := mkIdent ``PastaLean.pySetItem
+              match growVar?, forElemWriteback? iterJson targetJson bodyElems with
+              | some _, _ =>
+                  let qIdent ← getCode iterJson `term
+                  let idx := mkIdent (← freshName `__fi')
+                  let seed ← `(doElem| let mut $idx:ident : Int := -1)
+                  let whileLoop ← `(doElem|
+                    while ($idx +ₚ (1 : Int)) < $pyLenId $qIdent do
+                      $idx:ident := $idx +ₚ (1 : Int)
+                      let $targetIdent:ident := $getId $qIdent $idx
+                      $[$bodyStxArray:doElem]*)
+                  pure #[seed, whileLoop]
+              | none, some _ =>
+                  -- `for row in C: <mutate row in place>` — bind each element, run the body (its prelude
+                  -- shadows `row` as a `let mut`), then WRITE the mutated `row` back into `C[idx]`, since
+                  -- our loop var is a value copy. `C` is made mutable by `jsonMutatesName` recognising
+                  -- this pattern.
+                  let cIdent ← getCode iterJson `ident
+                  let rowIdent ← getCode targetJson `ident
+                  let idx := mkIdent (← freshName `__fi')
+                  let seed ← `(doElem| let mut $idx:ident : Int := -1)
+                  let whileLoop ← `(doElem|
+                    while ($idx +ₚ (1 : Int)) < $pyLenId $cIdent do
+                      $idx:ident := $idx +ₚ (1 : Int)
+                      let $targetIdent:ident := $getId $cIdent $idx
+                      $[$bodyStxArray:doElem]*
+                      $cIdent:ident := $setId $cIdent $idx $rowIdent)
+                  pure #[seed, whileLoop]
+              | none, none =>
+                  match forEnumerateContainerMut? iterJson bodyElems with
+                  | some cName =>
+                      -- `for i, x in enumerate(C): <mutate C[...]>` — re-read `C[i]` each iteration so a
+                      -- mutation to a later index (`C[i+1] ^= 1`) is seen, matching Python's live enumerate.
+                      let cIdent := mkIdent cName.toName
+                      let idx := mkIdent (← freshName `__fi')
+                      let seed ← `(doElem| let mut $idx:ident : Int := -1)
+                      let whileLoop ← `(doElem|
+                        while ($idx +ₚ (1 : Int)) < $pyLenId $cIdent do
+                          $idx:ident := $idx +ₚ (1 : Int)
+                          let $targetIdent:ident := ($idx, $getId $cIdent $idx)
+                          $[$bodyStxArray:doElem]*)
+                      pure #[seed, whileLoop]
+                  | none =>
+                      let iterCode ← rangeIterSyntax iterJson
+                      let forLoop ← `(doElem| for $targetIdent:ident in ($iterCode) do
+                          $[$bodyStxArray:doElem]*)
+                      pure #[forLoop]
         let loopStx ← loopWithElseDoElem breakFlag? coreElems orelseElems
         if hoistDecls.isEmpty then pure loopStx
         -- `loopStx` is itself a null-node (from `loopWithElseDoElem`); splice its children flat rather
@@ -628,7 +809,14 @@ def ifSyntax : (kind : SyntaxNodeKind) → Json →
           s!"If node does not have an 'orelse' field or it is not a JSON array: {json}"
         -- Lower the test in condition position so a direct comparison may be a provable `Prop`
         -- (paired with the `if h : …` hypothesis below); `and`/`or`/`not` reset this to `Bool`.
-        let testStx ← truthyConditionTerm testJson (← withPropCondition true (getCode testJson `term))
+        -- A test that carries a monadic effect is lowered through the effect-inlining path, which
+        -- emits the awaits (`← …`) inline; the surrounding `do` sequences them before the branch, so
+        -- the condition sees the pure result rather than the raw action (works for any effect monad).
+        let testStx ←
+          if jsonUsesMonadicEffect testJson then
+            truthyConditionTerm testJson (← inlineEffectfulTerm testJson)
+          else
+            truthyConditionTerm testJson (← withPropCondition true (getCode testJson `term))
         -- Hoist names first bound inside a branch but escaping the `if` (read after it, or in the
         -- other branch). Each branch lowers to its own `do` block, so a `let mut` there is invisible
         -- outside it; pre-declaring one enclosing `let mut name : T := default` turns the branch
@@ -648,12 +836,12 @@ def ifSyntax : (kind : SyntaxNodeKind) → Json →
         let bodyStxArray ← withFixedVariables do
           let mut arr : Array (TSyntax `doElem) := #[]
           for elem in bodyElems do
-            arr := appendDoElems arr (← getCode elem `doElem)
+            arr := appendDoElems arr (← getStmtDoElem elem)
           pure arr
         let orelseStxArray ← withFixedVariables do
           let mut arr : Array (TSyntax `doElem) := #[]
           for elem in orelseElems do
-            arr := appendDoElems arr (← getCode elem `doElem)
+            arr := appendDoElems arr (← getStmtDoElem elem)
           pure arr
         let ifStx ←
           if orelseStxArray.isEmpty then
@@ -676,7 +864,7 @@ def ifSyntax : (kind : SyntaxNodeKind) → Json →
         -- A top-level `if` that mutates module globals is a state transformer.
         match blockMutatedNames? json with
         | some names =>
-            let cmds ← topLevelStmtCommands json names "__py_if" "if-block"
+            let cmds ← topLevelStmtCommands json names "p'_if" "if-block"
             return ⟨mkNullNode (cmds.map TSyntax.raw)⟩
         | none => pure ()
         -- Otherwise, the only supported top-level `if` is the `__main__` guard, which
@@ -689,7 +877,7 @@ def ifSyntax : (kind : SyntaxNodeKind) → Json →
           s!"If node does not have a 'body' field or it is not a JSON array: {json}"
         let mut bodyStxArray := #[]
         for elem in bodyElems do
-          let elemStx ← getCode elem `doElem
+          let elemStx ← getStmtDoElem elem
           bodyStxArray := appendDoElems bodyStxArray elemStx
         -- Run-twin (`--mode both`): the entry wrapper is emitted as `main'rn` (and its body call to
         -- `main'` is suffixed to `main''rn` by the Name pygen), leaving the prove `main` as the file's
@@ -717,7 +905,8 @@ def ifSyntax : (kind : SyntaxNodeKind) → Json →
               let inputLines := String.splitOn inputText "\n"
               let inputStream : PastaLean.ProofMode.IOStream :=
                 ⟨0, fun i => PastaLean.ProofMode.IOResult.success (List.getD inputLines i "")⟩
-              let initState : PastaLean.HeapIOState $valId := ⟨PastaLean.emptyHeap, ⟨inputStream, []⟩⟩
+              let initState : PastaLean.HeapIOState $valId :=
+                ⟨PastaLean.emptyHeap, { input := inputStream, output := [] }⟩
               let (result, finalState) := PastaLean.PyHeapProofM.runProgram (V := $valId) (do
                   $[$bodyStxArray:doElem]*
                   pure ()) initState
@@ -762,7 +951,9 @@ def ifSyntax : (kind : SyntaxNodeKind) → Json →
             let inputText ← IO.getStdin >>= fun h => h.readToEnd
             let inputLines := String.splitOn inputText "\n"
             let inputStream : $ioStreamIdent := ⟨0, fun i => $ioResultSuccessIdent (List.getD inputLines i "")⟩
-            let initState : $ioStateIdent := ⟨inputStream, []⟩
+            -- Structure syntax (not `⟨…⟩`) so defaulted fields (e.g. the PRNG seed) fill in and a
+            -- later field addition never breaks this emitted initializer.
+            let initState : $ioStateIdent := { input := inputStream, output := [] }
             -- Run the PyProofM computation
             let (result, finalState) := (((do
                 $[$bodyStxArray:doElem]*

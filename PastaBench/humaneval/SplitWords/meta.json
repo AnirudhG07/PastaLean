@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/125",
+  "problem": "split-words",
+  "module": "SplitWords",
+  "method": "split_words",
+  "params": [
+    "txt"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

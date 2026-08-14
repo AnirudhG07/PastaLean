@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/16",
+  "problem": "count-distinct-characters",
+  "module": "CountDistinctCharacters",
+  "method": "count_distinct_characters",
+  "params": [
+    "string"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

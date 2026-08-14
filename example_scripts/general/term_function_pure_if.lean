@@ -9,10 +9,14 @@ open Std.Do
 set_option linter.all false
 set_option mvcgen.warning false
 
-set_option maxHeartbeats 0
+set_option maxHeartbeats 200000
 
-def choose := fun x ↦ if x > (0 : Int) then (1 : Int) else (2 : Int)
+namespace PastaLean.User.Root
+
+def choose := fun (x : Int) ↦ if x > (0 : Int) then (1 : Int) else (2 : Int)
 
 attribute [simp, taste_ingr] choose
 
-def choose'rn := fun x ↦ if x > (0 : Int) then (1 : Int) else (2 : Int)
+def choose'rn := fun (x : Int) ↦ if x > (0 : Int) then (1 : Int) else (2 : Int)
+
+end PastaLean.User.Root

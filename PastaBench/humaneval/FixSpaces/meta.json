@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/140",
+  "problem": "fix-spaces",
+  "module": "FixSpaces",
+  "method": "fix_spaces",
+  "params": [
+    "text"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

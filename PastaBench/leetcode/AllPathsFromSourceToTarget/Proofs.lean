@@ -1,0 +1,4 @@
+import PastaBench.leetcode.AllPathsFromSourceToTarget.Generated
+namespace PastaBench.leetcode.AllPathsFromSourceToTarget
+-- TODO.
+end PastaBench.leetcode.AllPathsFromSourceToTarget

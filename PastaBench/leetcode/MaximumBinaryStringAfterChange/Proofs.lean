@@ -1,0 +1,4 @@
+import PastaBench.leetcode.MaximumBinaryStringAfterChange.Generated
+namespace PastaBench.leetcode.MaximumBinaryStringAfterChange
+-- TODO.
+end PastaBench.leetcode.MaximumBinaryStringAfterChange

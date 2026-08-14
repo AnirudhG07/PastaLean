@@ -44,17 +44,28 @@ inductive PyType where
 
 namespace PyType
 
-partial def beq : PyType → PyType → Bool
+def beq : PyType → PyType → Bool
   | .unknown, .unknown | .any, .any | .int, .int | .bool, .bool
   | .str, .str | .float, .float | .none, .none => true
   | .list a, .list b | .set a, .set b | .opt a, .opt b => beq a b
   | .dict k₁ v₁, .dict k₂ v₂ => beq k₁ k₂ && beq v₁ v₂
   | .cls a, .cls b => a == b
   | .tuple as, .tuple bs =>
-      as.length == bs.length && (as.zip bs).all fun (a, b) => beq a b
+      as.length == bs.length && (as.zip bs).attach.all fun ⟨(a, b), _⟩ => beq a b
   | .fn as r₁, .fn bs r₂ =>
-      as.length == bs.length && (as.zip bs).all (fun (a, b) => beq a b) && beq r₁ r₂
+      as.length == bs.length && ((as.zip bs).attach.all fun ⟨(a, b), _⟩ => beq a b) && beq r₁ r₂
   | _, _ => false
+termination_by a b => sizeOf a + sizeOf b
+decreasing_by
+  all_goals simp_wf
+  all_goals
+    first
+    | omega
+    | · rename_i h
+        obtain ⟨ha, hb⟩ := List.of_mem_zip h
+        have := List.sizeOf_lt_of_mem ha
+        have := List.sizeOf_lt_of_mem hb
+        omega
 
 instance : BEq PyType := ⟨beq⟩
 
@@ -84,13 +95,22 @@ def classNameOf? : PyType → Option String
   | _ => Option.none
 
 /-- True when the type is fully determined, so a Lean type can be emitted for it. -/
-partial def isKnown : PyType → Bool
+def isKnown : PyType → Bool
   | .unknown | .any => false
   | .list e | .set e | .opt e => isKnown e
   | .dict k v => isKnown k && isKnown v
-  | .tuple es => es.all isKnown
-  | .fn as r => as.all isKnown && isKnown r
+  | .tuple es => es.attach.all fun ⟨e, _⟩ => isKnown e
+  | .fn as r => (as.attach.all fun ⟨e, _⟩ => isKnown e) && isKnown r
   | _ => true
+termination_by t => sizeOf t
+decreasing_by
+  all_goals simp_wf
+  all_goals
+    first
+    | omega
+    | · rename_i h
+        have := List.sizeOf_lt_of_mem h
+        omega
 
 /-- A mutable container that lowers to a `Ref` under `--heap` (list/dict/set). A tuple is an
 immutable value type, so it is excluded — matching the driver's `_CONTAINER_ANN_HEADS`. -/
@@ -103,7 +123,7 @@ unascribed literal would otherwise default (`5` → `ℚ` in exact mode). Contai
 Lean to infer from the assignment RHS, so an ascription never *forces* an element type (e.g. `ℚ`)
 against what the RHS actually elaborates to (e.g. a numpy `Float`). Parameters are ascribed
 separately — this governs only locals. -/
-partial def needsAscription : PyType → Bool
+def needsAscription : PyType → Bool
   | .int | .bool | .str => true
   -- A container of concrete scalars (`list[int]`, `set[str]`, `list[list[int]]`) is unambiguous, so
   -- ascribing it is safe *and* needed: without it a `List Int` local can be silently unified up to
@@ -116,25 +136,47 @@ partial def needsAscription : PyType → Bool
   | .dict k v => needsAscription k && needsAscription v
   -- A tuple of concrete scalars is unambiguous too (`t = []; t.append((i, j))` → `list[(int,int)]`),
   -- and without it a captured list-of-pairs is lifted untyped.
-  | .tuple es => !es.isEmpty && es.all needsAscription
+  | .tuple es => !es.isEmpty && es.attach.all fun ⟨e, _⟩ => needsAscription e
   -- The known-dynamic top type materialises as `PyAny`, which Lean cannot infer from a heterogeneous
   -- literal's first element — so a container wrapping it (`list[any]` → `List PyAny`) must be ascribed.
   | .any => true
+  -- A nullable local always needs its ascription: initialised from `None`, `let mut x := Option.none`
+  -- fixes the slot to `Option ?α` — a stuck metavariable a later `x = (l, r)` / `x = curr.next` cannot
+  -- back-pin. Ascribe `Option τ` for any fully-known inner `τ` (node class, pair, scalar, container).
+  | .opt e => isKnown e
   -- A function type must be ascribed whenever it is fully known: a heap `list` of closures builds up
   -- from an empty `allocM []`, which leaves the element's (function) domain universe stuck unless the
   -- local's type pins it — `list[Callable[[], str]]` → `List (Unit → String)`.
   | .fn as r => as.all isKnown && isKnown r
   | _ => false
+termination_by t => sizeOf t
+decreasing_by
+  all_goals simp_wf
+  all_goals
+    first
+    | omega
+    | · rename_i h
+        have := List.sizeOf_lt_of_mem h
+        omega
 
 /-- Does this type contain a function type anywhere? A container of closures cannot have its element
 (function-domain) universe inferred from an empty `allocM []` literal, so under `--heap` its binding
 must be ascribed even though a plain empty container is normally left for Lean to infer. -/
-partial def containsFn : PyType → Bool
+def containsFn : PyType → Bool
   | .fn _ _ => true
   | .list e | .set e | .opt e => containsFn e
   | .dict k v => containsFn k || containsFn v
-  | .tuple es => es.any containsFn
+  | .tuple es => es.attach.any fun ⟨e, _⟩ => containsFn e
   | _ => false
+termination_by t => sizeOf t
+decreasing_by
+  all_goals simp_wf
+  all_goals
+    first
+    | omega
+    | · rename_i h
+        have := List.sizeOf_lt_of_mem h
+        omega
 
 /-- Least upper bound.
 
@@ -142,7 +184,7 @@ partial def containsFn : PyType → Bool
 `str`) go to `any`. `bool` joins into `int` because Python's `bool` is a subclass of `int`
 (`True + 1 = 2`), and `None` joins into `Optional`.
 -/
-partial def join : PyType → PyType → PyType
+def join : PyType → PyType → PyType
   | .unknown, t | t, .unknown => t
   | .any, _ | _, .any => .any
   -- Python's numeric tower `bool <: int <: float`: the join widens rather than becoming a union, so
@@ -152,20 +194,35 @@ partial def join : PyType → PyType → PyType
   | .float, .int | .int, .float | .float, .bool | .bool, .float => .float
   | .none, .none => .none
   -- `opt` before `none`, or `None ⊔ Optional[int]` would nest to `Optional[Optional[int]]`.
-  | .opt a, .opt b => .opt (join a b)
+  -- ABSORPTION: `Optional[Any]` collapses to `Any` (a nullable dynamic value is just a dynamic value).
+  -- Without it `join` is non-associative — `join(join(None,int),str) = opt any` but
+  -- `join(None, join(int,str)) = any` (the `_, .any => any` rung above fires first) — which makes the
+  -- fixpoint non-confluent (`Option PyAny` on one order, `PyAny` on another) for None+conflict slots.
+  | .opt a, .opt b => match join a b with | .any => .any | j => .opt j
   | .opt a, .none | .none, .opt a => .opt a
-  | .opt a, b | b, .opt a => .opt (join a b)
+  | .opt a, b | b, .opt a => match join a b with | .any => .any | j => .opt j
   | .none, t | t, .none => .opt t
   | .list a, .list b => .list (join a b)
   | .set a, .set b => .set (join a b)
   | .dict k₁ v₁, .dict k₂ v₂ => .dict (join k₁ k₂) (join v₁ v₂)
   | .tuple as, .tuple bs =>
-      if as.length == bs.length then .tuple ((as.zip bs).map fun (a, b) => join a b)
+      if as.length == bs.length then .tuple ((as.zip bs).attach.map fun ⟨(a, b), _⟩ => join a b)
       else .any
   | .fn as r₁, .fn bs r₂ =>
-      if as.length == bs.length then .fn ((as.zip bs).map fun (a, b) => join a b) (join r₁ r₂)
+      if as.length == bs.length then .fn ((as.zip bs).attach.map fun ⟨(a, b), _⟩ => join a b) (join r₁ r₂)
       else .any
   | a, b => if a.beq b then a else .any
+termination_by a b => sizeOf a + sizeOf b
+decreasing_by
+  all_goals simp_wf
+  all_goals
+    first
+    | omega
+    | · rename_i h
+        obtain ⟨ha, hb⟩ := List.of_mem_zip h
+        have := List.sizeOf_lt_of_mem ha
+        have := List.sizeOf_lt_of_mem hb
+        omega
 
 /-- Join a whole list, starting from `unknown`. -/
 def joinAll (ts : List PyType) : PyType := ts.foldl join .unknown
@@ -173,7 +230,7 @@ def joinAll (ts : List PyType) : PyType := ts.foldl join .unknown
 /-- Gradual-typing *consistency* (Siek & Taha): reflexive and symmetric, **not** transitive.
 `any` is consistent with everything, so a boxed value may flow anywhere; `int` and `str` are not
 consistent with each other. -/
-partial def consistent : PyType → PyType → Bool
+def consistent : PyType → PyType → Bool
   | .any, _ | _, .any | .unknown, _ | _, .unknown => true
   -- Python's numeric tower `bool <: int <: float` — consistent so `join` (which widens to `float`)
   -- stays consistent with each operand.
@@ -183,10 +240,21 @@ partial def consistent : PyType → PyType → Bool
   | .opt a, b | b, .opt a => b.beq .none || consistent a b
   | .dict k₁ v₁, .dict k₂ v₂ => consistent k₁ k₂ && consistent v₁ v₂
   | .tuple as, .tuple bs =>
-      as.length == bs.length && (as.zip bs).all fun (a, b) => consistent a b
+      as.length == bs.length && (as.zip bs).attach.all fun ⟨(a, b), _⟩ => consistent a b
   | .fn as r₁, .fn bs r₂ =>
-      as.length == bs.length && (as.zip bs).all (fun (a, b) => consistent a b) && consistent r₁ r₂
+      as.length == bs.length && ((as.zip bs).attach.all fun ⟨(a, b), _⟩ => consistent a b) && consistent r₁ r₂
   | a, b => a.beq b
+termination_by a b => sizeOf a + sizeOf b
+decreasing_by
+  all_goals simp_wf
+  all_goals
+    first
+    | omega
+    | · rename_i h
+        obtain ⟨ha, hb⟩ := List.of_mem_zip h
+        have := List.sizeOf_lt_of_mem ha
+        have := List.sizeOf_lt_of_mem hb
+        omega
 
 /-- Is this a number Python arithmetic accepts? -/
 def isNumeric : PyType → Bool
@@ -202,6 +270,18 @@ def elemType : PyType → PyType
   -- Indexing/iterating a boxed value yields a boxed value.
   | .any => .any
   | _ => .unknown
+
+/-- For a builtin that iterates its single argument (`min`/`max`/`sum` over one container), the
+result type: the element type of a KNOWN container — even when still `unknown`, so a transiently
+under-determined element doesn't leak the container type back onto the target — or the argument
+itself when it is a scalar (`min(x)` on an un-inferred `x`). -/
+def containerElemOrSelf : PyType → PyType
+  | .list e | .set e => e
+  | .str => .str
+  | .dict k _ => k
+  | .tuple es => joinAll es
+  | .any => .any
+  | other => other
 
 /-- What to do when a value of type `actual` reaches a position expecting `expected`: the small
 implicit coercion Python performs, or `box` (fall back to `PyAny`) when the types are unrelated. -/

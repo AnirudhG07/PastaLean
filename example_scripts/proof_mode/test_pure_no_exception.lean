@@ -9,7 +9,9 @@ open Std.Do
 set_option linter.all false
 set_option mvcgen.warning false
 
-set_option maxHeartbeats 0
+set_option maxHeartbeats 200000
+
+namespace PastaLean.User.Root
 
 -- Test: Pure computation (no IO, no exceptions)
 def add := fun a ↦ fun b ↦ a +ₚ b
@@ -17,3 +19,5 @@ def add := fun a ↦ fun b ↦ a +ₚ b
 attribute [simp, taste_ingr] add
 
 def add'rn := fun a ↦ fun b ↦ a +ₚ b
+
+end PastaLean.User.Root

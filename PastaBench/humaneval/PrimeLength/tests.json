@@ -1,0 +1,202 @@
+[
+  {
+    "input": "string = 'Hello'",
+    "output": "True"
+  },
+  {
+    "input": "string = 'abcdcba'",
+    "output": "True"
+  },
+  {
+    "input": "string = 'kittens'",
+    "output": "True"
+  },
+  {
+    "input": "string = 'orange'",
+    "output": "False"
+  },
+  {
+    "input": "string = 'wow'",
+    "output": "True"
+  },
+  {
+    "input": "string = 'world'",
+    "output": "True"
+  },
+  {
+    "input": "string = 'MadaM'",
+    "output": "True"
+  },
+  {
+    "input": "string = 'Wow'",
+    "output": "True"
+  },
+  {
+    "input": "string = ''",
+    "output": "False"
+  },
+  {
+    "input": "string = 'HI'",
+    "output": "True"
+  },
+  {
+    "input": "string = 'go'",
+    "output": "True"
+  },
+  {
+    "input": "string = 'gogo'",
+    "output": "False"
+  },
+  {
+    "input": "string = 'aaaaaaaaaaaaaaa'",
+    "output": "False"
+  },
+  {
+    "input": "string = 'Madam'",
+    "output": "True"
+  },
+  {
+    "input": "string = 'M'",
+    "output": "False"
+  },
+  {
+    "input": "string = '0'",
+    "output": "False"
+  },
+  {
+    "input": "string = 'a'",
+    "output": "False"
+  },
+  {
+    "input": "string = 'ab'",
+    "output": "True"
+  },
+  {
+    "input": "string = 'abc'",
+    "output": "True"
+  },
+  {
+    "input": "string = 'abcd'",
+    "output": "False"
+  },
+  {
+    "input": "string = 'abcde'",
+    "output": "True"
+  },
+  {
+    "input": "string = 'abcdef'",
+    "output": "False"
+  },
+  {
+    "input": "string = 'abcdefg'",
+    "output": "True"
+  },
+  {
+    "input": "string = 'abcdefgh'",
+    "output": "False"
+  },
+  {
+    "input": "string = 'abcdefghi'",
+    "output": "False"
+  },
+  {
+    "input": "string = 'zyxwvutsrqponmlkjihgfedcba'",
+    "output": "False"
+  },
+  {
+    "input": "string = 'abcddefghi'",
+    "output": "False"
+  },
+  {
+    "input": "string = 'abcdefabcddefghi'",
+    "output": "False"
+  },
+  {
+    "input": "string = 'abcdeabcabcdefgfabcddefghi'",
+    "output": "False"
+  },
+  {
+    "input": "string = 'abcdefghiab'",
+    "output": "True"
+  },
+  {
+    "input": "string = 'abcdeabcabcdeabc'",
+    "output": "False"
+  },
+  {
+    "input": "string = 'zyxwvutsrqponmledcba'",
+    "output": "False"
+  },
+  {
+    "input": "string = 'aabcbcde'",
+    "output": "False"
+  },
+  {
+    "input": "string = 'abcdefga'",
+    "output": "False"
+  },
+  {
+    "input": "string = 'abcddefg'",
+    "output": "False"
+  },
+  {
+    "input": "string = 'abcdeabcddefgfg'",
+    "output": "False"
+  },
+  {
+    "input": "string = 'abcdabcdefgadefg'",
+    "output": "False"
+  },
+  {
+    "input": "string = 'aabcbcdeabcdeabcddefgaabcbcdefg'",
+    "output": "True"
+  },
+  {
+    "input": "string = 'zyxwvutsrqponwmlkjihgfedcba'",
+    "output": "False"
+  },
+  {
+    "input": "string = 'phZ'",
+    "output": "True"
+  },
+  {
+    "input": "string = 'aabcbcdeabcdeabcddefgaabcbabcdefghiabefg'",
+    "output": "False"
+  },
+  {
+    "input": "string = 'aabcbcdeabcdeabcddefgaeabcbcdefg'",
+    "output": "False"
+  },
+  {
+    "input": "string = 'abcdabcdabcdefgadefggade'",
+    "output": "False"
+  },
+  {
+    "input": "string = 'abcabcdddefghi'",
+    "output": "False"
+  },
+  {
+    "input": "string = 'abcdeg'",
+    "output": "False"
+  },
+  {
+    "input": "string = 'ababcdefga'",
+    "output": "False"
+  },
+  {
+    "input": "string = 'abacdabcdefgadefg'",
+    "output": "True"
+  },
+  {
+    "input": "string = 'abacdabcdefgeadefg'",
+    "output": "False"
+  },
+  {
+    "input": "string = 'ababcdabcdegabcdefgeadefg'",
+    "output": "False"
+  },
+  {
+    "input": "string = 'Z'",
+    "output": "False"
+  }
+]

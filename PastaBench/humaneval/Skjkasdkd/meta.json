@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/94",
+  "problem": "skjkasdkd",
+  "module": "Skjkasdkd",
+  "method": "skjkasdkd",
+  "params": [
+    "lst"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

@@ -1,4 +1,4 @@
-import Mathlib
+import PastaLean.Imports
 import PastaLean.PyAPI.Dicts
 
 namespace PastaLean
@@ -69,16 +69,33 @@ def pyPopRest (xs : List α) (idx : Int := -1) : List α :=
 instance [BEq α] [Hashable α] : PyPop (Std.HashMap α β) α β where
   pyPop m key default := pyDictPop m key default
 
-/-! Dict `d.pop(key, default)` splits like the list pop: `pyDictPopValue` is `d[key]` (or the
-default when absent), `pyDictPopRest` is the map without that key. Value form takes the default,
-rest form only the key. -/
+/-- `d.pop(key[, default])` on a dict-like — value at `key` (with an optional default) and the dict
+without it. Polymorphic over the concrete dict type (a plain `Std.HashMap`, a `PyDefaultDict`, …) so one
+call site handles all of them — `d.pop(key)` shares its name with the 1-arg `list.pop(i)`, and the
+codegen routes here once it knows the receiver is a dict. `δ` is the dict type; `κ`/`ν` (its key/value)
+are `outParam`s of it. -/
+class PyDictKeyPop (δ : Type) (κ : outParam Type) (ν : outParam Type) where
+  keyPopValue : δ → κ → ν          -- `d.pop(key)`  — value at key (its `default` if absent)
+  keyGetOr    : δ → κ → ν → ν      -- `d.pop(key, dflt)` — value at key, else `dflt`
+  keyPopRest  : δ → κ → δ          -- the dict without `key`
+
+instance [BEq α] [Hashable α] [Inhabited β] : PyDictKeyPop (Std.HashMap α β) α β where
+  keyPopValue m key := (m.get? key).getD default
+  keyGetOr m key d := (m.get? key).getD d
+  keyPopRest m key := m.erase key
+
+def pyDictKeyPopValue [PyDictKeyPop δ κ ν] (d : δ) (key : κ) : ν := PyDictKeyPop.keyPopValue d key
+def pyDictKeyPopRest [PyDictKeyPop δ κ ν] (d : δ) (key : κ) : δ := PyDictKeyPop.keyPopRest d key
+
+/-! Dict `d.pop(key, default)` splits like the list pop: `pyDictPopValue` is `d[key]` (or the default
+when absent), `pyDictPopRest` is the map without that key. Both are polymorphic (`PyDictKeyPop`), so
+`Counter`/`defaultdict.pop(k, dflt)` work as well as a plain dict. -/
 
 /-- The value `d.pop(key, default)` returns: `d[key]` if present, else `default`. -/
-def pyDictPopValue [BEq α] [Hashable α] (m : Std.HashMap α β) (key : α) (default : β) : β :=
-  (m.get? key).getD default
+def pyDictPopValue [PyDictKeyPop δ κ ν] (d : δ) (key : κ) (default : ν) : ν :=
+  PyDictKeyPop.keyGetOr d key default
 
-/-- The map after `d.pop(key, ...)` removes `key`. -/
-def pyDictPopRest [BEq α] [Hashable α] (m : Std.HashMap α β) (key : α) : Std.HashMap α β :=
-  m.erase key
+/-- The dict after `d.pop(key, ...)` removes `key`. -/
+def pyDictPopRest [PyDictKeyPop δ κ ν] (d : δ) (key : κ) : δ := PyDictKeyPop.keyPopRest d key
 
 end PastaLean

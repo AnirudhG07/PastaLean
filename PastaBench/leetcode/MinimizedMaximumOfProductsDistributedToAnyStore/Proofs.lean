@@ -1,0 +1,4 @@
+import PastaBench.leetcode.MinimizedMaximumOfProductsDistributedToAnyStore.Generated
+namespace PastaBench.leetcode.MinimizedMaximumOfProductsDistributedToAnyStore
+-- TODO.
+end PastaBench.leetcode.MinimizedMaximumOfProductsDistributedToAnyStore

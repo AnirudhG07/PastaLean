@@ -1,0 +1,202 @@
+[
+  {
+    "input": "s = 'a'",
+    "output": "False"
+  },
+  {
+    "input": "s = 'aa'",
+    "output": "False"
+  },
+  {
+    "input": "s = 'abcd'",
+    "output": "True"
+  },
+  {
+    "input": "s = 'aabb'",
+    "output": "False"
+  },
+  {
+    "input": "s = 'adb'",
+    "output": "True"
+  },
+  {
+    "input": "s = 'xyy'",
+    "output": "False"
+  },
+  {
+    "input": "s = 'iopaxpoi'",
+    "output": "True"
+  },
+  {
+    "input": "s = 'iopaxioi'",
+    "output": "False"
+  },
+  {
+    "input": "s = 'xyz'",
+    "output": "True"
+  },
+  {
+    "input": "s = 'tim'",
+    "output": "True"
+  },
+  {
+    "input": "s = 'abcabc'",
+    "output": "True"
+  },
+  {
+    "input": "s = 'bjmpzkfak'",
+    "output": "True"
+  },
+  {
+    "input": "s = 'cadbfe'",
+    "output": "True"
+  },
+  {
+    "input": "s = 'agbebf'",
+    "output": "False"
+  },
+  {
+    "input": "s = ' this is a comment'",
+    "output": "False"
+  },
+  {
+    "input": "s = 'yyyyy'",
+    "output": "False"
+  },
+  {
+    "input": "s = 'xycxyz'",
+    "output": "True"
+  },
+  {
+    "input": "s = 'bacbacb'",
+    "output": "True"
+  },
+  {
+    "input": "s = 'xy'",
+    "output": "False"
+  },
+  {
+    "input": "s = 'xxy'",
+    "output": "False"
+  },
+  {
+    "input": "s = 'baacbacb'",
+    "output": "False"
+  },
+  {
+    "input": "s = 'bjmzpzkfak'",
+    "output": "False"
+  },
+  {
+    "input": "s = 'xxyzycxyz'",
+    "output": "False"
+  },
+  {
+    "input": "s = 'bacacbacb'",
+    "output": "False"
+  },
+  {
+    "input": "s = 'tibacacbacbm'",
+    "output": "False"
+  },
+  {
+    "input": "s = 'bagbebf'",
+    "output": "False"
+  },
+  {
+    "input": "s = 'tibaagbebfcacbacbmm'",
+    "output": "False"
+  },
+  {
+    "input": "s = 'baaacbacb'",
+    "output": "False"
+  },
+  {
+    "input": "s = ' this is bacbacba comment'",
+    "output": "False"
+  },
+  {
+    "input": "s = 'abbaacbacbcabc'",
+    "output": "False"
+  },
+  {
+    "input": "s = 'abbaacbaccbcabc'",
+    "output": "False"
+  },
+  {
+    "input": "s = ' this is bacbacba commenst'",
+    "output": "False"
+  },
+  {
+    "input": "s = 'baacbacbkfak'",
+    "output": "False"
+  },
+  {
+    "input": "s = 'xx'",
+    "output": "False"
+  },
+  {
+    "input": "s = ' this is aao comment'",
+    "output": "False"
+  },
+  {
+    "input": "s = ' this is bat'",
+    "output": "True"
+  },
+  {
+    "input": "s = ' this is baacbacbbat'",
+    "output": "False"
+  },
+  {
+    "input": "s = 'x'",
+    "output": "False"
+  },
+  {
+    "input": "s = 'agbbebf'",
+    "output": "False"
+  },
+  {
+    "input": "s = ' thiis is hbat'",
+    "output": "False"
+  },
+  {
+    "input": "s = 'abbaacbaccb'",
+    "output": "False"
+  },
+  {
+    "input": "s = ' thiis is hb'",
+    "output": "False"
+  },
+  {
+    "input": "s = ' this is baaacbacbbat'",
+    "output": "False"
+  },
+  {
+    "input": "s = ' this is baaacbaicbbat'",
+    "output": "False"
+  },
+  {
+    "input": "s = 'cabcabc'",
+    "output": "True"
+  },
+  {
+    "input": "s = 'XX'",
+    "output": "False"
+  },
+  {
+    "input": "s = ' this is bacbacba coxxmmenst'",
+    "output": "False"
+  },
+  {
+    "input": "s = ' this is bacbacba comnnt'",
+    "output": "False"
+  },
+  {
+    "input": "s = 'xxbacbacbx'",
+    "output": "False"
+  },
+  {
+    "input": "s = 'bjmzpzfak'",
+    "output": "False"
+  }
+]

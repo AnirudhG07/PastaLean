@@ -9,10 +9,16 @@ open Std.Do
 set_option linter.all false
 set_option mvcgen.warning false
 
-set_option maxHeartbeats 0
+set_option maxHeartbeats 200000
 
-def f := fun (a : PyAny) ↦ if PastaLean.pyTruthy !PastaLean.pyTruthy a then a else !PastaLean.pyTruthy a
+namespace PastaLean.User.Root
 
-attribute [simp, taste_ingr] f
+def f := fun (a : PyAny) ↦
+  (show PastaLean.PyAny from if PastaLean.pyTruthy !PastaLean.pyTruthy a then a else !PastaLean.pyTruthy a)
 
-def f'rn := fun (a : PyAny) ↦ if PastaLean.pyTruthy !PastaLean.pyTruthy a then a else !PastaLean.pyTruthy a
+attribute [simp] f
+
+def f'rn := fun (a : PyAny) ↦
+  (show PastaLean.PyAny from if PastaLean.pyTruthy !PastaLean.pyTruthy a then a else !PastaLean.pyTruthy a)
+
+end PastaLean.User.Root

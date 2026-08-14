@@ -1,0 +1,12 @@
+{
+  "problem": "find-common-characters",
+  "module": "FindCommonCharacters",
+  "method": "commonChars",
+  "params": [
+    "words"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 103
+}

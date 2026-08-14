@@ -717,6 +717,97 @@ is the whole point, printing gets its own typeclass. (In exact/prove mode `print
 — §9 — because a `noncomputable ℝ` has no printable form; the arguments are still elaborated so the
 line type-checks, then discarded.)
 
+## 27. Numeric widening: a binder is typed by the *join of its writes*, and inference runs on the *desugared* IR
+
+**The problem.** Python has one numeric ladder (`bool <: int <: float`) and silently widens along it:
+`ans = 0` then `ans = ans / k` leaves `ans` a float; `dist = [0]*n` then `dist[b] = w*p` makes `dist`
+a list of floats. Lean has three distinct numeric types (§6) and no silent widening — a `let mut ans :
+ℤ := 0` simply *rejects* a later `ans := (…: ℚ)`. So the transpiler has to decide each binder's type
+as the **least type that holds every value ever written to it**, before it emits the binder.
+
+**The choice.** `TypeInfer` types every mutable binder and every container element as the **join
+(least upper bound) of all its assignments**, over a monotone fixpoint (`Solve.lean`'s `learn`). `ans`
+sees `0 : int` and `ans/k : float`; `join int float = float`, so `ans : ℚ`. `dist` sees `[0]*n :
+list int` and `dist[b] = float`; the element joins to `float`, so `dist : List ℚ`, and the `0`
+literals coerce. The binder is then ascribed (or its initial literal coerced) so Lean commits to the
+wide type up front rather than inferring the narrow one from the first write.
+
+**Why this is the whole game, and where it breaks.** The join is only as good as the types feeding it,
+so **two things are load-bearing**, and each was a real class of bugs:
+
+1. **Inference must run on the *desugared* IR, not the surface AST.** A chained `ans = pre = 0` is one
+   AST node with two targets that per-target learning can't see; a walrus `(t := w*p)` hides the write
+   to `t` inside an expression. If inference runs first and desugaring splits them afterward, the
+   split statements carry none of the stamps inference would have produced — the binder stays narrow
+   and the file fails to compile. So the pipeline order is fixed: **`lowerGenerators → desugarAst →
+   inferModule`**, and codegen skips the passes it already ran (the `inferTypes` task does the
+   desugaring, marks the module `_inferred`, and the translate task honours it). This is the §4
+   principle — recover types once, with the whole (now *normalised*) function in view — made precise
+   about *when*.
+
+2. **Every value-producing or value-consuming library call must be typed in `TypeInfer`, or a single
+   `unknown` poisons the whole join.** `heappop(h)` must be typed as `h`'s element type and
+   `heappush(h, x)` must teach `h` that it holds `x` — otherwise `w, a = heappop(pq)` leaves `w :
+   unknown`, `w * p : unknown` (arithmetic on `unknown` is `unknown`, not `float`), and `dist[b] =
+   w*p` never widens `dist`. The join is a chain; one un-typed link breaks everything downstream of it.
+   This is why the builtin/method typing rules (`zip`, `chain`, `product`, `heappop`, `min`/`max`
+   over a container, …) are not a nicety — they are what keeps widening from silently under-typing.
+
+**The honest cost.** Float doesn't get ascribed by default (a `ℚ` ascription would fight a
+transcendental `ℝ` branch or a numpy `Float`, §6), so widening a scalar `int → float` relies on
+coercing the *initial literal* (`ans = 0` → `(0 : ℚ)`) rather than ascribing the binder. That works
+for scalars and flat float lists; it does **not** yet reach a float *nested inside a tuple inside a
+list* — a heap of `(priority, node)` pairs where the priority widens to `ℚ` (`pq = [(-1, s)]` then
+`heappush(pq, (-t, b))`) still needs position-specific tuple-literal coercion, which is a known gap
+(exercised in the numeric-widening regression). The general principle — *type by the join of writes,
+on the desugared IR, with every library link typed* — is sound; the remaining work is teaching the
+coercion to descend through the last few container shapes.
+
+## 28. Member *behaviour* is data too — libraries self-describe, the inference engine reads
+
+**The problem.** §5 made a library's *name → Lean function* mapping into data (a table), so adding a
+library never touches the code generator. But a name→function map is only half of what the translator
+needs. To type a program, `TypeInfer` also has to know each callable's **behaviour**: what type
+`zip(a, b)` or `heappop(h)` *returns* as a function of its argument types (so a binder can be typed by
+the join of its writes, §27), and whether `heappush(h, x)` *teaches* `h` a new element type by
+mutating it. For a long time that knowledge lived as a growing `match name with | "zip" => … |
+"chain" => … | "heappop" => …` inside the inference engine — so adding a library, or fixing how one
+library's function widens a number, meant editing `TypeInfer/Rules.lean`. That is exactly the coupling
+§5 removed for name resolution, creeping back in through the type system.
+
+**The choice.** A `Behaviour` record (`Libraries/Behaviour.lean`) captures *everything* the translator
+needs about one callable beyond "it maps to F", in one place read by **both** inference and codegen:
+`returns : List PyType → PyType` (result shape), `teaches?` (which argument gains which element type
+by mutation — the inference side of an in-place mutation), `mutator` (how the code generator lowers
+that mutation at runtime), `infiniteIter` (unbounded-iterator shape for the desugarer), and
+`keyedVariant` (the `*Key` shim to route to when called with `key=`). A **method's receiver is
+argument 0**, so `xs.append(v)` and `heappush(h, v)` share the same record and the same `push 0 1`
+rule. Each **library declares its members in its own `Mapping.lean`** (`heapqBehaviour?`,
+`itertoolsBehaviour?`, …) as named return-*shape* combinators (`listOf 0`, `push 0 1`), not raw
+lambdas; builtins live in `builtinBehaviour?`. `Registry` aggregates them (`bareBehaviour?` for a bare
+`Name` call, `memberBehaviour?` for a qualified `module.member`) and **derives** the engine's old views
+(`libraryMemberReturn?`/`libraryMutator?`/`libraryInfiniteIter?`) as one-field projections — so every
+call site, in the inference engine *and* the code generator, reads the single record and **names no
+specific library**. Adding a library member's whole behaviour is one entry in that library's file.
+(`math`/`scipy`/`numpy` stay *qualified-only* — kept out of `bareBehaviour?` — so a user function
+named `pow`/`sqrt`/`dot` is not shadowed.)
+
+**Why `List PyType → PyType` directly, not a neutral encoding.** `Libraries` may depend on
+`TypeInfer.PyType` (numpy/scipy/math Mappings already did), so a library expresses its return shape
+*in the lattice itself* — `fun args => .list (.tuple (args.map (·.elemType)))` for `product` — rather
+than through an intermediate DSL the engine would have to interpret. The dependency runs
+`TypeInfer.PyType` (leaf) ← `Libraries` ← `TypeInfer.Rules`, with no cycle, so the library layer can
+speak the type language without importing the inference engine.
+
+**Why this is the same decision as §5, one level up.** §5 keeps *behaviour vs. syntax* separated and
+libraries as data for *name resolution*. §28 extends "libraries are data" from *which function* to
+*what that function does to types* — the mutation, the widening, the return shape §27 depends on. The
+`LibraryMutator` record (§5's mutation table) already carried this intent in its doc comment ("the
+mutation analogue of `pythonLibraryMap?`"); `Behaviour` is that intent finished for the *inference*
+side. The payoff is the same: a new library — and the numeric-widening, in-place-mutation, and
+tuple-unpacking behaviour its functions need — joins the system by adding a descriptor, not by
+teaching the engine about it one `if`/`else` at a time.
+
 ## The shape of it, in one paragraph
 
 We translate the statically-meaningful subset of Python via a deterministic AST walk, because

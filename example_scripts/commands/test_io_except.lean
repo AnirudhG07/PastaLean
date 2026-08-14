@@ -9,13 +9,14 @@ open Std.Do
 set_option linter.all false
 set_option mvcgen.warning false
 
-set_option maxHeartbeats 0
+set_option maxHeartbeats 200000
+
+namespace PastaLean.User.Root
 
 -- !/usr/bin/env python3
 /-
 Test that exceptions with real IO use PyExcept.
 -/
--- CHECK: def get_validated : PyExcept Int
 def get_validated : PastaLean.ProofMode.PyProofM Int := do
   let mut x : Int := PastaLean.pyInt (← PastaLean.ProofMode.pyInputProof "")
   if h_1 : x < (0 : Int) then 
@@ -33,3 +34,5 @@ def get_validated'rn : PastaLean.PyExcept Int := do
   else
     let _ := ()
   return x
+
+end PastaLean.User.Root

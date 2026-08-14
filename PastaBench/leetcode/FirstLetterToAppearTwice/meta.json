@@ -1,0 +1,12 @@
+{
+  "problem": "first-letter-to-appear-twice",
+  "module": "FirstLetterToAppearTwice",
+  "method": "repeatedCharacter",
+  "params": [
+    "s"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 133
+}

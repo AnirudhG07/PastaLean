@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/158",
+  "problem": "find-max",
+  "module": "FindMax",
+  "method": "find_max",
+  "params": [
+    "words"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

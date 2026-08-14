@@ -1,0 +1,202 @@
+[
+  {
+    "input": "x = 16, n = 2",
+    "output": "True"
+  },
+  {
+    "input": "x = 143214, n = 16",
+    "output": "False"
+  },
+  {
+    "input": "x = 4, n = 2",
+    "output": "True"
+  },
+  {
+    "input": "x = 9, n = 3",
+    "output": "True"
+  },
+  {
+    "input": "x = 16, n = 4",
+    "output": "True"
+  },
+  {
+    "input": "x = 24, n = 2",
+    "output": "False"
+  },
+  {
+    "input": "x = 128, n = 4",
+    "output": "False"
+  },
+  {
+    "input": "x = 12, n = 6",
+    "output": "False"
+  },
+  {
+    "input": "x = 1, n = 1",
+    "output": "True"
+  },
+  {
+    "input": "x = 1, n = 12",
+    "output": "True"
+  },
+  {
+    "input": "x = 25, n = 5",
+    "output": "True"
+  },
+  {
+    "input": "x = 81, n = 3",
+    "output": "True"
+  },
+  {
+    "input": "x = 64, n = 4",
+    "output": "True"
+  },
+  {
+    "input": "x = 36, n = 6",
+    "output": "True"
+  },
+  {
+    "input": "x = 10, n = 2",
+    "output": "False"
+  },
+  {
+    "input": "x = 20, n = 5",
+    "output": "False"
+  },
+  {
+    "input": "x = 15, n = 3",
+    "output": "False"
+  },
+  {
+    "input": "x = 35, n = 5",
+    "output": "False"
+  },
+  {
+    "input": "x = 49, n = 7",
+    "output": "True"
+  },
+  {
+    "input": "x = 125, n = 5",
+    "output": "True"
+  },
+  {
+    "input": "x = 5, n = 5",
+    "output": "True"
+  },
+  {
+    "input": "x = 23, n = 5",
+    "output": "False"
+  },
+  {
+    "input": "x = 25, n = 23",
+    "output": "False"
+  },
+  {
+    "input": "x = 23, n = 2",
+    "output": "False"
+  },
+  {
+    "input": "x = 21, n = 2",
+    "output": "False"
+  },
+  {
+    "input": "x = 6, n = 5",
+    "output": "False"
+  },
+  {
+    "input": "x = 6, n = 7",
+    "output": "False"
+  },
+  {
+    "input": "x = 81, n = 6",
+    "output": "False"
+  },
+  {
+    "input": "x = 64, n = 6",
+    "output": "False"
+  },
+  {
+    "input": "x = 2, n = 2",
+    "output": "True"
+  },
+  {
+    "input": "x = 2, n = 5",
+    "output": "False"
+  },
+  {
+    "input": "x = 23, n = 23",
+    "output": "True"
+  },
+  {
+    "input": "x = 25, n = 6",
+    "output": "False"
+  },
+  {
+    "input": "x = 82, n = 3",
+    "output": "False"
+  },
+  {
+    "input": "x = 82, n = 7",
+    "output": "False"
+  },
+  {
+    "input": "x = 81, n = 81",
+    "output": "True"
+  },
+  {
+    "input": "x = 10, n = 3",
+    "output": "False"
+  },
+  {
+    "input": "x = 36, n = 5",
+    "output": "False"
+  },
+  {
+    "input": "x = 15, n = 23",
+    "output": "False"
+  },
+  {
+    "input": "x = 7, n = 15",
+    "output": "False"
+  },
+  {
+    "input": "x = 82, n = 2",
+    "output": "False"
+  },
+  {
+    "input": "x = 10, n = 81",
+    "output": "False"
+  },
+  {
+    "input": "x = 49, n = 8",
+    "output": "False"
+  },
+  {
+    "input": "x = 81, n = 7",
+    "output": "False"
+  },
+  {
+    "input": "x = 21, n = 35",
+    "output": "False"
+  },
+  {
+    "input": "x = 20, n = 23",
+    "output": "False"
+  },
+  {
+    "input": "x = 81, n = 25",
+    "output": "False"
+  },
+  {
+    "input": "x = 35, n = 35",
+    "output": "True"
+  },
+  {
+    "input": "x = 81, n = 5",
+    "output": "False"
+  },
+  {
+    "input": "x = 83, n = 4",
+    "output": "False"
+  }
+]

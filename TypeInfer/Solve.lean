@@ -54,40 +54,51 @@ def applyMutation (sigs : Sigs) (env : Env) (value : Json) : Env :=
   if nodeTypeOf value != some "Call" then env else
   match getField value "func" with
   | some func =>
-      if nodeTypeOf func != some "Attribute" then env else
-      match (func.getObjValAs? String "attr").toOption, getField func "value" with
-      | some attr, some recv =>
-          let args := ((value.getObjValAs? (Array Json) "args").toOption.getD #[]).toList
-          let elemFrom (i : Nat) : PyType := (args[i]?).elim .unknown (typeOfExpr sigs env)
-          let learned : PyType := match attr with
-            -- `add` is a SET method — learn `.set`, not `.list`, so `s = set()` (`.set unknown`)
-            -- refines to `.set T` instead of joining `.set` with `.list` (→ unknown → PyAny).
-            | "add" => .set (elemFrom 0)
-            | "append" | "insert" => .list (elemFrom (if attr == "insert" then 1 else 0))
-            | "extend" => match args[0]?.elim .unknown (typeOfExpr sigs env) with
-                          | .list e => .list e
-                          | _ => .unknown
-            | _ => .unknown
-          if learned == .unknown then env
-          else
-            let join1 (env : Env) (n : String) (t : PyType) : Env :=
-              env.insert n ((env.get? n |>.getD .unknown).join t)
-            match nameId? recv with
-            | some cname => join1 env cname learned
-            | none =>
-                -- `graph[k].append(v)`: the mutated thing is the VALUE at `k`, so `graph` is a
-                -- dict from the index type to `learned` (or a list of `learned`).
-                if nodeTypeOf recv == some "Subscript" then
-                  match (getField recv "value").bind nameId? with
+      let args := ((value.getObjValAs? (Array Json) "args").toOption.getD #[]).toList
+      -- A method's RECEIVER is effective argument 0, so `xs.append(v)` and `heappush(h, v)` share one
+      -- path — the member's `Behaviour.teaches?` says which effective arg is the container and which
+      -- is the element, and how (list / set / spliced-elements). The engine hardcodes no member name.
+      let behArgs? : Option (Libraries.Behaviour × List Json) := match nodeTypeOf func with
+        | some "Name" =>
+            (Libraries.bareBehaviour? ((func.getObjValAs? String "id").toOption.getD "")).map (·, args)
+        | some "Attribute" => match getField func "value" with
+            | some recv =>
+                -- A user class instance's method (`node.insert(...)`) must NOT be read as a same-named
+                -- container method (`list.insert`): that would re-teach the receiver as a list and
+                -- corrupt its `.cls C` type. Skip library behaviours when the receiver is a class. Only
+                -- a bare-name receiver is checked (via `env`, cheap) — never a full `typeOfExpr` on an
+                -- arbitrary receiver expression, which can recurse badly on nested calls/subscripts.
+                let recvIsClass := match (nameId? recv).bind env.get? with
+                  | some (.cls _) | some (.opt (.cls _)) => true
+                  | _ => false
+                if recvIsClass then none
+                else (Libraries.methodBehaviour? ((func.getObjValAs? String "attr").toOption.getD "")).map (·, recv :: args)
+            | none => none
+        | _ => none
+      match behArgs?.bind (fun (b, ea) => b.teaches?.map (·, ea)) with
+      | some (teach, ea) =>
+          let typeAt (i : Nat) : PyType := (ea[i]?).elim .unknown (typeOfExpr sigs env)
+          let (cIdx, learned) : Nat × PyType := match teach with
+            | .pushList c e => (c, .list (typeAt e))
+            | .pushSet c e => (c, .set (typeAt e))
+            | .extendList c e => (c, match typeAt e with | .list x => .list x | _ => .unknown)
+          if learned == .unknown then env else
+          let join1 (n : String) (t : PyType) : Env := env.insert n ((env.get? n |>.getD .unknown).join t)
+          match ea[cIdx]? with
+          | some target => match nameId? target with
+              | some cname => join1 cname learned
+              -- `graph[k].append(v)`: the mutated value is at `k`, so `graph` is a dict/list of it.
+              | none => if nodeTypeOf target == some "Subscript" then
+                  match (getField target "value").bind nameId? with
                   | some base =>
-                      let kt := (getField recv "slice").elim .unknown (typeOfExpr sigs env)
+                      let kt := (getField target "slice").elim .unknown (typeOfExpr sigs env)
                       let outer := match env.get? base |>.getD .unknown with
-                        | .list _ => .list learned
-                        | _ => .dict kt learned
-                      join1 env base outer
+                        | .list _ => .list learned | _ => .dict kt learned
+                      join1 base outer
                   | none => env
                 else env
-      | _, _ => env
+          | none => env
+      | none => env
   | none => env
 
 /-- Bind an assignment/loop/comprehension target to type `t`, distributing a tuple type over a
@@ -165,8 +176,14 @@ def applyStmt (sigs : Sigs) (env : Env) (s : Json) : Env :=
   | some "AugAssign" =>
       match getField s "target", getField s "value" with
       | some target, some value =>
+          -- Python's `/=` is TRUE division, so `x /= n` widens `x` to `float` even for integer
+          -- operands (`pre = 1; pre /= 10`); every other augmented op keeps the numeric `arith` result.
+          let augCombine (a b : PyType) : PyType :=
+            if (s.getObjValAs? String "op").toOption == some "div" then
+              (match a, b with | .any, _ | _, .any => .any | _, _ => .float)
+            else arith a b
           match nameId? target with
-          | some name => learn env name (arith (env.get? name |>.getD .unknown) (typeOfExpr sigs env value))
+          | some name => learn env name (augCombine (env.get? name |>.getD .unknown) (typeOfExpr sigs env value))
           -- `counts[k] += 1` teaches both sides of `counts` (a `Counter()` starts fully unknown).
           | none =>
               if nodeTypeOf target == some "Subscript" then
@@ -175,7 +192,7 @@ def applyStmt (sigs : Sigs) (env : Env) (s : Json) : Env :=
                     let vt := typeOfExpr sigs env value
                     let isSlice := (getField target "slice").any (nodeTypeOf · == some "Slice")
                     let learned := match env.get? cname |>.getD .unknown with
-                      | .dict _ v => .dict ((getField target "slice").elim .unknown (typeOfExpr sigs env)) (arith v vt)
+                      | .dict _ v => .dict ((getField target "slice").elim .unknown (typeOfExpr sigs env)) (augCombine v vt)
                       | _ => if isSlice then vt else .list vt
                     learn env cname learned
                 -- Nested `f[h][i][j] += v` widens the deep element (`join` at that depth).
@@ -245,48 +262,142 @@ def paramNames (fn : Json) : Array String := Id.run do
     if let .ok name := arg.getObjValAs? String "arg" then names := names.push name
   return names
 
-/-- Parameter name → annotated type for a `FunctionDef` (annotated params only). -/
+/-- A `None` literal (`Constant` whose value is JSON null). -/
+private def isNoneConst (j : Json) : Bool :=
+  nodeTypeOf j == some "Constant" && (getField j "value" == some Json.null)
+
+/-- A list of all `None` — `[None, None]` or `[None] * k` — the initial value of a recursive node's
+child array (a Trie's `children`, a segment tree's kids). -/
+private partial def isListOfNone (j : Json) : Bool :=
+  match nodeTypeOf j with
+  | some "List" =>
+      let elts := (j.getObjValAs? (Array Json) "elts").toOption.getD #[]
+      !elts.isEmpty && elts.all isNoneConst
+  | some "BinOp" =>
+      j.getObjValAs? String "op" == .ok "mul"
+        && ((getField j "left").any isListOfNone || (getField j "right").any isListOfNone)
+  | some "ListComp" => (getField j "elt").any isNoneConst
+  | _ => false
+
+/-- Does the body test `name` against `None` (`x is None`, `x == None`, `if not x`)? Such a test
+proves the parameter is nullable, so a bare node-class annotation (LeetCode writes `root: TreeNode`
+but the base case `if root is None: return` means `Optional[TreeNode]`) should widen to `Optional`. -/
+private partial def nameIsNoneTested (name : String) (json : Json) : Bool :=
+  -- Do NOT descend into a nested `def` — a same-named param there (`def dfs(root)` inside `def
+  -- convertBST(root)`) is a DIFFERENT, shadowing variable, and its `if root is None` must not widen
+  -- this scope's param.
+  if nodeTypeOf json == some "FunctionDef" then false else
+  let here : Bool :=
+    match nodeTypeOf json with
+    | some "Compare" =>
+        (["is", "is_not", "eq", "not_eq"].contains ((json.getObjValAs? String "op").toOption.getD "")) &&
+        (((getField json "left").bind nameId? == some name && (getField json "right").any isNoneConst) ||
+         ((getField json "right").bind nameId? == some name && (getField json "left").any isNoneConst))
+    | some "UnaryOp" =>
+        (json.getObjValAs? String "op").toOption == some "not" && (getField json "operand").bind nameId? == some name
+    | _ => false
+  here || (match json with
+    | .arr xs => xs.any (nameIsNoneTested name)
+    | .obj fs => fs.toList.any (fun (_, v) => nameIsNoneTested name v)
+    | _ => false)
+
+/-- Is `name` ever an assignment / aug-assign / `for` target (a `Name` target) in `json`, not
+descending into a nested def? A reassigned nullable node param is a mut-cursor (`node = node.next`,
+handled by a `_mut_opt` shadow); one only read + recursed on (`dfs(root.left)`) needs its param TYPE
+itself widened to `Optional`. -/
+private partial def nameReassigned (name : String) (json : Json) : Bool :=
+  if nodeTypeOf json == some "FunctionDef" then false
+  else
+    let hits (t : Json) : Bool := nameId? t == some name
+    let here : Bool := match nodeTypeOf json with
+      | some "Assign" =>
+          match getField json "targets" with | some (.arr ts) => ts.any hits | _ => false
+      | some "AugAssign" | some "AnnAssign" => (getField json "target").any hits
+      | some "For" => (getField json "target").any hits
+      | _ => false
+    here || (match json with
+      | .arr xs => xs.any (nameReassigned name)
+      | .obj fs => fs.toList.any (fun (_, v) => nameReassigned name v)
+      | _ => false)
+
+/-- Parameter name → annotated type for a `FunctionDef` (annotated params only). A bare node-class
+param the body tests against `None` is widened to `Optional` (see `nameIsNoneTested`). -/
 private def paramSeed (fn : Json) : Env := Id.run do
   let mut env : Env := {}
+  let body := Json.arr (fn.getObjValAs? (Array Json) "body" |>.toOption.getD #[])
   let .ok args := fn.getObjVal? "args" | return env
   let .ok argsArr := args.getObjValAs? (Array Json) "args" | return env
   for arg in argsArr do
     if let .ok name := arg.getObjValAs? String "arg" then
       match getField arg "annotation" with
-      | some ann => if !ann.isNull then env := env.insert name (ofAnnotation ann)
+      | some ann => if !ann.isNull then
+          let t := match ofAnnotation ann with
+            | .cls c => if nameIsNoneTested name body then .opt (.cls c) else .cls c
+            | other => other
+          env := env.insert name t
       | none => pure ()
   return env
 
-/-- The type a **type-exclusive** method pins its receiver to, or `unknown`. Only methods that belong
-to exactly ONE builtin type are listed — Python semantics, exhaustively. Shared methods are omitted
-on purpose (`pop` is list AND dict; `remove` is list AND set; `index`/`count` are list/str/tuple;
-`update` is dict AND set) so a receiver is never mis-typed. -/
-private def methodReceiverType? (attr : String) : PyType :=
-  -- str-only: no list/dict/set/tuple has these.
-  if ["split", "rsplit", "splitlines", "upper", "lower", "title", "capitalize", "casefold",
-      "swapcase", "strip", "lstrip", "rstrip", "replace", "startswith", "endswith", "find", "rfind",
-      "join", "format", "format_map", "ljust", "rjust", "center", "zfill", "encode", "expandtabs",
-      "partition", "rpartition", "removeprefix", "removesuffix", "translate", "maketrans",
-      "isdigit", "isalpha", "isalnum", "isspace", "isupper", "islower", "istitle", "isnumeric",
-      "isdecimal", "isidentifier", "isprintable", "isascii"].contains attr then .str
-  -- list-only: str/dict/set lack these (`pop`/`remove`/`index`/`count` are shared → excluded).
-  else if ["append", "extend", "insert", "sort", "reverse"].contains attr then .list .unknown
-  -- dict-only: `keys`/`values`/`items`/`get`/`setdefault`/`popitem`/`fromkeys` (`update`/`pop` shared).
-  else if ["keys", "values", "items", "get", "setdefault", "popitem", "fromkeys"].contains attr
-    then .dict .unknown .unknown
-  -- set-only: `add`/`discard`/`issubset`/… (`remove`/`update`/`union`&co are shared or on frozenset).
-  else if ["add", "discard", "issubset", "issuperset", "isdisjoint", "symmetric_difference",
-           "symmetric_difference_update", "difference_update", "intersection_update"].contains attr
-    then .set .unknown
-  else .unknown
+/-- Does `ord(name)` appear anywhere in `json`? `ord` demands a one-character string, so its argument
+is a single character (a `str`). -/
+private partial def containsOrdOf (name : String) (json : Json) : Bool :=
+  (nodeTypeOf json == some "Call"
+    && (getField json "func").bind nameId? == some "ord"
+    && ((json.getObjValAs? (Array Json) "args").toOption.getD #[]).any (fun a => nameId? a == some name))
+  || (match json with
+      | .arr xs => xs.any (containsOrdOf name)
+      | .obj fs => fs.toList.any (fun (_, v) => containsOrdOf name v)
+      | _ => false)
+
+/-- The static type of a *literal* expression (needs no environment): `[]`→list, `""`→str, `5`→int,
+`3.0`→float, `True`→bool, `None`→none, plus list/set/tuple literals recursively. `none` for a
+non-literal (a name, a call, …) so the caller learns nothing. Covers every PyAny subtype. -/
+private partial def literalType? (e : Json) : Option PyType :=
+  let elts := ((e.getObjValAs? (Array Json) "elts").toOption.getD #[]).toList
+  match nodeTypeOf e with
+  | some "Constant" => some (ofValue e)
+  | some "List"  => some (.list  (PyType.joinAll (elts.filterMap literalType?)))
+  | some "Set"   => some (.set   (PyType.joinAll (elts.filterMap literalType?)))
+  | some "Tuple" => some (.tuple (elts.map (fun x => (literalType? x).getD .unknown)))
+  | _ => none
+
+/-- `side` is a subscript read `name[…]` (a direct element access of `name`). -/
+private def isSubscriptOf (name : String) (side : Option Json) : Bool :=
+  match side with
+  | some s => nodeTypeOf s == some "Subscript" && (getField s "value").bind nameId? == some name
+  | none => false
+
+/-- `name[…]` appears ANYWHERE in `j` — used to propagate an element constraint down through nested
+arithmetic (`(array[0] + array[-1]) % 2` still teaches `array`'s element from the outer `% 2`). -/
+private partial def containsSubscriptOf (name : String) (j : Json) : Bool :=
+  (nodeTypeOf j == some "Subscript" && (getField j "value").bind nameId? == some name)
+  || (match j with
+      | .arr xs => xs.any (containsSubscriptOf name)
+      | .obj fs => fs.toList.any (fun (_, v) => containsSubscriptOf name v)
+      | _ => false)
 
 /-- What `name`'s usage in one expression unambiguously tells us — enumerated exhaustively over the
 Python signals that pin exactly one type: a type-exclusive method on it (`p.split()` → str), an
 int-only operator over it (`p << 1`, `p >> 1`, `~p` — bitwise `& | ^` are int OR set, so NOT here),
-or a type-fixing builtin arg (`ord(p)` → str, `chr(p)` → int). Genuinely ambiguous uses (`p[i]`,
+a type-fixing builtin arg (`ord(p)` → str, `chr(p)` → int), or a comparison against a literal
+(`p == []` → list, `p == ""` → str, `p in "abc"` → str element). Genuinely ambiguous uses (`p[i]`,
 `for x in p`, `len(p)`, `p + q`) stay `unknown` — the fixpoint fills them in. -/
-private partial def usageType (name : String) (json : Json) : PyType :=
+private partial def usageType (fuel : Nat) (name : String) (json : Json) : PyType :=
   let isName (j : Option Json) : Bool := j.bind nameId? == some name
+  -- Element type of an iterable whose loop variable `c` is used as `ctx`: `ord(c)` ⇒ the iterable is
+  -- a `str` (char iteration); any other concrete usage ⇒ `list[<c's type>]`. `fuel` bounds how deep
+  -- loop-variable inference may nest — each level re-scans a body via `usageType`, so unbounded
+  -- nesting (comprehension inside comprehension in a big contract) blows up exponentially.
+  let loopElemType (c : String) (ctx : Json) : PyType :=
+    if fuel == 0 then .unknown
+    else if containsOrdOf c ctx then .str
+    else match usageType (fuel - 1) c ctx with
+      | .unknown => .unknown
+      -- a `str`-typed loop var is ambiguous: iterating a STRING yields 1-char strings, so `str` usage
+      -- could mean `p : str` (char iteration) OR `p : list[str]`. Leave it to other signals rather
+      -- than force `list[str]` (which mis-typed a plain-string param iterated char by char).
+      | .str => .unknown
+      | t => .list t
   let here : PyType :=
     match nodeTypeOf json with
     | some "Call" =>
@@ -295,7 +406,13 @@ private partial def usageType (name : String) (json : Json) : PyType :=
         | some func =>
             if nodeTypeOf func == some "Attribute" then
               if isName (getField func "value") then
-                (func.getObjValAs? String "attr").toOption.elim .unknown methodReceiverType?
+                (func.getObjValAs? String "attr").toOption.elim .unknown Libraries.builtinMethodReceiver?
+              -- `p[i].method()`: a type-exclusive method on an ELEMENT ⇒ `p : list[<receiver>]`
+              -- (e.g. `words[0].upper()` ⇒ `words : list[str]`).
+              else if isSubscriptOf name (getField func "value") then
+                match (func.getObjValAs? String "attr").toOption.map Libraries.builtinMethodReceiver? with
+                | some t => if t == .unknown then .unknown else .list t
+                | none => .unknown
               else .unknown
             -- `ord(p)` → p is a one-char str; `chr(p)` → p is an int.
             else match nameId? func with
@@ -309,22 +426,129 @@ private partial def usageType (name : String) (json : Json) : PyType :=
                   else .unknown
               | none => .unknown
         | none => .unknown
-    -- Shift is int-only in Python (`p << 1`); `& | ^` also work on sets, so they pin nothing.
+    -- Shift is int-only in Python (`p << 1`); `& | ^` also work on sets, so they pin nothing for a
+    -- bare name. But over an ELEMENT (`p[i]`) these int-only ops teach `p : list[int]`, and an
+    -- arithmetic op against a literal teaches the element from the literal.
     | some "BinOp" =>
-        match (json.getObjValAs? String "op").toOption with
-        | some op =>
-            if ["lshift", "rshift"].contains op
-               && (isName (getField json "left") || isName (getField json "right")) then .int
+        let op := (json.getObjValAs? String "op").toOption.getD ""
+        let left := getField json "left"
+        let right := getField json "right"
+        -- `p << 1`: `p` itself is int.
+        if ["lshift", "rshift"].contains op && (isName left || isName right) then .int
+        -- an int-only op anywhere over an element of `p` — however nested, e.g. `(p[0]+p[-1]) % 2` —
+        -- forces the element int ⇒ `p : list[int]`.
+        else if ["mod", "lshift", "rshift", "bitand", "bitor", "bitxor"].contains op
+                && (left.elim false (containsSubscriptOf name) || right.elim false (containsSubscriptOf name)) then .list .int
+        -- `p[i] <arith> <literal>` (or the reverse): the element has the literal's type.
+        else if ["add", "sub", "mul", "div", "floordiv", "pow"].contains op then
+          if isSubscriptOf name left then (right.bind literalType?).elim .unknown .list
+          else if isSubscriptOf name right then (left.bind literalType?).elim .unknown .list
+          -- `name + <str/list literal>` pins `name` to that type: `+` typechecks only between two
+          -- `str`s or two `list`s (`class_name + "."` ⇒ `class_name : str`), so a `str`/`list` literal
+          -- on the other side is decisive (`int + str` / `list + str` are `TypeError`s in Python).
+          else
+            -- `x <arith> <numeric literal>` on a plain name (a loop/element variable, `x + 1`, `x * 2`)
+            -- pins `x` to that numeric type — the `[x + 1 for x in l]` element case. `str`/`list`
+            -- literals under `+` stay concat-typed (below); a numeric literal here is decisive
+            -- (`str`/`list` don't support `- * // ** %`). Joins with other evidence, so int+float widens.
+            let numLit (lit : Option Json) : PyType := match lit.bind literalType? with
+              | some .int => .int | some .float => .float | _ => .unknown
+            let numg := (if isName left then numLit right else .unknown).join
+                        (if isName right then numLit left else .unknown)
+            if numg != .unknown then numg
+            else if op == "add" then
+              let concatType (lit : Option Json) : PyType := match lit.bind literalType? with
+                | some (.str) => .str
+                | some (.list e) => .list e
+                | _ => .unknown
+              if isName left then concatType right
+              else if isName right then concatType left
+              else .unknown
             else .unknown
-        | none => .unknown
+        else .unknown
     -- `~p` (bitwise NOT) is int-only.
     | some "UnaryOp" =>
         if (json.getObjValAs? String "op").toOption == some "invert" && isName (getField json "operand")
         then .int else .unknown
+    -- `for c in p`: infer `p`'s element from how the loop variable `c` is used in the body. `ord(c)`
+    -- means `p` is a `str` iterated CHARACTER by character (the unannotated-word pattern); any other
+    -- concrete usage (`c > 0`, `c.split()`) means `p : list[<that element>]`. A `str`-forcing usage is
+    -- ambiguous (str-of-chars vs list[str]) so only `ord` decides `str`; the general lift covers
+    -- `int`/`float`/container elements. Conflicting evidence joins to `unknown` (→ PyAny), so a dict
+    -- param iterated for its keys is not mis-tagged when a `.keys()`/`d[k]=v` signal is also present.
+    | some "For" =>
+        match getField json "iter", (getField json "target").bind nameId? with
+        | some it, some c =>
+            if isName (some it)
+            then loopElemType c (Json.arr ((json.getObjValAs? (Array Json) "body").toOption.getD #[]))
+            else .unknown
+        | _, _ => .unknown
+    -- A comprehension `[<elt> for c in p if <ifs>]` (or `all(<elt> for c in p)` in a spec): each
+    -- generator iterating `p` teaches `p`'s element from how its target `c` is used in `elt`/`ifs` —
+    -- the comprehension analogue of the `For` rule. This is what recovers `lst : list[int]` from an
+    -- injected `Requires(all(x > 0 for x in lst))`, keeping the param concrete instead of `PyAny`.
+    | some "ListComp" | some "SetComp" | some "GeneratorExp" =>
+        let elt := (getField json "elt").toArray
+        let gens := (json.getObjValAs? (Array Json) "generators").toOption.getD #[]
+        PyType.joinAll (gens.toList.map (fun g =>
+          match getField g "iter", (getField g "target").bind nameId? with
+          | some it, some c =>
+              if nameId? it == some name then
+                let ifs := (g.getObjValAs? (Array Json) "ifs").toOption.getD #[]
+                loopElemType c (Json.arr (elt ++ ifs))
+              else .unknown
+          | _, _ => .unknown))
+    -- `p <cmp> <literal>` (or the reverse) pins `p` to the literal's type — the only type a concrete
+    -- value can be compared at. `in`/`notin` mean `p` is an ELEMENT of the literal container → its
+    -- element type. `is`/`isnot` are identity (usually `x is None` ⇒ nullable, NOT `none`), so they
+    -- teach nothing. Conflicting usages join to `unknown` (→ PyAny); a type-CHANGING reassignment is
+    -- still resolved per-segment by codegen's rebind-shadow, so this only ever refines a single-typed
+    -- parameter (e.g. an unannotated `array` used as `array == []`).
+    | some "Compare" =>
+        let op := (json.getObjValAs? String "op").toOption.getD ""
+        let left := getField json "left"
+        let right := getField json "right"
+        let membership := op == "in" || op == "notin"
+        let valueCmp := ["eq", "ne", "lt", "le", "gt", "ge"].contains op
+        -- An ORDERED comparison (`x < t`, `x >= r`) against a non-literal name is numeric in the
+        -- overwhelming majority of cases (`all(x < t for x in l)` ⇒ element `int`). `eq`/`ne` are
+        -- excluded (any type is `==`-comparable); a competing str/float signal still joins in.
+        let ordered := ["lt", "le", "gt", "ge"].contains op
+        let fromOrdered : PyType :=
+          if ordered && (right.bind literalType?).isNone && (left.bind literalType?).isNone
+             && (isName left || isName right) then .int else .unknown
+        let elemOf : PyType → PyType
+          | .list e => e | .set e => e | .tuple es => PyType.joinAll es | _ => .unknown
+        let fromLeft : PyType :=
+          if isName left then
+            match right.bind literalType? with
+            | some t => if membership then elemOf t else if valueCmp then t else .unknown
+            | none => .unknown
+          else .unknown
+        let fromRight : PyType :=
+          if valueCmp && isName right then (left.bind literalType?).getD .unknown else .unknown
+        -- `<literal> in p` (name is the CONTAINER): `p` holds elements of the literal's type ⇒
+        -- `p : list[<literal>]` (`0 in arr` ⇒ `arr : list[int]`). Left as `list` since it is the common
+        -- array case; a competing dict/set signal joins this away to `unknown`/`any` as usual. A `str`
+        -- literal is EXCLUDED — `"a" in s` is ambiguous between substring (`s : str`) and membership
+        -- (`s : list[str]`); only a non-`str` literal makes `p` unambiguously a container.
+        let fromRightContainer : PyType :=
+          if membership && isName right then
+            match left.bind literalType? with
+            | some t => if t == .str then .unknown else .list t
+            | none => .unknown
+          else .unknown
+        -- `p[i] <cmp> <literal>` pins the ELEMENT type ⇒ `p : list[<that>]`.
+        let fromLeftElem : PyType :=
+          if valueCmp && isSubscriptOf name left then (right.bind literalType?).elim .unknown .list else .unknown
+        let fromRightElem : PyType :=
+          if valueCmp && isSubscriptOf name right then (left.bind literalType?).elim .unknown .list else .unknown
+        fromLeft.join fromRight |>.join (fromLeftElem.join fromRightElem) |>.join fromRightContainer
+          |>.join fromOrdered
     | _ => .unknown
   let sub := match json with
-    | .arr xs => PyType.joinAll (xs.toList.map (usageType name))
-    | .obj fs => PyType.joinAll (fs.toList.map (fun (_, v) => usageType name v))
+    | .arr xs => PyType.joinAll (xs.toList.map (usageType fuel name))
+    | .obj fs => PyType.joinAll (fs.toList.map (fun (_, v) => usageType fuel name v))
     | _ => .unknown
   here.join sub
 
@@ -335,9 +559,174 @@ private def paramUsageSeed (fn : Json) : Env := Id.run do
   let body := fn.getObjValAs? (Array Json) "body" |>.toOption.getD #[]
   let mut env : Env := {}
   for name in paramNames fn do
-    let t := usageType name (Json.arr body)
+    -- fuel 1: loop-variable inference may fire at the top level but not nest (see `usageType`).
+    let t := usageType 1 name (Json.arr body)
     if t != .unknown then env := env.insert name t
   return env
+
+/-- Names `fn` binds directly — params plus `=`/`for`/annotated targets in its own body (through
+`if`/`for` blocks, not into deeper nested defs). A name used in `fn` but NOT here is a capture of an
+enclosing scope. -/
+private def localAssignNames (fn : Json) : List String := Id.run do
+  let mut names := (paramNames fn).toList
+  for s in flatStmts ((fn.getObjValAs? (Array Json) "body").toOption.getD #[]).toList do
+    match nodeTypeOf s with
+    | some "Assign" =>
+        for t in (s.getObjValAs? (Array Json) "targets").toOption.getD #[] do
+          if let some n := nameId? t then names := n :: names
+    | some "AnnAssign" | some "AugAssign" | some "For" =>
+        if let some n := (getField s "target").bind nameId? then names := n :: names
+    | _ => pure ()
+  return names
+
+/-- The container name a teaching METHOD mutation (`xs.append(v)`, `s.add(v)`) targets, for the
+capture pass. Only `recv.method(...)` receivers — a free `heappush(h, v)` capture is rarer and left to
+the enclosing-scope pass. -/
+private def mutationReceiverName? (value : Json) : Option String :=
+  if nodeTypeOf value != some "Call" then none else
+  match getField value "func" with
+  | some func =>
+      if nodeTypeOf func == some "Attribute" then
+        match getField func "value" with
+        | some recv =>
+            if ((Libraries.methodBehaviour? ((func.getObjValAs? String "attr").toOption.getD "")).bind (·.teaches?)).isSome
+            then match nameId? recv with
+              | some n => some n
+              -- `nums[i].append(v)`: the mutated container is the subscript BASE (`nums`).
+              | none => if nodeTypeOf recv == some "Subscript" then (getField recv "value").bind nameId? else none
+            else none
+        | none => none
+      else none
+  | none => none
+
+/-- Every positional argument list of a call `name(...)` anywhere in `json`. -/
+partial def collectCallArgLists (name : String) (json : Json) : Array (Array Json) :=
+  let here := if nodeTypeOf json == some "Call" && (getField json "func").bind nameId? == some name
+    then #[(json.getObjValAs? (Array Json) "args").toOption.getD #[]] else #[]
+  let rest := match json with
+    | .arr xs => xs.foldl (fun acc e => acc ++ collectCallArgLists name e) #[]
+    | .obj fs => fs.toList.foldl (fun acc (_, v) => acc ++ collectCallArgLists name v) #[]
+    | _ => #[]
+  here ++ rest
+
+/-- Param-type hints for a nested def `fn` from the arg types at every call to it in `roots`. Two
+passes so a recursive arg (`dfs(node.left)`) is re-typed once its param is seeded from the first,
+non-recursive call (`dfs(root)`) — the join is what makes a tree `dfs` param `Optional[TreeNode]`. -/
+def nestedParamHints (sigs : Sigs) (env : Env) (fn : Json) (roots : Array Json) : Env := Id.run do
+  let name := (fn.getObjValAs? String "name").toOption.getD ""
+  let params := paramNames fn
+  if name == "" || params.isEmpty then return {}
+  let callLists := roots.foldl (fun acc r => acc ++ collectCallArgLists name r) #[]
+  if callLists.isEmpty then return {}
+  let mut hints : Env := {}
+  for _ in [0:2] do
+    let env2 := hints.fold (fun m k v => m.insert k v) env
+    for args in callLists do
+      for i in [0:min params.size args.size] do
+        let t := typeOfExpr sigs env2 args[i]!
+        if t != .unknown then
+          hints := hints.insert params[i]! (((hints.get? params[i]!).getD .unknown).join t)
+  return hints
+
+/-- The combined parameter types of every nested `def` in `body`, from their call sites (`roots` is
+the enclosing body). Lets a captured `d[param].append(v)` INSIDE a nested def teach the OUTER `d`'s
+key from `param`'s type — which lives only in the inner scope. -/
+def nestedDefParamEnv (sigs : Sigs) (env : Env) (body : Array Json) (roots : Array Json) : Env :=
+  body.foldl (fun e nf =>
+    if nodeTypeOf nf == some "FunctionDef"
+    then (nestedParamHints sigs env nf roots).fold (fun m k v => m.insert k v) e
+    else e) {}
+
+/-- Apply container-teaching mutations found INSIDE nested defs to the enclosing `env`, so a capture
+learns its element type across scopes (`nums = []` here, `nums.append(x)` in a sibling `def dfs`, then
+`nums[i]` in `def build` — all one `List Int`). A name a nested def binds itself (param or `=`) is a
+shadow, not a capture, so it is skipped; only names already in `env` are refined (join-only, never a
+downgrade). `paramEnv` carries the enclosing nested def's parameter types so `d[param]` inside it can
+pin the captured `d`'s key. The enclosing scope's own mutations are handled by `applyStmt`. -/
+private partial def applyCaptureMutations (sigs : Sigs) (shadowed : List String) (paramEnv : Env)
+    (insideDef : Bool) (env : Env) (json : Json) : Env := Id.run do
+  let entering := nodeTypeOf json == some "FunctionDef"
+  let shadowed := if entering then shadowed ++ localAssignNames json else shadowed
+  let inside := insideDef || entering
+  let mut env := env
+  if inside then
+    if let some cname := mutationReceiverName? json then
+      if !shadowed.contains cname && (env.get? cname).isSome then
+        -- Type the mutation with the enclosing nested def's params visible (`d[offset]` needs
+        -- `offset : int`), but write back ONLY the receiver so those inner params never leak out.
+        let typingEnv := paramEnv.fold (fun m k v => m.insert k v) env
+        match (applyMutation sigs typingEnv json).get? cname with
+        | some t => env := env.insert cname t
+        | none => pure ()
+  match json with
+  | .arr xs => return xs.foldl (applyCaptureMutations sigs shadowed paramEnv inside) env
+  | .obj fs => return fs.toList.foldl (fun e (_, v) => applyCaptureMutations sigs shadowed paramEnv inside e v) env
+  | _ => return env
+
+/-- Every `(container-name, index-type)` from a subscript READ `base[idx]` anywhere in `json` (`base`
+a plain Name, not a slice). Container writes already teach element types (`applyStmt`/`applyMutation`),
+but the KEY of a dict is only pinned by *usage* — `d = defaultdict(int)` knows its value type yet
+leaves the key `unknown` until a `d[k]` read fixes it. This is the read side of Python's
+"infer from all usages". -/
+partial def collectSubscriptKeys (sigs : Sigs) (env : Env) (json : Json) : Array (String × PyType) :=
+  let here : Array (String × PyType) :=
+    if nodeTypeOf json == some "Subscript" then
+      match (getField json "value").bind nameId?, getField json "slice" with
+      | some cname, some slice =>
+          if nodeTypeOf slice == some "Slice" then #[] else #[(cname, typeOfExpr sigs env slice)]
+      | _, _ => #[]
+    else #[]
+  let rest := match json with
+    | .arr xs => xs.foldl (fun acc e => acc ++ collectSubscriptKeys sigs env e) #[]
+    | .obj fs => fs.toList.foldl (fun acc (_, v) => acc ++ collectSubscriptKeys sigs env v) #[]
+    | _ => #[]
+  here ++ rest
+
+/-- Pin a dict's KEY type from every subscript-read `d[k]`, joining `typeof(k)` into the key. Only
+touches names ALREADY typed as a dict (so a list `xs[i]` is never mis-widened to a dict); a genuinely
+undetermined container stays undetermined here — the write side decides list-vs-dict. -/
+def learnFromReads (sigs : Sigs) (env : Env) (json : Json) : Env :=
+  (collectSubscriptKeys sigs env json).foldl (fun e (cname, kt) =>
+    if kt == .unknown then e else
+    match e.get? cname |>.getD .unknown with
+    | .dict k v => e.insert cname (.dict (k.join kt) v)
+    | _ => e) env
+
+/-- Collect `(dictName, keyType, valType)` from every dict-method call `d.pop(k, default)` /
+`d.get(k, default)` / `d.setdefault(k, v)` — the key is arg 0, the value the (optional) arg 1. `.pop`
+is also a LIST method (`xs.pop(i)`), so the caller must guard on `d` already being dict-typed. -/
+partial def collectDictKV (sigs : Sigs) (env : Env) (json : Json) : Array (String × PyType × PyType) :=
+  let here : Array (String × PyType × PyType) :=
+    if nodeTypeOf json == some "Call" then
+      match getField json "func" with
+      | some func =>
+          if nodeTypeOf func == some "Attribute"
+              && ["pop", "get", "setdefault"].contains ((func.getObjValAs? String "attr").toOption.getD "") then
+            match (getField func "value").bind nameId? with
+            | some dname =>
+                let args := (json.getObjValAs? (Array Json) "args").toOption.getD #[]
+                let kt := if args.size ≥ 1 then typeOfExpr sigs env args[0]! else .unknown
+                let vt := if args.size ≥ 2 then typeOfExpr sigs env args[1]! else .unknown
+                #[(dname, kt, vt)]
+            | none => #[]
+          else #[]
+      | none => #[]
+    else #[]
+  let rest := match json with
+    | .arr xs => xs.foldl (fun acc e => acc ++ collectDictKV sigs env e) #[]
+    | .obj fs => fs.toList.foldl (fun acc (_, v) => acc ++ collectDictKV sigs env v) #[]
+    | _ => #[]
+  here ++ rest
+
+/-- Refine a dict's key/value from `d.pop`/`.get`/`.setdefault` calls (see `collectDictKV`). Only
+touches names ALREADY dict-typed — a bare `dict` param seeds as `dict[⊥,⊥]`, so a `counts.pop(k, -1)`
+fills its key/value in and it materialises as a concrete `Std.HashMap`, not a stuck metavariable. -/
+def learnFromDictMethods (sigs : Sigs) (env : Env) (json : Json) : Env :=
+  (collectDictKV sigs env json).foldl (fun e (cname, kt, vt) =>
+    match e.get? cname |>.getD .unknown with
+    | .dict k v => e.insert cname (.dict (if kt == .unknown then k else k.join kt)
+                                         (if vt == .unknown then v else v.join vt))
+    | _ => e) env
 
 /-- Infer a type for every local in `fn`, reflowing to a fixpoint. `outer` seeds the environment
 with the enclosing scope so a nested def's captures start typed; `hints` seeds unannotated
@@ -352,7 +741,18 @@ partial def inferFunction (sigs : Sigs) (outer hints : Env) (fn : Json) : Env :=
   let mut env := paramUsageSeed fn
   env := outer.fold (fun m k v => m.insert k v) env
   env := hints.fold (fun m k v => m.insert k v) env
-  env := (paramSeed fn).fold (fun m k v => m.insert k v) env
+  -- An annotation overrides usage, EXCEPT a bare container annotation (`list`/`set`/`dict` whose
+  -- element is `.any`/`.unknown`) keeps a concrete element the body-usage found: `l: list` +
+  -- `[x+1 for x in l]` ⇒ `list[int]`, not the annotation's `list[Any]`. The annotation still wins on
+  -- shape and on any element it names concretely.
+  let refineElem (ann usage : PyType) : PyType :=
+    let pick (a u : PyType) : PyType := if a == .any || a == .unknown then (if u.isKnown then u else a) else a
+    match ann, usage with
+    | .list a, .list u => .list (pick a u)
+    | .set a, .set u => .set (pick a u)
+    | .dict ak av, .dict uk uv => .dict (pick ak uk) (pick av uv)
+    | _, _ => ann
+  env := (paramSeed fn).fold (fun m k v => m.insert k (refineElem v (m.get? k |>.getD .unknown))) env
   let bodyJson := Json.arr body
   -- Reflow until stable. The lattice climbs, so a small cap is a sound floor, not a correctness risk.
   for _ in [0:8] do
@@ -361,7 +761,11 @@ partial def inferFunction (sigs : Sigs) (outer hints : Env) (fn : Json) : Env :=
     -- shadows an outer variable owns a separate scope (Python-3), so clobbering the outer type (a
     -- loop `v : int` vs a comprehension `v : list[int]` → `any`) would poison it. Fresh-only respects
     -- that: never downgrade an outer binding.
-    let next := compBindings sigs (stmts.foldl (applyStmt sigs) env) bodyJson
+    let paramEnv := nestedDefParamEnv sigs env body #[bodyJson]
+    let stepped := applyCaptureMutations sigs [] paramEnv false (stmts.foldl (applyStmt sigs) env) bodyJson
+    let stepped := learnFromReads sigs stepped bodyJson
+    let stepped := learnFromDictMethods sigs stepped bodyJson
+    let next := compBindings sigs stepped bodyJson
     if next.size == env.size && next.fold (fun ok k v => ok && (env.get? k |>.getD .unknown) == v) true then
       env := next
       break
@@ -444,8 +848,27 @@ partial def usedInPyAnyPosition (name : String) (json : Json) : Bool :=
       | some "BoolOp" =>
           ((json.getObjValAs? (Array Json) "values").toOption.getD #[]).any (fun v => nameId? v == some name)
       | some "Call" =>
-          (getField json "func").bind nameId? == some "len" &&
+          -- `len(x)` and the functional builtins that consume a container (`sum(x)`, `sorted(x)`,
+          -- `map(f, x)`, `filter(f, x)`, …) leave `x` stuck on `PyIterable ?m`/`PyLen ?m` if it stays an
+          -- un-inferred binder — box it as `PyAny` (which is iterable/lengthable) so they resolve.
+          let fn := ((getField json "func").bind nameId?).getD ""
+          let nameIsArg :=
             ((json.getObjValAs? (Array Json) "args").toOption.getD #[]).any (fun a => nameId? a == some name)
+          -- Only the builtins whose lambda/context does NOT pin the element type: `filter`/`any`/`all`
+          -- take a predicate that usually FIXES the element (`ch not in "aeiou"` ⇒ `String`), so boxing
+          -- would clobber a type Lean could infer — exclude them.
+          -- `type(x)` / `isinstance(x, …)` inspect the runtime tag, so an un-inferred `x` must be `PyAny`
+          -- (`PyTyped ?m` is otherwise stuck). For `isinstance` only the FIRST arg is the value.
+          let isTypeIntrospect :=
+            (fn == "type" && nameIsArg) ||
+            (fn == "isinstance" &&
+              ((json.getObjValAs? (Array Json) "args").toOption.getD #[])[0]?.any (nameId? · == some name))
+          -- `str(x)`/`repr(x)`/`print(x)` on an otherwise-unknown `x` leave `PyPrintable ?m` stuck.
+          -- `PyAny` is printable, so box it (Python `str()` accepts any value) — fires only when no
+          -- other signal typed `x`, so it never clobbers an inferred int/str param.
+          let isStringify := nameIsArg && ["str", "repr", "print", "ascii"].contains fn
+          isTypeIntrospect || isStringify ||
+            (nameIsArg && ["len", "sum", "sorted", "map", "reversed", "enumerate"].contains fn)
       -- `x is None` / `x is not None` on an otherwise-unknown `x`: box it so `pyIsNone x` resolves
       -- (`PyIsNone PyAny`) instead of leaving `x` an untyped binder that forces `Option _`.
       | some "Compare" =>
@@ -462,6 +885,20 @@ partial def usedInPyAnyPosition (name : String) (json : Json) : Bool :=
       | .obj fs => fs.toList.any (fun (_, v) => usedInPyAnyPosition name v)
       | _ => false)
 
+/-- Fill an `unknown` element/key/value inside a KNOWN-shape container with `any` (→ `PyAny`), so a
+`list`/`set`/`dict`/`tuple`/`opt` whose shape we know but whose elements we don't emits `List PyAny`
+etc. — the structural ops (iterate, index, `len`, `==`) still resolve; only the elements stay
+dynamic. A bare `unknown`/`any` (no container shape) is left untouched for the caller to box. -/
+private partial def containerFillAny : PyType → PyType :=
+  let elemOrAny (e : PyType) : PyType := match e with | .unknown => .any | t => containerFillAny t
+  fun
+  | .list e => .list (elemOrAny e)
+  | .set e => .set (elemOrAny e)
+  | .dict k v => .dict (elemOrAny k) (elemOrAny v)
+  | .tuple es => .tuple (es.map elemOrAny)
+  | .opt e => .opt (elemOrAny e)
+  | t => t
+
 /-- Add `_ty` to each unannotated parameter we could type (a nested capture, or a rare
 un-hinted param). An explicit annotation, or an existing `_ty`, always wins. -/
 private def stampParams (env : Env) (fn : Json) : Json :=
@@ -477,7 +914,48 @@ private def stampParams (env : Env) (fn : Json) : Json :=
                 let annotated := match getField arg "annotation" with
                   | some a => !a.isNull
                   | none => false
-                if annotated || (getField arg "_ty").isSome then arg
+                if annotated || (getField arg "_ty").isSome then
+                  -- A node param annotated `ListNode`/`TreeNode` (non-optional) that the body reassigns
+                  -- from a `.next`/`.left` (Option) — so `env` widened it to `.opt (.cls c)` — is really
+                  -- nullable. Mark `_mut_opt` so codegen seeds its mut shadow as `Option c` (`some p`),
+                  -- letting `while node`, `node.field` (Option-unwrap), and `node = node.next` line up
+                  -- WITHOUT changing the param's type (callers still pass a plain `c`).
+                  -- An IMPRECISE bare container annotation (`dict`/`list`/`set` whose element(s) are
+                  -- still `.unknown`) is refined by USAGE: prefer the env-inferred type when it fills
+                  -- the unknown in, via a `_ty` override — `counts: dict` used as `counts.pop(k, -1)`
+                  -- becomes `Std.HashMap Int Int`, not a stuck bare `dict` → `HashMap ?m ?m`.
+                  let refined? : Option PyType :=
+                    match (getField arg "annotation").map ofAnnotation, env.get? name with
+                    | some (.dict ak av), some (.dict ek ev) =>
+                        let k := if ak == .unknown then ek else ak
+                        let v := if av == .unknown then ev else av
+                        if (ak == .unknown && k != .unknown) || (av == .unknown && v != .unknown)
+                        then some (.dict k v) else none
+                    -- A bare `list`/`set` annotation is `.list .any` (PyAny elements — the safe
+                    -- fallback). But when body USAGE pins a concrete element (`[x+1 for x in l]` ⇒
+                    -- `list[int]`), prefer it: `List Int` both compiles and keeps element ops in their
+                    -- native type instead of collapsing `List PyAny` against a defaulted `ℤ` lambda.
+                    | some (.list ea), some (.list e) =>
+                        if (ea == .unknown || ea == .any) && e.isKnown then some (.list e) else none
+                    | some (.set ea), some (.set e) =>
+                        if (ea == .unknown || ea == .any) && e.isKnown then some (.set e) else none
+                    | _, _ => none
+                  match refined?.bind toAnnotation? with
+                  | some refAnn => arg.setObjVal! "_ty" refAnn
+                  | none =>
+                    match env.get? name, getField arg "annotation" with
+                    | some (.opt (.cls c)), some ann =>
+                        if ofAnnotation ann == .cls c then
+                          -- Reassigned (`node = node.next`): keep the param type `c`, shadow it as
+                          -- `Option c` via `_mut_opt` (callers pass a plain `c`). Only read + recursed
+                          -- on (`dfs(root.left)`): widen the PARAM TYPE to `Optional c` so an Option
+                          -- arg lines up, via a `_ty` override of the bare annotation.
+                          if nameReassigned name (Json.arr body) then arg.setObjVal! "_mut_opt" (Json.str c)
+                          else match toAnnotation? (PyType.opt (.cls c)) with
+                            | some optAnn => arg.setObjVal! "_ty" optAnn
+                            | none => arg.setObjVal! "_mut_opt" (Json.str c)
+                        else arg
+                    | _, _ => arg
                 else
                   -- A residual-unknown param is boxed as `PyAny` only when it is used in a
                   -- container-dispatch position (else it would compile-error); otherwise it is left
@@ -493,7 +971,15 @@ private def stampParams (env : Env) (fn : Json) : Json :=
                         match toAnnotation? t with
                         | some ann => arg.setObjVal! "_ty" ann
                         | none => arg
-                      else boxIfStuck ()
+                      else
+                        -- A known-shape container with unknown elements (`arr == []` → `list unknown`)
+                        -- emits `List PyAny` etc. — better than the bare-`PyAny` fallback, keeping
+                        -- iterate/index/len/`==` structural. Only when the param is actually used in a
+                        -- dispatch position (else leave it bare for Lean's own unification).
+                        let filled := containerFillAny t
+                        match (if filled == t then none else toAnnotation? filled) with
+                        | some ann => if body.any (usedInPyAnyPosition name) then arg.setObjVal! "_ty" ann else arg
+                        | none => boxIfStuck ()
                   | none => boxIfStuck ()
             | _ => arg
           fn.setObjVal! "args" (args.setObjVal! "args" (Json.arr argsArr))
@@ -515,6 +1001,15 @@ partial def markTuples (env : Env) (json : Json) : Json :=
             | some (.tuple es) =>
                 json.setObjVal! "value"
                   (v.setObjVal! "_PastaLean_tuple_arity" (Json.num (JsonNumber.mk (Int.ofNat es.length) 0)))
+            | some (.dict _ _) =>
+                -- `d[i, j]` on a dict is a single tuple-KEY access (`d[(i, j)]`), NOT numpy-style
+                -- multi-index (`d[i][j]`). Mark the slice so codegen forms the tuple key.
+                match getField json "slice" with
+                | some s =>
+                    if nodeTypeOf s == some "Tuple" then
+                      json.setObjVal! "slice" (s.setObjVal! "_dict_tuple_key" (Json.bool true))
+                    else json
+                | none => json
             | _ => json
         | none => json
       else json
@@ -535,40 +1030,31 @@ partial def markOptAttrs (sigs : Sigs) (env : Env) (json : Json) : Json :=
         match (getField json "value").map (typeOfExpr sigs env) with
         | some (.opt _) => json.setObjVal! "_unwrap_opt" (Json.bool true)
         | _ => json
+      -- `root1 == root2` / `root1 is root2` between two user-class (node) values: mark `_class_cmp`
+      -- so codegen compares through `BEq` (`==`) even in the exact twin — nodes have no `DecidableEq`
+      -- for a propositional `=`.
+      else if nodeTypeOf json == some "Compare" then
+        let isClassish := fun (side : String) => match (getField json side).map (typeOfExpr sigs env) with
+          | some (.cls _) | some (.opt (.cls _)) => true
+          | _ => false
+        if isClassish "left" || isClassish "right" then json.setObjVal! "_class_cmp" (Json.bool true) else json
+      -- `X if c else None` (or `None if c else X`) whose value branch is ALREADY `Option`-typed
+      -- (`l1 = l1.next if l1 else None`, `.next` an `Option` field): mark `_branch_opt` so codegen
+      -- does not re-wrap it in `some`, which would nest to `Option (Option _)`.
+      else if nodeTypeOf json == some "IfExp" then
+        let branchOpt := fun (side : String) => match (getField json side).map (typeOfExpr sigs env) with
+          | some (.opt _) => true
+          | _ => false
+        if ((getField json "orelse").any isNoneConst && branchOpt "body")
+            || ((getField json "body").any isNoneConst && branchOpt "orelse") then
+          json.setObjVal! "_branch_opt" (Json.bool true)
+        else json
       else json
     match json with
     | .arr xs => Json.arr (xs.map (markOptAttrs sigs env))
     | .obj fs => Json.mkObj (fs.toList.map (fun (k, v) => (k, markOptAttrs sigs env v)))
     | _ => json
 
-/-- Every positional argument list of a call `name(...)` anywhere in `json`. -/
-partial def collectCallArgLists (name : String) (json : Json) : Array (Array Json) :=
-  let here := if nodeTypeOf json == some "Call" && (getField json "func").bind nameId? == some name
-    then #[(json.getObjValAs? (Array Json) "args").toOption.getD #[]] else #[]
-  let rest := match json with
-    | .arr xs => xs.foldl (fun acc e => acc ++ collectCallArgLists name e) #[]
-    | .obj fs => fs.toList.foldl (fun acc (_, v) => acc ++ collectCallArgLists name v) #[]
-    | _ => #[]
-  here ++ rest
-
-/-- Param-type hints for a nested def `fn` from the arg types at every call to it in `roots`. Two
-passes so a recursive arg (`dfs(node.left)`) is re-typed once its param is seeded from the first,
-non-recursive call (`dfs(root)`) — the join is what makes a tree `dfs` param `Optional[TreeNode]`. -/
-def nestedParamHints (sigs : Sigs) (env : Env) (fn : Json) (roots : Array Json) : Env := Id.run do
-  let name := (fn.getObjValAs? String "name").toOption.getD ""
-  let params := paramNames fn
-  if name == "" || params.isEmpty then return {}
-  let callLists := roots.foldl (fun acc r => acc ++ collectCallArgLists name r) #[]
-  if callLists.isEmpty then return {}
-  let mut hints : Env := {}
-  for _ in [0:2] do
-    let env2 := hints.fold (fun m k v => m.insert k v) env
-    for args in callLists do
-      for i in [0:min params.size args.size] do
-        let t := typeOfExpr sigs env2 args[i]!
-        if t != .unknown then
-          hints := hints.insert params[i]! (((hints.get? params[i]!).getD .unknown).join t)
-  return hints
 
 /-- Stamp an int-literal `Constant` with `_ty = float` (so codegen emits `(0 : ℚ)`). -/
 private def stampIfIntConst (e : Json) : Json :=
@@ -584,13 +1070,19 @@ private partial def deepFloatContainer : PyType → Bool
   | .list e | .set e => deepFloatContainer e
   | _ => false
 
-/-- A list/set literal or a `[x] * n` repeat — a value whose element type an ascription can fix. -/
-private def isListLitOrRepeat (v : Json) : Bool :=
+/-- A list/set literal or a `[x] * n` repeat — a value whose element type an ascription can fix.
+Also a comprehension whose ELEMENT is itself such a container (`[[inf]*m for …]`), so the outer
+float container is ascribed and the polymorphic `inf` seed pins to the mode float. A comprehension
+of scalars (`[pow(a-b, 2) for …]`) is deliberately NOT matched: ascribing it would force the int
+subexpressions inside each element to ℚ (`PyHSub ℤ ℤ ℚ`). -/
+private partial def isListLitOrRepeat (v : Json) : Bool :=
   match nodeTypeOf v with
   | some "List" | some "Set" => true
   | some "BinOp" => (v.getObjValAs? String "op").toOption == some "mul"
       && ((getField v "left").any (fun l => nodeTypeOf l == some "List")
           || (getField v "right").any (fun r => nodeTypeOf r == some "List"))
+  | some "ListComp" | some "GeneratorExp" | some "SetComp" =>
+      (getField v "elt").any isListLitOrRepeat
   | _ => false
 
 /-- For a float-typed container assigned `value`, coerce its int-literal ELEMENTS to float. Descends
@@ -616,7 +1108,292 @@ private partial def stampFloatListElems (value : Json) : Json :=
       (getField value "value").elim value (fun e => value.setObjVal! "value" (stampFloatListElems e))
   | _ => value
 
+/-! ### Array-backing eligibility (runnable twin)
+
+A `list` local whose every use is `Array`-portable is stamped `_seq: "array"` so codegen backs it
+with `Array` (O(1) append/index) in the runnable twin; everything else stays `List`. -/
+
+/-- Does `v` occur as a `Name` anywhere in `j`? (for the for-target rebind guard). -/
+partial def refsListName (v : String) (j : Json) : Bool :=
+  nameId? j == some v ||
+    (match j with
+     | .arr xs => xs.any (refsListName v)
+     | .obj fs => fs.toList.any (fun (_, x) => refsListName v x)
+     | _ => false)
+
+/-- Does the assignment target `t` have root name `v` (`v = …`, `v[i] = …`, `v.f = …`, or a tuple
+unpack binding `v`)? -/
+private partial def targetRootIs (v : String) (t : Json) : Bool :=
+  match nodeTypeOf t with
+  | some "Name" => nameId? t == some v
+  | some "Subscript" | some "Attribute" => (getField t "value").any (targetRootIs v)
+  | some "Tuple" | some "List" => ((t.getObjValAs? (Array Json) "elts").toOption.getD #[]).any (targetRootIs v)
+  | _ => false
+
+/-- Is `v` MUTATED anywhere in `json` — reassigned/`v[i]=`/`v.f=`, or the receiver of a mutating method
+(`append`/`pop`/…)? Used to keep a captured-and-mutated list off `Array` backing: such a var is
+THREADED through nested defs as a `List`, so an `Array` binder would clash. -/
+private partial def mutatesNameWithin (v : String) (json : Json) : Bool :=
+  let here : Bool := match nodeTypeOf json with
+    | some "Assign" | some "AugAssign" | some "AnnAssign" =>
+        (getField json "target").any (targetRootIs v)
+    | some "Call" =>
+        (getField json "func").any fun f =>
+          nodeTypeOf f == some "Attribute"
+            && ((getField f "value").bind nameId? == some v)
+            && ["append", "extend", "pop", "insert", "remove", "sort", "reverse", "appendleft",
+                "popleft", "add", "clear", "discard", "update"].contains
+                  ((f.getObjValAs? String "attr").toOption.getD "")
+    | _ => false
+  here || (match json with
+    | .arr xs => xs.any (mutatesNameWithin v)
+    | .obj fs => fs.toList.any (fun (_, x) => mutatesNameWithin v x)
+    | _ => false)
+
+/-- A use of list variable `v` that `Array`-backing supports with the identical generated surface:
+integer-index `v[i]` (read/write), `len(v)`, `for _ in v`, `(re)binding v`, and — only when
+`allowAppend` — a bare `v.append(x)`. Returns `false` on ANY other use — a slice `v[a:b]`, another
+method (`v.sort()`/`v.pop()`), a nested `v[i].append(...)`, passing `v` to a function, returning it,
+storing it — so an ineligible value safely stays `List`. `allowAppend` is off for NESTED lists: the
+appended row's own backing can't be guaranteed to match, so a nested list is only eligible when it is
+a full literal accessed by index (no append). Conservative: an unrecognised context recurses into
+every child and a bare `Name v` reached there fails. Skips nested defs/lambdas (separate scope). -/
+partial def listUsePorted (v : String) (allowAppend : Bool) (json : Json) : Bool :=
+  match nodeTypeOf json with
+  | some "Name" => nameId? json != some v
+  -- A nested def that only READS `v` keeps it portable (the capture is forwarded at its own type);
+  -- one that MUTATES `v` threads it as a `List`, so `v` must not be `Array`-backed.
+  | some "FunctionDef" | some "ClassDef" | some "Lambda" => !(mutatesNameWithin v json)
+  | some "Subscript" =>
+      let val := (getField json "value").getD Json.null
+      let slice := (getField json "slice").getD Json.null
+      if nameId? val == some v then
+        if nodeTypeOf slice == some "Slice" then false else listUsePorted v allowAppend slice
+      else listUsePorted v allowAppend val && listUsePorted v allowAppend slice
+  | some "Call" =>
+      let func := (getField json "func").getD Json.null
+      let args := (json.getObjValAs? (Array Json) "args").toOption.getD #[]
+      let kws := (json.getObjValAs? (Array Json) "keywords").toOption.getD #[]
+      -- an `.append(...)` whose receiver mentions v (covers `v.append` and `v[i].append`)
+      let appendRecvV := nodeTypeOf func == some "Attribute"
+        && (func.getObjValAs? String "attr" == .ok "append")
+        && ((getField func "value").any (refsListName v))
+      let isLen := nameId? func == some "len"
+      if appendRecvV then
+        -- only a bare `v.append(x)` on an append-allowed (flat scalar) list is ported
+        if allowAppend && ((getField func "value").any (fun r => nameId? r == some v)) then
+          args.all (listUsePorted v allowAppend) && kws.all (listUsePorted v allowAppend)
+        else false
+      else if isLen then
+        args.all (fun a => nameId? a == some v || listUsePorted v allowAppend a)
+          && kws.all (listUsePorted v allowAppend)
+      else listUsePorted v allowAppend func && args.all (listUsePorted v allowAppend)
+        && kws.all (listUsePorted v allowAppend)
+  | some "For" =>
+      let target := (getField json "target").getD Json.null
+      let iter := (getField json "iter").getD Json.null
+      let body := (json.getObjValAs? (Array Json) "body").toOption.getD #[]
+      let orelse := (json.getObjValAs? (Array Json) "orelse").toOption.getD #[]
+      if refsListName v target then false
+      else (nameId? iter == some v || listUsePorted v allowAppend iter)
+        && body.all (listUsePorted v allowAppend) && orelse.all (listUsePorted v allowAppend)
+  | some "Assign" | some "AnnAssign" | some "AugAssign" =>
+      let value := (getField json "value").getD Json.null
+      let tgt := (getField json "target").getD Json.null
+      let tgtOk :=
+        match nodeTypeOf tgt with
+        | some "Name" => true
+        | some "Subscript" =>
+            let tv := (getField tgt "value").getD Json.null
+            let ts := (getField tgt "slice").getD Json.null
+            if nameId? tv == some v then (nodeTypeOf ts != some "Slice") && listUsePorted v allowAppend ts
+            else listUsePorted v allowAppend tv && listUsePorted v allowAppend ts
+        | _ => listUsePorted v allowAppend tgt
+      tgtOk && listUsePorted v allowAppend value
+  | _ =>
+      match json with
+      | .arr xs => xs.all (listUsePorted v allowAppend)
+      | .obj fs => fs.toList.all (fun (_, x) => listUsePorted v allowAppend x)
+      | _ => true
+
+-- A flat list of scalars: `list[int]` / `list[float]` / `list[str]` / `list[bool]`. Append is safe
+-- (scalar elements are always consistently backed), so these are eligible even when built by append.
+private def isFlatScalarList : PyType → Bool
+  | .list .int | .list .bool | .list .float | .list .str => true
+  | _ => false
+
+-- A NESTED list of scalars: `list[list[int]]`, `list[list[list[float]]]`, … . Backed `Array (Array
+-- …)` but only when a full literal accessed by index (no append — see `listUsePorted`).
+private partial def isNestedScalarList : PyType → Bool
+  | .list (.list e) => isNestedScalarList (.list e) || isFlatScalarList (.list e)
+  | _ => false
+
+/-- The init value matches `ty`'s list nesting: every list LEVEL is a literal (markable as `Array`),
+scalar leaves may be any expression. With `full`, each list level must be NON-EMPTY (a nested list is
+only eligible fully-populated — an empty `[]` that is later appended to can't be safely backed). -/
+private partial def litMatchesNesting (full : Bool) (ty : PyType) (v : Json) : Bool :=
+  match ty with
+  | .list inner =>
+      (nodeTypeOf v == some "List"
+        && (let elts := (v.getObjValAs? (Array Json) "elts").toOption.getD #[]
+            (!full || !elts.isEmpty) && elts.all (litMatchesNesting full inner)))
+      -- `[x] * n` / `n * [x]` — a repeated one-element list is an array-safe init just like a literal
+      -- (the sieve/DP-table idiom `[0]*n`, `[True]*n`): under value semantics it is `n` independent
+      -- copies, so backing it as an `Array` (O(1) `a[i]=v`) is correct and turns O(n²) into O(n).
+      || (nodeTypeOf v == some "BinOp" && (getField v "op").any (· == Json.str "mul") &&
+          (let sides := [getField v "left", getField v "right"]
+           sides.any fun s? => match s? with
+             | some s => nodeTypeOf s == some "List"
+                 && (let elts := (s.getObjValAs? (Array Json) "elts").toOption.getD #[]
+                     elts.size == 1 && litMatchesNesting full inner elts[0]!)
+             | none => false))
+      -- `[<row> for _ in range(n)]` — a comprehension building rows is an array-safe nested init (the
+      -- 2D-DP idiom `[[inf]*(m) for _ in range(n)]`), as long as its element matches the inner nesting.
+      || ((nodeTypeOf v == some "ListComp" || nodeTypeOf v == some "GeneratorExp")
+          && (getField v "elt").any (litMatchesNesting full inner))
+  | _ => true
+
+/-- Every bare-`Name` assignment to `name` is a nesting-matching `List` literal (and there is at
+least one) — so the variable is only initialised from literals, never aliased to another list. -/
+private def initsAreLits (stmts : List Json) (name : String) (ty : PyType) (full : Bool) : Bool := Id.run do
+  let mut sawOne := false
+  for s in stmts do
+    if nodeTypeOf s == some "Assign" || nodeTypeOf s == some "AnnAssign" then
+      if let some tgt := getField s "target" then
+        if nameId? tgt == some name then
+          sawOne := true
+          if !litMatchesNesting full ty ((getField s "value").getD Json.null) then return false
+  return sawOne
+
+/-- Local list variables codegen may back with `Array` in the runnable twin: a FLAT scalar list whose
+uses are ported (append allowed), or a NESTED scalar list that is a full literal accessed by index
+(no append). Everything else stays `List`. -/
+def arrayEligibleVars (env : Env) (fn : Json) : Std.HashSet String := Id.run do
+  let body := (fn.getObjValAs? (Array Json) "body").toOption.getD #[]
+  let stmts := flatStmts body.toList
+  let params := paramNames fn
+  let mut result : Std.HashSet String := {}
+  for (name, ty) in env.toList do
+    if params.contains name then
+      pure ()
+    else if isFlatScalarList ty then
+      if initsAreLits stmts name ty false && body.all (listUsePorted name true) then
+        result := result.insert name
+    else if isNestedScalarList ty then
+      if initsAreLits stmts name ty true && body.all (listUsePorted name false) then
+        result := result.insert name
+  return result
+
+/-- Mark `_seq: "array"` on EVERY `list[...]` level of a type annotation (so `list[list[int]]` →
+`Array (Array Int)`, not `Array (List Int)`). -/
+private partial def markSeqAnn (ann : Json) : Json :=
+  if ann.getObjValAs? String "node_type" == .ok "Subscript"
+     && ((ann.getObjVal? "value").toOption.any (·.getObjValAs? String "id" |>.toOption |>.any (· == "list"))) then
+    let ann := ann.setObjVal! "_seq" (Json.str "array")
+    match ann.getObjVal? "slice" with
+    | .ok inner => ann.setObjVal! "slice" (markSeqAnn inner)
+    | _ => ann
+  else ann
+
+/-- Mark `_seq: "array"` on a nested `List` literal at every level (`[[..],[..]]` → `#[#[..],#[..]]`),
+and on a `[x] * n` repeat (marking the BinOp and its `[x]` operand) so it emits `pyArrayRepeat`. -/
+private partial def markSeqLit (v : Json) : Json :=
+  if nodeTypeOf v == some "List" then
+    let v := v.setObjVal! "_seq" (Json.str "array")
+    match v.getObjValAs? (Array Json) "elts" with
+    | .ok elts => v.setObjVal! "elts" (Json.arr (elts.map markSeqLit))
+    | _ => v
+  else if nodeTypeOf v == some "BinOp" && (getField v "op").any (· == Json.str "mul") then
+    -- `[x] * n` / `n * [x]`: back the whole repeat as an `Array` and its `[x]` list operand too.
+    let markSide (k : String) (v : Json) : Json :=
+      match getField v k with
+      | some s => if nodeTypeOf s == some "List" then v.setObjVal! k (markSeqLit s) else v
+      | none => v
+    if [getField v "left", getField v "right"].any (fun s? => s?.any (nodeTypeOf · == some "List")) then
+      markSide "right" (markSide "left" (v.setObjVal! "_seq" (Json.str "array")))
+    else v
+  else if nodeTypeOf v == some "ListComp" || nodeTypeOf v == some "GeneratorExp" then
+    -- `[<row> for …]`: back the comprehension result as an `Array` and its element (row) too.
+    let v := v.setObjVal! "_seq" (Json.str "array")
+    match getField v "elt" with
+    | some e => v.setObjVal! "elt" (markSeqLit e)
+    | none => v
+  else v
+
+/-- A var assigned inside an `if`/`for`/`while`/`try` block is hoisted to a `let mut x : T := default`
+at the function top, with `T` from a `<block>_assigned_types` map (stamped from `env`, so no `_seq`).
+Mark the `array_ok` names there too, else the hoisted `List` type clashes with the `Array` literal. -/
+private def markHoistTypeMaps (eligible : Std.HashSet String) (json : Json) : Json := Id.run do
+  let mut j := json
+  for key in #["if_assigned_types", "try_assigned_types", "for_assigned_types", "while_assigned_types"] do
+    if let some tmap := getField j key then
+      let mut newMap := tmap
+      for nm in eligible.toList do
+        if let some ann := (tmap.getObjVal? nm).toOption then
+          newMap := newMap.setObjVal! nm (markSeqAnn ann)
+      j := j.setObjVal! key newMap
+  return j
+
+/-- Stamp `_seq: "array"` on a `v.append(x)` / `v.extend(x)` call whose receiver `v` is `array_ok`, so
+codegen emits the O(1) `pyArrayAppend`/`pyArrayExtend` instead of the `List` `pyAppend`/`pyExtend`. -/
+private def markAppendCall (eligible : Std.HashSet String) (json : Json) : Json :=
+  match getField json "func" with
+  | some func =>
+      let attr := (func.getObjValAs? String "attr").toOption
+      if nodeTypeOf func == some "Attribute" && (attr == some "append" || attr == some "extend")
+         && ((getField func "value").any (fun r => (nameId? r).any eligible.contains)) then
+        json.setObjVal! "_seq" (Json.str "array")
+      else json
+  | none => json
+
+/-- Stamp `_seq: "array"` on an `array_ok` local's declaring binder type (`_ty`), its nested list
+literals at every level, and its hoisted-type-map entries; codegen then emits `Array`/`#[…]` in the
+runnable twin. Only the declaration needs it — append/index/len/iter dispatch by the resulting type.
+Does not descend into nested defs. -/
+partial def stampArraySeqs (eligible : Std.HashSet String) (json : Json) : Json :=
+  if nodeTypeOf json == some "FunctionDef" || nodeTypeOf json == some "ClassDef" then json
+  else
+    let json := markHoistTypeMaps eligible json
+    let json := if nodeTypeOf json == some "Call" then markAppendCall eligible json else json
+    let recurse : Json :=
+      match json with
+      | .arr xs => Json.arr (xs.map (stampArraySeqs eligible))
+      | .obj fs => Json.mkObj (fs.toList.map (fun (k, x) => (k, stampArraySeqs eligible x)))
+      | _ => json
+    if nodeTypeOf json == some "Assign" || nodeTypeOf json == some "AnnAssign" then
+      let tgt := (getField json "target").getD Json.null
+      if (nameId? tgt).any eligible.contains then
+        let json := match getField tgt "_ty" with
+          | some ty => json.setObjVal! "target" (tgt.setObjVal! "_ty" (markSeqAnn ty))
+          | none => json
+        match getField json "value" with
+        | some v =>
+            -- mark the literal (`#[…]`) AND the value's own `_ty` ascription (`(… : Array …)`), which
+            -- codegen adds from `stampedTypeSyntax? value` for numeric-container element pinning.
+            let v := markSeqLit v
+            let v := match getField v "_ty" with
+              | some ty => v.setObjVal! "_ty" (markSeqAnn ty)
+              | none => v
+            json.setObjVal! "value" v
+        | none => json
+      else recurse
+    else recurse
+
+
 mutual
+
+/-- The types of a value's *branch leaves*, descending through `IfExp`/`BoolOp` (whose result is one
+of its operands). `return -1 if v >= inf else v` yields `[int, float]`, so a single mixed ternary
+return is seen as mixing `int` and `float` — the same reconciliation a `return 0` / `return ans`
+pair gets — not just its `float` join. -/
+partial def returnBranchTypes (sigs : Sigs) (env : Env) (v : Json) : List PyType :=
+  match nodeTypeOf v with
+  | some "IfExp" =>
+      (getField v "body").elim [] (returnBranchTypes sigs env)
+        ++ (getField v "orelse").elim [] (returnBranchTypes sigs env)
+  | some "BoolOp" =>
+      ((v.getObjValAs? (Array Json) "values").toOption.getD #[]).toList.flatMap (returnBranchTypes sigs env)
+  | _ => [typeOfExpr sigs env v]
 
 /-- Infer types for `fn` (seeded by `outer` captures and `hints` for unannotated params, resolving
 calls with `sigs`), stamp its params and every binder in its body, and recurse into nested defs.
@@ -624,11 +1401,11 @@ A function whose returns disagree (`.any`) and that has no return annotation is 
 so codegen boxes its result as `PyAny`. -/
 partial def stampFunction (sigs : Sigs) (outer hints : Env) (fn : Json) : Json :=
   let env1 := inferFunction sigs outer hints fn
+  let body := (fn.getObjValAs? (Array Json) "body").toOption.getD #[]
   -- Second pass: a param that pass 1 leaves `unknown` but that is used in a `PyAny`-dispatch position
   -- WILL be boxed to `PyAny` by codegen. Seed those as `.any` and re-infer, so `PyAny` propagates
   -- through the body (`for x in nums: total += x*2` → `total : PyAny`) and matches what codegen emits;
   -- otherwise `total` stays `Int` and the `total := <PyAny>` reassignment fails to type-check.
-  let body := (fn.getObjValAs? (Array Json) "body").toOption.getD #[]
   let pyAnySeed : Env := (paramNames fn).foldl (fun m name =>
     if (env1.get? name).getD .unknown == .unknown && body.any (usedInPyAnyPosition name)
     then m.insert name .any else m) hints
@@ -650,26 +1427,41 @@ partial def stampFunction (sigs : Sigs) (outer hints : Env) (fn : Json) : Json :
         -- `!_real_fn`) so both coerce. A pure-`float` body needs no ascription (Lean infers it).
         -- `sawOther` covers `int`/`bool` and `unknown` (a `return t` whose `t` TypeInfer left unknown
         -- but Lean will infer `ℤ`) — anything that could pin the codomain to `ℤ` ahead of the float.
-        let (sawOther, sawFloat) : Bool × Bool := Id.run do
-          let mut so := false; let mut sf := false
+        -- `sawAny`: a return branch that types `.any` under the PyAny-SEEDED `env` (e.g. `return best/2`
+        -- where `best` was boxed to `PyAny`). `retType` comes from the globals-free `sigs` where the
+        -- same param was still `unknown`, so it can wrongly claim a concrete `float`; the env-based
+        -- `sawAny` is authoritative for whether the body actually yields a boxed value.
+        let (sawOther, sawFloat, sawAny) : Bool × Bool × Bool := Id.run do
+          let mut so := false; let mut sf := false; let mut sa := false
           for st in flatStmts ((fn.getObjValAs? (Array Json) "body").toOption.getD #[]).toList do
             if nodeTypeOf st == some "Return" then
-              match (getField st "value").bind (fun v => if v.isNull then none else some (typeOfExpr sigs env v)) with
-              | some .float => sf := true
-              | some .int | some .bool | some .unknown => so := true
-              | _ => pure ()
-          return (so, sf)
-        let fn := if sawOther && sawFloat then fn.setObjVal! "_ret_float" (Json.bool true) else fn
-        if retType == (.any : PyType) then fn.setObjVal! "_box_return" (Json.bool true)
+              match getField st "value" with
+              | some v =>
+                  unless v.isNull do
+                    for t in returnBranchTypes sigs env v do
+                      match t with
+                      | .float => sf := true
+                      | .int | .bool | .unknown => so := true
+                      | .any => sa := true
+                      | _ => pure ()
+              | none => pure ()
+          return (so, sf, sa)
+        -- Box the return (and suppress the contradictory `_ret_float`/`_ret_ty` ascriptions) when the
+        -- body actually yields `PyAny` — either `sigs` said so, or the env-seeded return is boxed.
+        let boxRet := retType == (.any : PyType) || sawAny
+        let fn := if !boxRet && sawOther && sawFloat then fn.setObjVal! "_ret_float" (Json.bool true) else fn
+        if boxRet then fn.setObjVal! "_box_return" (Json.bool true)
         else if !annotated && retType.isKnown then
           match toAnnotation? retType with
           | some ann => fn.setObjVal! "_ret_ty" ann
           | none => fn
         else fn
     | _ => fn
+  let eligible := arrayEligibleVars env fn
   match fn.getObjValAs? (Array Json) "body" with
   | .ok body => fn.setObjVal! "body"
-      (Json.arr (((body.map (stampStmt sigs env body)).map (markTuples env)).map (markOptAttrs sigs env)))
+      (Json.arr ((((((body.map (stampStmt sigs env body)).map (markTuples env)).map (markOptAttrs sigs env)).map
+        (stampArraySeqs eligible)).map (stampCompTargets sigs env)).map (stampKeyLambdas sigs env)))
   | _ => fn
 
 /-- Stamp a (possibly nested) tuple-unpack target with the list-vs-`Prod` access mode at EVERY level,
@@ -688,6 +1480,9 @@ partial def stampUnpackShape (target : Json) (ty : PyType) : Json :=
         for i in [0:elts.size] do
           newElts := newElts.push (stampUnpackShape elts[i]! (childTy i))
         let t := target.setObjVal! "elts" (Json.arr newElts)
+        -- Stamp the whole element's type so a comprehension's lambda param `_pair` is ascribed —
+        -- otherwise Lean infers it from the body (`c*ₚv` → `ℤ×ℤ`) and clashes with the real element.
+        let t := match toAnnotation? ty with | some ann => t.setObjVal! "_pair_ty" ann | none => t
         match ty with
         | .list _ => return t.setObjVal! "_list_unpack" (Json.bool true)
         | .tuple _ =>
@@ -701,7 +1496,38 @@ partial def stampUnpackShape (target : Json) (ty : PyType) : Json :=
             return t.setObjVal! "_tuple_unpack" (Json.bool true)
         | _ => return t
     | _ => target
+  -- A single-`Name` comp/for target (`for group in groups`) gets its element type stamped as `_ty`,
+  -- so the lambda/loop binder is ascribed instead of defaulting (e.g. `group : String`, not `ℤ`).
+  else if nodeTypeOf target == some "Name" then
+    match toAnnotation? ty with
+    | some ann => if (getField target "_ty").isSome then target else target.setObjVal! "_ty" ann
+    | none => target
   else target
+
+/-- Is `name` assigned from a `Counter(...)`/`defaultdict(...)` call anywhere in `json` (bare or
+module-qualified)? Such a var is backed by `PyDefaultDict`, not the `Std.HashMap` a plain `.dict`
+annotation emits, so its hoisted binder must use the defaultdict annotation — otherwise the
+`pyCounter` reassignment clashes with the `Std.HashMap` declaration. Skips nested defs. -/
+partial def assignedFromDefaultDict (name : String) (json : Json) : Bool :=
+  if nodeTypeOf json == some "FunctionDef" then false
+  else
+    let hitHere : Bool :=
+      nodeTypeOf json == some "Assign"
+        && ((getField json "target").bind nameId? == some name)
+        && (match getField json "value" with
+            | some v =>
+                nodeTypeOf v == some "Call" &&
+                (match getField v "func" with
+                 | some f =>
+                     match (nameId? f).orElse (fun _ => (f.getObjValAs? String "attr").toOption) with
+                     | some n => n == "Counter" || n == "defaultdict"
+                     | none => false
+                 | none => false)
+            | none => false)
+    hitHere || (match json with
+      | .arr xs => xs.any (assignedFromDefaultDict name)
+      | .obj fs => fs.toList.any (fun (_, v) => assignedFromDefaultDict name v)
+      | _ => false)
 
 /-- Stamp `<typesKey>`: for each name a block leaks out (listed under `namesKey`, e.g.
 `if_assigned_names`) that we can type, its annotation — so codegen ascribes the hoisted
@@ -714,16 +1540,173 @@ private partial def stampHoistTypes (env : Env) (namesKey typesKey : String) (s 
       -- a `ℚ` ascription fights a real-context `ℝ` branch value; `.any` DOES need it (→ `PyAny`).
       let entries := names.toList.filterMap (fun nm =>
         match env.get? nm with
-        | some t => if t.needsAscription then (toAnnotation? t).map (fun ann => (nm, ann)) else none
+        | some t =>
+            if t.needsAscription then
+              -- A dict var fed by `Counter`/`defaultdict` is `PyDefaultDict`-backed, not `Std.HashMap`.
+              let ann? := match t with
+                | .dict k v => if assignedFromDefaultDict nm s then defaultDictAnnotation? k v else toAnnotation? t
+                | _ => toAnnotation? t
+              ann?.map (fun ann => (nm, ann))
+            else none
         | none => none)
       if entries.isEmpty then s else s.setObjVal! typesKey (Json.mkObj entries)
   | _ => s
+
+/-- Stamp `_list_unpack` on a comprehension/generator tuple target iterating a list-of-lists
+(`[… for a, b in edges]`, `edges : list[list[int]]`), so codegen indexes it (`row[0]`) instead of
+projecting a `Prod` — the same mark `stampStmt` gives a `for`-statement target. Iterates the whole
+subtree; the first generator's `iter` is typed in the enclosing `env` (the common case). -/
+partial def stampCompTargets (sigs : Sigs) (env : Env) (json : Json) : Json :=
+  if nodeTypeOf json == some "FunctionDef" then json
+  else
+    let json :=
+      match nodeTypeOf json with
+      | some "ListComp" | some "SetComp" | some "GeneratorExp" | some "DictComp" =>
+          match json.getObjValAs? (Array Json) "generators" with
+          | .ok gens =>
+              json.setObjVal! "generators" (Json.arr (gens.map fun g =>
+                match getField g "target", getField g "iter" with
+                | some target, some iter =>
+                    if nodeTypeOf target == some "Tuple" then
+                      g.setObjVal! "target" (stampUnpackShape target (typeOfExpr sigs env iter).elemType)
+                    else g
+                | _, _ => g))
+          | _ => json
+      | _ => json
+    match json with
+    | .arr xs => Json.arr (xs.map (stampCompTargets sigs env))
+    | .obj fs => Json.mkObj (fs.toList.map (fun (k, v) => (k, stampCompTargets sigs env v)))
+    | _ => json
+
+/-- Set `_ty` (an annotation) on a lambda's FIRST parameter. -/
+private partial def stampLambdaParam (lam : Json) (ann : Json) : Json :=
+  match lam.getObjVal? "args" with
+  | .ok argsNode =>
+      match argsNode.getObjValAs? (Array Json) "args" with
+      | .ok params =>
+          if params.size ≥ 1 then
+            lam.setObjVal! "args" (argsNode.setObjVal! "args"
+              (Json.arr (params.set! 0 (params[0]!.setObjVal! "_ty" ann))))
+          else lam
+      | _ => lam
+  | _ => lam
+
+/-- The keyed collection of a `key=`-callback call (`sorted/min/max(coll, key=f)`, `xs.sort(key=f)`,
+`bisect_left/right(a, x, key=f)`): the value whose ELEMENT type the callback's parameter takes. -/
+private partial def keyCallbackColl? (json : Json) : Option Json :=
+  match getField json "func" with
+  | some func =>
+      let args := (json.getObjValAs? (Array Json) "args").toOption.getD #[]
+      match nodeTypeOf func, (func.getObjValAs? String "id").toOption,
+            (func.getObjValAs? String "attr").toOption with
+      | some "Name", some fn, _ =>
+          if ["sorted", "min", "max", "bisect_left", "bisect_right", "bisect",
+              "nlargest", "nsmallest"].contains fn then args[0]? else none
+      | some "Attribute", _, some "sort" => getField func "value"
+      | _, _, _ => none
+  | none => none
+
+/-- Stamp each `key=`-callback lambda's first parameter with the keyed collection's element type, so
+`sorted(xs, key=lambda p: -p[1])` types `p` as `xs`'s element (`list[int]` or a tuple) instead of the
+polymorphic `α × β` fallback — which leaves `-p[1]` stuck on `Neg β`. Only stamps a concrete element
+type (`toAnnotation?` succeeds); a tuple element is stamped too, letting codegen project statically. -/
+partial def stampKeyLambdas (sigs : Sigs) (env : Env) (json : Json) : Json :=
+  if nodeTypeOf json == some "FunctionDef" then json
+  else
+    let json :=
+      if nodeTypeOf json == some "Call" then
+        match keyCallbackColl? json, getField json "keywords" with
+        | some coll, some kwObj =>
+            match getField kwObj "key" with
+            | some keyVal =>
+                if nodeTypeOf keyVal == some "Lambda" then
+                  let elemTy := (typeOfExpr sigs env coll).elemType
+                  match toAnnotation? elemTy with
+                  | some ann =>
+                      -- A tuple element gets `_pair_param` too, so codegen projects `p[0]`/`p[1]`
+                      -- statically (`Prod.fst`/`snd`) rather than a non-existent `PyGetItem (_ × _)`.
+                      let keyVal := stampLambdaParam keyVal ann
+                      let keyVal := match elemTy with
+                        | .tuple _ => keyVal.setObjVal! "_pair_param" (Json.bool true)
+                        | _ => keyVal
+                      json.setObjVal! "keywords" (kwObj.setObjVal! "key" keyVal)
+                  | none => json
+                else json
+            | none => json
+        | _, _ => json
+      else json
+    match json with
+    | .arr xs => Json.arr (xs.map (stampKeyLambdas sigs env))
+    | .obj fs => Json.mkObj (fs.toList.map (fun (k, v) => (k, stampKeyLambdas sigs env v)))
+    | _ => json
+
+/-- Every element type at which the named callback `name` is passed as a `key=` argument
+(`sorted(xs, key=name)`, `bisect_left(range(n), v, key=name)`, …). The `key=lambda` case is stamped
+inline by `stampKeyLambdas`; this handles the NAMED nested-def case, whose param is typed elsewhere. -/
+partial def keyCallbackElemTypes (sigs : Sigs) (env : Env) (name : String) (json : Json) :
+    Array PyType :=
+  let here : Array PyType :=
+    if nodeTypeOf json == some "Call" then
+      match keyCallbackColl? json, getField json "keywords" with
+      | some coll, some kwObj =>
+          match getField kwObj "key" with
+          | some keyVal =>
+              if nodeTypeOf keyVal == some "Name" && nameId? keyVal == some name
+              then #[(typeOfExpr sigs env coll).elemType] else #[]
+          | none => #[]
+      | _, _ => #[]
+    else #[]
+  let rest := match json with
+    | .arr xs => xs.foldl (fun acc e => acc ++ keyCallbackElemTypes sigs env name e) #[]
+    | .obj fs => fs.toList.foldl (fun acc (_, v) => acc ++ keyCallbackElemTypes sigs env name v) #[]
+    | _ => #[]
+  here ++ rest
+
+/-- Param hint for a nested def used as a `key=` callback: its FIRST param is the element type of the
+collection the key function ranges over (`def check(x): …` + `bisect_left(range(n), True, key=check)`
+⇒ `x : int`). Empty when the def isn't used that way or the element type is unknown. -/
+partial def keyCallbackHints (sigs : Sigs) (env : Env) (fn : Json) (roots : Array Json) : Env :=
+  Id.run do
+    let name := (fn.getObjValAs? String "name").toOption.getD ""
+    let params := paramNames fn
+    if name == "" || params.isEmpty then return {}
+    let elemTys := roots.foldl (fun acc r => acc ++ keyCallbackElemTypes sigs env name r) #[]
+    let joined := elemTys.foldl (fun t e => t.join e) PyType.unknown
+    if joined == .unknown then return {}
+    return (Std.HashMap.emptyWithCapacity 1).insert params[0]! joined
+
+/-- Stamp each NUMERIC `Name` element of a tuple-unpack target with its ENV type (`_ty`), so a var
+seeded one numeric type by the tuple element but WIDENED by a later reassignment (`left, right =
+(0, 1e8)` then `left = mid : ℚ`) is ascribed the joined type — otherwise codegen infers the narrow
+element type and the widened reassignment fails. Numeric-only + absent-`_ty`-only keeps containers /
+nodes on their existing (shape-driven) path. -/
+private partial def stampNumericTupleElemTys (env : Env) (target : Json) : Json :=
+  match nodeTypeOf target with
+  | some "Name" =>
+      if (getField target "_ty").isSome then target
+      else match (nameId? target).bind env.get? with
+        | some (.int) | some (.bool) | some (.float) =>
+            match (nameId? target).bind env.get? |>.bind toAnnotation? with
+            | some ann => target.setObjVal! "_ty" ann
+            | none => target
+        | _ => target
+  | some "Tuple" | some "List" =>
+      match target.getObjValAs? (Array Json) "elts" with
+      | .ok elts => target.setObjVal! "elts" (Json.arr (elts.map (stampNumericTupleElemTys env)))
+      | _ => target
+  | _ => target
 
 /-- Stamp one statement: its target, its nested blocks, and any nested def. -/
 partial def stampStmt (sigs : Sigs) (env : Env) (roots : Array Json) (s : Json) : Json :=
   if nodeTypeOf s == some "FunctionDef" then
     let ownBody := (s.getObjValAs? (Array Json) "body").toOption.getD #[]
-    stampFunction sigs env (nestedParamHints sigs env s (roots ++ ownBody)) s
+    -- Call-site hints from positional calls, plus (join, don't override) the element type at any
+    -- `key=<thisDef>` usage — a callback passed as `key=` is never called by name, so the positional
+    -- pass alone leaves its param `unknown` (→ `PyAny`).
+    let posHints := nestedParamHints sigs env s (roots ++ ownBody)
+    let keyHints := keyCallbackHints sigs env s (roots ++ ownBody)
+    let hints := keyHints.fold (fun m k v => m.insert k (((m.get? k).getD .unknown).join v)) posHints
+    stampFunction sigs env hints s
   else Id.run do
     let mut s := s
     match nodeTypeOf s with
@@ -784,7 +1767,7 @@ partial def stampStmt (sigs : Sigs) (env : Env) (roots : Array Json) (s : Json) 
       match getField s "target", getField s "value" with
       | some target, some value =>
           if nodeTypeOf target == some "Tuple" then
-            s := s.setObjVal! "target" (stampUnpackShape target (typeOfExpr sigs env value))
+            s := s.setObjVal! "target" (stampNumericTupleElemTys env (stampUnpackShape target (typeOfExpr sigs env value)))
       | _, _ => pure ()
     -- A name a branch/try leaks out (Python has no block scope; Lean does) is hoisted by codegen to
     -- `let mut x : T := default` before the block. Stamp its type T so the hoist is ascribed — PyAny
@@ -822,14 +1805,75 @@ private def topLevelStmts (module : Json) : Array Json :=
   ((module.getObjValAs? (Array Json) "body").toOption.getD #[]).filter
     (nodeTypeOf · != some "FunctionDef")
 
-/-- The hint environment for `fn`'s parameters from `params` (its inferred per-position types). -/
-private def hintsFor (params : ParamSigs) (fn : Json) : Env := Id.run do
+/-- Top-level `ClassDef`s of a module. -/
+private def classDefsOf (module : Json) : Array Json :=
+  ((module.getObjValAs? (Array Json) "body").toOption.getD #[]).filter (nodeTypeOf · == some "ClassDef")
+
+/-- The `FunctionDef` methods of a class (stored under `methods`, or `body` on older nodes). -/
+private def methodsOf (classDef : Json) : Array Json :=
+  (#["methods", "body"].foldl (fun acc key =>
+    acc ++ (classDef.getObjValAs? (Array Json) key).toOption.getD #[]) #[]).filter
+    (nodeTypeOf · == some "FunctionDef")
+
+/-- Names of every class defined at module top level. -/
+private def classNamesOf (module : Json) : Std.HashSet String :=
+  (classDefsOf module).foldl (fun s c => (c.getObjValAs? String "name").toOption.elim s s.insert) {}
+
+/-- True when `fn`'s first parameter is `self` — an instance method, as opposed to a `@staticmethod`. -/
+private def isInstanceMethod (fn : Json) : Bool := (paramNames fn)[0]? == some "self"
+
+/-- Collect `Class.method(...)` call sites for method-parameter inference, keyed `"Class.method"` (a
+dot no Python function name has). Two shapes resolve a class: a qualified call on a class *name*
+(`BinaryIndexedTree.lowbit(x)`, static or explicit-`self`) and an instance call whose receiver types
+to `.cls C` (`tree.update(a, b)`, `self.query(x)`). An instance method's arg list is prefixed with the
+receiver's `.cls C` so it aligns with the `self` parameter. Skips nested defs' own scopes only in that
+`env` is the enclosing one; the walk itself is exhaustive. -/
+private partial def collectMethodCalls (sigs : Sigs) (env : Env) (classNames : Std.HashSet String)
+    (methodSelf : Std.HashMap String Bool) (json : Json) : Array (String × Array PyType) :=
+  let here : Array (String × Array PyType) :=
+    match nodeTypeOf json, getField json "func" with
+    | some "Call", some func =>
+        if nodeTypeOf func != some "Attribute" then #[] else
+        match (func.getObjValAs? String "attr").toOption, getField func "value" with
+        | some attr, some recv =>
+            let args := ((json.getObjValAs? (Array Json) "args").toOption.getD #[]).map (typeOfExpr sigs env)
+            match nameId? recv with
+            -- Qualified on a class name: static (args as-is) or explicit-self (prefix `.cls C`).
+            | some rname =>
+                if classNames.contains rname then
+                  let key := s!"{rname}.{attr}"
+                  let args := if (methodSelf.get? key).getD false then #[PyType.cls rname] ++ args else args
+                  #[(key, args)]
+                else instanceCall attr recv args
+            | none => instanceCall attr recv args
+        | _, _ => #[]
+    | _, _ => #[]
+  here ++ (match json with
+    | .arr xs => xs.foldl (fun acc x => acc ++ collectMethodCalls sigs env classNames methodSelf x) #[]
+    | .obj fs => fs.toList.foldl (fun acc (_, v) => acc ++ collectMethodCalls sigs env classNames methodSelf v) #[]
+    | _ => #[])
+where
+  /-- An instance call `recv.attr(args)` where `recv : .cls C` → `C.attr` with the args prefixed by
+  the receiver's `.cls C` (the `self` slot). -/
+  instanceCall (attr : String) (recv : Json) (args : Array PyType) : Array (String × Array PyType) :=
+    match (typeOfExpr sigs env recv).classNameOf? with
+    | some c => #[(s!"{c}.{attr}", #[PyType.cls c] ++ args)]
+    | none => #[]
+
+/-- The hint environment for the parameters named in `fn`, drawn from `params[key]` (its inferred
+per-position types). `key` is the callee's name — a bare function name, or `"Class.method"` for a
+class method. -/
+private def hintsForKey (params : ParamSigs) (fn : Json) (key : String) : Env := Id.run do
   let names := paramNames fn
-  let types := (params.get? ((fn.getObjValAs? String "name").toOption.getD "")).getD #[]
+  let types := (params.get? key).getD #[]
   let mut env : Env := {}
   for i in [0:names.size] do
     if let some t := types[i]? then if t != .unknown then env := env.insert names[i]! t
   return env
+
+/-- The hint environment for `fn`'s parameters from `params` (its inferred per-position types). -/
+private def hintsFor (params : ParamSigs) (fn : Json) : Env :=
+  hintsForKey params fn ((fn.getObjValAs? String "name").toOption.getD "")
 
 /-- Collect `(calleeName, argumentTypes)` for every direct call `foo(a, b, …)` in `json`, typing the
 arguments under `env`. Nested calls are included; method calls are ignored (no positional callee). -/
@@ -903,9 +1947,15 @@ private def classFieldSigs (module : Json) : Sigs := Id.run do
               match nameId? init with
               | some p =>
                   if noneParams.contains p then .opt (.cls cls) else (ptype.get? p).getD .unknown
-              -- Otherwise type the initialiser itself, under the `__init__` params
-              -- (`self.p = list(range(n))` → `list[int]`, which `ofValue` alone cannot see).
-              | none => typeOfExpr {} ptype init
+              -- A DIRECT `self.x = None` → `Option C`; `self.x = [None]*k` → `List (Option C)` — the
+              -- recursive-node child pointer / children array. (These stay class-mentioning so
+              -- `stampClassFields` leaves them unannotated for the struct codegen to type.)
+              | none =>
+                  if isNoneConst init then .opt (.cls cls)
+                  else if isListOfNone init then .list (.opt (.cls cls))
+                  -- Otherwise type the initialiser itself, under the `__init__` params
+                  -- (`self.p = list(range(n))` → `list[int]`, which `ofValue` alone cannot see).
+                  else typeOfExpr {} ptype init
           | none => .unknown
         if t != .unknown then out := out.insert s!"{cls}.{fname}" t
   return out
@@ -949,26 +1999,56 @@ partial def collectSigs (module : Json) : Sigs × ParamSigs := Id.run do
     if let .ok name := fn.getObjValAs? String "name" then
       let seed := paramSeed fn
       params := params.insert name ((paramNames fn).map fun p => (seed.get? p).getD .unknown)
-  -- Class field types share the `sigs` table under `"Class.field"` keys (no Python function name
-  -- contains a dot, so they cannot collide with a return type).
+  -- Class methods join the same table under `"Class.method"` keys (a dot no function name has), so
+  -- their params are refined from call sites just like a free function's. `methodSelf` records which
+  -- take a leading `self` (an instance method) vs a `@staticmethod`, so a qualified `Class.m(...)` call
+  -- prefixes the receiver type only for the former.
+  let classNames := classNamesOf module
+  let methodEntries : Array (String × String × Json) := (classDefsOf module).foldl (fun acc cd =>
+    match (cd.getObjValAs? String "name").toOption with
+    | some cls => acc ++ (methodsOf cd).filterMap (fun m =>
+        (m.getObjValAs? String "name").toOption.map (fun mn => (cls, mn, m)))
+    | none => acc) #[]
+  let mut methodSelf : Std.HashMap String Bool := {}
+  for (cls, mn, m) in methodEntries do
+    let key := s!"{cls}.{mn}"
+    let seed := paramSeed m
+    params := params.insert key ((paramNames m).map fun p => (seed.get? p).getD .unknown)
+    methodSelf := methodSelf.insert key (isInstanceMethod m)
+  -- Class field types share the `sigs` table under `"Class.field"` keys; a bare class name maps to
+  -- `.cls C`, so a `t = C(...)` constructor call types `t` (letting `t.method(...)` resolve `C.method`).
   let mut sigs : Sigs := classFieldSigs module
+  for cls in classNames.toList do sigs := sigs.insert cls (.cls cls)
+  -- Hints for a method, with `self : .cls C` seeded (an instance method's receiver).
+  let methodHints (params : ParamSigs) (cls key : String) (m : Json) : Env :=
+    let h := hintsForKey params m key
+    if isInstanceMethod m then h.insert "self" (.cls cls) else h
   for _ in [0:6] do
     let mut nextSigs := sigs
     let mut nextParams := params
+    let refineFrom (nextParams : ParamSigs) (calls : Array (String × Array PyType)) : ParamSigs :=
+      calls.foldl (fun p (callee, argTypes) =>
+        if params.contains callee then refineParams p callee argTypes.size argTypes else p) nextParams
     for fn in fns do
       if let .ok name := fn.getObjValAs? String "name" then
         let hints := hintsFor params fn
         nextSigs := nextSigs.insert name (returnTypeOf sigs hints fn)
         -- refine callees' params from this function's call sites, typed under its own env.
         let env := inferFunction sigs {} hints fn
-        for (callee, argTypes) in collectCalls sigs env fn do
-          if params.contains callee then
-            nextParams := refineParams nextParams callee argTypes.size argTypes
+        nextParams := refineFrom nextParams (collectCalls sigs env fn)
+        nextParams := refineFrom nextParams (collectMethodCalls sigs env classNames methodSelf fn)
+    -- Class methods: refine callees from each method body, with `self` typed to its class.
+    for (cls, mn, m) in methodEntries do
+      let key := s!"{cls}.{mn}"
+      let hints := methodHints params cls key m
+      nextSigs := nextSigs.insert key (returnTypeOf sigs hints m)
+      let env := inferFunction sigs {} hints m
+      nextParams := refineFrom nextParams (collectCalls sigs env m)
+      nextParams := refineFrom nextParams (collectMethodCalls sigs env classNames methodSelf m)
     -- Module top-level call sites (outside any def), typed under an empty env (literal args).
     for stmt in topLevelStmts module do
-      for (callee, argTypes) in collectCalls sigs {} stmt do
-        if params.contains callee then
-          nextParams := refineParams nextParams callee argTypes.size argTypes
+      nextParams := refineFrom nextParams (collectCalls sigs {} stmt)
+      nextParams := refineFrom nextParams (collectMethodCalls sigs {} classNames methodSelf stmt)
     -- Decorator unification: `@d def g` is `g = d(g_raw)`, so g's type and d's wrapped-parameter
     -- type are the same. Flow each into the other: g's `.fn` type refines d's parameter 0 (so a
     -- decorator's `f` is learned from the function it wraps), and d's parameter 0 — if a function
@@ -1028,14 +2108,19 @@ partial def stampNodeWith (sigs : Sigs) (params : ParamSigs) (globals : Env) (s 
   match nodeTypeOf s with
   | some "FunctionDef" => stampFunction sigs (outerFor s) (hintsFor params s) s
   | some "ClassDef" =>
-      let s := match s.getObjValAs? String "name" with
-        | .ok cls => stampClassFields sigs cls s
-        | _ => s
-      -- A class keeps its methods under "methods"; older nodes use "body".
+      let cls := (s.getObjValAs? String "name").toOption.getD ""
+      let s := if cls.isEmpty then s else stampClassFields sigs cls s
+      -- A class keeps its methods under "methods"; older nodes use "body". Each method's params are
+      -- keyed `"Class.method"` in `params` (from call-site inference), and `self : .cls Class` seeds
+      -- the outer env so `self.field`/`self.method(...)` resolve.
       #["methods", "body"].foldl (fun s key =>
         match s.getObjValAs? (Array Json) key with
         | .ok ms => s.setObjVal! key (Json.arr (ms.map fun m =>
-            if nodeTypeOf m == some "FunctionDef" then stampFunction sigs (outerFor m) (hintsFor params m) m else m))
+            if nodeTypeOf m == some "FunctionDef" then
+              let mn := (m.getObjValAs? String "name").toOption.getD ""
+              let outer := if isInstanceMethod m then (outerFor m).insert "self" (.cls cls) else outerFor m
+              stampFunction sigs outer (hintsForKey params m s!"{cls}.{mn}") m
+            else m))
         | _ => s) s
   | some "Module" =>
       match s.getObjValAs? (Array Json) "body" with

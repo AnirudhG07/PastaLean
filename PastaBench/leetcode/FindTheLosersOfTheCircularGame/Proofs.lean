@@ -1,0 +1,4 @@
+import PastaBench.leetcode.FindTheLosersOfTheCircularGame.Generated
+namespace PastaBench.leetcode.FindTheLosersOfTheCircularGame
+-- TODO.
+end PastaBench.leetcode.FindTheLosersOfTheCircularGame

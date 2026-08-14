@@ -1,0 +1,202 @@
+[
+  {
+    "input": "x = 2, y = 3, z = 1",
+    "output": "True"
+  },
+  {
+    "input": "x = 2.5, y = 2, z = 3",
+    "output": "False"
+  },
+  {
+    "input": "x = 1.5, y = 5, z = 3.5",
+    "output": "False"
+  },
+  {
+    "input": "x = 2, y = 6, z = 2",
+    "output": "False"
+  },
+  {
+    "input": "x = 4, y = 2, z = 2",
+    "output": "True"
+  },
+  {
+    "input": "x = 2.2, y = 2.2, z = 2.2",
+    "output": "False"
+  },
+  {
+    "input": "x = -4, y = 6, z = 2",
+    "output": "True"
+  },
+  {
+    "input": "x = 2, y = 1, z = 1",
+    "output": "True"
+  },
+  {
+    "input": "x = 3, y = 4, z = 7",
+    "output": "True"
+  },
+  {
+    "input": "x = 3.0, y = 4, z = 7",
+    "output": "False"
+  },
+  {
+    "input": "x = -1, y = 8, z = 7",
+    "output": "True"
+  },
+  {
+    "input": "x = -2, y = -2, z = -4",
+    "output": "True"
+  },
+  {
+    "input": "x = 0, y = 0, z = 0",
+    "output": "True"
+  },
+  {
+    "input": "x = 1, y = 1, z = 1",
+    "output": "False"
+  },
+  {
+    "input": "x = -3, y = -4, z = -7",
+    "output": "True"
+  },
+  {
+    "input": "x = 50, y = -20, z = -30",
+    "output": "False"
+  },
+  {
+    "input": "x = -5, y = 10, z = -5",
+    "output": "False"
+  },
+  {
+    "input": "x = 7, y = 1, z = 8",
+    "output": "True"
+  },
+  {
+    "input": "x = -2, y = 5, z = 7",
+    "output": "True"
+  },
+  {
+    "input": "x = 4, y = 5, z = 9",
+    "output": "True"
+  },
+  {
+    "input": "x = -2, y = -1, z = -4",
+    "output": "False"
+  },
+  {
+    "input": "x = -5, y = 8, z = 10",
+    "output": "False"
+  },
+  {
+    "input": "x = -2, y = 1, z = 7",
+    "output": "False"
+  },
+  {
+    "input": "x = -5, y = 8, z = 8",
+    "output": "False"
+  },
+  {
+    "input": "x = 7, y = 11, z = 11",
+    "output": "False"
+  },
+  {
+    "input": "x = 50, y = -19, z = -30",
+    "output": "False"
+  },
+  {
+    "input": "x = -3, y = 8, z = -3",
+    "output": "False"
+  },
+  {
+    "input": "x = -5, y = 50, z = -4",
+    "output": "False"
+  },
+  {
+    "input": "x = 8, y = 7, z = 8",
+    "output": "False"
+  },
+  {
+    "input": "x = 6, y = -30, z = 10",
+    "output": "False"
+  },
+  {
+    "input": "x = 6, y = 10, z = 6",
+    "output": "False"
+  },
+  {
+    "input": "x = 6, y = 6, z = 6",
+    "output": "False"
+  },
+  {
+    "input": "x = -3, y = -4, z = -6",
+    "output": "False"
+  },
+  {
+    "input": "x = 6, y = 7, z = 7",
+    "output": "False"
+  },
+  {
+    "input": "x = -3, y = -4, z = 9",
+    "output": "False"
+  },
+  {
+    "input": "x = -5, y = 10, z = 10",
+    "output": "False"
+  },
+  {
+    "input": "x = 5, y = -4, z = -7",
+    "output": "False"
+  },
+  {
+    "input": "x = 8, y = 10, z = 6",
+    "output": "False"
+  },
+  {
+    "input": "x = 10, y = 6, z = 6",
+    "output": "False"
+  },
+  {
+    "input": "x = -20, y = -5, z = 10",
+    "output": "False"
+  },
+  {
+    "input": "x = -1, y = -4, z = -7",
+    "output": "False"
+  },
+  {
+    "input": "x = 0, y = 10, z = 0",
+    "output": "False"
+  },
+  {
+    "input": "x = 10, y = 8, z = -19",
+    "output": "False"
+  },
+  {
+    "input": "x = -1, y = -4, z = -1",
+    "output": "False"
+  },
+  {
+    "input": "x = -5, y = 50, z = 50",
+    "output": "False"
+  },
+  {
+    "input": "x = -20, y = -4, z = 10",
+    "output": "False"
+  },
+  {
+    "input": "x = 0, y = 10, z = -5",
+    "output": "False"
+  },
+  {
+    "input": "x = 6, y = -6, z = 6",
+    "output": "False"
+  },
+  {
+    "input": "x = 7, y = 5, z = 11",
+    "output": "False"
+  },
+  {
+    "input": "x = -4, y = 49, z = 50",
+    "output": "False"
+  }
+]

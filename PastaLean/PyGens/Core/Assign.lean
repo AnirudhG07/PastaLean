@@ -282,43 +282,68 @@ partial def attrRecordUpdateDoElem (recvJson : Json) (attr : String) (rhs : TSyn
       | _ => throwError "attribute assignment `arr[i].f = v` needs a variable or attribute base container."
   | _ => throwError "attribute assignment `x.f = v` needs a variable or attribute receiver."
 
-/-- Lower a possibly-nested subscript assignment `a[i]…[k] = value` to a reassignment of the
-base variable. Each level is rebuilt innermost-first with `pySetItem`: `a[i][j] = v` becomes
-`a := pySetItem a i (pySetItem (pyGetItem a i) j v)`. This mirrors Python, where mutating the
-inner list and leaving outer bindings pointing at the (now-rebuilt) value is observationally the
-same for the local variable. Returns `none` when the target is not a subscript (or is an outer
-slice, handled by `sliceTargetParts?`); throws if the base is not a variable. -/
+/-- Unwrap a nested subscript `root[i₁]…[iₖ]` into `(root, [slice₁, …, sliceₖ])` (outermost index
+first). `none` if any level is a `Slice` (handled elsewhere) or the root isn't a `Name`/`Attribute`. -/
+partial def subscriptChain? (target : Json) : Option (Json × Array Json) :=
+  let rec go (node : Json) (acc : Array Json) : Option (Json × Array Json) :=
+    match jsonNodeType? node with
+    | some "Subscript" => do
+        let c ← (node.getObjVal? "value").toOption
+        let s ← (node.getObjVal? "slice").toOption
+        guard (jsonNodeType? s != some "Slice")
+        go c (acc.push s)
+    | _ => some (node, acc)
+  match go target #[] with
+  | some (root, slicesInner) =>
+      if slicesInner.isEmpty then none else some (root, slicesInner.reverse)
+  | none => none
+
+/-- Build the RHS of a nested subscript assignment `base[i₁]…[iₖ] = v`. The innermost level is a
+`pySetItem`; every OUTER level is a `pyModifyItem base iₘ (fun row => …)` so an `Array` slot updates in
+place (O(1)) instead of copying the whole row (the `pyGetItem`-then-`pySetItem` form is O(n)). -/
+partial def buildSubscriptSetRhs (base : TSyntax `term) (idxs : List (TSyntax `term))
+    (value : TSyntax `term) : PygenM (TSyntax `term) := do
+  match idxs with
+  | [] => pure value
+  | [last] => `($(mkIdent ``PastaLean.pySetItem) $base $last $value)
+  | i :: rest =>
+      let row := mkIdent (← freshName `__row)
+      let inner ← buildSubscriptSetRhs row rest value
+      `($(mkIdent ``PastaLean.pyModifyItem) $base $i (fun $row => $inner))
+
 partial def nestedSubscriptSetDoElem? (target : Json) (value : TSyntax `term) :
     PygenM (Option (TSyntax `doElem)) := do
-  unless jsonNodeType? target == some "Subscript" do return none
-  let .ok containerJson := target.getObjValAs? Json "value" | throwError
-    s!"Subscript assignment target is missing a 'value' field: {target}"
-  let .ok sliceJson := target.getObjValAs? Json "slice" | throwError
-    s!"Subscript assignment target is missing a 'slice' field: {target}"
-  if jsonNodeType? sliceJson == some "Slice" then return none
-  let indexTerm ← getCode sliceJson `term
-  let setItemIdent := mkIdent ``PastaLean.pySetItem
   -- Under `--heap`, `a[i] = v` on a container held by reference mutates it in place through the ref.
-  if let some refCode ← heapContainerRef? containerJson then
-    let lVar := mkIdent `__hc_l
-    return some (← `(doElem| PastaLean.modifyRefM $refCode (fun $lVar => $setItemIdent $lVar $indexTerm $value)))
-  let containerCode ← getCode containerJson `term
-  let newContainer ← `($setItemIdent $containerCode $indexTerm $value)
-  match jsonNodeType? containerJson with
+  -- (Heap mode handles only the single-level subscript case; the multi-level chain below is the
+  -- default value-semantics path.)
+  if (← getHeapMode) && jsonNodeType? target == some "Subscript" then
+    if let some containerJson := (target.getObjVal? "value").toOption then
+      if let some sliceJson := (target.getObjVal? "slice").toOption then
+        if jsonNodeType? sliceJson != some "Slice" then
+          if let some refCode ← heapContainerRef? containerJson then
+            let indexTerm ← getCode sliceJson `term
+            let lVar := mkIdent `__hc_l
+            return some (← `(doElem| PastaLean.modifyRefM $refCode
+              (fun $lVar => $(mkIdent ``PastaLean.pySetItem) $lVar $indexTerm $value)))
+  let some (root, slices) := subscriptChain? target | return none
+  -- `d[i, j] = v` on a dict is a single tuple-KEY write; otherwise each level is a plain index.
+  let idxTerms ← slices.mapM fun s => do return (← dictTupleKeyTerm? s).getD (← getCode s `term)
+  match jsonNodeType? root with
   | some "Name" =>
-      let containerIdent ← getCode containerJson `ident
-      return some (← `(doElem| $containerIdent:ident := $newContainer))
-  | some "Subscript" =>
-      nestedSubscriptSetDoElem? containerJson newContainer
+      let rootIdent ← getCode root `ident
+      let rhs ← buildSubscriptSetRhs rootIdent idxTerms.toList value
+      return some (← `(doElem| $rootIdent:ident := $rhs))
   | some "Attribute" =>
-      -- `recv.c[i] = v` rebuilds the field: `recv := { recv with c := … }` (self or any local, e.g.
+      -- `recv.c[i]… = v` rebuilds the field: `recv := { recv with c := … }` (self or any local, e.g.
       -- a Trie walk-node `node.children[i] = Trie()`).
-      let .ok recv := containerJson.getObjVal? "value" | throwError
-        s!"Attribute container is missing 'value': {containerJson}"
-      let .ok attr := containerJson.getObjValAs? String "attr" | throwError
-        s!"Attribute container is missing 'attr': {containerJson}"
-      return some (← attrRecordUpdateDoElem recv attr newContainer
-        (containerJson.getObjValAs? Bool "_unwrap_opt" == .ok true))
+      let .ok recv := root.getObjVal? "value" | throwError
+        s!"Attribute container is missing 'value': {root}"
+      let .ok attr := root.getObjValAs? String "attr" | throwError
+        s!"Attribute container is missing 'attr': {root}"
+      let rootTerm ← getCode root `term
+      let rhs ← buildSubscriptSetRhs rootTerm idxTerms.toList value
+      return some (← attrRecordUpdateDoElem recv attr rhs
+        (root.getObjValAs? Bool "_unwrap_opt" == .ok true))
   | _ =>
       throwError "Subscript assignment requires the base container to be a variable \
         (`a[i]…[k] = v`); got an unsupported container expression."
@@ -332,7 +357,21 @@ partial def tupleElementAssignDoElem (isTuple : Bool) (elt : Json) (acc : TSynta
   | some setStx => pure setStx
   | none =>
     match jsonNodeType? elt with
-    | some "Name" => bindOrAssignLocal (← getCode elt `ident) acc
+    -- Ascribe the binder to the element's inferred type (`_ty`, stamped by TypeInfer) so a slot
+    -- seeded by a polymorphic sentinel (`ans, mi = (0, inf)` → `mi : Int`, not the `ℚ` default) pins.
+    | some "Name" =>
+      -- A node mut-cursor target (`Option C`, from `tl, tr = (l, r)` then `tl = tl.next`) unpacked
+      -- from a bare-`C` tuple element: coerce the projection (`↑`) so it elaborates at `C` then lifts.
+      -- Without it the `Option C` ascription back-unifies the polymorphic `Prod.fst`, forcing the whole
+      -- tuple to `Option C × …` which the `C × C` RHS can't match. `↑` is a no-op if the element is
+      -- already `Option C`.
+      -- Also coerce a numeric-WIDENED element (`_ty = float`/ℚ from `left,right = (0, 1e8)` then
+      -- `left = mid : ℚ`): the same back-unification would otherwise force the tuple to `ℚ × …`. The
+      -- int-sentinel case (`ans, mi = (0, inf)` → `mi : Int`) keeps the pinning ascription (not float).
+      let coerceElem := match (jsonFieldOption elt "_ty").map TypeInfer.ofAnnotation with
+        | some (.opt (.cls _)) | some (.float) => true | _ => false
+      let acc ← if coerceElem then `(↑$acc) else pure acc
+      bindOrAssignLocal (← getCode elt `ident) acc (ty? := ← stampedTypeSyntax? elt)
     | some "Attribute" =>
       -- `a.val, b.val = b.val, a.val` (a value swap on tree nodes): rebuild each receiver record.
       let .ok recv := elt.getObjVal? "value" | throwError s!"Attribute target missing 'value': {elt}"
@@ -390,15 +429,13 @@ def sliceBoundOptTerm (boundJson? : Option Json) : PygenM (TSyntax `term) := do
 and the two optional bound terms. Returns `none` for non-slice subscript targets. A step
 (`name[a:b:c]`) is rejected. -/
 def sliceTargetParts? (target : Json) :
-    PygenM (Option (TSyntax `ident × TSyntax `term × TSyntax `term)) := do
+    PygenM (Option (TSyntax `ident × TSyntax `term × TSyntax `term × Option (TSyntax `term))) := do
   unless jsonNodeType? target == some "Subscript" do
     return none
   let .ok sliceJson := target.getObjValAs? Json "slice" | throwError
     s!"Subscript assignment target is missing a 'slice' field: {target}"
   unless jsonNodeType? sliceJson == some "Slice" do
     return none
-  unless (jsonFieldOption sliceJson "step").isNone do
-    throwError "Slice assignment with a step (`s[a:b:c] = ...`) is not supported yet."
   let .ok containerJson := target.getObjValAs? Json "value" | throwError
     s!"Slice assignment target is missing a 'value' field: {target}"
   unless jsonNodeType? containerJson == some "Name" do
@@ -406,7 +443,11 @@ def sliceTargetParts? (target : Json) :
   let containerIdent ← getCode containerJson `ident
   let lowerTerm ← sliceBoundOptTerm (jsonFieldOption sliceJson "lower")
   let upperTerm ← sliceBoundOptTerm (jsonFieldOption sliceJson "upper")
-  return some (containerIdent, lowerTerm, upperTerm)
+  -- An extended slice `s[a:b:c] = repl` writes every `c`-th element via `pySliceSetStep`.
+  let stepTerm? ← match jsonFieldOption sliceJson "step" with
+    | some s => if s.isNull then pure none else pure (some (← getCode s `term))
+    | none => pure none
+  return some (containerIdent, lowerTerm, upperTerm, stepTerm?)
 
 /-- Simple returned expressions can stay unparenthesized; more complex or effectful ones
 keep parentheses so Lean parses multiline `return` expressions reliably. -/
@@ -420,6 +461,21 @@ def shouldParenthesizeReturnValue (value : Json) : Bool :=
     | some "Attribute" => false
     | _ => true
 
+/-- The library module owning the object this expression constructs (`hashlib.md5()` → `"hashlib"`),
+or the module already recorded for a `Name` being copied. Lets `m = hashlib.md5()` then
+`n = m` both tag their target, so the method dispatch follows the value. -/
+def jsonLibObjectModule? (value : Json) : PygenM (Option String) := do
+  match jsonNodeType? value with
+  | some "Call" =>
+      let some func := (value.getObjVal? "func").toOption | return none
+      let .ok m := func.getObjValAs? String "library_module" | return none
+      let .ok member := func.getObjValAs? String "library_member" | return none
+      return if Libraries.libraryObjectConstructor? m member then some m else none
+  | some "Name" =>
+      let .ok id := value.getObjValAs? String "id" | return none
+      libObjVarModule? id.toName
+  | _ => return none
+
 @[pygen "Assign"]
 def assignSyntax : (kind : SyntaxNodeKind) → Json →
     PygenM (TSyntax kind)
@@ -432,7 +488,7 @@ def assignSyntax : (kind : SyntaxNodeKind) → Json →
         | some idents => do
             let n := idents.size
             let valueStx ← getCode value `term
-            let unpackTmpIdent := mkIdent (Name.mkSimple s!"__py_unpack_{idents.toList.map (·.getId.toString) |> String.intercalate "_"}")
+            let unpackTmpIdent := mkIdent (Name.mkSimple s!"p'_unpack_{idents.toList.map (·.getId.toString) |> String.intercalate "_"}")
             -- The unpack temporary is always private (an implementation detail).
             let cmd0 ← makeCommandPrivate (← `(command| def $unpackTmpIdent := $valueStx))
             -- A literal `Tuple` RHS builds a `Prod` (use `Prod.fst`/`Prod.snd`); so does a
@@ -441,10 +497,18 @@ def assignSyntax : (kind : SyntaxNodeKind) → Json →
             -- into subscripts and never reach here, so a `Call` here means a `Prod` result).
             -- `_list_unpack` (stamped when the RHS is list-typed, e.g. `np.shape(x)` returns a list)
             -- forces list-index access even for a `Call` RHS that would otherwise be read as a `Prod`.
-            -- `_tuple_unpack` (TypeInfer saw a `tuple[...]`-typed RHS) settles it directly.
-            let isTuple := target.getObjValAs? Bool "_tuple_unpack" == .ok true
-              || ((jsonNodeType? value == some "Tuple" || jsonNodeType? value == some "Call")
-                  && target.getObjValAs? Bool "_list_unpack" != .ok true)
+            -- Unpack shape is decided by the INFERRED RHS type (authoritative): `_list_unpack` (RHS a
+            -- `list` — `sorted`/`map`/a `list[...]` value) → index access; `_tuple_unpack` (RHS a
+            -- `tuple[...]`) → `Prod`. The syntactic checks are ONLY the fallback when inference stamped
+            -- neither (an inference gap, or best-effort inference disabled): a literal `Tuple` is
+            -- exactly a `Prod`; a residual `Call` defaults to `Prod` (an un-inferred call is usually a
+            -- user function returning a tuple — a list-returning builtin carries a return-shape
+            -- `Behaviour` so it is stamped `_list_unpack` instead). To fix a mis-shaped case, extend
+            -- inference, not this fallback.
+            let isTuple :=
+              if target.getObjValAs? Bool "_list_unpack" == .ok true then false
+              else if target.getObjValAs? Bool "_tuple_unpack" == .ok true then true
+              else jsonNodeType? value == some "Tuple" || jsonNodeType? value == some "Call"
             let mut cmds : Array (TSyntax `command) := #[cmd0]
             for i in List.range n do
               let acc ← unpackAccessTerm isTuple unpackTmpIdent i n
@@ -480,9 +544,13 @@ def assignSyntax : (kind : SyntaxNodeKind) → Json →
             if let some (valueTerm, update) ← mutatingCallRhsLowering? value then
               let valueTmpIdent := mkIdent (← freshName `__unpack_value)
               let bindValueTmp ← `(doElem| let $valueTmpIdent:ident := $valueTerm)
+              -- The popped value may be a tuple (`d, node = heappop(h)`) OR a list element
+              -- (`_, i, j = heappop(q)` on a list-of-lists) — a `_list_unpack` stamp forces list access;
+              -- otherwise default to a `Prod` (the popped element is usually a tuple).
+              let isTuple := target.getObjValAs? Bool "_list_unpack" != .ok true
               let mut binds : Array (TSyntax `doElem) := #[bindValueTmp, update]
               for i in List.range n do
-                let acc ← unpackAccessTerm true valueTmpIdent i n
+                let acc ← unpackAccessTerm isTuple valueTmpIdent i n
                 binds := binds.push (← tupleElementAssignDoElem nestedIsTuple elts[i]! acc)
               return ⟨mkNullNode (binds.map TSyntax.raw)⟩
             let valueStx ← getCode value `term
@@ -505,10 +573,18 @@ def assignSyntax : (kind : SyntaxNodeKind) → Json →
             -- into subscripts and never reach here, so a `Call` here means a `Prod` result).
             -- `_list_unpack` (stamped when the RHS is list-typed, e.g. `np.shape(x)` returns a list)
             -- forces list-index access even for a `Call` RHS that would otherwise be read as a `Prod`.
-            -- `_tuple_unpack` (TypeInfer saw a `tuple[...]`-typed RHS) settles it directly.
-            let isTuple := target.getObjValAs? Bool "_tuple_unpack" == .ok true
-              || ((jsonNodeType? value == some "Tuple" || jsonNodeType? value == some "Call")
-                  && target.getObjValAs? Bool "_list_unpack" != .ok true)
+            -- Unpack shape is decided by the INFERRED RHS type (authoritative): `_list_unpack` (RHS a
+            -- `list` — `sorted`/`map`/a `list[...]` value) → index access; `_tuple_unpack` (RHS a
+            -- `tuple[...]`) → `Prod`. The syntactic checks are ONLY the fallback when inference stamped
+            -- neither (an inference gap, or best-effort inference disabled): a literal `Tuple` is
+            -- exactly a `Prod`; a residual `Call` defaults to `Prod` (an un-inferred call is usually a
+            -- user function returning a tuple — a list-returning builtin carries a return-shape
+            -- `Behaviour` so it is stamped `_list_unpack` instead). To fix a mis-shaped case, extend
+            -- inference, not this fallback.
+            let isTuple :=
+              if target.getObjValAs? Bool "_list_unpack" == .ok true then false
+              else if target.getObjValAs? Bool "_tuple_unpack" == .ok true then true
+              else jsonNodeType? value == some "Tuple" || jsonNodeType? value == some "Call"
             -- Under `--heap`, a tuple-unpack of a function returning a tuple-of-containers binds each
             -- container element to its object-ref (`Ref (List …)`); TypeInfer marks which slots are
             -- containers, so register those `Name` targets — later `len`/subscript/iterate deref them,
@@ -516,12 +592,25 @@ def assignSyntax : (kind : SyntaxNodeKind) → Json →
             let containerMask? : Option (Array Bool) :=
               (target.getObjValAs? (Array Bool) "_unpack_container_mask").toOption
             let mut binds : Array (TSyntax `doElem) := #[bindValueTmp, bindUnpackTmp]
-            for i in List.range n do
+            -- A threaded combined-assign `(userTarget, ...threadedNames) = helper(...)` (ClosureConvert)
+            -- puts the user target at index 0 and the threaded-state restores after it. When the user
+            -- target is `p[x]` on a threaded container `p`, the restore `p := snd` must land BEFORE the
+            -- subscript write `p[x] := fst` — else it clobbers the compression (`p[x]=find(p[x])` in a
+            -- union-find `find`). Both read the already-bound tmp, so restoring first is safe. Emit the
+            -- threaded restores (indices ≥ 1) ahead of the user target (index 0).
+            let order : List Nat :=
+              if target.getObjValAs? Bool "_thread_unpack" == .ok true && n ≥ 2
+              then (List.range n).drop 1 ++ [0] else List.range n
+            for i in order do
               let acc ← unpackAccessTerm isTuple unpackTmpIdent i n
+              let mut elt := elts[i]!
               if ← getHeapMode then
-                if (containerMask?.bind (·[i]?)).getD false && jsonNodeType? elts[i]! == some "Name" then
-                  registerHeapVarContainer (← getCode elts[i]! `ident).getId
-              binds := binds.push (← tupleElementAssignDoElem nestedIsTuple elts[i]! acc)
+                if (containerMask?.bind (·[i]?)).getD false && jsonNodeType? elt == some "Name" then
+                  registerHeapVarContainer (← getCode elt `ident).getId
+                  -- The slot binds a `Ref (List …)`, not the plain container the `_ty` stamp records;
+                  -- drop the ascription so Lean infers the ref type from the `Prod.fst`/`.snd` projection.
+                  elt := elt.setObjVal! "_ty" Json.null
+              binds := binds.push (← tupleElementAssignDoElem nestedIsTuple elt acc)
             -- Return the bindings as siblings (a flattened null-node), NOT wrapped in a
             -- nested `do` — wrapping would scope the unpacked names away from following
             -- statements. Consumers flatten via `appendDoElems`.
@@ -535,11 +624,19 @@ def assignSyntax : (kind : SyntaxNodeKind) → Json →
               if let some (valueTerm, update) ← mutatingCallRhsLowering? value then
                 let bindTarget ← bindOrAssignLocal (← getCode target `ident) valueTerm
                 return ⟨mkNullNode #[bindTarget.raw, update.raw]⟩
+            -- `mat[i][j] = g[k].pop()`: the RHS both mutates and yields, and the target is a subscript.
+            -- Hoist the value to a temp, run the receiver update, then rebuild the target container.
+            if jsonNodeType? target == some "Subscript" then
+              if let some (valueTerm, update) ← mutatingCallRhsLowering? value then
+                let tmpIdent := mkIdent (← freshRenameName `_popval)
+                let bindTmp ← `(doElem| let $tmpIdent:ident := $valueTerm)
+                if let some setStx ← nestedSubscriptSetDoElem? target tmpIdent then
+                  return ⟨mkNullNode #[bindTmp.raw, update.raw, setStx.raw]⟩
             let rhs ←
               -- `x = a or b` binds the deciding *value*, not a `Bool` (`x = s or '0'` → the string).
               if jsonNodeType? value == some "BoolOp" then boolOpValueTerm value
               else if jsonUsesIOEffect value then
-                inlineIOTerm value
+                inlineEffectfulTerm value
               else
                 let valueStx ← getCode value `term
                 if jsonUsesMonadicEffect value then
@@ -578,10 +675,16 @@ def assignSyntax : (kind : SyntaxNodeKind) → Json →
               return ← attrRecordUpdateDoElem recv attr rhs
                 (target.getObjValAs? Bool "_unwrap_opt" == .ok true)
             match ← sliceTargetParts? target with
-            | some (containerIdent, lowerTerm, upperTerm) =>
-                -- `s[a:b] = repl` replaces the slice and reassigns the variable.
-                let sliceSetIdent := mkIdent ``PastaLean.pySliceSet
-                `(doElem| $containerIdent:ident := $sliceSetIdent $containerIdent $lowerTerm $upperTerm $rhs)
+            | some (containerIdent, lowerTerm, upperTerm, stepTerm?) =>
+                match stepTerm? with
+                | none =>
+                    -- `s[a:b] = repl` replaces the slice and reassigns the variable.
+                    let sliceSetIdent := mkIdent ``PastaLean.pySliceSet
+                    `(doElem| $containerIdent:ident := $sliceSetIdent $containerIdent $lowerTerm $upperTerm $rhs)
+                | some stepTerm =>
+                    -- `s[a:b:c] = repl` overwrites every `c`-th element in order.
+                    let sliceSetStepIdent := mkIdent ``PastaLean.pySliceSetStep
+                    `(doElem| $containerIdent:ident := $sliceSetStepIdent $containerIdent $lowerTerm $upperTerm (some $stepTerm) $rhs)
             | none =>
             match ← nestedSubscriptSetDoElem? target rhs with
             | some setStx =>
@@ -642,6 +745,21 @@ def assignSyntax : (kind : SyntaxNodeKind) → Json →
                 -- shadowed, and a `PyAny` slot coerces the new value in).
                 let conflicting := (jsonFieldOption target "_ty").any
                   (fun t => t.getObjValAs? String "id" == .ok "PyAny")
+                -- A type-changing rebind (`s = list(s)`: str → List) of a name that is already a
+                -- `let mut` can't re-`let mut` it (Lean forbids shadowing a mut var) nor plain-reassign
+                -- (the types differ). Bind a fresh `let mut s'rbN` and SSA-rename every later `s`
+                -- reference, keeping concrete types (vs. widening the slot to PyAny).
+                if conflicting && (← hasVar nameIdent.getId) && (← isMutVar nameIdent.getId)
+                    && !(← isPyAnySlot nameIdent.getId) then
+                  let fresh ← freshRenameName nameIdent.getId
+                  addRename nameIdent.getId fresh
+                  addVar fresh
+                  setMutVar fresh
+                  setSetVar fresh (← jsonIsSetExpr value)
+                  setSortedVar fresh (← jsonIsSortedListExpr value)
+                  setDictVar fresh (← jsonIsDictExpr value)
+                  setLibObjVar fresh (← jsonLibObjectModule? value)
+                  return ← `(doElem| let mut $(mkIdent fresh):ident := $rhs)
                 let shadow := conflicting && (← hasVar nameIdent.getId) && !(← isMutVar nameIdent.getId)
                 -- Under `--heap`, `t = (xs, ys)` where the elements are container object-refs builds a
                 -- `Ref × Ref`; the value-semantics `_ty` stamp (`List × List`) would mismatch, so drop it
@@ -652,9 +770,14 @@ def assignSyntax : (kind : SyntaxNodeKind) → Json →
                     if (← heapContainerRef? e).isSome then heapTupleOfRefs := true
                 let ty? ← if shadow || heapTupleOfRefs then pure none else stampedTypeSyntax? target
                 let bound ← bindOrAssignLocal nameIdent rhs ty? shadow
+                -- A `PyAny`-slotted mut var absorbs later cross-type reassignments by coercion (no rebind).
+                if conflicting then setPyAnySlot nameIdent.getId true
                 -- Track whether this name now holds a set, so later `==`/`<=` on it use set semantics
                 -- (order-independent) rather than the list-backed ones.
                 setSetVar nameIdent.getId (← jsonIsSetExpr value)
+                setSortedVar nameIdent.getId (← jsonIsSortedListExpr value)
+                setDictVar nameIdent.getId (← jsonIsDictExpr value)
+                setLibObjVar nameIdent.getId (← jsonLibObjectModule? value)
                 pure bound
     | _, _ => throwError s!"Unsupported syntax category for Assign node"
 
@@ -698,7 +821,8 @@ def returnSyntax : (kind : SyntaxNodeKind) → Json →
         -- A bare `return` (Python `return`, i.e. `None`) → `return default`, which is `()` for a
         -- `Unit`/void function but also matches a (mis-)annotated non-`Unit` return type.
         | .null =>
-            `(doElem| return default)
+            if (← getValueMutatorContext) then `(doElem| return (default, $(mkIdent `self)))
+            else `(doElem| return default)
         | _ =>
             let valueStx ←
               -- `return a or b` returns the deciding *value* (`x or '0'` → the string), not a `Bool`.
@@ -708,7 +832,7 @@ def returnSyntax : (kind : SyntaxNodeKind) → Json →
               else if let some (valueTerm, _) ← mutatingCallRhsLowering? value then
                 pure valueTerm
               else if jsonUsesIOEffect value then
-                inlineIOTerm value
+                inlineEffectfulTerm value
               else
                 let s ← getCode value `term
                 if jsonUsesMonadicEffect value then `((← $s:term)) else pure s
@@ -716,6 +840,18 @@ def returnSyntax : (kind : SyntaxNodeKind) → Json →
             -- coerce individually (Lean would otherwise unify the branch types from the first return).
             let valueStx ← if (← getBoxReturnContext)
               then `(($valueStx : PastaLean.PyAny)) else pure valueStx
+            -- In a float-reconciled function (`_ret_float`), a *branching* return `return -1 if …
+            -- else v` must have BOTH branches elaborated at `ℚ`/`Float` so the `int` branch coerces
+            -- up (via `Coe Int Rat`/`Coe Int Float`) instead of the first branch pinning the temp to
+            -- `ℤ`. Only ascribe the branching forms — a plain `return a/b` of untyped operands would
+            -- become an ambiguous `a /ₚ b : ℚ`; those are handled by the whole-body ascription.
+            let valueStx ← if (← getRetFloatContext) && jsonNodeType? value == some "IfExp"
+              then let t := if (← getNumericMode) == .exact then mkIdent ``Rat else mkIdent ``Float
+                   `(($valueStx : $t)) else pure valueStx
+            -- In a VALUE+MUTATE method, return BOTH the value and the (mutated) receiver so the caller
+            -- can reassign it — `return v` becomes `return (v, self)`.
+            let valueStx ← if (← getValueMutatorContext)
+              then `(($valueStx, $(mkIdent `self))) else pure valueStx
             -- A simple atom (`return x` / `return 42`) is always narrow, so return it directly.
             -- A wide expression placed directly after `return`, however, can be split onto the
             -- next line by the pretty-printer, which re-parses as `return` (Unit) followed by a

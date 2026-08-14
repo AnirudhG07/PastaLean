@@ -175,12 +175,15 @@ def runPastafolio (p : Profile) (stx : Syntax) : TacticM Unit := do
       -- match each proof back to its own `taste?` token: a token whose goals `mvcgen` fully self-closed
       -- invokes the closer zero times and so records *nothing*, and the splice can then emit a clean
       -- `mvcgen [...]` with no dead closer instead of stealing the next token's proof.
-      let off := (stx.getPos?.getD 0).byteIdx
-      let ws ← ref.get
-      match ws.findIdx? (·.1 == off) with
-      | some idx => ref.set (ws.set! idx (off, mergeWinner ws[idx]!.2 proof))
-      | none => ref.set (ws.push (off, proof))
-      -- Suggest TryThis for the (possibly partial) proof found
-      addSuggestion stx (SuggestionText.string proof : Suggestion) (origSpan? := stx)
+      -- An empty `proof` means nothing was committed (`mvcgen` self-closed every goal, or the goal was
+      -- already closed): record NOTHING here, and never surface a bogus `Try this:\n[apply] ` suggestion.
+      unless proof.isEmpty do
+        let off := (stx.getPos?.getD 0).byteIdx
+        let ws ← ref.get
+        match ws.findIdx? (·.1 == off) with
+        | some idx => ref.set (ws.set! idx (off, mergeWinner ws[idx]!.2 proof))
+        | none => ref.set (ws.push (off, proof))
+        -- Suggest TryThis for the (possibly partial) proof found
+        addSuggestion stx (SuggestionText.string proof : Suggestion) (origSpan? := stx)
 
 end PastaLean.Pastafolio

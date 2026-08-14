@@ -1,0 +1,4 @@
+import PastaBench.leetcode.MinimumNumberOfSwapsToMakeTheBinaryStringAlternating.Generated
+namespace PastaBench.leetcode.MinimumNumberOfSwapsToMakeTheBinaryStringAlternating
+-- TODO.
+end PastaBench.leetcode.MinimumNumberOfSwapsToMakeTheBinaryStringAlternating

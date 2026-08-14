@@ -1,4 +1,3 @@
-from contracts import *
 import random
 import functools
 import collections
@@ -14,10 +13,14 @@ from bisect import *
 from string import *
 from operator import *
 from math import *
+from contracts import *
 
 def sumOfDigits(nums: List[int]) -> int:
-    Requires(len(nums) > 0 and min(nums) >= 0)
+    Requires(len(nums) > 0)
+    Requires(all(n >= 0 for n in nums))
+    Ensures(Result() == 0 or Result() == 1)
     x = min(nums)
+    Assert(x >= 0)
     s = 0
     while x:
         Invariant(x >= 0)

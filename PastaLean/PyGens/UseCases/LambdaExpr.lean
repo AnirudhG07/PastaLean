@@ -1,4 +1,4 @@
-import Mathlib
+import PastaLean.Imports
 import PastaLean.Codegen
 import PastaLean.PyGens.UseCases.FuncDef
 
@@ -78,7 +78,14 @@ def lambdaStx : (kind : SyntaxNodeKind) → Json →
           let (argIdent, ty?) := argInfos[0]!
           match ty? with
           | some ty =>
-              `(fun ($argIdent : $ty) ↦ $bodyStx)
+              -- A tuple-typed key param (`_pair_param`, stamped by TypeInfer's `stampKeyLambdas`) has
+              -- its `p[0]`/`p[1]` projected statically (`Prod.fst`/`Prod.snd`) — `PyGetItem (_ × _)`
+              -- doesn't exist — while keeping the concrete `ty` so `-p[1]` isn't stuck on `Neg β`.
+              if json.getObjValAs? Bool "_pair_param" == .ok true then
+                let pairBodyStx ← getCode (markPairSubscripts body argIdent.getId.toString) `term
+                `(fun ($argIdent : $ty) ↦ $pairBodyStx)
+              else
+                `(fun ($argIdent : $ty) ↦ $bodyStx)
           | none =>
               let argName := argIdent.getId.toString
               if lambdaUsesPairSubscript body argName then

@@ -54,6 +54,8 @@ class LeanBackendClient:
         # True once a request has come back from this process, so we know Mathlib is imported and
         # the ordinary (short) per-request budget applies from here on.
         self._warm = False
+        # Cached `libraryInfo` response (library facts declared in `Libraries/Registry.lean`).
+        self._library_info = None
         self._stderr_lines = deque(maxlen=200)
         self._stderr_thread = None
 
@@ -153,7 +155,8 @@ class LeanBackendClient:
     def _recent_stderr(self):
         return "\n".join(self._stderr_lines)
 
-    def _task_payload(self, ast_json, target, check, numeric_mode, run_suffix, user_names, heap):
+    def _task_payload(self, ast_json, target, check, numeric_mode, run_suffix, user_names,
+                      best_effort=False, heap=False):
         return json.dumps(
             {
                 "task": "translate",
@@ -163,6 +166,7 @@ class LeanBackendClient:
                 "numericMode": numeric_mode,
                 "runSuffix": run_suffix,
                 "userNames": list(user_names),
+                "best_effort": best_effort,
                 "heap": heap,
             },
             separators=(",", ":"),
@@ -250,6 +254,7 @@ class LeanBackendClient:
         numeric_mode="exact",
         run_suffix="",
         user_names=(),
+        best_effort=False,
         heap=False,
     ):
         """Send one translation request to the persistent Lean backend."""
@@ -257,7 +262,8 @@ class LeanBackendClient:
         assert self.proc is not None
         assert self.proc.stdin is not None
 
-        json_task = self._task_payload(ast_json, target, check, numeric_mode, run_suffix, user_names, heap)
+        json_task = self._task_payload(ast_json, target, check, numeric_mode, run_suffix, user_names,
+                                       best_effort=best_effort, heap=heap)
         logger.debug("Sending request to Lean backend: target=%s check=%s", target, check)
         try:
             self.proc.stdin.write(json_task + "\n")
@@ -336,6 +342,36 @@ class LeanBackendClient:
         except json.JSONDecodeError:
             return ast_json
         return resp.get("ast", ast_json) if resp.get("result") else ast_json
+
+    def library_info(self, timeout=None):
+        """Library facts the driver needs, fetched from the Lean registry so they are declared in
+        exactly one place (`Libraries/Registry.lean`). Cached for the process's lifetime. On any
+        failure returns `{}` — callers must treat every field as optional."""
+        if self._library_info is not None:
+            return self._library_info
+        self.start()
+        assert self.proc is not None and self.proc.stdin is not None
+        json_task = json.dumps({"task": "libraryInfo"}, separators=(",", ":"))
+        try:
+            self.proc.stdin.write(json_task + "\n")
+            self.proc.stdin.flush()
+        except BrokenPipeError:
+            self.close()
+            return {}
+        budget = (timeout or self.request_timeout) + (0 if self._warm else self.startup_timeout)
+        line = self._read_response(budget)
+        if line is None:
+            self.close()
+            return {}
+        self._warm = True
+        try:
+            resp = json.loads(line)
+        except json.JSONDecodeError:
+            return {}
+        if not resp.get("result"):
+            return {}
+        self._library_info = resp
+        return resp
 
     def __enter__(self):
         self.start()

@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/91",
+  "problem": "is-bored",
+  "module": "IsBored",
+  "method": "is_bored",
+  "params": [
+    "S"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

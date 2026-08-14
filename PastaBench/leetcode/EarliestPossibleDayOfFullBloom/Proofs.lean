@@ -1,0 +1,4 @@
+import PastaBench.leetcode.EarliestPossibleDayOfFullBloom.Generated
+namespace PastaBench.leetcode.EarliestPossibleDayOfFullBloom
+-- TODO.
+end PastaBench.leetcode.EarliestPossibleDayOfFullBloom

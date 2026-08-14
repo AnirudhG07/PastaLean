@@ -1,0 +1,202 @@
+[
+  {
+    "input": "n = 123",
+    "output": "(8, 13)"
+  },
+  {
+    "input": "n = 12",
+    "output": "(4, 6)"
+  },
+  {
+    "input": "n = 3",
+    "output": "(1, 2)"
+  },
+  {
+    "input": "n = 63",
+    "output": "(6, 8)"
+  },
+  {
+    "input": "n = 25",
+    "output": "(5, 6)"
+  },
+  {
+    "input": "n = 19",
+    "output": "(4, 6)"
+  },
+  {
+    "input": "n = 9",
+    "output": "(4, 5)"
+  },
+  {
+    "input": "n = 1",
+    "output": "(0, 1)"
+  },
+  {
+    "input": "n = 1000",
+    "output": "(48, 60)"
+  },
+  {
+    "input": "n = 500",
+    "output": "(28, 30)"
+  },
+  {
+    "input": "n = 777",
+    "output": "(38, 48)"
+  },
+  {
+    "input": "n = 10",
+    "output": "(4, 5)"
+  },
+  {
+    "input": "n = 15",
+    "output": "(4, 6)"
+  },
+  {
+    "input": "n = 27",
+    "output": "(5, 6)"
+  },
+  {
+    "input": "n = 35",
+    "output": "(5, 7)"
+  },
+  {
+    "input": "n = 50",
+    "output": "(6, 7)"
+  },
+  {
+    "input": "n = 89",
+    "output": "(8, 9)"
+  },
+  {
+    "input": "n = 201",
+    "output": "(8, 20)"
+  },
+  {
+    "input": "n = 51",
+    "output": "(6, 7)"
+  },
+  {
+    "input": "n = 11",
+    "output": "(4, 6)"
+  },
+  {
+    "input": "n = 26",
+    "output": "(5, 6)"
+  },
+  {
+    "input": "n = 778",
+    "output": "(38, 48)"
+  },
+  {
+    "input": "n = 88",
+    "output": "(8, 9)"
+  },
+  {
+    "input": "n = 202",
+    "output": "(9, 20)"
+  },
+  {
+    "input": "n = 28",
+    "output": "(5, 6)"
+  },
+  {
+    "input": "n = 200",
+    "output": "(8, 20)"
+  },
+  {
+    "input": "n = 31",
+    "output": "(5, 6)"
+  },
+  {
+    "input": "n = 30",
+    "output": "(5, 6)"
+  },
+  {
+    "input": "n = 999",
+    "output": "(48, 60)"
+  },
+  {
+    "input": "n = 32",
+    "output": "(5, 6)"
+  },
+  {
+    "input": "n = 36",
+    "output": "(5, 7)"
+  },
+  {
+    "input": "n = 87",
+    "output": "(7, 9)"
+  },
+  {
+    "input": "n = 779",
+    "output": "(38, 48)"
+  },
+  {
+    "input": "n = 998",
+    "output": "(48, 59)"
+  },
+  {
+    "input": "n = 203",
+    "output": "(9, 20)"
+  },
+  {
+    "input": "n = 86",
+    "output": "(7, 9)"
+  },
+  {
+    "input": "n = 33",
+    "output": "(5, 7)"
+  },
+  {
+    "input": "n = 14",
+    "output": "(4, 6)"
+  },
+  {
+    "input": "n = 29",
+    "output": "(5, 6)"
+  },
+  {
+    "input": "n = 34",
+    "output": "(5, 7)"
+  },
+  {
+    "input": "n = 24",
+    "output": "(5, 6)"
+  },
+  {
+    "input": "n = 204",
+    "output": "(9, 20)"
+  },
+  {
+    "input": "n = 13",
+    "output": "(4, 6)"
+  },
+  {
+    "input": "n = 23",
+    "output": "(5, 6)"
+  },
+  {
+    "input": "n = 780",
+    "output": "(38, 48)"
+  },
+  {
+    "input": "n = 85",
+    "output": "(7, 9)"
+  },
+  {
+    "input": "n = 781",
+    "output": "(38, 48)"
+  },
+  {
+    "input": "n = 206",
+    "output": "(9, 20)"
+  },
+  {
+    "input": "n = 16",
+    "output": "(4, 6)"
+  },
+  {
+    "input": "n = 499",
+    "output": "(28, 30)"
+  }
+]

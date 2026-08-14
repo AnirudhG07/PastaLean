@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/20",
+  "problem": "find-closest-elements",
+  "module": "FindClosestElements",
+  "method": "find_closest_elements",
+  "params": [
+    "numbers"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

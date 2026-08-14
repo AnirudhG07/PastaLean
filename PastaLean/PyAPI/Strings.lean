@@ -1,12 +1,17 @@
-import Mathlib
+import PastaLean.Imports
 import PastaLean.PyAPI.Core
 import PastaLean.PyAPI.CommonProtocols.Iterable
 
 namespace PastaLean
 
-/-- Treat the most common Python whitespace characters as separators/strip chars. -/
+/-- Python's whitespace set for `str.split()`/`strip()` — ASCII space/tab/newline/CR plus vertical
+tab (`\v`), form feed (`\f`), and the common Unicode blanks NEL (U+0085) and NBSP (U+00A0), so a
+`str.split()` on `"a\xa0b"` (a non-breaking space) drops it as CPython does. -/
 private def isPyWhitespace (c : Char) : Bool :=
   c = ' ' || c = '\t' || c = '\n' || c = '\r'
+    || c.val == 0x0b || c.val == 0x0c || c.val == 0x1c || c.val == 0x1d
+    || c.val == 0x1e || c.val == 0x1f || c.val == 0x85 || c.val == 0xa0
+    || c.val == 0x2028 || c.val == 0x2029
 
 /-- Helper used by `strip` to remove matching characters from the left. -/
 private def stripLeftBy (p : Char → Bool) : List Char → List Char
@@ -69,6 +74,11 @@ instance : PyStringJoin String where
 /-- Joining over a string should treat each character as a one-character string. -/
 instance : PyStringJoin Char where
   toJoinString c := String.singleton c
+
+/-- Joining a nullable-string sequence (elements typed `Optional[str]` by inference): a `none`
+contributes the empty string. -/
+instance : PyStringJoin (Option String) where
+  toJoinString := (·.getD "")
 
 /--
 Concrete string implementation for Python `join`.
@@ -152,45 +162,56 @@ def pyStringRstrip : String → (chars : String := " ") → String
       let p := if chars = " " then isPyWhitespace else (fun c => chars.toList.contains c)
       String.ofList (stripLeftBy p s.toList.reverse).reverse
 
-/-- Python `rfind`: index of the LAST occurrence of `sub`, or `-1`. -/
-def pyStringRfind (s sub : String) : Int :=
-  let n := s.length
-  let m := sub.length
-  let rec go (i : Nat) : Int :=
-    if i = 0 then (if (s.toList.take m) = sub.toList then 0 else -1)
-    else if (s.toList.drop i).take m = sub.toList then (i : Int)
-    else go (i - 1)
-  if m = 0 then (n : Int) else if m > n then -1 else go (n - m)
+/-- Clamp a Python slice bound (negative counts from the end) into `[0, n]`. -/
+private def pyClampIdx (n : Nat) (i : Int) : Nat :=
+  if i < 0 then (max 0 ((n : Int) + i)).toNat else min i.toNat n
 
-/--
-Concrete string implementation for Python `find`.
+/-- Char positions `i` in `[start, stop)` where `s[i:i+len(sub)]` matches `sub` (all char-indexed, so
+`start`/`stop` are Python char bounds). Shared by `find`/`rfind`. -/
+private def pyMatchPositions (s sub : String) (start stop : Int) : List Nat :=
+  let cs := s.toList; let subL := sub.toList
+  let n := cs.length; let m := subL.length
+  let lo := pyClampIdx n start; let hi := pyClampIdx n stop
+  (List.range (n + 1)).filter (fun i => lo ≤ i ∧ i + m ≤ hi ∧ (cs.drop i).take m == subL)
 
-Returns `-1` when the substring is missing, matching Python's `str.find`.
--/
-def pyStringFind : String → (sub : String) → Int
-  | s, sub =>
-      match s.find? sub with
-      | some idx => idx.offset.byteIdx
-      | none => -1
+/-- Python `str.find(sub, start=0, stop=len)`: index of the FIRST occurrence of `sub` within
+`s[start:stop]` (char-indexed), or `-1`. -/
+def pyStringFind (s sub : String) (start : Int := 0) (stop : Int := (s.length : Int)) : Int :=
+  match (pyMatchPositions s sub start stop).head? with
+  | some i => Int.ofNat i
+  | none => -1
+
+/-- Python `str.rfind(sub, start=0, stop=len)`: index of the LAST occurrence, or `-1`. -/
+def pyStringRfind (s sub : String) (start : Int := 0) (stop : Int := (s.length : Int)) : Int :=
+  match (pyMatchPositions s sub start stop).getLast? with
+  | some i => Int.ofNat i
+  | none => -1
 
 /--
 Concrete string implementation for Python `index`.
 
 Raises at runtime when the substring is missing, matching Python's `str.index`.
 -/
-def pyStringIndex : String → (sub : String) → Int
-  | s, sub =>
-      match s.find? sub with
-      | some idx => idx.offset.byteIdx
-      | none => panic! "ValueError: substring not found"
+def pyStringIndex (s sub : String) (start : Int := 0) (stop : Int := (s.length : Int)) : Int :=
+  match (pyMatchPositions s sub start stop).head? with
+  | some i => Int.ofNat i
+  | none => panic! "ValueError: substring not found"
 
-/-- Concrete string implementation for Python `startswith`. -/
-def pyStringStartswith : String → (pfx : String) → Bool
-  | s, pfx => s.startsWith pfx
+/-- Concrete string implementation for Python `startswith`. Python's optional `start`/`end` restrict
+the check to the slice `s[start:end]` (`s.startswith(pfx, i)` / `s.startswith(pfx, i, j)`). -/
+def pyStringStartswith (s : String) (pfx : String)
+    (start : Option Int := none) (stop : Option Int := none) : Bool :=
+  match start, stop with
+  | none, none => s.startsWith pfx
+  | _, _ => (pyStringSlice s start stop).startsWith pfx
 
-/-- Concrete string implementation for Python `endswith`. -/
-def pyStringEndswith : String → (sfx : String) → Bool
-  | s, sfx => s.endsWith sfx
+/-- Concrete string implementation for Python `endswith`. `s.endswith(sfx, start, end)` checks the
+slice `s[start:end]`. -/
+def pyStringEndswith (s : String) (sfx : String)
+    (start : Option Int := none) (stop : Option Int := none) : Bool :=
+  match start, stop with
+  | none, none => s.endsWith sfx
+  | _, _ => (pyStringSlice s start stop).endsWith sfx
 
 /-- Concrete string implementation for Python `lower`. -/
 def pyStringLower : String → String
@@ -251,15 +272,21 @@ def pyStringCenter (s : String) (width : Int) (fill : String := " ") : String :=
     let right := pad.toNat - left
     String.ofList (List.replicate left ch) ++ s ++ String.ofList (List.replicate right ch)
 
+/-- Sentinel default for `split()` with NO separator (Python `s.split()` / `s.split(None)`): splits on
+runs of whitespace and drops empties. An EXPLICIT separator — even `" "` — splits on that literal and
+keeps empties (`"a  b".split(" ") == ["a", "", "b"]`), which is different from `"a  b".split()`. The
+sentinel is a control string no user would pass as a real separator. -/
+def splitNoSepSentinel : String := "\x00\x00PASTA_SPLIT_WS\x00\x00"
+
 /--
 Concrete string implementation for Python `split`.
 
-With an explicit separator, this uses `splitOn`. With no explicit separator, it uses
-Python-like whitespace splitting.
+With an explicit separator, this uses `splitOn`. With no explicit separator (the sentinel default), it
+uses Python-like whitespace splitting.
 -/
-def pyStringSplit : String → (sep : String := " ") → List String
+def pyStringSplit : String → (sep : String := splitNoSepSentinel) → List String
   | s, sep =>
-      if sep = " " then
+      if sep = splitNoSepSentinel then
         splitOnPyWhitespace s
       else
         if sep = "" then
@@ -267,12 +294,21 @@ def pyStringSplit : String → (sep : String := " ") → List String
         else
           s.splitOn sep
 
+/-- Python `str.splitlines()`: split on line boundaries (`\n`, `\r`, `\r\n`), dropping the empty
+tail a trailing newline would produce. `"a\nb\n".splitlines() == ["a", "b"]`; `"".splitlines() == []`. -/
+def pyStringSplitlines (s : String) : List String :=
+  if s.isEmpty then []
+  else
+    let s := (s.replace "\r\n" "\n").replace "\r" "\n"
+    let parts := s.splitOn "\n"
+    if s.endsWith "\n" then parts.dropLast else parts
+
 /-- Concrete string implementation for Python `splitlines()`. -/
 def pyStringSplitLines : String → List String
   | s => s.splitOn "\n"
 
 /-- Public runtime surface for Python `split`. -/
-def pySplit : String → (sep : String := " ") → List String
+def pySplit : String → (sep : String := splitNoSepSentinel) → List String
   | s, sep => pyStringSplit s sep
 
 /-- Public runtime surface for Python `replace`. -/
@@ -381,10 +417,15 @@ theorem pyUpper_length_invariant (s : String) : (pyStringUpper s).length = s.len
 
 theorem pyFind_eq_pyIndex (s sub : String) : pyStringFind s sub ≠ -1 → pyStringFind s sub = pyStringIndex s sub := by
   intro h
-  match eq : s.find? sub with
-  | some idx =>
-      simp [pyStringFind, pyStringIndex,eq]
-  | none => simp [pyStringFind, eq] at h
+  unfold pyStringFind pyStringIndex
+  match hm : (pyMatchPositions s sub 0 (s.length : Int)).head? with
+  | some i => simp only [Int.ofNat_eq_natCast]
+  | none => unfold pyStringFind at h; simp [hm] at h
 
 -- #check String.split
+/-- **DUMMY** `str.encode(...)` / `bytes.decode(...)`. There is no `bytes` type here — a byte string
+is modelled as the `String` itself — so this is the identity. Anything depending on the actual
+encoded octets is wrong. -/
+def pyStringEncodeDummy (s : String) (_encoding : String := "utf-8") : String := s
+
 end PastaLean

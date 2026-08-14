@@ -1,4 +1,4 @@
-import Mathlib
+import PastaLean.Imports
 
 namespace PastaLean.ProofMode
 

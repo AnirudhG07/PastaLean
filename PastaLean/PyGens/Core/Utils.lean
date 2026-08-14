@@ -1,4 +1,4 @@
-import Mathlib
+import PastaLean.Imports
 import PastaLean.Codegen
 import PastaLean.PyGens.Basic
 
@@ -50,24 +50,46 @@ def appendCommandSyntax (cmds : Array (TSyntax `command)) (cmd : TSyntax `comman
 Append one generated `doElem` into an accumulator, flattening null-node wrappers that
 represent "many doElems" from a lowering that produced several sibling statements (e.g.
 tuple-unpack assignment). Flattening keeps the bindings as siblings in the enclosing `do`
-rather than scoping them inside a nested `do` block.
+rather than scoping them inside a nested `do` block. A nested tuple-unpack target
+(`(a, b), c = …` in a `do` block) nests null-nodes, so the flatten must recurse — otherwise
+an inner wrapper leaks into the `do` sequence and elaborates as a stray `null`.
 -/
-def appendDoElems (elems : Array (TSyntax `doElem)) (elem : TSyntax `doElem) :
+partial def appendDoElems (elems : Array (TSyntax `doElem)) (elem : TSyntax `doElem) :
     Array (TSyntax `doElem) :=
   if elem.raw.isOfKind nullKind then
-    elems ++ elem.raw.getArgs.map (fun arg => ⟨arg⟩)
+    elem.raw.getArgs.foldl (fun acc arg => appendDoElems acc ⟨arg⟩) elems
   else
     elems.push elem
 
-/-- Pick a fresh local name for generated bindings. -/
+/-- Normalise a generated (compiler-invented) name stem so it can NEVER collide with a Python
+identifier. Python names cannot contain `'`, so a historical `__foo` generated stem becomes `p'_foo`
+(the leading `__`, and a redundant `py_`, are dropped). A stem that is not `__`-marked is left alone
+(it is not a generated name). -/
+def genStem (base : Name) : Name :=
+  let s := base.toString
+  if s.startsWith "__" then
+    let core := s.drop 2
+    let core := if core.startsWith "py_" then core.drop 3 else core
+    ("p'_" ++ core).toName
+  -- Single-underscore generated stems (`_pair`, `_s`, `_row` from for-targets/comprehensions) are
+  -- also valid Python, so normalise them too. Bare `_` (the discard) is left untouched.
+  else if s.startsWith "_" && s.length > 1 then
+    ("p'_" ++ s.drop 1).toName
+  else base
+
+/-- Pick a fresh local name for generated bindings. The stem is normalised to a Python-invalid form
+(`genStem`) so it can never shadow a user variable. -/
 partial def freshName (base : Name) (idx : Nat := 1) : PygenM Name := do
-  let candidate :=
-    if idx == 0 then base else base.appendIndexAfter idx
-  if ← hasVar candidate then
-    freshName base (idx + 1)
-  else
-    addVar candidate
-    pure candidate
+  freshNameAux (genStem base) idx
+where
+  freshNameAux (base : Name) (idx : Nat) : PygenM Name := do
+    let candidate :=
+      if idx == 0 then base else base.appendIndexAfter idx
+    if ← hasVar candidate then
+      freshNameAux base (idx + 1)
+    else
+      addVar candidate
+      pure candidate
 
 def isMainGuardTest (json : Json) : Bool :=
   match json.getObjValAs? String "node_type" with
@@ -233,13 +255,31 @@ partial def stmtHasReachableReturn (json : Json) : Bool :=
     | .obj fs => fs.toList.any (fun (_, v) => stmtHasReachableReturn v)
     | _ => false
 
+/-- Lower ONE body statement to a `doElem`. In best-effort mode a statement whose codegen throws is
+degraded to a `pyUnsupported` placeholder (naming the failing node + the error) instead of propagating
+the error up to collapse the whole enclosing block / function. Used by EVERY statement-list site (the
+function body and each loop/branch body), so a single bad line anywhere degrades just that line. Strict
+mode (default) re-raises. -/
+def getStmtDoElem (elem : Json) : PygenM (TSyntax `doElem) := do
+  if ← PastaLean.bestEffortRef.get then
+    try
+      getCode elem `doElem
+    catch e =>
+      let nt := (elem.getObjValAs? String "node_type").toOption.getD "statement"
+      -- Keep enough of the message to name the actual cause: at 100 chars a nested `getCode`
+      -- failure showed only the wrapper ("Error in code generation function … for key …"), which
+      -- says a generator threw but never why.
+      let emsg := ((← e.toMessageData.toString).replace "\n" " ").take 400
+      `(doElem| let _ := PastaLean.pyUnsupported $(Syntax.mkStrLit s!"degraded {nt}: {emsg}"))
+  else
+    getCode elem `doElem
+
 /-- Compile a function body statement-by-statement into `doElem`s for the monadic fallback path. -/
 def monadicFunctionBodySyntax (bodyElems : Array Json) : PygenM (Array (TSyntax `doElem)) := do
   let mut bodyStxArray := #[]
   let mut broke := false
   for elem in bodyElems do
-    let elemStx ← withoutCheck do
-      getCode elem `doElem
+    let elemStx ← withoutCheck do getStmtDoElem elem
     bodyStxArray := appendDoElems bodyStxArray elemStx
     if statementDefinitelyReturns elem then
       broke := true

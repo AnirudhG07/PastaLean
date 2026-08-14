@@ -1,0 +1,12 @@
+{
+  "problem": "palindromic-substrings",
+  "module": "PalindromicSubstrings",
+  "method": "countSubstrings",
+  "params": [
+    "s"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 140
+}

@@ -7,6 +7,13 @@ import PastaLean.PyAPI.CommonProtocols.Iterable
 import PastaLean.PyAPI.CommonProtocols.IsNone
 import PastaLean.PyAPI.Operators
 import PastaLean.PyAPI.Builtins.Casting
+import PastaLean.PyAPI.Builtins.Math
+import PastaLean.PyAPI.Builtins.Functional
+import PastaLean.PyAPI.Strings
+import PastaLean.PyAPI.Lists
+import PastaLean.PyAPI.CommonProtocols.Membership
+import PastaLean.PyAPI.CommonProtocols.Count
+import PastaLean.PyAPI.CommonProtocols.Sorting
 
 /-!
 # `PyAny` — the dynamic-value fallback
@@ -39,6 +46,38 @@ pre-declares the variable before the block. `none` (Python `None`) is the honest
 faithfully model `UnboundLocalError`, which the linter flags separately. -/
 def emptyPyAny : PyAny := .none
 
+/- Structural decidable equality on the boxed value (`=`), distinct from the numeric `BEq` below
+(`==`, which makes `5 == 5.0` true). `deriving DecidableEq` fails on the nested `List PyAny`, so this
+is a hand-written *mutual* recursion over `PyAny` and `List PyAny`. It lets a boxed comparison against a
+literal — `s = PyAny.str ""` — resolve when `s` could not be un-boxed to a concrete type. -/
+mutual
+def PyAny.decEq : (a b : PyAny) → Decidable (a = b)
+  | .int x,   .int y   => if h : x = y then .isTrue (by subst h; rfl) else .isFalse (by intro he; injection he; exact h ‹_›)
+  | .bool x,  .bool y  => if h : x = y then .isTrue (by subst h; rfl) else .isFalse (by intro he; injection he; exact h ‹_›)
+  | .str x,   .str y   => if h : x = y then .isTrue (by subst h; rfl) else .isFalse (by intro he; injection he; exact h ‹_›)
+  | .float x, .float y => if h : x = y then .isTrue (by subst h; rfl) else .isFalse (by intro he; injection he; exact h ‹_›)
+  | .none,    .none    => .isTrue rfl
+  | .list x,  .list y  => match PyAny.decEqList x y with
+      | .isTrue h  => .isTrue (by subst h; rfl)
+      | .isFalse h => .isFalse (by intro he; injection he; exact h ‹_›)
+  | .int _,.bool _ | .int _,.str _ | .int _,.float _ | .int _,.list _ | .int _,.none
+  | .bool _,.int _ | .bool _,.str _ | .bool _,.float _ | .bool _,.list _ | .bool _,.none
+  | .str _,.int _ | .str _,.bool _ | .str _,.float _ | .str _,.list _ | .str _,.none
+  | .float _,.int _ | .float _,.bool _ | .float _,.str _ | .float _,.list _ | .float _,.none
+  | .list _,.int _ | .list _,.bool _ | .list _,.str _ | .list _,.float _ | .list _,.none
+  | .none,.int _ | .none,.bool _ | .none,.str _ | .none,.float _ | .none,.list _ =>
+      .isFalse (by intro h; injection h)
+def PyAny.decEqList : (a b : List PyAny) → Decidable (a = b)
+  | [], []       => .isTrue rfl
+  | [], _::_     => .isFalse (by intro h; injection h)
+  | _::_, []     => .isFalse (by intro h; injection h)
+  | x::xs, y::ys => match PyAny.decEq x y, PyAny.decEqList xs ys with
+      | .isTrue h1, .isTrue h2 => .isTrue (by subst h1; subst h2; rfl)
+      | .isFalse h1, _         => .isFalse (by intro he; injection he with a b; exact h1 a)
+      | _, .isFalse h2         => .isFalse (by intro he; injection he with a b; exact h2 b)
+end
+instance : DecidableEq PyAny := PyAny.decEq
+
 /-- Default a `PyAny` to `emptyPyAny` (Python `None`), not `int 0` (the derived first-constructor
 default), so a hoisted dynamic binding reads as "unset" rather than a spurious zero. -/
 instance : Inhabited PyAny := ⟨emptyPyAny⟩
@@ -69,6 +108,10 @@ instance : PyToValue Bool    where toValue := .bool
 instance : PyToValue String  where toValue := .str
 instance : PyToValue Char    where toValue c := .str (String.singleton c)
 instance : PyToValue Rat     where toValue := .float
+-- `Float` is the run-twin's `float`; box it via its exact rational value so a dynamic (`PyAny`) slot
+-- can hold a `Float` (`PyAny.float` carries a `Rat`). This is the one tower type that could not
+-- previously enter `PyAny`, so `x + f` / a boxed return of `pyFloat …` (approx-mode division) failed.
+instance : PyToValue Float   where toValue f := .float f.toRat0
 instance : PyToValue Unit    where toValue _ := .none
 instance {α : Type} [PyToValue α] : PyToValue (List α)   where toValue xs := .list (xs.map toValue)
 instance {α : Type} [PyToValue α] : PyToValue (Option α) where
@@ -80,6 +123,7 @@ a generic `CoeTail α PyAny` has no synthesization order (the source `α` is unc
 instance : CoeTail Int PyAny    where coe := .int
 instance : CoeTail Nat PyAny    where coe n := .int n
 instance : CoeTail Bool PyAny   where coe := .bool
+instance : CoeTail Float PyAny  where coe f := .float f.toRat0
 instance : CoeTail String PyAny where coe := .str
 instance : CoeTail Char PyAny   where coe c := .str (String.singleton c)
 instance : CoeTail Rat PyAny    where coe := .float
@@ -266,6 +310,28 @@ instance : PyGetItem PyAny Int PyAny where
     | .str s => .str (pyStringGetItemStr s i)
     | _ => .none
 
+/-- A *typed* list indexed by a *boxed* index (`xs[k]` where `k` is dynamic, e.g. a loop variable
+that stayed `PyAny`) — unbox an integer index and delegate to the list instance. -/
+instance {α : Type} [Inhabited α] : PyGetItem (List α) PyAny α where
+  getItem xs i := match i with | .int n => pyListGetItem xs n | _ => default
+
+/-- A boxed value indexed by a *boxed* index (`x[k]` where `k` is also dynamic) — unbox an integer
+index and delegate; any other index yields `None`. -/
+instance : PyGetItem PyAny PyAny PyAny where
+  getItem v i :=
+    match i with
+    | .int n => match v with
+        | .list xs => pyListGetItem xs n
+        | .str s => .str (pyStringGetItemStr s n)
+        | _ => .none
+    | _ => .none
+
+/-- `s[k]` on a concrete `String` indexed by a *boxed* index (`k` is a dynamic value that stayed
+`PyAny`, e.g. an un-inferred loop variable) — unbox an integer index and delegate to the string
+instance; any other index yields the empty string. -/
+instance : PyGetItem String PyAny String where
+  getItem s i := match i with | .int n => pyStringGetItemStr s n | _ => ""
+
 instance : PySetItem PyAny Int PyAny where
   setItem v i x :=
     match v with
@@ -295,5 +361,102 @@ instance : PyTruthy PyAny where
     | .float q => q != 0
     | .none => false
     | .list xs => !xs.isEmpty
+
+/-- Total ordering for `sorted`/`min`/`max`/`Ord`-keyed containers over boxed values. Reuses the
+numeric/string/list comparison in `PyAny.cmp`; incomparable tags compare equal (a stable no-op). -/
+instance : Ord PyAny := ⟨fun a b => (a.cmp b).getD .eq⟩
+
+/-- Python `abs` on a boxed number; non-numbers pass through. -/
+instance : PyAbs PyAny where
+  pyAbs
+    | .int n => .int (if n < 0 then -n else n)
+    | .float q => .float (if q < 0 then -q else q)
+    | v => v
+
+/-- Hash a boxed value by tag + payload, so a `PyAny` can key a dict / enter a set. -/
+partial def PyAny.pyHash : PyAny → UInt64
+  | .int n => mixHash 3 (hash n)
+  | .bool b => mixHash 5 (hash b)
+  | .str s => mixHash 7 (hash s)
+  | .float q => mixHash 11 (mixHash (hash q.num) (hash q.den))
+  | .none => 13
+  | .list xs => xs.foldl (fun h x => mixHash h x.pyHash) 17
+instance : Hashable PyAny := ⟨PyAny.pyHash⟩
+
+/-- `sep.join(xs)` where each boxed item stringifies (Python str-joins any iterable of str-likes). -/
+instance : PyStringJoin PyAny where toJoinString := PyAny.toStr false
+
+/-- `float('inf')`/`float('nan')` in a boxed slot becomes a boxed float. -/
+instance : PyNonFinite PyAny where nonFinite s := .float (PyNonFinite.nonFinite s)
+
+/-! ### More container/value protocols on a boxed value — same delegate-by-tag design as above.
+These let an un-inferred (`PyAny`) parameter be `int()`-cast, membership-tested, `count`-ed, sliced,
+sorted, and summed, reusing the concrete `List`/`String` runtime and reboxing results. -/
+
+/-- `int(x)` on a boxed value: numeric tags read directly (float truncates toward zero, matching
+Python `int()`); a numeric string parses; everything else is `0`. -/
+instance : PyIntCast PyAny where
+  pyInt
+    | .int n => n
+    | .bool b => if b then 1 else 0
+    | .float q => q.num.tdiv (q.den : Int)
+    | .str s => (s.trimAscii.toInt?).getD 0
+    | _ => 0
+
+/-- `needle in x` on a boxed container: list membership (element equality) or substring test.
+`β` is an `outParam`, so a concrete needle (e.g. `ℤ`) coerces to `PyAny` via `CoeTail`; only this
+single `PyAny PyAny` instance may exist for the boxed container (extra ones break resolution). -/
+instance : PyContains PyAny PyAny where
+  contains
+    | .list xs, v => xs.contains v
+    | .str s, .str t => pyStrContainsSubstr s t
+    | _, _ => false
+
+/-- `x.count(v)` on a boxed list (occurrence count) or string (substring count). -/
+instance : PyCount PyAny PyAny where
+  pyCount
+    | .list xs, v => pyListCount xs v
+    | .str s, .str t => pyStringCount s t
+    | _, _ => 0
+instance : PyCount PyAny Int where
+  pyCount
+    | .list xs, x => pyListCount xs (PyAny.int x)
+    | _, _ => 0
+instance : PyCount PyAny String where
+  pyCount
+    | .list xs, x => pyListCount xs (PyAny.str x)
+    | .str s, t => pyStringCount s t
+    | _, _ => 0
+
+/-- `sum(x)` over a boxed iterable: each element is already a `PyAny`, folded with boxed `+`. -/
+instance : PySummand PyAny PyAny := ⟨id⟩
+
+/-- `x[lo:hi:step]` on a boxed list/string; other tags pass through unchanged. -/
+instance : PySlice PyAny where
+  slice v lo hi step := match v with
+    | .list xs => .list (pyListSliceStep xs lo hi step)
+    | .str s => .str (pyStringSliceStep s lo hi step)
+    | _ => v
+
+/-- `sorted(x)` on a boxed list (or string → sorted chars); reuses `Ord PyAny`. -/
+instance : PySort PyAny PyAny where
+  pySort
+    | .list xs => PySort.pySort xs
+    | .str s => PySort.pySort (s.toList.map (fun c => PyAny.str c.toString))
+    | _ => []
+
+/-- Decode a JSON value into `PyAny`, PRESERVING Python's int-vs-float distinction (a JSON number with
+no fractional part is `.int`, otherwise `.float`). Used by the test harness to feed a `PyAny`-typed
+parameter (e.g. `any_int`, which does `type(x) == int`) without collapsing every number to `Float`. -/
+partial def PyAny.ofJson? : Lean.Json → Except String PyAny
+  | .null   => .ok .none
+  | .bool b => .ok (.bool b)
+  | .str s  => .ok (.str s)
+  | .num n  => .ok (if n.exponent == 0 then .int n.mantissa
+                    else .float ((n.mantissa : Rat) / ((10 ^ n.exponent : Nat) : Rat)))
+  | .arr xs => do let l ← xs.toList.mapM PyAny.ofJson?; .ok (.list l)
+  | .obj _  => .error "PyAny.ofJson?: JSON objects (dict) are not supported"
+
+instance : Lean.FromJson PyAny := ⟨PyAny.ofJson?⟩
 
 end PastaLean

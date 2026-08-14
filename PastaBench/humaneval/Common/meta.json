@@ -1,0 +1,14 @@
+{
+  "task_id": "HumanEval/58",
+  "problem": "common",
+  "module": "Common",
+  "method": "common",
+  "params": [
+    "l1",
+    "l2"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

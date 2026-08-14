@@ -1,0 +1,12 @@
+{
+  "problem": "clear-digits",
+  "module": "ClearDigits",
+  "method": "clearDigits",
+  "params": [
+    "s"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 113
+}

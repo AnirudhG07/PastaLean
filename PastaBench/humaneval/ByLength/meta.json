@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/105",
+  "problem": "by-length",
+  "module": "ByLength",
+  "method": "by_length",
+  "params": [
+    "arr"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

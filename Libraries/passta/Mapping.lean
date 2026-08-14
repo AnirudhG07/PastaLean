@@ -1,4 +1,4 @@
-import Mathlib
+import PastaLean.Imports
 import Libraries.passta.PasstaDef
 
 namespace Libraries.passta

@@ -1,0 +1,202 @@
+[
+  {
+    "input": "n = 6",
+    "output": "False"
+  },
+  {
+    "input": "n = 101",
+    "output": "True"
+  },
+  {
+    "input": "n = 11",
+    "output": "True"
+  },
+  {
+    "input": "n = 13441",
+    "output": "True"
+  },
+  {
+    "input": "n = 61",
+    "output": "True"
+  },
+  {
+    "input": "n = 4",
+    "output": "False"
+  },
+  {
+    "input": "n = 1",
+    "output": "False"
+  },
+  {
+    "input": "n = 5",
+    "output": "True"
+  },
+  {
+    "input": "n = 17",
+    "output": "True"
+  },
+  {
+    "input": "n = 85",
+    "output": "False"
+  },
+  {
+    "input": "n = 77",
+    "output": "False"
+  },
+  {
+    "input": "n = 255379",
+    "output": "False"
+  },
+  {
+    "input": "n = -5",
+    "output": "False"
+  },
+  {
+    "input": "n = 0",
+    "output": "False"
+  },
+  {
+    "input": "n = 2",
+    "output": "True"
+  },
+  {
+    "input": "n = 31",
+    "output": "True"
+  },
+  {
+    "input": "n = 40",
+    "output": "False"
+  },
+  {
+    "input": "n = 103",
+    "output": "True"
+  },
+  {
+    "input": "n = 199",
+    "output": "True"
+  },
+  {
+    "input": "n = 1009",
+    "output": "True"
+  },
+  {
+    "input": "n = 8999",
+    "output": "True"
+  },
+  {
+    "input": "n = 1234567",
+    "output": "False"
+  },
+  {
+    "input": "n = 9000",
+    "output": "False"
+  },
+  {
+    "input": "n = 32",
+    "output": "False"
+  },
+  {
+    "input": "n = 9001",
+    "output": "True"
+  },
+  {
+    "input": "n = -1",
+    "output": "False"
+  },
+  {
+    "input": "n = 39",
+    "output": "False"
+  },
+  {
+    "input": "n = 1234566",
+    "output": "False"
+  },
+  {
+    "input": "n = -4",
+    "output": "False"
+  },
+  {
+    "input": "n = 9002",
+    "output": "False"
+  },
+  {
+    "input": "n = -6",
+    "output": "False"
+  },
+  {
+    "input": "n = 102",
+    "output": "False"
+  },
+  {
+    "input": "n = 200",
+    "output": "False"
+  },
+  {
+    "input": "n = 56",
+    "output": "False"
+  },
+  {
+    "input": "n = 38",
+    "output": "False"
+  },
+  {
+    "input": "n = 37",
+    "output": "True"
+  },
+  {
+    "input": "n = 1010",
+    "output": "False"
+  },
+  {
+    "input": "n = 1234568",
+    "output": "False"
+  },
+  {
+    "input": "n = 1008",
+    "output": "False"
+  },
+  {
+    "input": "n = 33",
+    "output": "False"
+  },
+  {
+    "input": "n = 35",
+    "output": "False"
+  },
+  {
+    "input": "n = 64",
+    "output": "False"
+  },
+  {
+    "input": "n = 63",
+    "output": "False"
+  },
+  {
+    "input": "n = 1234564",
+    "output": "False"
+  },
+  {
+    "input": "n = 34",
+    "output": "False"
+  },
+  {
+    "input": "n = 1011",
+    "output": "False"
+  },
+  {
+    "input": "n = 1234569",
+    "output": "False"
+  },
+  {
+    "input": "n = 197",
+    "output": "True"
+  },
+  {
+    "input": "n = -3",
+    "output": "False"
+  },
+  {
+    "input": "n = 8998",
+    "output": "False"
+  }
+]

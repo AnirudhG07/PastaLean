@@ -1,0 +1,202 @@
+[
+  {
+    "input": "x = 100, shift = 2",
+    "output": "'001'"
+  },
+  {
+    "input": "x = 12, shift = 2",
+    "output": "'12'"
+  },
+  {
+    "input": "x = 97, shift = 8",
+    "output": "'79'"
+  },
+  {
+    "input": "x = 12, shift = 1",
+    "output": "'21'"
+  },
+  {
+    "input": "x = 11, shift = 101",
+    "output": "'11'"
+  },
+  {
+    "input": "x = 16, shift = 3",
+    "output": "'61'"
+  },
+  {
+    "input": "x = 1234, shift = 6",
+    "output": "'4321'"
+  },
+  {
+    "input": "x = 341209, shift = 4",
+    "output": "'120934'"
+  },
+  {
+    "input": "x = 789456123, shift = 10",
+    "output": "'321654987'"
+  },
+  {
+    "input": "x = 500, shift = 4",
+    "output": "'005'"
+  },
+  {
+    "input": "x = 345, shift = 1",
+    "output": "'534'"
+  },
+  {
+    "input": "x = 86314, shift = 3",
+    "output": "'31486'"
+  },
+  {
+    "input": "x = 22, shift = 4",
+    "output": "'22'"
+  },
+  {
+    "input": "x = 987654321, shift = 9",
+    "output": "'987654321'"
+  },
+  {
+    "input": "x = 777, shift = 10",
+    "output": "'777'"
+  },
+  {
+    "input": "x = 23, shift = 789456124",
+    "output": "'32'"
+  },
+  {
+    "input": "x = 341209, shift = 3",
+    "output": "'209341'"
+  },
+  {
+    "input": "x = 341209, shift = 341209",
+    "output": "'902143'"
+  },
+  {
+    "input": "x = 789456123, shift = 23",
+    "output": "'321654987'"
+  },
+  {
+    "input": "x = 789456122, shift = 789456123",
+    "output": "'221654987'"
+  },
+  {
+    "input": "x = 500, shift = 3",
+    "output": "'500'"
+  },
+  {
+    "input": "x = 23, shift = 16",
+    "output": "'32'"
+  },
+  {
+    "input": "x = 789456123, shift = 777",
+    "output": "'321654987'"
+  },
+  {
+    "input": "x = 15, shift = 2",
+    "output": "'15'"
+  },
+  {
+    "input": "x = 789456122, shift = 789456122",
+    "output": "'221654987'"
+  },
+  {
+    "input": "x = 23, shift = 22",
+    "output": "'32'"
+  },
+  {
+    "input": "x = 789456124, shift = 789456124",
+    "output": "'421654987'"
+  },
+  {
+    "input": "x = 2, shift = 3",
+    "output": "'2'"
+  },
+  {
+    "input": "x = 10, shift = 6",
+    "output": "'01'"
+  },
+  {
+    "input": "x = 2, shift = 345",
+    "output": "'2'"
+  },
+  {
+    "input": "x = 789456123, shift = 789456123",
+    "output": "'321654987'"
+  },
+  {
+    "input": "x = 15, shift = 6",
+    "output": "'51'"
+  },
+  {
+    "input": "x = 23, shift = 10",
+    "output": "'32'"
+  },
+  {
+    "input": "x = 22, shift = 777",
+    "output": "'22'"
+  },
+  {
+    "input": "x = 789456124, shift = 3",
+    "output": "'124789456'"
+  },
+  {
+    "input": "x = 3, shift = 3",
+    "output": "'3'"
+  },
+  {
+    "input": "x = 789456123, shift = 11",
+    "output": "'321654987'"
+  },
+  {
+    "input": "x = 501, shift = 3",
+    "output": "'501'"
+  },
+  {
+    "input": "x = 15, shift = 23",
+    "output": "'51'"
+  },
+  {
+    "input": "x = 9, shift = 777",
+    "output": "'9'"
+  },
+  {
+    "input": "x = 1, shift = 777",
+    "output": "'1'"
+  },
+  {
+    "input": "x = 1235, shift = 23",
+    "output": "'5321'"
+  },
+  {
+    "input": "x = 15, shift = 9",
+    "output": "'51'"
+  },
+  {
+    "input": "x = 341209, shift = 5",
+    "output": "'412093'"
+  },
+  {
+    "input": "x = 5, shift = 789456123",
+    "output": "'5'"
+  },
+  {
+    "input": "x = 499, shift = 3",
+    "output": "'499'"
+  },
+  {
+    "input": "x = 1, shift = 776",
+    "output": "'1'"
+  },
+  {
+    "input": "x = 12, shift = 4",
+    "output": "'21'"
+  },
+  {
+    "input": "x = 341209, shift = 789456124",
+    "output": "'902143'"
+  },
+  {
+    "input": "x = 776, shift = 23",
+    "output": "'677'"
+  }
+]

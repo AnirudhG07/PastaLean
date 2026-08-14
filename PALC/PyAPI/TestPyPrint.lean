@@ -57,3 +57,38 @@ info: 9
 -/
 #guard_msgs in
 #eval (pyPrintIO [[4, 5]] *> pure (9 : Int))
+
+/-! Python-style `repr` for floats: shortest round-tripping decimal, `.0` on integers (not the
+6-digit `%f` `3.000000` / truncated `0.285714`). -/
+
+/-- info: "3.0" -/
+#guard_msgs in
+#eval pyFloatRepr (3.0 : Float)
+
+/-- info: "1.0" -/
+#guard_msgs in
+#eval pyFloatRepr (1.0 : Float)
+
+/-- info: "0.2857142857142857" -/
+#guard_msgs in
+#eval pyFloatRepr ((2 : Float) / 7)
+
+/-- info: "3.141592653589793" -/
+#guard_msgs in
+#eval pyFloatRepr (3.141592653589793 : Float)
+
+/-- info: "-1.5" -/
+#guard_msgs in
+#eval pyFloatRepr (-1.5 : Float)
+
+/-- info: "100.0" -/
+#guard_msgs in
+#eval pyFloatRepr (100.0 : Float)
+
+/-- info: "1e+20" -/
+#guard_msgs in
+#eval pyFloatRepr (1e20 : Float)
+
+/-- info: "0.0" -/
+#guard_msgs in
+#eval pyFloatRepr (0.0 : Float)

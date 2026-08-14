@@ -1,0 +1,12 @@
+{
+  "problem": "strange-printer",
+  "module": "StrangePrinter",
+  "method": "strangePrinter",
+  "params": [
+    "s"
+  ],
+  "difficulty": "Hard",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 102
+}

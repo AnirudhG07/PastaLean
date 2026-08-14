@@ -1,0 +1,12 @@
+{
+  "problem": "russian-doll-envelopes",
+  "module": "RussianDollEnvelopes",
+  "method": "maxEnvelopes",
+  "params": [
+    "envelopes"
+  ],
+  "difficulty": "Hard",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 96
+}

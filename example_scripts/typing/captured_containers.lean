@@ -9,7 +9,9 @@ open Std.Do
 set_option linter.all false
 set_option mvcgen.warning false
 
-set_option maxHeartbeats 0
+set_option maxHeartbeats 200000
+
+namespace PastaLean.User.Root
 
 -- !/usr/bin/env python3
 /-
@@ -29,8 +31,8 @@ private def _pick'first_one := fun (pairs : List (List Int)) ↦ fun (graph : St
           return u
         else
           let _ := ()
-      let __py_ret_1 := pairs⦋(0 : Int)⦌⦋(0 : Int)⦌
-      return __py_ret_1)
+      let p'_ret_1 := pairs⦋(0 : Int)⦌⦋(0 : Int)⦌
+      return p'_ret_1)
 
 attribute [simp, taste_ingr] _pick'first_one
 
@@ -38,12 +40,12 @@ def pick := fun (pairs : List (List Int)) ↦
   Id.run
     (do
       let mut graph : Std.HashMap Int Int := Std.HashMap.ofList []
-      for _pair_1 in (PastaLean.pyIter pairs)do
-        let a := PastaLean.pyListGetItem _pair_1 (0 : Int)
-        let b := PastaLean.pyListGetItem _pair_1 (1 : Int)
+      for p'_pair_1 in (PastaLean.pyIter pairs)do
+        let a := PastaLean.pyListGetItem p'_pair_1 (0 : Int)
+        let b := PastaLean.pyListGetItem p'_pair_1 (1 : Int)
         graph := PastaLean.pySetItem graph a b
-      let __py_ret_1 := _pick'first_one pairs graph
-      return __py_ret_1)
+      let p'_ret_1 := _pick'first_one pairs graph
+      return p'_ret_1)
 
 attribute [simp, taste_ingr] pick
 
@@ -55,19 +57,19 @@ private def _pick'first_one'rn := fun (pairs : List (List Int)) ↦ fun (graph :
           return u
         else
           let _ := ()
-      let __py_ret_1 := pairs⦋(0 : Int)⦌⦋(0 : Int)⦌
-      return __py_ret_1)
+      let p'_ret_1 := pairs⦋(0 : Int)⦌⦋(0 : Int)⦌
+      return p'_ret_1)
 
 def pick'rn := fun (pairs : List (List Int)) ↦
   Id.run
     (do
       let mut graph : Std.HashMap Int Int := Std.HashMap.ofList []
-      for _pair_1 in (PastaLean.pyIter pairs)do
-        let a := PastaLean.pyListGetItem _pair_1 (0 : Int)
-        let b := PastaLean.pyListGetItem _pair_1 (1 : Int)
+      for p'_pair_1 in (PastaLean.pyIter pairs)do
+        let a := PastaLean.pyListGetItem p'_pair_1 (0 : Int)
+        let b := PastaLean.pyListGetItem p'_pair_1 (1 : Int)
         graph := PastaLean.pySetItem graph a b
-      let __py_ret_1 := _pick'first_one'rn pairs graph
-      return __py_ret_1)
+      let p'_ret_1 := _pick'first_one'rn pairs graph
+      return p'_ret_1)
 
 -- `seen` is refined by `+=` through a subscript, and `buckets` by `.append` through a subscript.
 private def _tally'score := fun (seen : Std.HashMap String Int) ↦ fun (buckets : Std.HashMap Int (List String)) ↦
@@ -90,8 +92,8 @@ def tally := fun (words : List String) ↦
         buckets := PastaLean.pySetItem buckets (PastaLean.pyLen w) []
       for w in (PastaLean.pyIter words)do
         buckets := PastaLean.pySetItem buckets (PastaLean.pyLen w) (PastaLean.pyAppend buckets⦋PastaLean.pyLen w⦌ w)
-      let __py_ret_1 := _tally'score seen buckets
-      return __py_ret_1)
+      let p'_ret_1 := _tally'score seen buckets
+      return p'_ret_1)
 
 attribute [simp, taste_ingr] tally
 
@@ -113,8 +115,8 @@ def tally'rn := fun (words : List String) ↦
         buckets := PastaLean.pySetItem buckets (PastaLean.pyLen w) []
       for w in (PastaLean.pyIter words)do
         buckets := PastaLean.pySetItem buckets (PastaLean.pyLen w) (PastaLean.pyAppend buckets⦋PastaLean.pyLen w⦌ w)
-      let __py_ret_1 := _tally'score'rn seen buckets
-      return __py_ret_1)
+      let p'_ret_1 := _tally'score'rn seen buckets
+      return p'_ret_1)
 
 -- `defaultdict`/`Counter` are backed by `PyDefaultDict`, NOT the plain dict a `dict[_,_]`
 -- annotation emits — so a captured one needs that exact type, not merely *a* type. `todo` is a list
@@ -125,10 +127,10 @@ private def _walk'total := fun (graph : Libraries.collections.PyDefaultDict Int 
     (do
       let mut acc : Int := (0 : Int)
       for k in (PastaLean.pyRange (PastaLean.pyLen todo))do
-        let __unpack_value_1 := todo⦋k⦌
-        let __unpack_pair_1 := __unpack_value_1
-        let mut i := Prod.fst __unpack_pair_1
-        let mut j := Prod.snd __unpack_pair_1
+        let p'_unpack_value_1 := todo⦋k⦌
+        let p'_unpack_pair_1 := p'_unpack_value_1
+        let mut i : Int := Prod.fst p'_unpack_pair_1
+        let mut j : Int := Prod.snd p'_unpack_pair_1
         acc := acc +ₚ (PastaLean.pyLen graph⦋i⦌ +ₚ seen⦋i⦌ +ₚ j)
       return acc)
 
@@ -140,14 +142,14 @@ def walk := fun (pairs : List (List Int)) ↦
       let mut graph : Libraries.collections.PyDefaultDict Int (List Int) := Libraries.collections.pyDefaultDictList
       let mut seen : Libraries.collections.PyDefaultDict Int Int := Libraries.collections.pyCounterEmpty
       let mut todo : List (Int × Int) := []
-      for _pair_1 in (PastaLean.pyIter pairs)do
-        let a := PastaLean.pyListGetItem _pair_1 (0 : Int)
-        let b := PastaLean.pyListGetItem _pair_1 (1 : Int)
+      for p'_pair_1 in (PastaLean.pyIter pairs)do
+        let a := PastaLean.pyListGetItem p'_pair_1 (0 : Int)
+        let b := PastaLean.pyListGetItem p'_pair_1 (1 : Int)
         graph := PastaLean.pySetItem graph a (PastaLean.pyAppend graph⦋a⦌ b)
         seen := PastaLean.pySetItem seen a (seen⦋a⦌ +ₚ (1 : Int))
         todo := PastaLean.pyAppend todo (a, b)
-      let __py_ret_1 := _walk'total graph seen todo
-      return __py_ret_1)
+      let p'_ret_1 := _walk'total graph seen todo
+      return p'_ret_1)
 
 attribute [simp, taste_ingr] walk
 
@@ -157,10 +159,10 @@ private def _walk'total'rn := fun (graph : Libraries.collections.PyDefaultDict I
     (do
       let mut acc : Int := (0 : Int)
       for k in (PastaLean.pyRange (PastaLean.pyLen todo))do
-        let __unpack_value_1 := todo⦋k⦌
-        let __unpack_pair_1 := __unpack_value_1
-        let mut i := Prod.fst __unpack_pair_1
-        let mut j := Prod.snd __unpack_pair_1
+        let p'_unpack_value_1 := todo⦋k⦌
+        let p'_unpack_pair_1 := p'_unpack_value_1
+        let mut i : Int := Prod.fst p'_unpack_pair_1
+        let mut j : Int := Prod.snd p'_unpack_pair_1
         acc := acc +ₚ (PastaLean.pyLen graph⦋i⦌ +ₚ seen⦋i⦌ +ₚ j)
       return acc)
 
@@ -170,14 +172,49 @@ def walk'rn := fun (pairs : List (List Int)) ↦
       let mut graph : Libraries.collections.PyDefaultDict Int (List Int) := Libraries.collections.pyDefaultDictList
       let mut seen : Libraries.collections.PyDefaultDict Int Int := Libraries.collections.pyCounterEmpty
       let mut todo : List (Int × Int) := []
-      for _pair_1 in (PastaLean.pyIter pairs)do
-        let a := PastaLean.pyListGetItem _pair_1 (0 : Int)
-        let b := PastaLean.pyListGetItem _pair_1 (1 : Int)
+      for p'_pair_1 in (PastaLean.pyIter pairs)do
+        let a := PastaLean.pyListGetItem p'_pair_1 (0 : Int)
+        let b := PastaLean.pyListGetItem p'_pair_1 (1 : Int)
         graph := PastaLean.pySetItem graph a (PastaLean.pyAppend graph⦋a⦌ b)
         seen := PastaLean.pySetItem seen a (seen⦋a⦌ +ₚ (1 : Int))
         todo := PastaLean.pyAppend todo (a, b)
-      let __py_ret_1 := _walk'total'rn graph seen todo
-      return __py_ret_1)
+      let p'_ret_1 := _walk'total'rn graph seen todo
+      return p'_ret_1)
+
+-- A `Counter`/`defaultdict` first ASSIGNED inside a loop (so it is hoisted to `let mut t := default`
+-- before the block) must keep its `PyDefaultDict` backing — the hoist used to emit `Std.HashMap`,
+-- clashing with the `Counter(...)` reassignment. `sorted(d)` then sorts the dict's KEYS.
+def group_max := fun (words : List String) ↦
+  Id.run
+    (do
+      let mut cnt : Libraries.collections.PyDefaultDict String Int := Libraries.collections.pyDefaultDictInt
+      for w in (PastaLean.pyIter words)do
+        let mut t : Libraries.collections.PyDefaultDict String Int := Libraries.collections.pyCounter w
+        for p'_pair_1 in (PastaLean.pyIter (PastaLean.pyItems t))do
+          let c := Prod.fst p'_pair_1
+          let v := Prod.snd p'_pair_1
+          cnt := PastaLean.pySetItem cnt c (PastaLean.pyMax [cnt⦋c⦌, v])
+      let mut acc : Int := (0 : Int)
+      for c in (PastaLean.pyIter (PastaLean.pySort cnt))do
+        acc := acc +ₚ cnt⦋c⦌
+      return acc)
+
+attribute [simp, taste_ingr] group_max
+
+def group_max'rn := fun (words : List String) ↦
+  Id.run
+    (do
+      let mut cnt : Libraries.collections.PyDefaultDict String Int := Libraries.collections.pyDefaultDictInt
+      for w in (PastaLean.pyIter words)do
+        let mut t : Libraries.collections.PyDefaultDict String Int := Libraries.collections.pyCounter w
+        for p'_pair_1 in (PastaLean.pyIter (PastaLean.pyItems t))do
+          let c := Prod.fst p'_pair_1
+          let v := Prod.snd p'_pair_1
+          cnt := PastaLean.pySetItem cnt c (PastaLean.pyMax [cnt⦋c⦌, v])
+      let mut acc : Int := (0 : Int)
+      for c in (PastaLean.pyIter (PastaLean.pySort cnt))do
+        acc := acc +ₚ cnt⦋c⦌
+      return acc)
 
 -- A capturing helper passed as a VALUE (`key=`), not called directly. Lifting it leaves a partial
 -- application, so the wrapper lambda needs its parameter TYPED — an untyped binder is exactly what
@@ -201,6 +238,7 @@ def main' :=
       let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg (pick [[(1 : Int), (1 : Int)], [(2 : Int), (3 : Int)]])]
       let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg (tally ["ab", "ab", "c"])]
       let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg (walk [[(1 : Int), (2 : Int)], [(1 : Int), (3 : Int)]])]
+      let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg (group_max ["ab", "bc", "abb"])]
       let _ ←
         PastaLean.ProofMode.pyPrintProof
             [pyPrintArg (ranked [(1 : Int), (2 : Int), (3 : Int)] [(10 : Int), (1 : Int)])]) :
@@ -213,6 +251,7 @@ def main''rn :=
       let _ ← pyPrintIO [pyPrintArg (pick'rn [[(1 : Int), (1 : Int)], [(2 : Int), (3 : Int)]])]
       let _ ← pyPrintIO [pyPrintArg (tally'rn ["ab", "ab", "c"])]
       let _ ← pyPrintIO [pyPrintArg (walk'rn [[(1 : Int), (2 : Int)], [(1 : Int), (3 : Int)]])]
+      let _ ← pyPrintIO [pyPrintArg (group_max'rn ["ab", "bc", "abb"])]
       let _ ← pyPrintIO [pyPrintArg (ranked'rn [(1 : Int), (2 : Int), (3 : Int)] [(10 : Int), (1 : Int)])]) :
     IO _)
 
@@ -223,3 +262,5 @@ def main : IO Unit := do
 def main'rn : IO Unit := do
   let _ := main''rn
   pure ()
+
+end PastaLean.User.Root

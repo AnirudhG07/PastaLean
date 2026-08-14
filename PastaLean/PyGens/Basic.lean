@@ -1,4 +1,4 @@
-import Mathlib
+import PastaLean.Imports
 import Libraries.Registry
 import PastaLean.Codegen
 import PastaLean.PyAPI
@@ -18,6 +18,22 @@ def intToStx (n : Int) : MetaM <| TSyntax `term := do
   else
     let nStx := Syntax.mkNumLit (toString (n))
     `(($nStx : $intIdent))
+
+/-- If a subscript slice is a dict tuple-key access (`d[i, j]` meaning `d[(i, j)]`, marked
+`_dict_tuple_key` by TypeInfer when the container is a dict), build the `(i, j, …)` tuple key term;
+otherwise `none` (a numpy-style multi-index or a plain index). -/
+def dictTupleKeyTerm? (sliceJson : Json) : PygenM (Option (TSyntax `term)) := do
+  if sliceJson.getObjValAs? Bool "_dict_tuple_key" == .ok true then
+    match sliceJson.getObjValAs? (Array Json) "elts" with
+    | .ok elts =>
+        if elts.isEmpty then return none
+        let keyTerms ← elts.mapM (fun e => getCode e `term)
+        let mut key := keyTerms[keyTerms.size - 1]!
+        for t in keyTerms.toList.dropLast.reverse do
+          key ← `(($t, $key))
+        return some key
+    | _ => return none
+  else return none
 
 def numToStx (mantissa : Int) (exponent : Nat) : MetaM <| TSyntax `term := do
   match exponent with
@@ -136,6 +152,12 @@ def constantSyntax : (kind : SyntaxNodeKind) → Json →
 def jsonLibraryMappedName? (json : Json) : PygenM (Option Lean.Name) := do
   match json.getObjValAs? String "library_module", json.getObjValAs? String "library_member" with
   | .ok moduleName, .ok memberName =>
+      -- Proof mode (`PyProofM`) needs the pure, state-threaded twin of an IO-effectful library member
+      -- (`random.*`): the `IO` version cannot be `←`-bound in the pure proof monad. Consulted first so
+      -- it wins over the regular map; a miss (every non-IO member) falls through unchanged.
+      if (← getNumericMode) == .exact then
+        if let some proofName := Libraries.pythonLibraryMapProof? moduleName memberName then
+          return some proofName
       -- Exact mode prefers provable `ℝ`/`noncomputable` mappings for transcendentals; otherwise
       -- use the regular mapping (`--mode run` always does). Example: `math.pow` → rational in the
       -- exact map, else the regular (often `Float`) mapping.
@@ -159,10 +181,13 @@ def libraryMutatorOf? (funcJson : Json) : Option Libraries.LibraryMutator :=
 /-- Resolve a Python builtin name to its Lean runtime name, honouring the numeric mode: in exact
 mode the `pythonBuiltinMapExact?` overrides (e.g. `float` → `pyRat`) win over the regular table. -/
 def builtinMappedName? (name : String) : PygenM (Option Lean.Name) := do
+  -- User conversions registered via `@[py_convert "name"]` are a fallback: the built-in tables win,
+  -- so a user entry never silently shadows `int`/`str`/`list`.
+  let registered ← pyConvertRegistered? name
   if (← getNumericMode) == .exact then
-    return pythonBuiltinMapExact? name <|> pythonBuiltinMap? name
+    return pythonBuiltinMapExact? name <|> pythonBuiltinMap? name <|> registered
   else
-    return pythonBuiltinMap? name
+    return pythonBuiltinMap? name <|> registered
 
 /-- The literal of a non-finite `float('inf')` / `float('-inf')` / `float('nan')` call. -/
 def nonFiniteFloatLiteral? (funcJson : Json) (argsArray : Array Json) : Option String := do
@@ -194,8 +219,10 @@ def nameSyntax : (kind : SyntaxNodeKind) → Json →
     match ← jsonLibraryMappedName? json with
     | some leanName => pure (mkIdent leanName)
     | none =>
-        let .ok id := json.getObjValAs? String "id" | throwError
+        let .ok id0 := json.getObjValAs? String "id" | throwError
           s!"Name node does not have an 'id' field or it is not a string: {json}"
+        -- Resolve SSA renames first (a type-changing rebind `s = list(s)` renamed later `s` refs).
+        let id := (← applyRename id0.toName).toString
         -- A closure-promoted variable CELL (`--heap`): raw ref when passed to its capturing sibling
         -- (`_heap_cell_arg`), else its value/object-ref via one deref in every ordinary position.
         if (← getHeapMode) && (← isHeapCellVar id.toName) then
@@ -206,22 +233,19 @@ def nameSyntax : (kind : SyntaxNodeKind) → Json →
         -- In a run-twin, a reference to a user function/class is suffixed (`bar` → `bar'rn`,
         -- `CNN` → `CNN'rn`); locals and library names are left as-is.
         let suffixed ← suffixIfUserName id
-        -- A reference to a user-defined top-level function/class is `_root_`-qualified ONLY when the
-        -- name actually collides with an existing global (`dist`, `gcd`, …), so it resolves to the
-        -- user's own definition rather than a Mathlib export — the endless-clash fix, no namespace.
-        -- A local shadows the global, and a non-clashing name (e.g. a recursive self-reference not
-        -- yet in the environment) is left bare so its reference still resolves.
-        if (← userNamesRef.get).contains id && !(← hasVar id.toName)
-            && !(← resolveGlobalName id.toName).isEmpty then
-          return mkIdent (`_root_ ++ suffixed.toName)
-        else
-          return mkIdent suffixed.toName
+        -- User definitions live in a dedicated `namespace PastaLean.User.<path>` (opened by the module
+        -- wrapper), so a bare reference resolves to the user's own `compare`/`gcd`/`dist` by namespace
+        -- precedence, not a Mathlib/Lean global of the same name. The old `_root_`-qualification is gone:
+        -- it misfired for globals that live under a namespace (`Ord.compare`), since `_root_.compare`
+        -- then names nothing.
+        return mkIdent suffixed.toName
   | `ident, json => do
     match ← jsonLibraryMappedName? json with
     | some leanName => pure (mkIdent leanName)
     | none =>
-        let .ok id := json.getObjValAs? String "id" | throwError
+        let .ok id0 := json.getObjValAs? String "id" | throwError
           s!"Name node does not have an 'id' field or it is not a string: {json}"
+        let id := (← applyRename id0.toName).toString
         -- In a run-twin, a reference to a user function/class is suffixed (`bar` → `bar'rn`,
         -- `CNN` → `CNN'rn`); locals and library names are left as-is.
         return mkIdent (← suffixIfUserName id).toName
@@ -241,8 +265,11 @@ def listSyntax : (kind : SyntaxNodeKind) → Json →
     let eltCodes ← match eltsJson with
       | .arr arr => arr.mapM (fun eltJson => getCode eltJson `term)
       | _ => throwError s!"List node 'elts' field is not an array: {eltsJson}"
-    let listTerm ← `([$eltCodes,*])
-    allocIfHeap listTerm
+    -- An `array_ok`-marked literal in the runnable twin is an `Array` (`#[…]`); else a `List` (`[…]`).
+    let arrayBacked := (json.getObjValAs? String "_seq" == .ok "array")
+      && (← getNumericMode) == .approx
+    if arrayBacked then `(#[$eltCodes,*])
+    else allocIfHeap (← `([$eltCodes,*]))
   | _, _ => throwError s!"Unsupported syntax category for List node"
 
 /-- `{a, b, c}` set literals lower to a deduplicated list via `pySetFromList`; sets are
@@ -388,7 +415,7 @@ def isNoneConstantJson (json : Json) : Bool :=
   | _, _ => false
 
 /-- Apply a Python binary operator to already-lowered operand terms. Shared by `binOpSyntax`
-and `inlineIOTerm` so IO-bearing operands can be hoisted without duplicating the op table. -/
+and `inlineEffectfulTerm` so IO-bearing operands can be hoisted without duplicating the op table. -/
 def binOpApplyTerm (op : String) (leftCode rightCode : TSyntax `term) :
     PygenM (TSyntax `term) := do
   match op with
@@ -436,6 +463,34 @@ def conditionIsBoolean (json : Json) : Bool :=
       | _ => false
   | _ => false
 
+/-- `all`/`any` over a single-generator, `Name`-target comprehension, which `quantifiedAllAnyProp?`
+lowers to a `∀`/`∃` in a Prop context. Lives here so the truthiness-coercion sites can consult the
+same predicate — coercing an already-`Prop` operand with `pyTruthy` is a type error. -/
+def isQuantifiedAllAnyJson (json : Json) : Bool :=
+  json.getObjValAs? String "node_type" == .ok "Call" &&
+    (match (json.getObjVal? "func").toOption with
+     | some func =>
+         func.getObjValAs? String "node_type" == .ok "Name" &&
+           (match func.getObjValAs? String "id" with
+            | .ok name => name == "all" || name == "any"
+            | _ => false)
+     | none => false) &&
+    (match json.getObjValAs? (Array Json) "args" with
+     | .ok args =>
+         args.size == 1 &&
+           (match args[0]!.getObjValAs? String "node_type" with
+            | .ok argType =>
+                (argType == "GeneratorExp" || argType == "ListComp") &&
+                  (match args[0]!.getObjValAs? (Array Json) "generators" with
+                   | .ok gens =>
+                       gens.size == 1 &&
+                         (match (gens[0]!.getObjVal? "target").toOption with
+                          | some target => target.getObjValAs? String "node_type" == .ok "Name"
+                          | none => false)
+                   | _ => false)
+            | _ => false)
+     | _ => false)
+
 /-- Lower a condition expression, applying Python truthiness (`pyTruthy`) unless it already
 produces a `Bool`. Used by `if`/`while`/`if`-expression lowering. -/
 def truthyConditionTerm (json : Json) (code : TSyntax `term) : PygenM (TSyntax `term) := do
@@ -458,7 +513,7 @@ membership lowering: a string literal on the left of `in`/`not in` means substri
 (`pyStrContainsSubstr`); otherwise membership uses `pyContains`, whose `outParam` element type
 pins the element from the container. -/
 def compareApplyTerm (op : String) (leftJson : Json) (leftCode rightCode : TSyntax `term)
-    (rightJson : Option Json := none) : PygenM (TSyntax `term) := do
+    (rightJson : Option Json := none) (classCmp : Bool := false) : PygenM (TSyntax `term) := do
   -- Set comparisons are order-independent (subset / set-equality), unlike the list-backed `==`/`≤`
   -- the same `List` value would otherwise select. Fires when either operand is statically a set.
   if (← jsonIsSetExpr leftJson) || (← (rightJson.mapM jsonIsSetExpr).map (·.getD false)) then
@@ -496,10 +551,12 @@ def compareApplyTerm (op : String) (leftJson : Json) (leftCode rightCode : TSynt
   let prop ← getPropCondition
   let exact ← numericModeIsExact
   match op with
+  -- User-class (node) operands compare through `BEq` (`==`): they derive `BEq` but not `DecidableEq`,
+  -- so the propositional `=`/`≠` the exact twin would otherwise emit has no `Decidable` instance.
   | "eq" | "is" =>
-      if prop && exact then `($leftCode = $rightCode) else `($leftCode == $rightCode)
+      if prop && exact && !classCmp then `($leftCode = $rightCode) else `($leftCode == $rightCode)
   | "ne" | "isnot" =>
-      if prop && exact then `($leftCode ≠ $rightCode) else `($leftCode != $rightCode)
+      if prop && exact && !classCmp then `($leftCode ≠ $rightCode) else `($leftCode != $rightCode)
   | "lt" => if prop then `($leftCode < $rightCode) else `(decide ($leftCode < $rightCode))
   | "gt" => if prop then `($leftCode > $rightCode) else `(decide ($leftCode > $rightCode))
   | "le" => if prop then `($leftCode <= $rightCode) else `(decide ($leftCode <= $rightCode))
@@ -529,9 +586,12 @@ def binOpSyntax : (kind : SyntaxNodeKind) → Json →
       s!"BinOp node does not have a 'right' field or it is not a JSON value: {json}"
     let leftCode ←  getCode leftJson `term
     let rightCode ← getCode rightJson `term
-    -- Use `pyListRepeat` for list literals so the result type is fixed immediately.
+    -- `[x] * n`: `pyListRepeat` (or `pyArrayRepeat` when the slot is array-backed, so a sieve/DP-table
+    -- `[0]*n` gets O(1) `a[i]=v`) fixes the result type immediately. The `[x]` operand is emitted as an
+    -- `Array` (`#[x]`) via its own `_seq` stamp, so `pyArrayRepeat` receives an `Array`.
     if op == "mul" then
-      let repeatIdent := mkIdent ``PastaLean.pyListRepeat
+      let arrayBacked := (json.getObjValAs? String "_seq" == .ok "array") && (← getNumericMode) == .approx
+      let repeatIdent := mkIdent (if arrayBacked then ``PastaLean.pyArrayRepeat else ``PastaLean.pyListRepeat)
       if leftJson.getObjValAs? String "node_type" == .ok "List" then
         return ← `($repeatIdent $leftCode $rightCode)
       else if rightJson.getObjValAs? String "node_type" == .ok "List" then
@@ -555,6 +615,7 @@ def unaryOpSyntax : (kind : SyntaxNodeKind) → Json →
       -- `not x` is a truthiness context too: a bare non-boolean operand needs `pyTruthy`
       -- (same missing coercion as `if x:` / bool operands), else `¬`/`!` gets a raw value.
       let b ← if conditionIsBoolean operandJson then pure operandCode
+              else if propNot && isQuantifiedAllAnyJson operandJson then pure operandCode
               else if propNot then `($(mkIdent ``PastaLean.pyTruthy) $operandCode = true)
                    else `($(mkIdent ``PastaLean.pyTruthy) $operandCode)
       if propNot then `(¬ $b) else `(! $b)
@@ -604,11 +665,13 @@ def boolOpSyntax : (kind : SyntaxNodeKind) → Json →
       s!"BoolOp node does not have an 'op' field or it is not a string: {json}"
     let .ok valuesJson := json.getObjValAs? Json "values" | throwError
       s!"BoolOp node does not have a 'values' field or it is not a JSON value: {json}"
-    -- A test position (`while`/`if`/assert) sets this; there `and`/`or` must stay a `Bool`
-    -- connective in every twin, never the value form (a `while` cond needs `Bool`, not `Int`).
-    let inCondition ← getPropCondition
-    -- In exact `Prop` positions, `and`/`or` become `∧`/`∨`; otherwise lower to `Bool`.
-    let opProp := inCondition && (← numericModeIsExact)
+    -- A test position (`while`/`if`/assert) or a truthiness context (`any(…)`/`all(…)`) sets this;
+    -- there `and`/`or` must stay a `Bool` connective, never the value form (a `while` cond needs
+    -- `Bool`, and `any(list and bool for …)` would otherwise have mismatched value-form branches).
+    let inCondition := (← getPropCondition) || (← getTruthinessContext)
+    -- In exact `Prop` positions, `and`/`or` become `∧`/`∨`; otherwise lower to `Bool`. A truthiness
+    -- context stays `Bool` (it does NOT force `Prop`) — so `any(a == b for …)` is `List Bool`.
+    let opProp := (← getPropCondition) && (← numericModeIsExact)
     -- `a or b` / `a and b` on NON-boolean operands returns the deciding *operand*, not a `Bool`
     -- (`[…] or [0]` yields the list, `x or 0` the number) — but only in a VALUE position; a
     -- condition keeps the `Bool` connective. Only all-boolean operands are a real connective.
@@ -618,9 +681,15 @@ def boolOpSyntax : (kind : SyntaxNodeKind) → Json →
     if !inCondition && !allBool then
       return ← boolOpValueTerm json
     -- Each `and`/`or` operand is a truthiness context, so non-booleans must be coerced with `pyTruthy`.
+    -- Mark it as such while lowering so a NESTED BoolOp operand (`a or (b and c)`) also stays in the
+    -- Bool/Prop connective form instead of falling to the value form — the value form would leave a
+    -- non-`Bool` inner operand (`… and y%100`) to be mis-coerced by the enclosing connective.
     let lowerOperand (valueJson : Json) : PygenM (TSyntax `term) := do
-      let code ← withPropCondition opProp (getCode valueJson `term)
+      let code ← withTruthinessContext true (withPropCondition opProp (getCode valueJson `term))
       if conditionIsBoolean valueJson then pure code
+      -- An `all`/`any` operand of a contract's `and`/`or` is already a `Prop` (a quantifier), so
+      -- coercing it would be a type error.
+      else if opProp && isQuantifiedAllAnyJson valueJson then pure code
       else if opProp then `($(mkIdent ``PastaLean.pyTruthy) $code = true)
       else `($(mkIdent ``PastaLean.pyTruthy) $code)
     let valuesCodes ← match valuesJson with
@@ -636,7 +705,53 @@ def boolOpSyntax : (kind : SyntaxNodeKind) → Json →
         if opProp then valuesCodes.foldlM (fun a b => `($a ∨ $b)) (valuesCodes[0]!) (start := 1)
         else valuesCodes.foldlM (fun a b => `($a || $b)) (valuesCodes[0]!) (start := 1)
     | _ => throwError s!"Unsupported boolean operator: {op}"
+  -- A BoolOp as a STATEMENT is a short-circuit side effect: `g and effect` runs `effect` (a mutating
+  -- call like `u != v and uf.union(u, v)`) when the guards hold; `g or effect` runs it when they do
+  -- not. The last operand is the effect (lowered as a statement); the earlier ones are the guard.
+  | `doElem, json => do
+    let .ok op := json.getObjValAs? String "op" | throwError s!"BoolOp node missing 'op': {json}"
+    let values := (json.getObjValAs? (Array Json) "values").toOption.getD #[]
+    if values.size < 2 then
+      throwError s!"BoolOp statement needs at least two operands: {json}"
+    let effectJson := values[values.size - 1]!
+    let guards := values.extract 0 (values.size - 1)
+    let guardTerms ← guards.mapM (fun v => do
+      let c ← getCode v `term
+      let t : TSyntax `term ← if conditionIsBoolean v then pure c else `($(mkIdent ``PastaLean.pyTruthy) $c)
+      match op with
+      | "or" => `(! $t)
+      | _ => pure t)
+    let guard ← guardTerms.foldlM (fun a b => `($a && $b)) guardTerms[0]! (start := 1)
+    let effects : Array (TSyntax `doElem) := #[← getCode effectJson `doElem]
+    `(doElem| if $guard then $[$effects:doElem]*)
   | _, _ => throwError s!"Unsupported syntax category for BoolOp node"
+
+/-- A bare Python type-name `Name` node → its `TypeInfer.PyType` tag syntax, for `type(x) == int` and
+`isinstance(x, int)`. Builtin types map to element-less `PyType` heads (Python's `list`/`dict`/… type
+objects carry no element); a registered user class `Trie` maps to `PyType.cls "Trie"`. `none` for
+anything that is not a type name. -/
+def pyTypeNameTag? (json : Json) : PygenM (Option (TSyntax `term)) := do
+  if json.getObjValAs? String "node_type" != .ok "Name" then return none
+  match json.getObjValAs? String "id" with
+  | .ok "int"   => return some (← `(TypeInfer.PyType.int))
+  | .ok "float" => return some (← `(TypeInfer.PyType.float))
+  | .ok "str"   => return some (← `(TypeInfer.PyType.str))
+  | .ok "bool"  => return some (← `(TypeInfer.PyType.bool))
+  | .ok "list"  => return some (← `(TypeInfer.PyType.list TypeInfer.PyType.unknown))
+  | .ok "dict"  => return some (← `(TypeInfer.PyType.dict TypeInfer.PyType.unknown TypeInfer.PyType.unknown))
+  | .ok "tuple" => return some (← `(TypeInfer.PyType.tuple []))
+  | .ok "set"   => return some (← `(TypeInfer.PyType.set TypeInfer.PyType.unknown))
+  | .ok other   =>
+      -- A user class used as a type (`type(x) == Trie`, `isinstance(x, Trie)`) → its `.cls` tag.
+      if ← isRegisteredClass other then
+        return some (← `(TypeInfer.PyType.cls $(Syntax.mkStrLit other)))
+      return none
+  | _ => return none
+
+/-- Is `json` a call to the builtin `type(...)`? -/
+def isTypeCall (json : Json) : Bool :=
+  json.getObjValAs? String "node_type" == .ok "Call" &&
+    ((json.getObjVal? "func").toOption.bind (·.getObjValAs? String "id" |>.toOption)) == some "type"
 
 @[pygen "Compare"]
 def compareSyntax : (kind : SyntaxNodeKind) → Json →
@@ -648,9 +763,22 @@ def compareSyntax : (kind : SyntaxNodeKind) → Json →
       s!"Compare node does not have a 'left' field or it is not a JSON value: {json}"
     let .ok rightJson := json.getObjValAs? Json "right" | throwError
       s!"Compare node does not have a 'right' field or it is not a JSON value: {json}"
-    let leftCode ← getCode leftJson `term
-    let rightCode ← getCode rightJson `term
-    compareApplyTerm op leftJson leftCode rightCode (rightJson := some rightJson)
+    -- `type(x) == int` / `type(x) != int`: when one operand is a `type(...)` call, the bare type-name
+    -- on the other side lowers to its `PyTypeName` tag (so `pyType x == PyTypeName.int` compares).
+    let typeCmp := isTypeCall leftJson || isTypeCall rightJson
+    let sideCode (j : Json) : PygenM (TSyntax `term) := do
+      if typeCmp then
+        match ← pyTypeNameTag? j with | some t => pure t | none => getCode j `term
+      else getCode j `term
+    let leftCode ← sideCode leftJson
+    let rightCode ← sideCode rightJson
+    -- A `type(x) == T` check is a runtime `Bool` (never a proof goal), and `PyType` has `BEq` but no
+    -- `DecidableEq`, so force the Bool `==`/`!=` form rather than the prop `=`/`≠` exact mode would emit.
+    if typeCmp then
+      return ← withPropCondition false (compareApplyTerm op leftJson leftCode rightCode
+        (rightJson := some rightJson))
+    let classCmp := json.getObjValAs? Bool "_class_cmp" == .ok true
+    compareApplyTerm op leftJson leftCode rightCode (rightJson := some rightJson) (classCmp := classCmp)
   | _, _ => throwError s!"Unsupported syntax category for Compare node"
 
 @[pygen "IfExp"]
@@ -668,14 +796,19 @@ def ifExpSyntax : (kind : SyntaxNodeKind) → Json →
     let testCode ← truthyConditionTerm testJson (← withPropCondition true (getCode testJson `term))
     let bodyIsNone := isNoneConstantJson bodyJson
     let orelseIsNone := isNoneConstantJson orelseJson
+    -- The value branch is already `Option`-typed (TypeInfer's `_branch_opt`, e.g. `l1.next` an
+    -- `Option` field), so wrapping it in `some` would nest to `Option (Option _)` — emit it bare.
+    let branchOpt := json.getObjValAs? Bool "_branch_opt" == .ok true
+    let lift (code : TSyntax `term) : PygenM (TSyntax `term) :=
+      if branchOpt then pure code else `(some $code)
     if bodyIsNone && orelseIsNone then
       `(none)
     else if bodyIsNone then
-      let orelseCode ← getCode orelseJson `term
-      `(if $testCode then none else some $orelseCode)
+      let orelseCode ← lift (← getCode orelseJson `term)
+      `(if $testCode then none else $orelseCode)
     else if orelseIsNone then
-      let bodyCode ← getCode bodyJson `term
-      `(if $testCode then some $bodyCode else none)
+      let bodyCode ← lift (← getCode bodyJson `term)
+      `(if $testCode then $bodyCode else none)
     else
       let bodyCode ← getCode bodyJson `term
       let orelseCode ← getCode orelseJson `term

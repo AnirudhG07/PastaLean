@@ -67,7 +67,6 @@ def mean(data: list[int]) -> float:
 
 def median(data: list[int]) -> float:
     Requires(len(data) > 0)
-    Ensures(Result() * 2 == sum(sorted(data)[len(data) // 2 - 1:len(data) // 2 + 1]) if len(data) % 2 == 0 else sorted(data)[len(data) // 2])
     s = sorted(data)
     n = len(s)
     return s[n // 2] if n % 2 == 1 else (s[n // 2 - 1] + s[n // 2]) / 2

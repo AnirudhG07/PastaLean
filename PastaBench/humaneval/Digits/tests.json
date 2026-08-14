@@ -1,0 +1,202 @@
+[
+  {
+    "input": "n = 5",
+    "output": "5"
+  },
+  {
+    "input": "n = 54",
+    "output": "5"
+  },
+  {
+    "input": "n = 120",
+    "output": "1"
+  },
+  {
+    "input": "n = 5014",
+    "output": "5"
+  },
+  {
+    "input": "n = 98765",
+    "output": "315"
+  },
+  {
+    "input": "n = 5576543",
+    "output": "2625"
+  },
+  {
+    "input": "n = 2468",
+    "output": "0"
+  },
+  {
+    "input": "n = 951",
+    "output": "45"
+  },
+  {
+    "input": "n = 246",
+    "output": "0"
+  },
+  {
+    "input": "n = 135797531",
+    "output": "99225"
+  },
+  {
+    "input": "n = 888",
+    "output": "0"
+  },
+  {
+    "input": "n = 182135",
+    "output": "15"
+  },
+  {
+    "input": "n = 703",
+    "output": "21"
+  },
+  {
+    "input": "n = 999",
+    "output": "729"
+  },
+  {
+    "input": "n = 111",
+    "output": "1"
+  },
+  {
+    "input": "n = 1001",
+    "output": "1"
+  },
+  {
+    "input": "n = 3",
+    "output": "3"
+  },
+  {
+    "input": "n = 952",
+    "output": "45"
+  },
+  {
+    "input": "n = 889",
+    "output": "9"
+  },
+  {
+    "input": "n = 998",
+    "output": "81"
+  },
+  {
+    "input": "n = 2",
+    "output": "0"
+  },
+  {
+    "input": "n = 182136",
+    "output": "3"
+  },
+  {
+    "input": "n = 25",
+    "output": "5"
+  },
+  {
+    "input": "n = 701",
+    "output": "7"
+  },
+  {
+    "input": "n = 4",
+    "output": "0"
+  },
+  {
+    "input": "n = 24",
+    "output": "0"
+  },
+  {
+    "input": "n = 997",
+    "output": "567"
+  },
+  {
+    "input": "n = 247",
+    "output": "7"
+  },
+  {
+    "input": "n = 6",
+    "output": "0"
+  },
+  {
+    "input": "n = 953",
+    "output": "135"
+  },
+  {
+    "input": "n = 135797532",
+    "output": "99225"
+  },
+  {
+    "input": "n = 7",
+    "output": "7"
+  },
+  {
+    "input": "n = 248",
+    "output": "0"
+  },
+  {
+    "input": "n = 23",
+    "output": "3"
+  },
+  {
+    "input": "n = 996",
+    "output": "81"
+  },
+  {
+    "input": "n = 135797533",
+    "output": "297675"
+  },
+  {
+    "input": "n = 995",
+    "output": "405"
+  },
+  {
+    "input": "n = 994",
+    "output": "81"
+  },
+  {
+    "input": "n = 891",
+    "output": "9"
+  },
+  {
+    "input": "n = 26",
+    "output": "0"
+  },
+  {
+    "input": "n = 8",
+    "output": "0"
+  },
+  {
+    "input": "n = 112",
+    "output": "1"
+  },
+  {
+    "input": "n = 22",
+    "output": "0"
+  },
+  {
+    "input": "n = 950",
+    "output": "45"
+  },
+  {
+    "input": "n = 702",
+    "output": "7"
+  },
+  {
+    "input": "n = 1000",
+    "output": "1"
+  },
+  {
+    "input": "n = 704",
+    "output": "7"
+  },
+  {
+    "input": "n = 182137",
+    "output": "21"
+  },
+  {
+    "input": "n = 893",
+    "output": "27"
+  },
+  {
+    "input": "n = 993",
+    "output": "243"
+  }
+]

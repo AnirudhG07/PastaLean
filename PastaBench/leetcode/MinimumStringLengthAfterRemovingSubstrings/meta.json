@@ -1,0 +1,12 @@
+{
+  "problem": "minimum-string-length-after-removing-substrings",
+  "module": "MinimumStringLengthAfterRemovingSubstrings",
+  "method": "minLength",
+  "params": [
+    "s"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 153
+}

@@ -1,0 +1,4 @@
+import PastaBench.leetcode.MaskingPersonalInformation.Generated
+namespace PastaBench.leetcode.MaskingPersonalInformation
+-- TODO.
+end PastaBench.leetcode.MaskingPersonalInformation

@@ -1,0 +1,1531 @@
+{
+  "source": "evalplus/humanevalplus",
+  "count": 164,
+  "problems": [
+    {
+      "task_id": "HumanEval/0",
+      "module": "HasCloseElements",
+      "method": "has_close_elements",
+      "params": [
+        "numbers",
+        "threshold"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/1",
+      "module": "SeparateParenGroups",
+      "method": "separate_paren_groups",
+      "params": [
+        "paren_string"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/2",
+      "module": "TruncateNumber",
+      "method": "truncate_number",
+      "params": [
+        "number"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/3",
+      "module": "BelowZero",
+      "method": "below_zero",
+      "params": [
+        "operations"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/4",
+      "module": "MeanAbsoluteDeviation",
+      "method": "mean_absolute_deviation",
+      "params": [
+        "numbers"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/5",
+      "module": "Intersperse",
+      "method": "intersperse",
+      "params": [
+        "numbers",
+        "delimeter"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/6",
+      "module": "ParseNestedParens",
+      "method": "parse_nested_parens",
+      "params": [
+        "paren_string"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/7",
+      "module": "FilterBySubstring",
+      "method": "filter_by_substring",
+      "params": [
+        "strings",
+        "substring"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/8",
+      "module": "SumProduct",
+      "method": "sum_product",
+      "params": [
+        "numbers"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/9",
+      "module": "RollingMax",
+      "method": "rolling_max",
+      "params": [
+        "numbers"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/10",
+      "module": "MakePalindrome",
+      "method": "make_palindrome",
+      "params": [
+        "string"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/11",
+      "module": "StringXor",
+      "method": "string_xor",
+      "params": [
+        "a",
+        "b"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/12",
+      "module": "Longest",
+      "method": "longest",
+      "params": [
+        "strings"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/13",
+      "module": "GreatestCommonDivisor",
+      "method": "greatest_common_divisor",
+      "params": [
+        "a",
+        "b"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/14",
+      "module": "AllPrefixes",
+      "method": "all_prefixes",
+      "params": [
+        "string"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/15",
+      "module": "StringSequence",
+      "method": "string_sequence",
+      "params": [
+        "n"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/16",
+      "module": "CountDistinctCharacters",
+      "method": "count_distinct_characters",
+      "params": [
+        "string"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/17",
+      "module": "ParseMusic",
+      "method": "parse_music",
+      "params": [
+        "music_string"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/18",
+      "module": "HowManyTimes",
+      "method": "how_many_times",
+      "params": [
+        "string",
+        "substring"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/19",
+      "module": "SortNumbers",
+      "method": "sort_numbers",
+      "params": [
+        "numbers"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/20",
+      "module": "FindClosestElements",
+      "method": "find_closest_elements",
+      "params": [
+        "numbers"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/21",
+      "module": "RescaleToUnit",
+      "method": "rescale_to_unit",
+      "params": [
+        "numbers"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/22",
+      "module": "FilterIntegers",
+      "method": "filter_integers",
+      "params": [
+        "values"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/23",
+      "module": "Strlen",
+      "method": "strlen",
+      "params": [
+        "string"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/24",
+      "module": "LargestDivisor",
+      "method": "largest_divisor",
+      "params": [
+        "n"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/25",
+      "module": "Factorize",
+      "method": "factorize",
+      "params": [
+        "n"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/26",
+      "module": "RemoveDuplicates",
+      "method": "remove_duplicates",
+      "params": [
+        "numbers"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/27",
+      "module": "FlipCase",
+      "method": "flip_case",
+      "params": [
+        "string"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/28",
+      "module": "Concatenate",
+      "method": "concatenate",
+      "params": [
+        "strings"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/29",
+      "module": "FilterByPrefix",
+      "method": "filter_by_prefix",
+      "params": [
+        "strings",
+        "prefix"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/30",
+      "module": "GetPositive",
+      "method": "get_positive",
+      "params": [
+        "l"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/31",
+      "module": "IsPrime",
+      "method": "is_prime",
+      "params": [
+        "n"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/32",
+      "module": "FindZero",
+      "method": "find_zero",
+      "params": [
+        "xs"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/33",
+      "module": "SortThird",
+      "method": "sort_third",
+      "params": [
+        "l"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/34",
+      "module": "Unique",
+      "method": "unique",
+      "params": [
+        "l"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/35",
+      "module": "MaxElement",
+      "method": "max_element",
+      "params": [
+        "l"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/36",
+      "module": "FizzBuzz",
+      "method": "fizz_buzz",
+      "params": [
+        "n"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/37",
+      "module": "SortEven",
+      "method": "sort_even",
+      "params": [
+        "l"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/38",
+      "module": "DecodeCyclic",
+      "method": "decode_cyclic",
+      "params": [
+        "s"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/39",
+      "module": "PrimeFib",
+      "method": "prime_fib",
+      "params": [
+        "n"
+      ],
+      "n_tests": 12
+    },
+    {
+      "task_id": "HumanEval/40",
+      "module": "TriplesSumToZero",
+      "method": "triples_sum_to_zero",
+      "params": [
+        "l"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/41",
+      "module": "CarRaceCollision",
+      "method": "car_race_collision",
+      "params": [
+        "n"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/42",
+      "module": "IncrList",
+      "method": "incr_list",
+      "params": [
+        "l"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/43",
+      "module": "PairsSumToZero",
+      "method": "pairs_sum_to_zero",
+      "params": [
+        "l"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/44",
+      "module": "ChangeBase",
+      "method": "change_base",
+      "params": [
+        "x",
+        "base"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/45",
+      "module": "TriangleArea45",
+      "method": "triangle_area",
+      "params": [
+        "a",
+        "h"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/46",
+      "module": "Fib4",
+      "method": "fib4",
+      "params": [
+        "n"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/47",
+      "module": "Median",
+      "method": "median",
+      "params": [
+        "l"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/48",
+      "module": "IsPalindrome",
+      "method": "is_palindrome",
+      "params": [
+        "text"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/49",
+      "module": "Modp",
+      "method": "modp",
+      "params": [
+        "n",
+        "p"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/50",
+      "module": "DecodeShift",
+      "method": "decode_shift",
+      "params": [
+        "s"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/51",
+      "module": "RemoveVowels",
+      "method": "remove_vowels",
+      "params": [
+        "text"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/52",
+      "module": "BelowThreshold",
+      "method": "below_threshold",
+      "params": [
+        "l",
+        "t"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/53",
+      "module": "Add53",
+      "method": "add",
+      "params": [
+        "x",
+        "y"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/54",
+      "module": "SameChars",
+      "method": "same_chars",
+      "params": [
+        "s0",
+        "s1"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/55",
+      "module": "Fib",
+      "method": "fib",
+      "params": [
+        "n"
+      ],
+      "n_tests": 45
+    },
+    {
+      "task_id": "HumanEval/56",
+      "module": "CorrectBracketing56",
+      "method": "correct_bracketing",
+      "params": [
+        "brackets"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/57",
+      "module": "Monotonic",
+      "method": "monotonic",
+      "params": [
+        "l"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/58",
+      "module": "Common",
+      "method": "common",
+      "params": [
+        "l1",
+        "l2"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/59",
+      "module": "LargestPrimeFactor",
+      "method": "largest_prime_factor",
+      "params": [
+        "n"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/60",
+      "module": "SumToN",
+      "method": "sum_to_n",
+      "params": [
+        "n"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/61",
+      "module": "CorrectBracketing61",
+      "method": "correct_bracketing",
+      "params": [
+        "brackets"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/62",
+      "module": "Derivative",
+      "method": "derivative",
+      "params": [
+        "xs"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/63",
+      "module": "Fibfib",
+      "method": "fibfib",
+      "params": [
+        "n"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/64",
+      "module": "VowelsCount",
+      "method": "vowels_count",
+      "params": [
+        "s"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/65",
+      "module": "CircularShift",
+      "method": "circular_shift",
+      "params": [
+        "x",
+        "shift"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/66",
+      "module": "Digitsum",
+      "method": "digitSum",
+      "params": [
+        "s"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/67",
+      "module": "FruitDistribution",
+      "method": "fruit_distribution",
+      "params": [
+        "s",
+        "n"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/68",
+      "module": "Pluck",
+      "method": "pluck",
+      "params": [
+        "arr"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/69",
+      "module": "Search",
+      "method": "search",
+      "params": [
+        "lst"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/70",
+      "module": "StrangeSortList",
+      "method": "strange_sort_list",
+      "params": [
+        "lst"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/71",
+      "module": "TriangleArea71",
+      "method": "triangle_area",
+      "params": [
+        "a",
+        "b",
+        "c"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/72",
+      "module": "WillItFly",
+      "method": "will_it_fly",
+      "params": [
+        "q",
+        "w"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/73",
+      "module": "SmallestChange",
+      "method": "smallest_change",
+      "params": [
+        "arr"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/74",
+      "module": "TotalMatch",
+      "method": "total_match",
+      "params": [
+        "lst1",
+        "lst2"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/75",
+      "module": "IsMultiplyPrime",
+      "method": "is_multiply_prime",
+      "params": [
+        "a"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/76",
+      "module": "IsSimplePower",
+      "method": "is_simple_power",
+      "params": [
+        "x",
+        "n"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/77",
+      "module": "Iscube",
+      "method": "iscube",
+      "params": [
+        "a"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/78",
+      "module": "HexKey",
+      "method": "hex_key",
+      "params": [
+        "num"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/79",
+      "module": "DecimalToBinary",
+      "method": "decimal_to_binary",
+      "params": [
+        "decimal"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/80",
+      "module": "IsHappy",
+      "method": "is_happy",
+      "params": [
+        "s"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/81",
+      "module": "NumericalLetterGrade",
+      "method": "numerical_letter_grade",
+      "params": [
+        "grades"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/82",
+      "module": "PrimeLength",
+      "method": "prime_length",
+      "params": [
+        "string"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/83",
+      "module": "StartsOneEnds",
+      "method": "starts_one_ends",
+      "params": [
+        "n"
+      ],
+      "n_tests": 39
+    },
+    {
+      "task_id": "HumanEval/84",
+      "module": "Solve84",
+      "method": "solve",
+      "params": [
+        "N"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/85",
+      "module": "Add85",
+      "method": "add",
+      "params": [
+        "lst"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/86",
+      "module": "AntiShuffle",
+      "method": "anti_shuffle",
+      "params": [
+        "s"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/87",
+      "module": "GetRow",
+      "method": "get_row",
+      "params": [
+        "lst",
+        "x"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/88",
+      "module": "SortArray88",
+      "method": "sort_array",
+      "params": [
+        "array"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/89",
+      "module": "Encrypt",
+      "method": "encrypt",
+      "params": [
+        "s"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/90",
+      "module": "NextSmallest",
+      "method": "next_smallest",
+      "params": [
+        "lst"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/91",
+      "module": "IsBored",
+      "method": "is_bored",
+      "params": [
+        "S"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/92",
+      "module": "AnyInt",
+      "method": "any_int",
+      "params": [
+        "x",
+        "y",
+        "z"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/93",
+      "module": "Encode",
+      "method": "encode",
+      "params": [
+        "message"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/94",
+      "module": "Skjkasdkd",
+      "method": "skjkasdkd",
+      "params": [
+        "lst"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/95",
+      "module": "CheckDictCase",
+      "method": "check_dict_case",
+      "params": [
+        "dict"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/96",
+      "module": "CountUpTo",
+      "method": "count_up_to",
+      "params": [
+        "n"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/97",
+      "module": "Multiply",
+      "method": "multiply",
+      "params": [
+        "a",
+        "b"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/98",
+      "module": "CountUpper",
+      "method": "count_upper",
+      "params": [
+        "s"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/99",
+      "module": "ClosestInteger",
+      "method": "closest_integer",
+      "params": [
+        "value"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/100",
+      "module": "MakeAPile",
+      "method": "make_a_pile",
+      "params": [
+        "n"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/101",
+      "module": "WordsString",
+      "method": "words_string",
+      "params": [
+        "s"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/102",
+      "module": "ChooseNum",
+      "method": "choose_num",
+      "params": [
+        "x",
+        "y"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/103",
+      "module": "RoundedAvg",
+      "method": "rounded_avg",
+      "params": [
+        "n",
+        "m"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/104",
+      "module": "UniqueDigits",
+      "method": "unique_digits",
+      "params": [
+        "x"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/105",
+      "module": "ByLength",
+      "method": "by_length",
+      "params": [
+        "arr"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/106",
+      "module": "F",
+      "method": "f",
+      "params": [
+        "n"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/107",
+      "module": "EvenOddPalindrome",
+      "method": "even_odd_palindrome",
+      "params": [
+        "n"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/108",
+      "module": "CountNums",
+      "method": "count_nums",
+      "params": [
+        "arr"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/109",
+      "module": "MoveOneBall",
+      "method": "move_one_ball",
+      "params": [
+        "arr"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/110",
+      "module": "Exchange",
+      "method": "exchange",
+      "params": [
+        "lst1",
+        "lst2"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/111",
+      "module": "Histogram",
+      "method": "histogram",
+      "params": [
+        "test"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/112",
+      "module": "ReverseDelete",
+      "method": "reverse_delete",
+      "params": [
+        "s",
+        "c"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/113",
+      "module": "OddCount",
+      "method": "odd_count",
+      "params": [
+        "lst"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/114",
+      "module": "Minsubarraysum",
+      "method": "minSubArraySum",
+      "params": [
+        "nums"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/115",
+      "module": "MaxFill",
+      "method": "max_fill",
+      "params": [
+        "grid",
+        "capacity"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/116",
+      "module": "SortArray116",
+      "method": "sort_array",
+      "params": [
+        "arr"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/117",
+      "module": "SelectWords",
+      "method": "select_words",
+      "params": [
+        "s",
+        "n"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/118",
+      "module": "GetClosestVowel",
+      "method": "get_closest_vowel",
+      "params": [
+        "word"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/119",
+      "module": "MatchParens",
+      "method": "match_parens",
+      "params": [
+        "lst"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/120",
+      "module": "Maximum",
+      "method": "maximum",
+      "params": [
+        "arr",
+        "k"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/121",
+      "module": "Solution",
+      "method": "solution",
+      "params": [
+        "lst"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/122",
+      "module": "AddElements",
+      "method": "add_elements",
+      "params": [
+        "arr",
+        "k"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/123",
+      "module": "GetOddCollatz",
+      "method": "get_odd_collatz",
+      "params": [
+        "n"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/124",
+      "module": "ValidDate",
+      "method": "valid_date",
+      "params": [
+        "date"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/125",
+      "module": "SplitWords",
+      "method": "split_words",
+      "params": [
+        "txt"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/126",
+      "module": "IsSorted",
+      "method": "is_sorted",
+      "params": [
+        "lst"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/127",
+      "module": "Intersection",
+      "method": "intersection",
+      "params": [
+        "interval1",
+        "interval2"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/128",
+      "module": "ProdSigns",
+      "method": "prod_signs",
+      "params": [
+        "arr"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/129",
+      "module": "Minpath",
+      "method": "minPath",
+      "params": [
+        "grid",
+        "k"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/130",
+      "module": "Tri",
+      "method": "tri",
+      "params": [
+        "n"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/131",
+      "module": "Digits",
+      "method": "digits",
+      "params": [
+        "n"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/132",
+      "module": "IsNested",
+      "method": "is_nested",
+      "params": [
+        "string"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/133",
+      "module": "SumSquares133",
+      "method": "sum_squares",
+      "params": [
+        "lst"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/134",
+      "module": "CheckIfLastCharIsALetter",
+      "method": "check_if_last_char_is_a_letter",
+      "params": [
+        "txt"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/135",
+      "module": "CanArrange",
+      "method": "can_arrange",
+      "params": [
+        "arr"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/136",
+      "module": "LargestSmallestIntegers",
+      "method": "largest_smallest_integers",
+      "params": [
+        "lst"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/137",
+      "module": "CompareOne",
+      "method": "compare_one",
+      "params": [
+        "a",
+        "b"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/138",
+      "module": "IsEqualToSumEven",
+      "method": "is_equal_to_sum_even",
+      "params": [
+        "n"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/139",
+      "module": "SpecialFactorial",
+      "method": "special_factorial",
+      "params": [
+        "n"
+      ],
+      "n_tests": 49
+    },
+    {
+      "task_id": "HumanEval/140",
+      "module": "FixSpaces",
+      "method": "fix_spaces",
+      "params": [
+        "text"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/141",
+      "module": "FileNameCheck",
+      "method": "file_name_check",
+      "params": [
+        "file_name"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/142",
+      "module": "SumSquares142",
+      "method": "sum_squares",
+      "params": [
+        "lst"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/143",
+      "module": "WordsInSentence",
+      "method": "words_in_sentence",
+      "params": [
+        "sentence"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/144",
+      "module": "Simplify",
+      "method": "simplify",
+      "params": [
+        "x",
+        "n"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/145",
+      "module": "OrderByPoints",
+      "method": "order_by_points",
+      "params": [
+        "nums"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/146",
+      "module": "Specialfilter",
+      "method": "specialFilter",
+      "params": [
+        "nums"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/147",
+      "module": "GetMaxTriples",
+      "method": "get_max_triples",
+      "params": [
+        "n"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/148",
+      "module": "Bf",
+      "method": "bf",
+      "params": [
+        "planet1",
+        "planet2"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/149",
+      "module": "SortedListSum",
+      "method": "sorted_list_sum",
+      "params": [
+        "lst"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/150",
+      "module": "XOrY",
+      "method": "x_or_y",
+      "params": [
+        "n",
+        "x",
+        "y"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/151",
+      "module": "DoubleTheDifference",
+      "method": "double_the_difference",
+      "params": [
+        "lst"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/152",
+      "module": "Compare",
+      "method": "compare",
+      "params": [
+        "game",
+        "guess"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/153",
+      "module": "StrongestExtension",
+      "method": "Strongest_Extension",
+      "params": [
+        "class_name",
+        "extensions"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/154",
+      "module": "CycpatternCheck",
+      "method": "cycpattern_check",
+      "params": [
+        "a",
+        "b"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/155",
+      "module": "EvenOddCount",
+      "method": "even_odd_count",
+      "params": [
+        "num"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/156",
+      "module": "IntToMiniRoman",
+      "method": "int_to_mini_roman",
+      "params": [
+        "number"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/157",
+      "module": "RightAngleTriangle",
+      "method": "right_angle_triangle",
+      "params": [
+        "a",
+        "b",
+        "c"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/158",
+      "module": "FindMax",
+      "method": "find_max",
+      "params": [
+        "words"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/159",
+      "module": "Eat",
+      "method": "eat",
+      "params": [
+        "number",
+        "need",
+        "remaining"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/160",
+      "module": "DoAlgebra",
+      "method": "do_algebra",
+      "params": [
+        "operator",
+        "operand"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/161",
+      "module": "Solve161",
+      "method": "solve",
+      "params": [
+        "s"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/162",
+      "module": "StringToMd5",
+      "method": "string_to_md5",
+      "params": [
+        "text"
+      ],
+      "n_tests": 50
+    },
+    {
+      "task_id": "HumanEval/163",
+      "module": "GenerateIntegers",
+      "method": "generate_integers",
+      "params": [
+        "a",
+        "b"
+      ],
+      "n_tests": 50
+    }
+  ]
+}

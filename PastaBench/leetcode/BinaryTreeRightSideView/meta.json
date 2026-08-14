@@ -1,0 +1,12 @@
+{
+  "problem": "binary-tree-right-side-view",
+  "module": "BinaryTreeRightSideView",
+  "method": "rightSideView",
+  "params": [
+    "root"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "class",
+  "n_tests": 93
+}

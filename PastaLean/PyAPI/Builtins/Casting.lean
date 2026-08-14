@@ -1,4 +1,4 @@
-import Mathlib
+import PastaLean.Imports
 import PastaLean.PyAPI.CommonProtocols.Iterable
 import PastaLean.PyAPI.PyPrint
 
@@ -21,8 +21,7 @@ instance : PyIntCast Int where
   pyInt x := x
 
 /-- `int(x)` on an exact-mode real number (a transcendental result). `ℝ` is noncomputable, so this
-is `noncomputable` and only lets the program elaborate — regenerate with `--mode run` to evaluate.
-Uses the floor `⌊x⌋`. -/
+is `noncomputable` and only lets the program elaborate. -/
 noncomputable instance : PyIntCast ℝ where
   pyInt x := ⌊x⌋
 
@@ -50,7 +49,7 @@ sign and the usual `0x`/`0b`/`0o` prefix for base 16/2/8. Malformed input yields
 def pyIntBase (s : String) (base : Int) : Int := Id.run do
   let b := base.toNat
   if b < 2 then return 0
-  let mut chars := s.trim.toList
+  let mut chars := s.trimAscii.toString.toList
   let mut neg := false
   match chars with
   | '-' :: rest => neg := true; chars := rest
@@ -100,6 +99,14 @@ matrix into a float one). Mirror it so an `Int` value flows into a `Float` slot.
 `--approx` (Float) mode; exact mode uses `ℚ`, which already has `IntCast`. -/
 instance : Coe Int Float := ⟨floatOfInt⟩
 instance : Coe Nat Float := ⟨Float.ofNat⟩
+
+/-- Python's numeric tower bottoms out at `bool ⊆ int` (`True == 1`), which widens on up
+(`sum([True, False, True]) == 2`, a `bool` flowing into an int/float/ℚ slot). `int → ℚ`/`float`/`ℝ`
+and `ℚ`/`int → ℝ` already come from Mathlib / the `Coe Int Float` above, completing the tower
+`bool < int < {float, ℚ} < ℝ`. -/
+instance : Coe Bool Int   := ⟨fun b => if b then 1 else 0⟩
+instance : Coe Bool Float := ⟨fun b => if b then 1.0 else 0.0⟩
+instance : Coe Bool Rat   := ⟨fun b => if b then 1 else 0⟩
 
 /--
 Typeclass for Python-style `float(...)` coercions.

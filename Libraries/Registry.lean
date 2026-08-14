@@ -1,16 +1,21 @@
 import Lean
 import Libraries.Mutator
+import Libraries.Behaviour
 import Libraries.bisect.Mapping
 import Libraries.collections.Mapping
 import Libraries.functools.Mapping
+import Libraries.hashlib.Mapping
 import Libraries.heapq.Mapping
 import Libraries.itertools.Mapping
 import Libraries.math.Mapping
+import Libraries.operator.Mapping
 import Libraries.string.Mapping
 import Libraries.numpy.Mapping
 import Libraries.passta.Mapping
+import Libraries.random.Mapping
 import Libraries.scipy.Mapping
 import Libraries.pandas.Mapping
+import Libraries.sortedcontainers.Mapping
 
 namespace Libraries
 
@@ -26,14 +31,27 @@ def pythonLibraryMap? (moduleName member : String) : Option Lean.Name :=
   | "bisect" => bisect.pythonBisectMemberMap? member
   | "collections" => collections.pythonCollectionsMemberMap? member
   | "functools" => functools.pythonFunctoolsMemberMap? member
+  | "hashlib" => hashlib.pythonHashlibMemberMap? member
   | "heapq" => heapq.pythonHeapqMemberMap? member
   | "itertools" => itertools.pythonItertoolsMemberMap? member
   | "math" => math.pythonMathMemberMap? member
+  | "operator" => operator.pythonOperatorMemberMap? member
   | "string" => string.pythonStringMemberMap? member
   | "numpy" => numpy.pythonNumpyMemberMap? member
   | "passta" => passta.pythonPasstaMemberMap? member
+  | "random" => random.pythonRandomMemberMap? member
   | "scipy" => scipy.pythonScipyMemberMap? member
   | "pandas" => pandas.pythonPandasMemberMap? member
+  | "sortedcontainers" => sortedcontainers.pythonSortedcontainersMemberMap? member
+  | _ => none
+
+/-- Proof-mode (`PyProofM`) registry: the `IO`-effectful library members whose pure, state-threaded
+twins run in the proof monad. Codegen consults this FIRST when `shouldUseProofMonad` (exact mode), so
+`random.randint(...)` lowers to `pyRandomRandintProof` (a `PyProofM Int`) instead of the `IO` version,
+which cannot be `←`-bound in the pure proof monad. A miss falls through to the regular map. -/
+def pythonLibraryMapProof? (moduleName member : String) : Option Lean.Name :=
+  match moduleName with
+  | "random" => random.pythonRandomMemberMapProof? member
   | _ => none
 
 /--
@@ -59,36 +77,89 @@ def pythonLibraryMapExact? (moduleName member : String) : Option Lean.Name :=
   | "numpy" => numpy.pythonNumpyMemberMapExact? member
   | _ => none
 
-/-- Return type of a library member, for TypeInfer — the single entry point, so `TypeInfer` names no
-specific library. numpy is field-polymorphic, hence a function of the first argument's type. -/
+/-- The `Behaviour` of a **qualified** library member `module.member` — the single record carrying
+its return shape, mutation, and iterator kind. Adding a library member is one entry in that library's
+own `Mapping.lean`; this dispatch and the derived views below never change. -/
+def memberBehaviour? (moduleName member : String) : Option Behaviour :=
+  match moduleName with
+  | "heapq"       => heapq.heapqBehaviour? member
+  | "itertools"   => itertools.itertoolsBehaviour? member
+  | "collections" => collections.collectionsBehaviour? member
+  | "bisect"      => bisect.bisectBehaviour? member
+  | "functools"   => functools.functoolsBehaviour? member
+  | "hashlib"     => hashlib.hashlibBehaviour? member
+  | "math"        => math.mathBehaviour? member
+  | "scipy"       => scipy.scipyBehaviour? member
+  | "numpy"       => numpy.numpyBehaviour? member
+  | "sortedcontainers" => sortedcontainers.sortedcontainersBehaviour? member
+  | _ => none
+
+/-- The `Behaviour` of a BARE callable name (a builtin, or a star-imported library member) — the entry
+point TypeInfer consults for a `Name` call. Excludes `math`/`scipy`/`numpy`, which are qualified-only,
+so a user function named `pow`/`sqrt`/`dot` is not shadowed by the library. -/
+def bareBehaviour? (name : String) : Option Behaviour :=
+  (builtinBehaviour? name).orElse fun _ =>
+  (itertools.itertoolsBehaviour? name).orElse fun _ =>
+  (heapq.heapqBehaviour? name).orElse fun _ =>
+  (collections.collectionsBehaviour? name).orElse fun _ =>
+  (functools.functoolsBehaviour? name).orElse fun _ =>
+  (bisect.bisectBehaviour? name)
+
+/-! ### Views derived from `memberBehaviour?` — one field each, so existing call sites are unchanged. -/
+
+/-- Return type of a qualified library member, for TypeInfer (`.unknown` → `none`, as before). -/
 def libraryMemberReturn? (moduleName member : String) (arg0 : TypeInfer.PyType) :
     Option TypeInfer.PyType :=
-  match moduleName with
-  | "math" => math.mathMemberReturn? member
-  | "scipy" => scipy.scipyMemberReturn? member
-  | "numpy" => (numpy.numpyMemberReturn? member).map (· arg0)
-  | _ => none
+  match (memberBehaviour? moduleName member).map (·.returns [arg0]) with
+  | some t => if t == .unknown then none else some t
+  | none => none
 
-/-- The in-place mutation spec of a library member, for the core codegen — one entry point, so
-codegen names no specific library. -/
+/-- The in-place mutation spec of a library member, for the core codegen. -/
 def libraryMutator? (moduleName member : String) : Option LibraryMutator :=
+  (memberBehaviour? moduleName member).bind (·.mutator)
+
+/-- The unbounded-iterator spec of a library member, for the core codegen. -/
+def libraryInfiniteIter? (moduleName member : String) : Option InfiniteIter :=
+  (memberBehaviour? moduleName member).bind (·.infiniteIter)
+
+/-- Library modules whose members live in `IO` because they read or advance global mutable state
+(`random`'s generator). A call to one makes its enclosing function IO-effectful, exactly as
+`input()` does. Declared here rather than in the Python driver so a library's facts stay in one
+place; the driver reads it over the `libraryInfo` backend task. -/
+def ioEffectfulLibraries : List String := ["random"]
+
+/-- Does this member construct a library-owned object (`hashlib.md5()`)? Codegen tags the assigned
+variable with the owning module so its methods route through `libraryMethod?`. -/
+def libraryObjectConstructor? (moduleName member : String) : Bool :=
+  ((memberBehaviour? moduleName member).map (·.constructsObject)).getD false
+
+/-- A METHOD on a library-owned object → its runtime function. Consulted only when the receiver is
+a variable known to hold an object of that module, so a name that collides with a builtin method
+(`update`) still resolves correctly for ordinary dicts and sets. One entry point, so codegen names
+no specific library. -/
+def libraryMethod? (moduleName member : String) : Option Lean.Name :=
   match moduleName with
-  | "heapq" => heapq.heapqMutator? member
-  | "bisect" => bisect.bisectMutator? member
+  | "hashlib" => hashlib.hashlibMethod? member
   | _ => none
 
-/-- The unbounded-iterator spec of a library member, for the core codegen — one entry point, so
-codegen names no specific library. -/
-def libraryInfiniteIter? (moduleName member : String) : Option InfiniteIter :=
-  match moduleName with
-  | "itertools" => itertools.itertoolsInfiniteIter? member
-  | _ => none
+/-- Does this member wrap a comparator into a sort key (`functools.cmp_to_key`)? Keyed on the member
+name alone as well as qualified, since it reaches codegen either way (`from functools import
+cmp_to_key` gives a bare name). Lets the core sort lowering unwrap it without naming any library. -/
+def isCmpKeyWrapper (member : String) : Bool :=
+  ((bareBehaviour? member).map (·.cmpKeyWrapper)).getD false ||
+    ((memberBehaviour? "functools" member).map (·.cmpKeyWrapper)).getD false
 
 /-- A method that a library declares as a no-op, for the core codegen — keyed on the method name
 alone (these come from decorated values, e.g. `f.cache_clear()`, which carry no module tag). One
 entry point, so codegen names no specific library. -/
 def libraryNoopMethod? (member : String) : Option Lean.Name :=
   functools.functoolsNoopMethod? member
+
+/-- A `sortedcontainers.SortedList` instance method → its runtime function. Codegen consults this
+only when the receiver is a known SortedList (several names collide with set/list/bisect). One entry
+point, so codegen names no specific library. -/
+def sortedListMethod? (member : String) : Option Lean.Name :=
+  sortedcontainers.sortedListMethod? member
 
 /-- A decorator a library declares transparent — no effect on the transpiled value, so the decorated
 function is emitted unchanged (e.g. functools' `@cache`). One entry point, so codegen names no

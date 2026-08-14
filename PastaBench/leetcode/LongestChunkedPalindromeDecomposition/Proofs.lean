@@ -1,0 +1,4 @@
+import PastaBench.leetcode.LongestChunkedPalindromeDecomposition.Generated
+namespace PastaBench.leetcode.LongestChunkedPalindromeDecomposition
+-- TODO.
+end PastaBench.leetcode.LongestChunkedPalindromeDecomposition

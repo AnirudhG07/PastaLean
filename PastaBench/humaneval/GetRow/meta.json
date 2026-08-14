@@ -1,0 +1,14 @@
+{
+  "task_id": "HumanEval/87",
+  "problem": "get-row",
+  "module": "GetRow",
+  "method": "get_row",
+  "params": [
+    "lst",
+    "x"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

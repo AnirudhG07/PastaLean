@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/108",
+  "problem": "count-nums",
+  "module": "CountNums",
+  "method": "count_nums",
+  "params": [
+    "arr"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

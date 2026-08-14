@@ -1,4 +1,4 @@
-import Mathlib
+import PastaLean.Imports
 import PastaLean.PyAPI
 
 namespace PastaLean
@@ -17,6 +17,7 @@ def pythonMethodMap? (attr : String) : Option Lean.Name :=
   match attr with
   -- String Only
   | "split"      => some ``pyStringSplit
+  | "splitlines" => some ``pyStringSplitlines
   | "join"       => some ``pyStringJoin
   | "replace"    => some ``pyStringReplace
   | "strip"      => some ``pyStringStrip
@@ -79,6 +80,7 @@ def pythonMethodMap? (attr : String) : Option Lean.Name :=
   -- Common
   | "clear"      => some ``pyClear
   | "update"     => some ``pyUpdate
+  | "encode" | "decode" => some ``pyStringEncodeDummy
   | "pop"        => some ``pyPop
   | "count"      => some ``pyCount
   | "find"        => some ``pyStringFind

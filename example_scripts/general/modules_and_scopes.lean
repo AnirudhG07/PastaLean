@@ -9,7 +9,9 @@ open Std.Do
 set_option linter.all false
 set_option mvcgen.warning false
 
-set_option maxHeartbeats 0
+set_option maxHeartbeats 200000
+
+namespace PastaLean.User.Root
 
 def GLOBAL_VAR :=
   (42 : Int)
@@ -92,7 +94,7 @@ def main : IO Unit := do
   let inputLines := String.splitOn inputText "\n"
   let inputStream : PastaLean.ProofMode.IOStream :=
     ⟨0, fun i => PastaLean.ProofMode.IOResult.success (List.getD inputLines i "")⟩
-  let initState : PastaLean.ProofMode.IOState := ⟨inputStream, []⟩
+  let initState : PastaLean.ProofMode.IOState := { input := inputStream, output := [] }
   let (result, finalState) :=
     (((do
           for _ in (PastaLean.pyRange (10 : Int))do
@@ -117,3 +119,5 @@ def main'rn : IO Unit := do
     let _ := calculate_sum'rn
   let _ := get_global'rn
   pure ()
+
+end PastaLean.User.Root

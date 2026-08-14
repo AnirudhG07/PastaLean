@@ -1,0 +1,12 @@
+{
+  "problem": "longest-chunked-palindrome-decomposition",
+  "module": "LongestChunkedPalindromeDecomposition",
+  "method": "longestDecomposition",
+  "params": [
+    "text"
+  ],
+  "difficulty": "Hard",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 181
+}

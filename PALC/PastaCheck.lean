@@ -57,7 +57,11 @@ def translateAll (pyBin : String) (dir : System.FilePath)
     (summaryPath : System.FilePath := "/tmp/pastacheck_summary.json") : IO (Array Json) := do
   let out ← IO.Process.output {
     cmd := pyBin,
+    -- `--prove-asserts`: the CLI/API default is now opt-in (fast, leaves `:= by taste?`), but the
+    -- test suite must exercise the full proof-search + splice path so a regression in taste?/proving
+    -- fails `lake test`.
     args := #["-m", "pastalean", "batch", dir.toString, "--recursive", "--mode", "both",
+              "--prove-asserts",
               "--emit-lean", "--summary", summaryPath.toString, "--quiet"] ++ extraArgs }
   unless (← summaryPath.pathExists) do
     throw (IO.userError s!"pastalean batch produced no summary:\n{out.stderr}")

@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/62",
+  "problem": "derivative",
+  "module": "Derivative",
+  "method": "derivative",
+  "params": [
+    "xs"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

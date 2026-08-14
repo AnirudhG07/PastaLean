@@ -1,0 +1,12 @@
+{
+  "problem": "minimum-add-to-make-parentheses-valid",
+  "module": "MinimumAddToMakeParenthesesValid",
+  "method": "minAddToMakeValid",
+  "params": [
+    "s"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 120
+}

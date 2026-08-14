@@ -1,8 +1,9 @@
-import Mathlib
+import PastaLean.Imports
 import PastaLean.PyAPI.TasteIngr
 
 namespace PastaLean
 
+@[grind]
 class PyHAdd (α β : Type) (γ : outParam Type) where
   hAdd : α → β → γ
 
@@ -95,6 +96,7 @@ instance (priority := high) : PyHSub Rat Int Rat where
 instance (priority := high) : PyHSub Int Rat Rat where
   hSub := fun a b => (a : Rat) - b
 
+@[grind]
 class PyHMul (α β : Type) (γ : outParam Type) where
   hMul : α → β → γ
 
@@ -159,11 +161,13 @@ instance (priority := high) : PyHMul Nat Rat Rat where hMul := fun a b => (a : R
 @[default_instance 10001]
 instance (priority := high) : PyHMul Int Int Int where hMul := fun a b => a * b
 
+@[grind]
 class PyHPow (α β : Type) (γ : outParam Type) where
   hPow : α → β → γ
 
 infixr:80 " ^ₚ " => PyHPow.hPow
 
+@[grind]
 class PyModulo (α β : Type) (γ : outParam Type) where
   hMod : α → β → γ
 
@@ -210,6 +214,16 @@ instance (priority := high) : PyModulo Int Rat Rat where hMod a b := pyRatMod (a
 instance (priority := high) : PyModulo Rat Nat Rat where hMod a b := pyRatMod a (b : Rat)
 instance (priority := high) : PyModulo Nat Rat Rat where hMod a b := pyRatMod (a : Rat) b
 
+-- `%` with a `bool` operand (bool coerces to int: `x % 2` where `x` is a predicate) and the mixed
+-- `Rat`/`Float` cases (`PyNumJoin` does not cover `%`), following Python's floor/divisor-sign result.
+instance (priority := high) : PyModulo Bool Int Int where hMod a b := pyMod (pyBoolToInt a) b
+instance (priority := high) : PyModulo Int Bool Int where hMod a b := pyMod a (pyBoolToInt b)
+instance : PyModulo Bool Bool Int where hMod a b := pyMod (pyBoolToInt a) (pyBoolToInt b)
+instance (priority := high) : PyModulo Nat Bool Int where hMod a b := pyMod (a : Int) (pyBoolToInt b)
+instance (priority := high) : PyModulo Bool Nat Int where hMod a b := pyMod (pyBoolToInt a) (b : Int)
+instance (priority := high) : PyModulo Rat Float Float where hMod a b := pyFloatMod (Rat.toFloat a) b
+instance (priority := high) : PyModulo Float Rat Float where hMod a b := pyFloatMod a (Rat.toFloat b)
+
 @[default_instance]
 instance {α β γ} [HPow α β γ] : PyHPow α β γ where
   hPow := HPow.hPow
@@ -237,6 +251,12 @@ The base is widened to `Float`; the common idiom is `int(n ** 0.5)`. -/
 instance (priority := high) : PyHPow Int Float Float where
   hPow := fun a b => Float.pow (Float.ofInt a) b
 
+-- In exact mode a literal like `0.5` is a `Rat`, so `n ** 0.5` is `Int ^ Rat` — a root, which is
+-- irrational, so the provable type is noncomputable `ℝ` (via `rpow`), NOT `Float`. The approx twin
+-- never hits this: there `0.5` is already a `Float`, matching `PyHPow Int Float Float` above.
+noncomputable instance (priority := high) : PyHPow Int Rat Real where
+  hPow := fun a b => Real.rpow (a : ℝ) (b : ℝ)
+
 instance (priority := high) : PyHPow Float Float Float where
   hPow := fun a b => Float.pow a b
 
@@ -244,6 +264,16 @@ instance (priority := high) : PyHPow Float Float Float where
 instance (priority := high) : PyHPow Float Int Float where hPow a b := Float.pow a (Float.ofInt b)
 instance (priority := high) : PyHPow Float Nat Float where hPow a b := Float.pow a (Float.ofNat b)
 instance (priority := high) : PyHPow Nat Int Nat where hPow a b := a ^ b.toNat
+
+-- `**` mixes missing from the tower. A rational/`Nat` base with a rational exponent is generally
+-- irrational → noncomputable `ℝ` (via `rpow`), matching `Int ** Rat` above; a `Float` operand keeps
+-- the result `Float`. (`Rat ** Nat` / `Rat ** Int` are already covered by the generic `Pow`/explicit
+-- instances above.)
+noncomputable instance (priority := high) : PyHPow Rat Rat Real where hPow a b := Real.rpow (a : ℝ) (b : ℝ)
+noncomputable instance (priority := high) : PyHPow Nat Rat Real where hPow a b := Real.rpow (a : ℝ) (b : ℝ)
+instance (priority := high) : PyHPow Nat Float Float where hPow a b := Float.pow (Float.ofNat a) b
+instance (priority := high) : PyHPow Rat Float Float where hPow a b := Float.pow (Rat.toFloat a) b
+instance (priority := high) : PyHPow Float Rat Float where hPow a b := Float.pow a (Rat.toFloat b)
 
 @[default_instance]
 instance (priority := high) : Neg Rat where
@@ -408,6 +438,30 @@ def pyFloorDiv {α β γ : Type} [PyFloorDiv α β γ] (a : α) (b : β) : γ :=
 instance : PyFloorDiv Int Int Int where
   floorDiv a b := if b == 0 then panic! "ZeroDivisionError: integer division or modulo by zero" else Int.fdiv a b
 
+/-! Python `//` is floor division for EVERY numeric type, not just `int`: `7.0 // 2 = 3.0` (float),
+`len(a) // len(b)` (the operands are `Nat`), and the exact-mode rational/mixed cases. `PyNumJoin`
+only auto-derives `+ - * /`, so each `//` pair is spelled out. Result type follows Python: a float
+operand keeps the result float, otherwise it stays in the integer/rational domain. -/
+instance : PyFloorDiv Float Float Float where floorDiv a b := (a / b).floor
+instance : PyFloorDiv Rat Rat Rat where floorDiv a b := if b == 0 then a else ((⌊a / b⌋ : Int) : Rat)
+instance : PyFloorDiv Nat Nat Nat where floorDiv a b := a / b
+-- Float with an integer operand → Float (Python promotes).
+instance : PyFloorDiv Float Int Float where floorDiv a b := (a / Float.ofInt b).floor
+instance : PyFloorDiv Int Float Float where floorDiv a b := (Float.ofInt a / b).floor
+instance : PyFloorDiv Float Nat Float where floorDiv a b := (a / Float.ofNat b).floor
+instance : PyFloorDiv Nat Float Float where floorDiv a b := (Float.ofNat a / b).floor
+-- Rat with an integer operand → Rat (exact mode).
+instance : PyFloorDiv Rat Int Rat where floorDiv a b := if b == 0 then a else ((⌊a / (b : Rat)⌋ : Int) : Rat)
+instance : PyFloorDiv Int Rat Rat where floorDiv a b := if b == 0 then (a : Rat) else ((⌊(a : Rat) / b⌋ : Int) : Rat)
+instance : PyFloorDiv Rat Nat Rat where floorDiv a b := if b == 0 then a else ((⌊a / (b : Rat)⌋ : Int) : Rat)
+instance : PyFloorDiv Nat Rat Rat where floorDiv a b := if b == 0 then (a : Rat) else ((⌊(a : Rat) / b⌋ : Int) : Rat)
+-- Nat/Int mixes → Int (floored).
+instance : PyFloorDiv Nat Int Int where floorDiv a b := if b == 0 then (a : Int) else Int.fdiv (a : Int) b
+instance : PyFloorDiv Int Nat Int where floorDiv a b := if b == 0 then a else Int.fdiv a (b : Int)
+-- Bool coerces to int (`True // 2 = 0`).
+instance : PyFloorDiv Bool Int Int where floorDiv a b := if b == 0 then pyBoolToInt a else Int.fdiv (pyBoolToInt a) b
+instance : PyFloorDiv Int Bool Int where floorDiv a b := if pyBoolToInt b == 0 then a else Int.fdiv a (pyBoolToInt b)
+
 /-!
 Python-style integer bitwise operators, modelling Python's infinite two's-complement (`-1 & 15 = 15`,
 `x & 1` for a negative `x`) at a fixed 64-bit width — ample for competitive-programming values (which
@@ -415,16 +469,16 @@ fit in 63 bits). A negative operand becomes its unsigned 64-bit representative, 
 runs, and the result is re-signed (negative iff the top bit is set).
 -/
 
-/-- Fixed width for the two's-complement model of Python integer bitwise ops. -/
-private def pyBitWidth : Nat := 64
-/-- Unsigned 64-bit two's-complement representative of `a` (`-1 ↦ 2^64-1`). -/
-private def pyToUnsigned (a : Int) : Nat := (a % ((2 : Int) ^ pyBitWidth)).toNat
-/-- Re-sign a 64-bit result: negative iff the top bit is set. -/
-private def pyFromUnsigned (r : Nat) : Int :=
-  if r ≥ 2 ^ (pyBitWidth - 1) then (r : Int) - (2 : Int) ^ pyBitWidth else (r : Int)
-/-- Apply a `Nat` bitwise op in the two's-complement model, so negatives behave like Python. -/
+/-- Apply a `Nat` bitwise op with Python's arbitrary-precision two's-complement semantics. Python
+integers are unbounded, so a FIXED width is wrong: a non-negative result ≥ 2^63 would be re-signed to a
+negative (`reduce(or_, big)` → `-1`) and anything wider than the width truncates. Instead pick a width
+`w` STRICTLY larger than either operand's magnitude — then a non-negative result never sets the sign bit
+(no spurious negative), a negative operand still round-trips (`-1 & 5 = 5`), and nothing truncates. -/
 private def pyTwosComp (f : Nat → Nat → Nat) (a b : Int) : Int :=
-  pyFromUnsigned (f (pyToUnsigned a) (pyToUnsigned b))
+  let w := (max a.natAbs b.natAbs).log2 + 2      -- 2^(w-1) > max magnitude
+  let width : Int := 2 ^ w
+  let r := f (a % width).toNat (b % width).toNat  -- `Int.emod` is non-negative for width > 0
+  if r ≥ 2 ^ (w - 1) then (r : Int) - width else (r : Int)
 
 /-- Python `a & b`. -/
 -- `&`, `|`, `^` are bitwise on integers *and* the binary set operations (intersection, union,
@@ -446,6 +500,27 @@ instance : PyBitAnd Int Int Int where bitAnd := pyTwosComp Nat.land
 instance : PyBitOr Int Int Int where bitOr := pyTwosComp Nat.lor
 instance : PyBitXor Int Int Int where bitXor := pyTwosComp Nat.xor
 
+-- Bitwise on `Nat` operands (a length/`range` index): non-negative, so the plain `Nat` bit ops apply.
+instance : PyBitAnd Nat Nat Nat where bitAnd := Nat.land
+instance : PyBitOr Nat Nat Nat where bitOr := Nat.lor
+instance : PyBitXor Nat Nat Nat where bitXor := Nat.xor
+
+/-- On two `bool`s Python's `&`/`|`/`^` are the boolean connectives (returning `bool`), e.g.
+`flag |= cond`, `parity ^= bit`. Mixed `bool`/`int` goes through the `Int` instances (bool coerces). -/
+instance : PyBitAnd Bool Bool Bool where bitAnd a b := a && b
+instance : PyBitOr Bool Bool Bool where bitOr a b := a || b
+instance : PyBitXor Bool Bool Bool where bitXor a b := xor a b
+
+/-- Mixed `bool`/`int` bitwise: the `bool` coerces to `int` (Python `True & 6 = 0`, `flag |= cond`,
+`parity ^= bit`). The comment above promised these "go through the Int instances", but there was no
+`Bool→Int` coercion for these classes — these instances supply it. -/
+instance : PyBitAnd Bool Int Int where bitAnd a b := pyTwosComp Nat.land (pyBoolToInt a) b
+instance : PyBitAnd Int Bool Int where bitAnd a b := pyTwosComp Nat.land a (pyBoolToInt b)
+instance : PyBitOr Bool Int Int where bitOr a b := pyTwosComp Nat.lor (pyBoolToInt a) b
+instance : PyBitOr Int Bool Int where bitOr a b := pyTwosComp Nat.lor a (pyBoolToInt b)
+instance : PyBitXor Bool Int Int where bitXor a b := pyTwosComp Nat.xor (pyBoolToInt a) b
+instance : PyBitXor Int Bool Int where bitXor a b := pyTwosComp Nat.xor a (pyBoolToInt b)
+
 class PyShiftLeft (α β : Type) (γ : outParam Type) where shiftLeft : α → β → γ
 class PyShiftRight (α β : Type) (γ : outParam Type) where shiftRight : α → β → γ
 /-- Python `a << b`. -/
@@ -455,6 +530,14 @@ def pyShiftRight {α β γ : Type} [PyShiftRight α β γ] (a : α) (b : β) : �
 
 instance : PyShiftLeft Int Int Int where shiftLeft a b := a * (2 ^ b.toNat)
 instance : PyShiftRight Int Int Int where shiftRight a b := Int.fdiv a (2 ^ b.toNat)
+
+-- Shifts with a `Nat` or `bool` operand (bool coerces to int: `flag << 1`, `1 << n` with `n : Nat`).
+instance : PyShiftLeft Nat Nat Nat where shiftLeft a b := a * (2 ^ b)
+instance : PyShiftRight Nat Nat Nat where shiftRight a b := a / (2 ^ b)
+instance : PyShiftLeft Int Nat Int where shiftLeft a b := a * (2 ^ b)
+instance : PyShiftRight Int Nat Int where shiftRight a b := Int.fdiv a (2 ^ b)
+instance : PyShiftLeft Bool Int Int where shiftLeft a b := (pyBoolToInt a) * (2 ^ b.toNat)
+instance : PyShiftRight Bool Int Int where shiftRight a b := Int.fdiv (pyBoolToInt a) (2 ^ b.toNat)
 
 /-!
 ## Reduction lemmas — `simp` rewrites the Python operators to the standard ones

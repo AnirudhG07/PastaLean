@@ -1,0 +1,4 @@
+import PastaBench.leetcode.MinimumDeletionsToMakeArrayDivisible.Generated
+namespace PastaBench.leetcode.MinimumDeletionsToMakeArrayDivisible
+-- TODO.
+end PastaBench.leetcode.MinimumDeletionsToMakeArrayDivisible

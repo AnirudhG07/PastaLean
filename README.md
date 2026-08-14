@@ -129,28 +129,6 @@ The type `T` comes from `TypeInfer`; a variable bound at *different* types acros
 
 </details>
 
-<details><summary>Nested Functions & Closures</summary>
-
-A **closure** is a nested function that reads a variable from the enclosing one — a *free variable* it "closes over":
-
-```python
-def make_adder(n):
-    def add(x):
-        return x + n     # n is free in `add`; it belongs to make_adder
-    return add
-make_adder(5)(3)         # 8 — the returned `add` still remembers n = 5
-```
-
-**The Lean problem:** you can't just move `add` to the top level (it would lose `n`), and Lean has no mutable enclosing scope to point back at.
-
-**How we deal — lambda lifting.** Every captured variable becomes an extra parameter of a **sibling `private partial def`** — `_make_adder'add := fun x n ↦ x + n` — passed at each call site (what's lifted is exactly `(names the inner reads) ∩ (names the outer binds)`; builtins/globals fall outside it). When the closure **escapes as a value** — returned, or a decorator's wrapper — we emit a genuine Lean closure that partial-applies the sibling with the captures baked in: `make_adder := fun n ↦ fun x ↦ _make_adder'add x n`. So returned closures, **currying**, and **decorators** all work, and stay **provable** — the sibling keeps its `[simp, taste_ingr]` tag, so `assert make_adder(5)(3) == 8` is proved automatically on conversion. (An un-inferable returned-closure param falls back to `PyAny`.)
-
-**Mutation** (`nonlocal ans; ans += 1`) is *threaded*: the capture is both a parameter and part of the return, each call rebinding it. The one genuinely hard case is a closure that mutates a captured cell **and escapes** (a stateful `counter()`), which needs a real reference cell — still to come.
-
-We use a sibling `private partial def` (not `where`/`let rec`, which would force the *outer* def `partial` and lose its provability). It all lives in `PyGens/Transform/ClosureConvert.lean` — no Python pass.
-
-</details>
-
 <details><summary>None and Optional</summary>
 
 Python's `None` and `Optional[T]` map to Lean's `Option`. Tree/linked-list fields default to `None`, so `TreeNode.left : Option TreeNode`; a field access then unwraps:
@@ -241,6 +219,60 @@ def describe(x):
 
 </details>
 
+<details><summary>Nested Functions & Closures</summary>
+
+A **closure** is a nested function that reads a variable from the enclosing one — a *free variable* it "closes over":
+
+```python
+def make_adder(n):
+    def add(x):
+        return x + n     # n is free in `add`; it belongs to make_adder
+    return add
+make_adder(5)(3)         # 8 — the returned `add` still remembers n = 5
+```
+
+**The Lean problem:** you can't just move `add` to the top level (it would lose `n`), and Lean has no mutable enclosing scope to point back at.
+
+**How we deal — lambda lifting.** Every captured variable becomes an extra parameter of a **sibling `private partial def`** — `_make_adder'add := fun x n ↦ x + n` — passed at each call site (what's lifted is exactly `(names the inner reads) ∩ (names the outer binds)`; builtins/globals fall outside it). When the closure **escapes as a value** — returned, or a decorator's wrapper — we emit a genuine Lean closure that partial-applies the sibling with the captures baked in: `make_adder := fun n ↦ fun x ↦ _make_adder'add x n`. So returned closures, **currying**, and **decorators** all work, and stay **provable** — the sibling keeps its `[simp, taste_ingr]` tag, so `assert make_adder(5)(3) == 8` is proved automatically on conversion. (An un-inferable returned-closure param falls back to `PyAny`.)
+
+**Mutation** (`nonlocal ans; ans += 1`) is *threaded*: the capture is both a parameter and part of the return, each call rebinding it. The one genuinely hard case is a closure that mutates a captured cell **and escapes** (a stateful `counter()`), which needs a real reference cell — still to come.
+
+We use a sibling `private partial def` (not `where`/`let rec`, which would force the *outer* def `partial` and lose its provability). It all lives in `PyGens/Transform/ClosureConvert.lean`.
+
+</details>
+
+<details><summary>Generators & <code>yield</code></summary>
+
+A **generator** is a function that `yield`s a lazy stream of values. We **materialise it to a `List`**: the body is rewritten to build and return a list, so every consumer (`for x in g()`, `list(g())`, `sum(g())`, comprehensions) just sees an ordinary `List` handled by the existing `PyIterable` protocol — no new consumer machinery.
+
+```python
+def squares(n):
+    for i in range(n):
+        yield i * i          #  ->  __gen'acc.append(i * i)
+list(squares(4))             # [0, 1, 4, 9]
+```
+
+Per generator, `yield e` → `acc.append(e)`, `yield from it` → `acc.extend(it)`, and `return` → `return acc` (in a generator, `return` just *stops*); the body is wrapped with `acc = []` … `return acc`. The `append`/`for`/`while` value-semantics threading is reused as-is. It lives in `PyGens/Transform/GeneratorLower.lean` and runs *before* type inference, so the accumulator gets a real element type — which is what makes **recursive** generators (`yield from inorder(node.left)`, backtracking `subsets`/`permutations`) and generator **pipelines** (`for x in doubled(evens(data))`) work. (Materialisation is eager, so an *infinite* generator consumed lazily won't terminate.)
+
+</details>
+
+<details><summary>Sequence backing: <code>List</code> to prove, <code>Array</code> to run</summary>
+
+A Python `list` is a dynamic array — O(1) amortized `append`, O(1) index — but a `List α`-backed `xs = xs ++ [v]` is O(n) and `xs[i]` is O(i), so an append/index loop becomes **O(n²)**. We keep *both* backings and use each where it wins. The **provable** twin (`fn`) stays `List α`: it is an inductive type with a free induction principle, so `taste?`/`mvcgen`, `omega`, and Mathlib's lemma library work naturally. The **runnable** twin (`fn'rn`) backs a `list` with `Array α` wherever every use is Array-portable, giving **O(1)** append/index.
+
+That O(1) is Lean 4's reference-counting model — "functional but in-place" (FBIP): `Array.push`/`set!`/`get!` mutate in place when the array is uniquely owned, which the codegen's threaded mutation (`xs := pyArrayAppend xs v`, rebinding the same name) guarantees. See Ullrich & de Moura, *[Counting Immutable Beans](https://arxiv.org/abs/1908.05647)* (IFL 2019) and Reinking, Xie, de Moura & Leijen, *[Perceus: Garbage Free Reference Counting with Reuse](https://www.microsoft.com/en-us/research/uploads/prod/2020/11/perceus-tr-v1.pdf)* (PLDI 2021). Because `Array α` is *defined as* `{ toList : List α }`, the two twins are the same value in two representations — not divergent implementations.
+
+The choice is **per value**, decided at compile time (`List.toArray`/`Array.toList` are each O(n), so flipping per-operation would reintroduce O(n²)): `Array` by default (wins build-by-`append` + random index), `List` fallback for a value dominated by prepend / `insert(0,·)` / `pop(0)` (where `List` is O(n) and `Array` O(n²)) or by any op not ported to `Array`. Details in [`PastaLean/README.md`](./PastaLean/README.md#sequence-backing-list-prove-vs-array-run).
+
+```python
+def f(n):
+    xs = []
+    for i in range(n): xs.append(i)   # fn'rn: Array push, O(1)   |  fn: List ++, provable
+    return sum(xs[i] for i in range(n))
+```
+
+</details>
+
 <details><summary>Python Decorators</summary>
 
 Python has decorators which are functions that modify the behavior of other functions. We support decorators in PastaLean by translating them to Lean functions that take a function as an argument and return a new function like a wrapper OR do syntax changes/noops since every decorator in Python hasn't been well translated. For example:
@@ -254,7 +286,69 @@ You can declare your own decorators in Python or use commonly supported OOP/libr
 
 </details>
 
+<details><summary><code>@cache</code> / <code>@lru_cache</code> memoization</summary>
+
+`@cache`/`@lru_cache` are value-transparent (memoization recomputes to the same result) but performance-critical: naive recursion recomputes exponentially. The **runnable** twin memoizes so exponential `@cache` DP runs in polynomial time; the **provable** twin stays the plain pure recursion (so it is still provable). The run twin is emitted as a `StateM`-threaded worker that shares one `HashMap` cache across the recursion, plus a pure wrapper that seeds a fresh cache per top-level call:
+
+```lean
+partial def fib'memo'rn : Int → StateM (Std.HashMap Int Int) Int := fun (n : Int) => do
+  match (← get)[n]? with
+  | some v => return v
+  | none => let v ← (do if n < 2 then return n
+                        else return ((← fib'memo'rn (n-1)) + (← fib'memo'rn (n-2))))
+            modify (·.insert n v); return v
+def fib'rn : Int → Int := fun (n : Int) => (fib'memo'rn n).run' ∅
+```
+
+Recursive self-calls in the body are lowered to `(← fib'memo'rn …)`, so the recursion threads the shared cache; `do`-notation hoists each `(←…)` to a bind. This is pure (no `unsafe`/global ref, so it runs under `lean --run` and native alike). It turns exponential recomputation into linear — the complexity-theoretic backing for memoization is Avanzini & Dal Lago, *[On Sharing, Memoization, and Polynomial Time](https://arxiv.org/abs/1501.00894)* (Information and Computation, 2017).
+
+**Coverage.** Params of type `int`/`bool`/`str` (a `Hashable`/`BEq` key); one param keys directly, several key on the tuple `(a, b, …) : A × B × …`. The common competitive-programming shape — a **nested `@cache dfs(i, j, …)`** (multi-arg, often capturing the grid/array) — works: closure-conversion lifts the `dfs` to a sibling def whose captures become trailing params, and the cache is keyed on the **original** params only (a capture is constant across the recursion and may be a non-hashable container, so it's threaded through but not keyed). What isn't memoised **falls back to the plain recursive def** (correct, just not faster): a self-call inside a ternary / `and` / `or` / lambda / comprehension (a `(←…)` can't hoist out of a lazily-evaluated position) or a param whose type isn't inferred. `example_scripts/general/decorators.py` exercises the memoised path.
+
+</details>
+
 any many more... like many many many more small annoying features...
+
+## Verifying with contracts (and how postcondition proving can fail)
+
+You annotate a Python function with `Requires`/`Ensures` (plus `Invariant`/`Decreases`/`Assert`), and
+PastaLean turns it into a Hoare-triple spec on the provable twin:
+
+- **precondition** = the conjunction of every `Requires`/`Assume`,
+- **postcondition** = the conjunction of every `Ensures` (and every `Result()`-bearing `Assert`),
+- a bare `Assert(...)` about *intermediate* state stays an in-body checkpoint (a no-op), and
+  `Invariant`/`Decreases` drive the loop's `mvcgen` proof,
+- the postcondition is `True` **only** when the function declares no `Ensures`/`Result`-`Assert` at all
+  — and a `True` postcondition asserts *nothing*, so it proves trivially and verifies nothing.
+- `Ensures`/`Result`-`Assert` must sit at the start/end of the body, never sandwiched *between loops*
+  (that would be a program-point checkpoint, not a postcondition) — PastaLean rejects that.
+
+The transpiler emits the spec and tries to discharge it automatically (`taste?`/`mvcgen`). **But a
+compiling spec is not a proved spec** — and worse, **a postcondition can be flat-out false**, in which
+case no proof exists. This is the single biggest way verification "fails miserably":
+
+```python
+def missingNumber(arr: list[int]) -> int:
+    Requires(len(arr) >= 1)
+    Requires((arr[-1] - arr[0]) % len(arr) == 0)
+    # ⚠️ FALSE as a postcondition. It only holds when `arr` is a genuine arithmetic
+    #    progression missing exactly one term — a property the two Requires do NOT capture.
+    Ensures(min(arr[0], arr[-1]) <= Result() <= max(arr[0], arr[-1]))
+    return (arr[0] + arr[-1]) * (len(arr) + 1) // 2 - sum(arr)
+```
+
+For `arr = [0, 50, -99]` both `Requires` hold (`len == 3`, `(-99 - 0) % 3 == 0`), but the function
+returns **-149**, while `min(0, -99) == -99` — so `-99 <= -149` is false. The postcondition is
+unprovable because it is *not true*. PastaLean will happily generate the `_spec` theorem and it will
+sit there with a `sorry` forever: **the contract, not the prover, is the bug.**
+
+Two lessons:
+
+1. **Strengthen the precondition** to the domain where the property holds ("`arr` is an arithmetic
+   progression"), or **weaken the postcondition** to something true (e.g. the direct
+   `Ensures(Result() == (arr[0] + arr[-1]) * (len(arr) + 1) // 2 - sum(arr))`).
+2. Even a *true* postcondition can be out of automated reach — a functional characterization like
+   `Ensures(Result() == number_of_pairs(i, j) with i < j and words[i] == reverse(words[j]))` is true
+   but needs a bespoke inductive proof; `taste?`/`mvcgen` will leave a `sorry`, and that is expected.
 
 ## Libraries
 

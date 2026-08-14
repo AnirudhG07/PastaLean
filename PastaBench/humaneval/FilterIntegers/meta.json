@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/22",
+  "problem": "filter-integers",
+  "module": "FilterIntegers",
+  "method": "filter_integers",
+  "params": [
+    "values"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

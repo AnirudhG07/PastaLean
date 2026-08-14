@@ -1,0 +1,13 @@
+{
+  "problem": "queries-on-a-permutation-with-key",
+  "module": "QueriesOnAPermutationWithKey",
+  "method": "processQueries",
+  "params": [
+    "queries",
+    "m"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 98
+}

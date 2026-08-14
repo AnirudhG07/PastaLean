@@ -1,0 +1,4 @@
+import PastaBench.leetcode.CountGoodNodesInBinaryTree.Generated
+namespace PastaBench.leetcode.CountGoodNodesInBinaryTree
+-- TODO.
+end PastaBench.leetcode.CountGoodNodesInBinaryTree

@@ -1,0 +1,202 @@
+[
+  {
+    "input": "l = [5, 3, 5, 2, 3, 3, 9, 0, 123]",
+    "output": "[0, 2, 3, 5, 9, 123]"
+  },
+  {
+    "input": "l = [1, 1, 1, 1]",
+    "output": "[1]"
+  },
+  {
+    "input": "l = [2, 1, 2, 1]",
+    "output": "[1, 2]"
+  },
+  {
+    "input": "l = [0, 0, 0, 0]",
+    "output": "[0]"
+  },
+  {
+    "input": "l = [-1, 5, -1, 3, 5, 2, 5]",
+    "output": "[-1, 2, 3, 5]"
+  },
+  {
+    "input": "l = ['a', 'b', 'b', 'c', 'd', 'd']",
+    "output": "['a', 'b', 'c', 'd']"
+  },
+  {
+    "input": "l = [1.1, 2.2, 3.3, 4.4, 4.4]",
+    "output": "[1.1, 2.2, 3.3, 4.4]"
+  },
+  {
+    "input": "l = [True, False, False, True]",
+    "output": "[False, True]"
+  },
+  {
+    "input": "l = []",
+    "output": "[]"
+  },
+  {
+    "input": "l = [2, 2, 2, 2, 2, 2]",
+    "output": "[2]"
+  },
+  {
+    "input": "l = ['apple', 'banana', 'orange']",
+    "output": "['apple', 'banana', 'orange']"
+  },
+  {
+    "input": "l = [True]",
+    "output": "[True]"
+  },
+  {
+    "input": "l = [2, 1, 2, 1, 1, 1]",
+    "output": "[1, 2]"
+  },
+  {
+    "input": "l = ['apple', 'banana', 'd', 'orange']",
+    "output": "['apple', 'banana', 'd', 'orange']"
+  },
+  {
+    "input": "l = ['apple', 'banana', 'lQd', 'orange']",
+    "output": "['apple', 'banana', 'lQd', 'orange']"
+  },
+  {
+    "input": "l = ['apple', 'banana', 'olQdrange']",
+    "output": "['apple', 'banana', 'olQdrange']"
+  },
+  {
+    "input": "l = [False, True, False, False, True, False]",
+    "output": "[False, True]"
+  },
+  {
+    "input": "l = ['apple', 'd', 'orange']",
+    "output": "['apple', 'd', 'orange']"
+  },
+  {
+    "input": "l = [2, 1, 1, 1]",
+    "output": "[1, 2]"
+  },
+  {
+    "input": "l = [False, False, False, True, True]",
+    "output": "[False, True]"
+  },
+  {
+    "input": "l = [2, 2, 5, 2, 2, 2]",
+    "output": "[2, 5]"
+  },
+  {
+    "input": "l = [1, 1, 1]",
+    "output": "[1]"
+  },
+  {
+    "input": "l = [2, 1, 1, 1, 1]",
+    "output": "[1, 2]"
+  },
+  {
+    "input": "l = [3.0219968583931567, 1.1, 2.2, 4.4, 4.4]",
+    "output": "[1.1, 2.2, 3.0219968583931567, 4.4]"
+  },
+  {
+    "input": "l = [2, 2, 5, 2, 2, 2, 2, 2]",
+    "output": "[2, 5]"
+  },
+  {
+    "input": "l = [2, 1, 2, 1, 1, 3, 1]",
+    "output": "[1, 2, 3]"
+  },
+  {
+    "input": "l = [-1, 1]",
+    "output": "[-1, 1]"
+  },
+  {
+    "input": "l = [1.1, 2.2, 3.3, 4.4, 4.4, 2.2]",
+    "output": "[1.1, 2.2, 3.3, 4.4]"
+  },
+  {
+    "input": "l = [1.1, 3.187467502157803, 3.3, 4.4, 4.4]",
+    "output": "[1.1, 3.187467502157803, 3.3, 4.4]"
+  },
+  {
+    "input": "l = [1, 2, 1, 1]",
+    "output": "[1, 2]"
+  },
+  {
+    "input": "l = [1.1, 2.2, 3.3, 4.4, 4.4, 2.2, 1.1]",
+    "output": "[1.1, 2.2, 3.3, 4.4]"
+  },
+  {
+    "input": "l = [2, 1, 2, 1, 1, 1, 1]",
+    "output": "[1, 2]"
+  },
+  {
+    "input": "l = [1.1, 2.2, 3.3, 4.4, 4.4, 4.4]",
+    "output": "[1.1, 2.2, 3.3, 4.4]"
+  },
+  {
+    "input": "l = ['apple', 'd', 'orange', 'd']",
+    "output": "['apple', 'd', 'orange']"
+  },
+  {
+    "input": "l = [2, 1, 2, 1, 1, 1, 2, 1]",
+    "output": "[1, 2]"
+  },
+  {
+    "input": "l = ['apple', 'banana', 'lQd', 'oralQdnge']",
+    "output": "['apple', 'banana', 'lQd', 'oralQdnge']"
+  },
+  {
+    "input": "l = ['apple', 'banana', 'lQd', 'llQd', 'orange']",
+    "output": "['apple', 'banana', 'lQd', 'llQd', 'orange']"
+  },
+  {
+    "input": "l = [2, 1, 1, 1, 2, 1]",
+    "output": "[1, 2]"
+  },
+  {
+    "input": "l = [True, False, False, True, False]",
+    "output": "[False, True]"
+  },
+  {
+    "input": "l = [3.0219968583931567, 1.1, 2.2, 2.2, 4.4, 4.4, 3.0219968583931567, 2.2]",
+    "output": "[1.1, 2.2, 3.0219968583931567, 4.4]"
+  },
+  {
+    "input": "l = ['alQd', 'dapple', 'banana', 'oralQdnge']",
+    "output": "['alQd', 'banana', 'dapple', 'oralQdnge']"
+  },
+  {
+    "input": "l = [True, True, False, False, True, True]",
+    "output": "[False, True]"
+  },
+  {
+    "input": "l = [2, 1, 1, 2, 1, 1]",
+    "output": "[1, 2]"
+  },
+  {
+    "input": "l = [3, 1, 1, 1]",
+    "output": "[1, 3]"
+  },
+  {
+    "input": "l = ['apple', 'banana', 'orange', 'banana']",
+    "output": "['apple', 'banana', 'orange']"
+  },
+  {
+    "input": "l = [1, 1, 1, 2, 1, 1]",
+    "output": "[1, 2]"
+  },
+  {
+    "input": "l = [True, False, True, True, True]",
+    "output": "[False, True]"
+  },
+  {
+    "input": "l = [3.0219968583931567, 1.1, 2.2, 4.4]",
+    "output": "[1.1, 2.2, 3.0219968583931567, 4.4]"
+  },
+  {
+    "input": "l = [2, 1, 1, 1, 1, 2, 1]",
+    "output": "[1, 2]"
+  },
+  {
+    "input": "l = [3.4145447979043606, 1.5142493540603779, 1.1, 2.2, 2.2, 4.4, 4.4, 3.0219968583931567, 2.2]",
+    "output": "[1.1, 1.5142493540603779, 2.2, 3.0219968583931567, 3.4145447979043606, 4.4]"
+  }
+]

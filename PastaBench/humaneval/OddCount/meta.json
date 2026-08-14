@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/113",
+  "problem": "odd-count",
+  "module": "OddCount",
+  "method": "odd_count",
+  "params": [
+    "lst"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

@@ -1,0 +1,12 @@
+{
+  "problem": "best-sightseeing-pair",
+  "module": "BestSightseeingPair",
+  "method": "maxScoreSightseeingPair",
+  "params": [
+    "values"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 106
+}

@@ -9,7 +9,9 @@ open Std.Do
 set_option linter.all false
 set_option mvcgen.warning false
 
-set_option maxHeartbeats 0
+set_option maxHeartbeats 200000
+
+namespace PastaLean.User.Root
 
 def l :=
   PastaLean.pyStringSplit "gh yy uu"
@@ -31,3 +33,5 @@ def s1 :=
 
 def s2 :=
   PastaLean.pyStringLower s
+
+end PastaLean.User.Root

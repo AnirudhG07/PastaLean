@@ -9,7 +9,9 @@ open Std.Do
 set_option linter.all false
 set_option mvcgen.warning false
 
-set_option maxHeartbeats 0
+set_option maxHeartbeats 200000
+
+namespace PastaLean.User.Root
 
 def process_data := fun (data : List (List Rat)) ↦ fun (weights : List (List Rat)) ↦
   ((do
@@ -30,8 +32,8 @@ def process_data := fun (data : List (List Rat)) ↦ fun (weights : List (List R
           let e := caught
           let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg s! "Processing failed: {e}"]
           -- Fallback to a zero matrix if dimensions fail
-          let __py_ret_1 := Libraries.numpy.pyNumpyZerosRat ((2 : Int), (2 : Int))
-          return __py_ret_1
+          let p'_ret_1 := Libraries.numpy.pyNumpyZerosRat ((2 : Int), (2 : Int))
+          return p'_ret_1
         else
           throw caught) :
     PastaLean.ProofMode.PyProofM _)
@@ -57,8 +59,8 @@ def process_data'rn : List (List Float) → List (List Float) → PastaLean.PyEx
       let e := caught
       let _ ← pyPrintIO [pyPrintArg s! "Processing failed: {e}"]
       -- Fallback to a zero matrix if dimensions fail
-      let __py_ret_1 := Libraries.numpy.pyNumpyZerosFloat ((2 : Int), (2 : Int))
-      return __py_ret_1
+      let p'_ret_1 := Libraries.numpy.pyNumpyZerosFloat ((2 : Int), (2 : Int))
+      return p'_ret_1
     else
       throw caught
 
@@ -83,10 +85,10 @@ def run_example :=
         PastaLean.ProofMode.pyPrintProof [pyPrintArg s! "Flattened Weights: {Libraries.numpy.pyNumpyFlatten weights}"]
       -- 3. Shape Info
       -- Note: np.shape returns (rows, cols)
-      let __unpack_value_1 := Libraries.numpy.pyNumpyShape dataset
-      let __unpack_pair_1 := __unpack_value_1
-      let mut rows := PastaLean.pyListGetItem __unpack_pair_1 (0 : Int)
-      let mut cols := PastaLean.pyListGetItem __unpack_pair_1 (1 : Int)
+      let p'_unpack_value_1 := Libraries.numpy.pyNumpyShape dataset
+      let p'_unpack_pair_1 := p'_unpack_value_1
+      let mut rows : Int := PastaLean.pyListGetItem p'_unpack_pair_1 (0 : Int)
+      let mut cols : Int := PastaLean.pyListGetItem p'_unpack_pair_1 (1 : Int)
       let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg s! "Dataset Shape: {rows }x{cols}"]
       -- 4. Error Handling Simulation
       let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg "\n[3] Exception Handling (Mismatched Dimensions):"]
@@ -115,10 +117,10 @@ def run_example'rn :=
       let _ ← pyPrintIO [pyPrintArg s! "Flattened Weights: {Libraries.numpy.pyNumpyFlatten weights}"]
       -- 3. Shape Info
       -- Note: np.shape returns (rows, cols)
-      let __unpack_value_1 := Libraries.numpy.pyNumpyShape dataset
-      let __unpack_pair_1 := __unpack_value_1
-      let mut rows := PastaLean.pyListGetItem __unpack_pair_1 (0 : Int)
-      let mut cols := PastaLean.pyListGetItem __unpack_pair_1 (1 : Int)
+      let p'_unpack_value_1 := Libraries.numpy.pyNumpyShape dataset
+      let p'_unpack_pair_1 := p'_unpack_value_1
+      let mut rows : Int := PastaLean.pyListGetItem p'_unpack_pair_1 (0 : Int)
+      let mut cols : Int := PastaLean.pyListGetItem p'_unpack_pair_1 (1 : Int)
       let _ ← pyPrintIO [pyPrintArg s! "Dataset Shape: {rows }x{cols}"]
       -- 4. Error Handling Simulation
       let _ ← pyPrintIO [pyPrintArg "\n[3] Exception Handling (Mismatched Dimensions):"]
@@ -132,7 +134,7 @@ def main : IO Unit := do
   let inputLines := String.splitOn inputText "\n"
   let inputStream : PastaLean.ProofMode.IOStream :=
     ⟨0, fun i => PastaLean.ProofMode.IOResult.success (List.getD inputLines i "")⟩
-  let initState : PastaLean.ProofMode.IOState := ⟨inputStream, []⟩
+  let initState : PastaLean.ProofMode.IOState := { input := inputStream, output := [] }
   let (result, finalState) :=
     (((do
           let _ ← run_example
@@ -159,3 +161,5 @@ def main'rn : IO Unit := do
     pure ()
   | .error err =>
     throw (IO.userError (toString err))
+
+end PastaLean.User.Root

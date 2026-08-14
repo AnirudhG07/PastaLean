@@ -111,23 +111,40 @@ def normalize(text):
 
 
 def summarize_error(status, log_text):
-    """A concise one-line reason from a failing stage's output."""
+    """A reason string from a failing stage's output. Keeps the FULL first Lean diagnostic — the
+    error message AND its continuation lines (the offending type / instance / expression), which is
+    what actually distinguishes one failure cluster from another (`PyGetItem (Option TreeNode × ℤ) ℤ`
+    vs `PyGetItem (List ℤ) Bool`). One truncated headline line collapses unrelated bugs together."""
     lines = [ln.rstrip() for ln in (log_text or "").splitlines() if ln.strip()]
     if not lines:
         return "(no error output)"
     if status == "convert_fail":
         for ln in reversed(lines):
             if "Error generating code:" in ln:
-                return ln.split("Error generating code:", 1)[1].strip()
+                # Keep the innermost (most specific) codegen message, not the outer wrapper chain.
+                return ln.rsplit("Error generating code:", 1)[-1].split(": ", 1)[-1].strip() \
+                    if ": " in ln.rsplit("Error generating code:", 1)[-1] \
+                    else ln.rsplit("Error generating code:", 1)[-1].strip()
         return lines[-1].strip()
-    for ln in lines:  # compile_fail: first Lean diagnostic mentioning an error
+    # compile_fail: the first Lean diagnostic (`file:line:col: error(kind): msg`) plus the indented
+    # detail lines that follow it, up to the next diagnostic / `Hint:` / blank. Joined with " | ".
+    DIAG = re.compile(r"^.*?:\d+:\d+:\s*(?:error|warning)")
+    for i, ln in enumerate(lines):
         low = ln.lower()
-        if "error" in low and ":" in ln:
-            tail = ln[low.find("error"):]
+        if "error" in low and DIAG.match(ln):
+            head = ln[low.find("error"):]
             for sep in ("): ", "error: "):
-                if sep in tail:
-                    return tail.split(sep, 1)[1].strip()
-            return tail.strip()
+                if sep in head:
+                    head = head.split(sep, 1)[1].strip()
+                    break
+            detail = []
+            for cont in lines[i + 1:]:
+                if DIAG.match(cont) or cont.lstrip().startswith("Hint:"):
+                    break
+                detail.append(cont.strip())
+                if len(detail) >= 4:
+                    break
+            return " | ".join([head, *detail]).strip()
     return lines[0].strip()
 
 
@@ -385,10 +402,118 @@ def _lean_type_of(values):
     if "str" in seen:
         return None if seen != {"str"} else "String"
     if "float" in seen:
-        return "Float"
+        # A column mixing int AND float (e.g. `any_int`, which type-checks its args) must decode as
+        # `PyAny` so ints stay `.int` and floats stay `.float` — collapsing to `Float` would make
+        # `type(x) == int` wrongly false for the integer rows. A pure-float column stays `Float`.
+        return "PastaLean.PyAny" if "int" in seen else "Float"
     if seen == {"bool"}:
         return "Bool"
     return "Int"  # int (or int+bool, which coerces), or no information at all
+
+
+def _balanced_paren(s, i):
+    """`s[i]` must be '('. Return (inner-text-without-the-outer-parens, index-just-past-the-close),
+    or (None, len(s)) if unbalanced."""
+    depth = 0
+    for j in range(i, len(s)):
+        if s[j] == "(":
+            depth += 1
+        elif s[j] == ")":
+            depth -= 1
+            if depth == 0:
+                return s[i + 1:j], j + 1
+    return None, len(s)
+
+
+def _split_top_level(s, sep):
+    """Split `s` on the single char `sep`, but only at parenthesis-depth 0."""
+    parts, depth, cur = [], 0, ""
+    for ch in s:
+        if ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+        if ch == sep and depth == 0:
+            parts.append(cur)
+            cur = ""
+        else:
+            cur += ch
+    parts.append(cur)
+    return parts
+
+
+# Numeric-tower names the exact (`ℚ`/`ℝ`) twin can emit, mapped to the runnable JSON-decodable atom.
+_DECODABLE_ATOM = {
+    "Int": "Int", "Nat": "Nat", "Bool": "Bool", "String": "String", "Float": "Float",
+    "ℤ": "Int", "ℕ": "Nat", "ℚ": "Float", "ℝ": "Float", "Rat": "Float",
+}
+
+
+def _normalize_lean_type(t):
+    """Map a Lean type from the twin's signature to a JSON-decodable harness field type, or None if
+    the runtime `fromJson?` decoder can't handle it (`PyAny`, functions, class/struct types, …).
+    Handles atoms, `List X`, and tuples `A × B × …`, recursively."""
+    t = t.strip()
+    # Peel one fully-enclosing paren pair: `(List Int)` → `List Int`.
+    while t.startswith("(") and t.endswith(")"):
+        inner, end = _balanced_paren(t, 0)
+        if inner is None or end != len(t):
+            break
+        t = inner.strip()
+    if t in _DECODABLE_ATOM:
+        return _DECODABLE_ATOM[t]
+    prod = _split_top_level(t, "×")
+    if len(prod) > 1:
+        parts = [_normalize_lean_type(p) for p in prod]
+        if any(p is None for p in parts):
+            return None
+        return "(" + " × ".join(parts) + ")"
+    if t.startswith("List "):
+        inner = _normalize_lean_type(t[len("List "):])
+        return None if inner is None else f"(List {inner})"
+    return None
+
+
+def _signature_arg_types(converted_lean, fn_name, arity):
+    """Parse the `'rn` twin's explicit parameter types from its signature, so harness field types
+    come from the transpiler's inferred signature rather than the (possibly out-of-spec) test data —
+    one stray Float in an Int column otherwise flips the whole field to `List Float` and the wrapper
+    fails to elaborate against the `List Int` twin. Returns a list of `arity` decodable type strings
+    (`None` per position it cannot supply), or `None` to fall back entirely to data inference.
+
+    The twin is `def NAME'rn := fun (a : T) ↦ fun (b : U) ↦ …`; we walk the leading `fun (…) ↦`
+    binder chain, normalizing each binder's ascribed type."""
+    m = re.search(r"\bdef\s+" + re.escape(fn_name) + r"'rn\s*:=", converted_lean)
+    if m is None:
+        return None
+    s, i, n = converted_lean, m.end(), len(converted_lean)
+    types, guard = [], 0
+    while len(types) < arity and guard < 100000:
+        guard += 1
+        while i < n and s[i].isspace():
+            i += 1
+        if i >= n:
+            break
+        if s.startswith("fun", i):
+            i += 3
+        elif s.startswith("↦", i):
+            i += len("↦")
+        elif s.startswith("=>", i):
+            i += 2
+        elif s[i] == "(":
+            content, end = _balanced_paren(s, i)
+            i = end
+            if content is None or ":" not in content:
+                return None  # unparseable binder → don't trust any of it
+            names_part, _, ty = content.partition(":")
+            nty = _normalize_lean_type(ty)
+            for _ in names_part.split():  # `(a b : Int)` shares one type across names
+                types.append(nty)
+        else:
+            break  # implicit binder `{…}` or the function body — stop
+    if not types:
+        return None
+    return (types + [None] * arity)[:arity]
 
 
 def build_test_harness(converted_lean, fn_name, cases, data_path):
@@ -411,9 +536,19 @@ def build_test_harness(converted_lean, fn_name, cases, data_path):
     arity = len(renderable[0][1]) if renderable else 0
     kept = [r for r in renderable if len(r[1]) == arity]
     arg_types = [_lean_type_of([r[1][i] for r in kept]) for i in range(arity)]
-    exp_type = _lean_type_of([r[2] for r in kept])
 
-    if not kept or exp_type is None or any(t is None for t in arg_types):
+    # Prefer the twin's inferred parameter types over types guessed from the (possibly out-of-spec)
+    # test data: one stray Float in an Int column otherwise flips the whole field to `List Float`,
+    # and the wrapper fails to elaborate against the `List Int` twin. Cases whose data doesn't
+    # conform to the signature type are then dropped by the runtime `fromJson?` decoder, rather than
+    # breaking the whole harness compile. Falls back to data inference where the signature is
+    # unparseable or not a decodable type.
+    sig_types = _signature_arg_types(converted_lean, fn_name, arity)
+    if sig_types is not None:
+        arg_types = [sig if sig is not None else data
+                     for sig, data in zip(sig_types, arg_types)]
+
+    if not kept or any(t is None for t in arg_types):
         body = "\n".join([converted_lean.rstrip(), "",
                           'def main : IO Unit := IO.println "PASSED 0/0"', ""])
         return body, [], "[]"
@@ -421,25 +556,46 @@ def build_test_harness(converted_lean, fn_name, cases, data_path):
     runnable = [idx for (idx, _a, _e) in kept]
     data_json = json.dumps([[idx] + args + [expected] for (idx, args, expected) in kept])
 
-    names = ["idx"] + [f"a{i}" for i in range(arity)] + ["e"]
-    field_types = ["Nat"] + arg_types + [exp_type]
+    # The expected value is NOT given a data-inferred type — a stray Float in the *result* column
+    # would otherwise mistype `e` (`List Float`) against the twin's `List Int` return and fail the
+    # whole compile. Instead it's carried as a raw `Json` and decoded per-case AT THE CALL'S ACTUAL
+    # RESULT TYPE via `_decodeLike _got`, so tuple/int/float returns all resolve correctly and only
+    # genuinely out-of-spec expected values are dropped (not compiled away).
+    in_names = ["idx"] + [f"a{i}" for i in range(arity)]
+    in_types = ["Nat"] + arg_types
     disc = ", ".join(f"Lean.fromJson? (α := {t}) (f.getD {k} .null)"
-                     for k, t in enumerate(field_types))
-    ok_pat = ", ".join(f".ok {n}" for n in names)
-    wild = ", ".join("_" for _ in field_types)
-    tuple_ty = " × ".join(field_types)
-    pat = "(" + ", ".join(names) + ")"
+                     for k, t in enumerate(in_types))
+    ok_pat = ", ".join(f".ok {n}" for n in in_names)
+    wild = ", ".join("_" for _ in in_types)
+    tuple_ty = " × ".join(in_types + ["Lean.Json"])
+    pat = "(" + ", ".join(in_names + ["ejson"]) + ")"
     call = rn + ((" " + " ".join(f"a{i}" for i in range(arity))) if arity else "")
     path_lit = str(data_path).replace("\\", "\\\\").replace('"', '\\"')
     body = "\n".join([
         "import Lean.Data.Json",
         converted_lean.rstrip(), "",
+        # Float results are compared with a tolerance, not exact `==`: Lean's Float parse/division can
+        # differ from CPython's by ~1 ULP, so bit-equality is the wrong test for a floating-point
+        # answer. Non-float types fall back to `BEq` (exact). Lists/tuples lift the comparison.
+        "private class _PyTestEq (α : Type) where teq : α → α → Bool",
+        "private instance : _PyTestEq Float := "
+        "⟨fun a b => (a - b).abs ≤ (1e-9 : Float) + (1e-9 : Float) * b.abs⟩",
+        "private instance (priority := 100) {α} [BEq α] : _PyTestEq α := ⟨(· == ·)⟩",
+        "private instance {α} [_PyTestEq α] : _PyTestEq (List α) := "
+        "⟨fun a b => a.length == b.length && (a.zip b).all (fun p => _PyTestEq.teq p.1 p.2)⟩",
+        "private instance {α β} [_PyTestEq α] [_PyTestEq β] : _PyTestEq (α × β) := "
+        "⟨fun a b => _PyTestEq.teq a.1 b.1 && _PyTestEq.teq a.2 b.2⟩",
+        "private def _pyTestEq {α} [_PyTestEq α] (a b : α) : Bool := _PyTestEq.teq a b", "",
+        # Decode the expected JSON at the SAME type as the value the twin computed: `_pat`'s type
+        # (`α`) is unified with `_got` at the call site, so no return-type annotation is needed.
+        "private def _decodeLike {α : Type} [Lean.FromJson α] (_pat : α) "
+        "(j : Lean.Json) : Option α := (Lean.fromJson? j).toOption", "",
         f"private def _decodeCase' (j : Lean.Json) : Option ({tuple_ty}) :=",
         "  match j.getArr? with",
         "  | .error _ => none",
         "  | .ok f =>",
         f"    match {disc} with",
-        f"    | {ok_pat} => some ({', '.join(names)})",
+        f"    | {ok_pat} => some ({', '.join(in_names)}, f.getD {arity + 1} .null)",
         f"    | {wild} => none", "",
         "def main : IO Unit := do",
         "  let _out ← IO.getStdout",
@@ -450,13 +606,18 @@ def build_test_harness(converted_lean, fn_name, cases, data_path):
         "  let mut _p := 0",
         "  let mut _t := 0",
         f"  for {pat} in _cases do",
-        "    _t := _t + 1",
+        f"    let _got := {call}",
+        "    match _decodeLike _got ejson with",
+        # Expected value undecodable at the result type → out-of-spec case, drop (don't count).
+        "    | none => pure ()",
+        "    | some e =>",
+        "      _t := _t + 1",
         # `repr` prints what Lean computed so a failure is debuggable without a rerun.
-        f"    if ({call}) == e then _p := _p + 1",
-        f'    else IO.println s!"FAIL {{idx}}: got {{repr ({call})}}"',
+        "      if _pyTestEq _got e then _p := _p + 1",
+        '      else IO.println s!"FAIL {idx}: got {repr _got}"',
         # Flush a running count each case so a native run that times out still reports partials
         # (how many passed / attempted before it hung) instead of a bare 0/N.
-        '    _out.putStr s!"PROG {_t} {_p}\\n"; _out.flush',
+        '      _out.putStr s!"PROG {_t} {_p}\\n"; _out.flush',
         '  IO.println s!"PASSED {_p}/{_t}"', ""])
     return body, runnable, data_json
 
@@ -725,7 +886,7 @@ class CPastaEval:
 
     def __init__(self, dataset, *, source=None, timeout=15, max_tests=0, skip_python=False,
                  random_n=None, seed=0, problems=None, max_solutions=3, split="test",
-                 workers=None, interpret=False, jobs=None,
+                 workers=None, interpret=False, jobs=None, native_chunk=500,
                  exclude_file="cp_harness/excluded_problems.txt"):
         self.dataset = Path(dataset)
         self.source = source
@@ -739,6 +900,10 @@ class CPastaEval:
         # `lake build` parallelism. Lake defaults to *every* core, which starves the rest of the
         # machine; leave headroom (~3/4 of cores, hard-capped) unless `--jobs` says otherwise.
         self.jobs = jobs or max(1, min(48, ((os.cpu_count() or 4) * 3) // 4))
+        # Native dispatcher chunk size: harnesses per linked `cpharness_run` binary. One giant binary
+        # over the whole corpus (~2100 harnesses) can fail to link/compile, and that used to zero out
+        # the entire evaluation; chunking bounds the link scale and the blast radius of any failure.
+        self.native_chunk = native_chunk
         self.max_tests = max_tests
         self.skip_python = skip_python
         self.random_n = random_n
@@ -978,13 +1143,31 @@ class CPastaEval:
 
     # -- convert -----------------------------------------------------------------------
 
-    def compile_check(self, lean_path):
-        """Elaborate a generated Lean file; return (ok, error_text)."""
+    def compile_check(self, lean_path, timeout=180):
+        """Elaborate a generated Lean file; return (ok, error_text).
+
+        A generated program can hang the elaborator/kernel (e.g. a closed program over reducible
+        library fns, which emits `set_option maxHeartbeats 0` so there is no heartbeat backstop). A
+        bare `subprocess.run` with no timeout then blocks the ENTIRE sweep forever. We cap it and, on
+        timeout, kill the whole process group (`lake` spawns `lean`, which would otherwise orphan and
+        keep burning a core) so one bad file becomes a single `compile_fail`, not a dead run.
+        """
         # Resolve to absolute: the command runs with cwd=REPO_ROOT but `lean_path` is relative to the
         # dataset, so a relative `--dataset` yields a spurious "no such file" compile_fail otherwise.
-        proc = subprocess.run(["lake", "env", "lean", str(Path(lean_path).resolve())],
-                              cwd=REPO_ROOT, capture_output=True, text=True)
-        return (True, "") if proc.returncode == 0 else (False, proc.stderr or proc.stdout)
+        proc = subprocess.Popen(["lake", "env", "lean", str(Path(lean_path).resolve())],
+                                cwd=REPO_ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                text=True, start_new_session=True)
+        try:
+            out, err = proc.communicate(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            import signal
+            try:
+                os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+            proc.communicate()
+            return (False, f"compile timed out after {timeout}s (elaboration/kernel hang)")
+        return (True, "") if proc.returncode == 0 else (False, err or out)
 
     def convert_solution(self, sol_path, lean_dir, wrap):
         """Translate one solution and compile-check it. Returns (status, concise_error_or_None)."""
@@ -1240,13 +1423,23 @@ class CPastaEval:
             deltas["py_total"] += py_total
             deltas["solutions"] += 1
 
-            # A compiling solution that disagrees with CPython is a runtime/API bug — the same
-            # `lean_wrong_python_right` bucket the stdio model reports.
-            if lean_pass < py_pass or (err and py_total):
+            # A compiling solution that disagrees with the reference is a runtime/API bug. Prefer the
+            # CPython oracle when Python actually ran; otherwise fall back to the dataset's
+            # expected-answer oracle (`lean_pass < lean_total`), so wrong answers surface even when
+            # Python is skipped — the LeetCode path skips Python (`"python": null`), which used to make
+            # this check dead (`py_pass = py_total = 0`) and report a false "0 divergences".
+            if py_total:
+                lean_wrong = lean_pass < py_pass or bool(err)
+                classification = "lean_wrong_python_right"
+            else:
+                lean_wrong = lean_pass < lean_total
+                classification = "lean_wrong_expected_right"
+            if lean_wrong:
                 diverged.append({
                     "problem": prob_dir.name, "solution": name, "model": "function",
-                    "classification": "lean_wrong_python_right",
-                    "lean": f"{lean_pass}/{lean_total}", "python": f"{py_pass}/{py_total}",
+                    "classification": classification,
+                    "lean": f"{lean_pass}/{lean_total}",
+                    "python": f"{py_pass}/{py_total}" if py_total else "skipped",
                     "lean_error": err, "harness": str(harness_path),
                     "failures": failures[:5],
                 })
@@ -1438,40 +1631,74 @@ class CPastaEval:
 
         # Phase 2: link the dispatcher over the harnesses that compiled. The match has one arm per
         # harness, so at corpus scale it blows the elaborator's recursion depth (default 512) and
-        # then the LCNF compiler's heartbeat budget — both are a function of harness COUNT, not
-        # content, so both guards are lifted here rather than per-harness.
-        (native_dir / "CpHarness.lean").write_text(
-            "\n".join(f"import CpHarness.H{i}" for i in ok_ids) + "\n")
-        dispatch = (["import CpHarness", "",
-                     "set_option maxRecDepth 1000000", "set_option maxHeartbeats 0", "",
-                     "def main (args : List String) : IO UInt32 := do",
-                     "  match args.head? with"]
-                    + [f'  | some "{i}" => CpHarness.H{i}.run' for i in ok_ids]
-                    + ["  | _ => pure ()", "  return 0"])
-        (native_dir / "CpHarnessMain.lean").write_text("\n".join(dispatch) + "\n")
-        proc = subprocess.run(self._lake_build("cpharness_run"), cwd=REPO_ROOT,
-                              capture_output=True, text=True, env=self._lake_env())
-        print(f"[*] compile finished in {time.time() - t0:.0f}s — {len(ok_ids)} ok, "
-              f"{len(bad_ids)} compile_fail (rc={proc.returncode})", flush=True)
-        if proc.returncode != 0:
-            # Surface the actual `error:` lines (head of stderr), not the tail — the tail is Lake's
-            # "targets logged failures" list, which hides the real cause (a maxRecDepth/heartbeat
-            # blow-up on the giant match, say). Keep the modules in place so the dispatcher can be
-            # rebuilt in seconds after a fix, instead of re-running the whole phase-1 compile.
-            out = proc.stderr or proc.stdout or ""
-            errs = [l for l in out.splitlines() if "error:" in l and "logged failures" not in l]
-            print("[!] dispatcher build FAILED:\n" + ("\n".join(errs[:20]) or out[:2000]), flush=True)
+        # then the LCNF compiler's heartbeat budget — both a function of harness COUNT, so both guards
+        # are lifted. But even so, one binary over the whole corpus can fail to link/compile, and that
+        # would zero out the ENTIRE evaluation. So build the dispatcher in CHUNKS: each chunk imports
+        # and matches only its own modules, so link scale is bounded and a failing chunk loses only
+        # itself. A chunk that fails is bisected down to the individual offending module(s), which are
+        # marked `compile_fail`; everything else still runs.
+        dispatch_dir = Path(REPO_ROOT) / ".lake" / "build" / "bin"
+        default_binary = dispatch_dir / "cpharness_run"
+        id_binary = {}          # harness id -> the chunk binary that can run it
+        chunk_tag = [0]
+
+        def build_chunk(chunk_ids):
+            """Build one dispatcher binary over `chunk_ids`; on failure, bisect to isolate the bad
+            module(s) into `bad_ids`. Successful (sub)chunks snapshot their binary and map their ids."""
+            if not chunk_ids:
+                return
+            (native_dir / "CpHarness.lean").write_text(
+                "\n".join(f"import CpHarness.H{i}" for i in chunk_ids) + "\n")
+            dispatch = (["import CpHarness", "",
+                         "set_option maxRecDepth 1000000", "set_option maxHeartbeats 0", "",
+                         "def main (args : List String) : IO UInt32 := do",
+                         "  match args.head? with"]
+                        + [f'  | some "{i}" => CpHarness.H{i}.run' for i in chunk_ids]
+                        + ["  | _ => pure ()", "  return 0"])
+            (native_dir / "CpHarnessMain.lean").write_text("\n".join(dispatch) + "\n")
+            proc = subprocess.run(self._lake_build("cpharness_run"), cwd=REPO_ROOT,
+                                  capture_output=True, text=True, env=self._lake_env())
+            if proc.returncode == 0 and default_binary.exists():
+                tag = chunk_tag[0]; chunk_tag[0] += 1
+                dst = dispatch_dir / f"cpharness_run_{tag}"
+                shutil.copy2(default_binary, dst)
+                for i in chunk_ids:
+                    id_binary[i] = str(dst)
+                return
+            if len(chunk_ids) == 1:
+                out = proc.stderr or proc.stdout or ""
+                errs = [l for l in out.splitlines()
+                        if "error:" in l and "logged failures" not in l]
+                bad_ids.add(chunk_ids[0])
+                print(f"[!] harness H{chunk_ids[0]} failed to link into a dispatcher: "
+                      + (errs[0] if errs else out.strip()[:300] or "build failed"), flush=True)
+                return
+            # Bisect: a scale/link blow-up shrinks away with size; a genuinely-broken module isolates.
+            mid = len(chunk_ids) // 2
+            build_chunk(chunk_ids[:mid])
+            build_chunk(chunk_ids[mid:])
+
+        chunk = max(1, self.native_chunk)
+        n_chunks = (len(ok_ids) + chunk - 1) // chunk
+        for k in range(n_chunks):
+            build_chunk(ok_ids[k * chunk:(k + 1) * chunk])
+        linked = len(id_binary)
+        print(f"[*] compile finished in {time.time() - t0:.0f}s — {linked} linked, "
+              f"{len(bad_ids)} compile_fail (chunk={chunk}, {chunk_tag[0]} binaries)", flush=True)
+        if not id_binary:
+            print("[!] no dispatcher chunk built; nothing to evaluate.", flush=True)
             print("[i] harness modules left in cp_harness/.native for a fast dispatcher rebuild.",
                   flush=True)
             return {"_summary": agg}
 
-        binary = str(Path(REPO_ROOT) / ".lake" / "build" / "bin" / "cpharness_run")
         report, lock, done, total = {}, threading.Lock(), [0], len(entries)
+        divergences = []
 
         def run_one(e):
             n, out, timed_out = len(e["cases"]), "", False
-            if e["id"] in bad_ids:
+            if e["id"] in bad_ids or e["id"] not in id_binary:
                 return e, 0, n, "compile_fail", {}
+            binary = id_binary[e["id"]]
             try:
                 r = subprocess.run([binary, str(e["id"])], capture_output=True, text=True,
                                    timeout=self.timeout)
@@ -1501,6 +1728,15 @@ class CPastaEval:
                     "model": "function", "method": e["method"],
                     "lean": {"passed": lp, "total": lt, "error": err},
                     "failures": fail_list}, indent=2, default=str))
+                # Python is skipped on this path, so score against the dataset's expected answers:
+                # `lp < lt` (some expected answer wrong) or a runtime `err` (timeout/crash) is a bug.
+                if lp < lt or err:
+                    divergences.append({
+                        "problem": e["prob_dir"].name, "solution": e["name"], "model": "function",
+                        "classification": "lean_wrong_expected_right",
+                        "lean": f"{lp}/{lt}", "python": "skipped",
+                        "lean_error": err, "harness": "native", "failures": fail_list[:5],
+                    })
                 with lock:
                     done[0] += 1
                     tag = "" if err is None else f" [{err}]"
@@ -1510,12 +1746,15 @@ class CPastaEval:
                     agg["lean_pass"] += lp; agg["lean_total"] += lt; agg["solutions"] += 1
 
         report["_summary"] = agg
+        report["_divergences"] = divergences
         (self.dataset / "eval_report.json").write_text(json.dumps(report, indent=2))
         restore_idle()  # drop the generated modules; keep valid placeholders for `lake build`
-        try:
-            (Path(REPO_ROOT) / ".lake" / "build" / "bin" / "cpharness_run").unlink()
-        except OSError:
-            pass
+        bin_dir = Path(REPO_ROOT) / ".lake" / "build" / "bin"
+        for b in [bin_dir / "cpharness_run", *bin_dir.glob("cpharness_run_*")]:
+            try:
+                b.unlink()
+            except OSError:
+                pass
         return report
 
     def evaluate(self):
@@ -1530,7 +1769,9 @@ class CPastaEval:
         if not self.interpret:
             report = self._evaluate_native(all_probs)
             agg = report.get("_summary", agg)
-            self._print_eval_summary(agg, [])
+            divergences = report.pop("_divergences", [])
+            self._write_divergences(divergences)
+            self._print_eval_summary(agg, divergences)
             return report
         n_workers = max(1, min(self.workers, total))
         print(f"[*] Evaluating {total} problem(s) across {n_workers} warm backend(s) "
@@ -1585,7 +1826,10 @@ class CPastaEval:
         by_class = {}
         for d in divergences:
             by_class[d["classification"]] = by_class.get(d["classification"], 0) + 1
-        api_bugs = [d for d in divergences if d["classification"] == "lean_wrong_python_right"]
+        # "Lean wrong" against whichever oracle ran: CPython (python model / stdio) or the dataset's
+        # expected answers (LeetCode function model, where Python is skipped).
+        api_bugs = [d for d in divergences
+                    if d["classification"] in ("lean_wrong_python_right", "lean_wrong_expected_right")]
         # A `lean_error` (timeout / crash) is a runtime bug; otherwise Lean ran and answered wrong.
         runtime_error = [d for d in api_bugs if d.get("lean_error")]
         wrong_output = [d for d in api_bugs if not d.get("lean_error")]
@@ -1597,7 +1841,7 @@ class CPastaEval:
             },
             # Most actionable first: wrong-output API bugs, then runtime errors, then the rest.
             "divergences": wrong_output + runtime_error
-            + [d for d in divergences if d["classification"] != "lean_wrong_python_right"],
+            + [d for d in divergences if d not in api_bugs],
         }, indent=2))
         self._api_bugs = (api_bugs, wrong_output, runtime_error)
 
@@ -1611,14 +1855,14 @@ class CPastaEval:
         if agg["py_total"]:
             print(f"Python pass rate: {agg['py_pass']}/{agg['py_total']} "
                   f"({agg['py_pass'] / agg['py_total']:.1%})")
-        if not self.skip_python:
-            print(f"Lean-vs-Python divergences: {len(divergences)} "
-                  f"(API bugs — Lean wrong, Python right: {len(api_bugs)} "
-                  f"= {len(wrong_output)} wrong-output + {len(runtime_error)} runtime-error)")
-            for d in wrong_output[:20]:
-                print(f"    {d['problem']}/{d['solution']} {d['test']}")
-            if len(wrong_output) > 20:
-                print(f"    … and {len(wrong_output) - 20} more (see eval_divergences.json)")
+        oracle = "Python" if not self.skip_python else "expected-answer"
+        print(f"Lean-vs-{oracle} divergences: {len(divergences)} "
+              f"(Lean wrong: {len(api_bugs)} "
+              f"= {len(wrong_output)} wrong-output + {len(runtime_error)} runtime-error/timeout)")
+        for d in wrong_output[:20]:
+            print(f"    {d['problem']}/{d['solution']}  ({d['lean']})")
+        if len(wrong_output) > 20:
+            print(f"    … and {len(wrong_output) - 20} more (see eval_divergences.json)")
         print(f"Report written to {self.dataset / 'eval_report.json'}")
 
     # -- plot --------------------------------------------------------------------------
@@ -1749,6 +1993,9 @@ def _add_eval_opts(p):
                         "machine usable; lake alone would take every core)")
     p.add_argument("--interpret", action="store_true",
                    help="Use the warm interpreter pool instead of compiling all harnesses natively")
+    p.add_argument("--native-chunk", type=int, default=500,
+                   help="Harnesses per linked dispatcher binary (default 500); a failing chunk is "
+                        "bisected to isolate the bad module rather than sinking the whole eval")
     p.add_argument("--max-tests", type=parse_max_tests, default=0,
                    help="Cap tests per solution (0 or 'max'/'all' = all)")
     p.add_argument("--skip-python", action="store_true", help="Skip the Python baseline run")
@@ -1769,6 +2016,7 @@ def _harness(args):
         workers=getattr(args, "workers", None),
         interpret=getattr(args, "interpret", False),
         jobs=getattr(args, "jobs", None),
+        native_chunk=getattr(args, "native_chunk", 500),
     )
 
 

@@ -1,0 +1,14 @@
+{
+  "task_id": "HumanEval/122",
+  "problem": "add-elements",
+  "module": "AddElements",
+  "method": "add_elements",
+  "params": [
+    "arr",
+    "k"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

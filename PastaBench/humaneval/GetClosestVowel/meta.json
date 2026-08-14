@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/118",
+  "problem": "get-closest-vowel",
+  "module": "GetClosestVowel",
+  "method": "get_closest_vowel",
+  "params": [
+    "word"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

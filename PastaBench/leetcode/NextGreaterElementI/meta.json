@@ -1,0 +1,13 @@
+{
+  "problem": "next-greater-element-i",
+  "module": "NextGreaterElementI",
+  "method": "nextGreaterElement",
+  "params": [
+    "nums1",
+    "nums2"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 118
+}

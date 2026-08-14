@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/14",
+  "problem": "all-prefixes",
+  "module": "AllPrefixes",
+  "method": "all_prefixes",
+  "params": [
+    "string"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

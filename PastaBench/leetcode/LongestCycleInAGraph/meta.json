@@ -1,0 +1,12 @@
+{
+  "problem": "longest-cycle-in-a-graph",
+  "module": "LongestCycleInAGraph",
+  "method": "longestCycle",
+  "params": [
+    "edges"
+  ],
+  "difficulty": "Hard",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 118
+}

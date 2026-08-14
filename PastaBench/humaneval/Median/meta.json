@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/47",
+  "problem": "median",
+  "module": "Median",
+  "method": "median",
+  "params": [
+    "l"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

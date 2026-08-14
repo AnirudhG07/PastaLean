@@ -9,16 +9,22 @@ open Std.Do
 set_option linter.all false
 set_option mvcgen.warning false
 
-set_option maxHeartbeats 0
+set_option maxHeartbeats 200000
+
+namespace PastaLean.User.Root
 
 def func := fun (a : PyAny) ↦ fun (b : PyAny) ↦ fun (c : PyAny) ↦
-  if PastaLean.pyTruthy (if PastaLean.pyTruthy a then if PastaLean.pyTruthy b then c else b else a) then
-    if PastaLean.pyTruthy a then if PastaLean.pyTruthy b then c else b else a
-  else if PastaLean.pyTruthy a then b else a
+  (show PastaLean.PyAny from
+    if PastaLean.pyTruthy (if PastaLean.pyTruthy a then if PastaLean.pyTruthy b then c else b else a) then
+      if PastaLean.pyTruthy a then if PastaLean.pyTruthy b then c else b else a
+    else if PastaLean.pyTruthy a then b else a)
 
-attribute [simp, taste_ingr] func
+attribute [simp] func
 
 def func'rn := fun (a : PyAny) ↦ fun (b : PyAny) ↦ fun (c : PyAny) ↦
-  if PastaLean.pyTruthy (if PastaLean.pyTruthy a then if PastaLean.pyTruthy b then c else b else a) then
-    if PastaLean.pyTruthy a then if PastaLean.pyTruthy b then c else b else a
-  else if PastaLean.pyTruthy a then b else a
+  (show PastaLean.PyAny from
+    if PastaLean.pyTruthy (if PastaLean.pyTruthy a then if PastaLean.pyTruthy b then c else b else a) then
+      if PastaLean.pyTruthy a then if PastaLean.pyTruthy b then c else b else a
+    else if PastaLean.pyTruthy a then b else a)
+
+end PastaLean.User.Root

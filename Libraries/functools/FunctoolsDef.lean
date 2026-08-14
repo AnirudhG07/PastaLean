@@ -1,4 +1,4 @@
-import Mathlib
+import PastaLean.Imports
 import PastaLean.PyAPI.CommonProtocols.Iterable
 
 namespace Libraries.functools
@@ -26,5 +26,10 @@ ST/IO.Ref cache (never a state monad on the prove twin, which would cost provabi
 `cache_clear` a genuine mutation rather than a no-op. A speed feature; build it only if the eval pass
 shows heavy-DP solutions timing out without it. -/
 def pyCacheNoop : Unit := ()
+
+/-- `functools.cmp_to_key(f)`. Python wraps `f` in a key object; there is no such object here — the
+sort paths detect `key=cmp_to_key(f)` and use the comparator directly — so this is the identity,
+present only so a bare reference to the name still resolves. -/
+def pyCmpToKey {β : Type} (f : β → β → Int) : β → β → Int := f
 
 end Libraries.functools

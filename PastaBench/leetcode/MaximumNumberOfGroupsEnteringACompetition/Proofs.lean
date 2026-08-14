@@ -1,0 +1,4 @@
+import PastaBench.leetcode.MaximumNumberOfGroupsEnteringACompetition.Generated
+namespace PastaBench.leetcode.MaximumNumberOfGroupsEnteringACompetition
+-- TODO.
+end PastaBench.leetcode.MaximumNumberOfGroupsEnteringACompetition

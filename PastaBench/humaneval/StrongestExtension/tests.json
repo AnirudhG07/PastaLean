@@ -1,0 +1,202 @@
+[
+  {
+    "input": "class_name = 'Watashi', extensions = ['tEN', 'niNE', 'eIGHt8OKe']",
+    "output": "'Watashi.eIGHt8OKe'"
+  },
+  {
+    "input": "class_name = 'Boku123', extensions = ['nani', 'NazeDa', 'YEs.WeCaNe', '32145tggg']",
+    "output": "'Boku123.YEs.WeCaNe'"
+  },
+  {
+    "input": "class_name = '__YESIMHERE', extensions = ['t', 'eMptY', 'nothing', 'zeR00', 'NuLl__', '123NoooneB321']",
+    "output": "'__YESIMHERE.NuLl__'"
+  },
+  {
+    "input": "class_name = 'K', extensions = ['Ta', 'TAR', 't234An', 'cosSo']",
+    "output": "'K.TAR'"
+  },
+  {
+    "input": "class_name = '__HAHA', extensions = ['Tab', '123', '781345', '-_-']",
+    "output": "'__HAHA.123'"
+  },
+  {
+    "input": "class_name = 'YameRore', extensions = ['HhAas', 'okIWILL123', 'WorkOut', 'Fails', '-_-']",
+    "output": "'YameRore.okIWILL123'"
+  },
+  {
+    "input": "class_name = 'finNNalLLly', extensions = ['Die', 'NowW', 'Wow', 'WoW']",
+    "output": "'finNNalLLly.WoW'"
+  },
+  {
+    "input": "class_name = '_', extensions = ['Bb', '91245']",
+    "output": "'_.Bb'"
+  },
+  {
+    "input": "class_name = 'Sp', extensions = ['671235', 'Bb']",
+    "output": "'Sp.671235'"
+  },
+  {
+    "input": "class_name = 'Test1', extensions = ['UPPERCASE', 'uppercase', '1111']",
+    "output": "'Test1.UPPERCASE'"
+  },
+  {
+    "input": "class_name = 'Test2', extensions = ['capitalLETTERS', 'lowercaseletters', 'mIxEdcAsE']",
+    "output": "'Test2.capitalLETTERS'"
+  },
+  {
+    "input": "class_name = 'Test3', extensions = ['oneUPPERcaseletter', 'TWoUPPERcaseletTErs', 'threeUppercaseletters', 'fourlowercaseletters']",
+    "output": "'Test3.TWoUPPERcaseletTErs'"
+  },
+  {
+    "input": "class_name = 'Test4', extensions = ['ALLUPPERcaseletters', 'ALLlowercaseletters', 'Nolettersatall123', '12345']",
+    "output": "'Test4.12345'"
+  },
+  {
+    "input": "class_name = 'Test5', extensions = ['ZERO', 'one', 'Two', 'THREE', 'four', 'FIVE', 'six', 'seven', 'eight', 'nine', '10']",
+    "output": "'Test5.THREE'"
+  },
+  {
+    "input": "class_name = 'Person', extensions = ['TEst', 'Name', 'naMe', 'AGE']",
+    "output": "'Person.AGE'"
+  },
+  {
+    "input": "class_name = 'Animal', extensions = ['CAMel', 'hOrSE', 'DoG']",
+    "output": "'Animal.CAMel'"
+  },
+  {
+    "input": "class_name = 'Vehicle', extensions = ['Automobile', 'CAR', 'SuPerbIkE', 'Z']",
+    "output": "'Vehicle.CAR'"
+  },
+  {
+    "input": "class_name = 'Computer', extensions = ['Laptop', 'DEsktop', 'TABLET', 'MONITOR', 'MOUSE', 'KEYboard']",
+    "output": "'Computer.MONITOR'"
+  },
+  {
+    "input": "class_name = 'Book', extensions = ['NOVEL', 'picturebook', 'COOkbook', 'Dictionary', 'Encyclopedia']",
+    "output": "'Book.NOVEL'"
+  },
+  {
+    "input": "class_name = 'Computer', extensions = ['Laptop', 'DEsktop', 'TABLET', 'MONITOR', 'MOUSE', 'KEYboard', 'KEYeightboard']",
+    "output": "'Computer.MONITOR'"
+  },
+  {
+    "input": "class_name = 'Compter', extensions = ['Laptop', 'DEsktop', 'TABLET', 'MONITOR', 'MOUSE', 'KEYboard', 'KEYeightboard']",
+    "output": "'Compter.MONITOR'"
+  },
+  {
+    "input": "class_name = 'Computer', extensions = ['Laptop', 'DEsktop', 'TABLET', 'MONITOR', 'MOUSE', 'KEYeightboard']",
+    "output": "'Computer.MONITOR'"
+  },
+  {
+    "input": "class_name = 'Vehcice', extensions = ['Automobile', 'CAR', 'Vehicle', 'SuPerbIkE', '']",
+    "output": "'Vehcice.CAR'"
+  },
+  {
+    "input": "class_name = 'VehciceBook', extensions = ['Automobile', 'CAR', 'Vehicle', 'SuPerbIkE', '']",
+    "output": "'VehciceBook.CAR'"
+  },
+  {
+    "input": "class_name = 'Animaal', extensions = ['CAMel', 'hOrSE', 'DoG']",
+    "output": "'Animaal.CAMel'"
+  },
+  {
+    "input": "class_name = 'Animal', extensions = ['capitalLETTERS', 'lowercaseletters', 'mIxEdcAsE']",
+    "output": "'Animal.capitalLETTERS'"
+  },
+  {
+    "input": "class_name = 'Test1', extensions = ['UPPERCASE', 'uppercase', 'uppercasse', '1111']",
+    "output": "'Test1.UPPERCASE'"
+  },
+  {
+    "input": "class_name = 'Test1', extensions = ['UPPERCASE', 'uppercase', 'Animal']",
+    "output": "'Test1.UPPERCASE'"
+  },
+  {
+    "input": "class_name = 'Vehcice', extensions = ['Automobile', 'CAR', 'Vehicele', 'SuPerbIkE', '']",
+    "output": "'Vehcice.CAR'"
+  },
+  {
+    "input": "class_name = 'T1e1st1', extensions = ['UPPERCASE', 'uppercase', '1111']",
+    "output": "'T1e1st1.UPPERCASE'"
+  },
+  {
+    "input": "class_name = 'Test3', extensions = ['oneUPPERcaseletter', 'threeUppercaseletters', 'fourlowercaseletters', 'threeUppercaseletters']",
+    "output": "'Test3.oneUPPERcaseletter'"
+  },
+  {
+    "input": "class_name = 'Vehcice', extensions = ['bIkE', 'Automobile', 'CAR', 'Vehicle', 'SuPerbIkE', '']",
+    "output": "'Vehcice.CAR'"
+  },
+  {
+    "input": "class_name = 'eightTeste3', extensions = ['UPPERCASE', 'uppercase', 'Animal']",
+    "output": "'eightTeste3.UPPERCASE'"
+  },
+  {
+    "input": "class_name = 'AniVehcicemal', extensions = ['CAMel', 'hOrSE', 'DoG']",
+    "output": "'AniVehcicemal.CAMel'"
+  },
+  {
+    "input": "class_name = 'Test5', extensions = ['ZERO', 'one', 'Two', 'THREE', 'four', 'FIVE', 'six', 'FVIVE', 'seven', 'eight', 'nine', '10']",
+    "output": "'Test5.THREE'"
+  },
+  {
+    "input": "class_name = 'VehciceBo', extensions = ['Automobile', 'CAR', 'Vehicle', 'SuPerbIkE', '']",
+    "output": "'VehciceBo.CAR'"
+  },
+  {
+    "input": "class_name = 'Test1', extensions = ['UPPERSCASE', 'uppercase', 'Animal']",
+    "output": "'Test1.UPPERSCASE'"
+  },
+  {
+    "input": "class_name = 'Test1', extensions = ['UPPERCASE', 'uppercase', 'uppercasse', '1Test5111']",
+    "output": "'Test1.UPPERCASE'"
+  },
+  {
+    "input": "class_name = 'Animal', extensions = ['Do', 'CAMel', 'hOrSE', 'ZERO']",
+    "output": "'Animal.ZERO'"
+  },
+  {
+    "input": "class_name = 'eightTeste3', extensions = ['aAnimal', 'UPPERCASE', 'uppercase', 'Animal']",
+    "output": "'eightTeste3.UPPERCASE'"
+  },
+  {
+    "input": "class_name = 'TeTst3CTest3omputer', extensions = ['oneUPPERcaseletter', 'TWoUPPERcaseletTErs', 'fourlowercaseletteNamers', 'threeUppercaseletters', 'fourlowercaseletters']",
+    "output": "'TeTst3CTest3omputer.TWoUPPERcaseletTErs'"
+  },
+  {
+    "input": "class_name = 'Vehcpicturebccookoobk', extensions = ['Automobile', 'CAR', 'Vehicle', 'SuPerbIkE', '']",
+    "output": "'Vehcpicturebccookoobk.CAR'"
+  },
+  {
+    "input": "class_name = 'Test5', extensions = ['ZERO', 'one', 'Two', 'THREE', 'fur', 'four', 'FIVE', 'six', 'FVIVE', 'seven', 'eight', 'nine', '10']",
+    "output": "'Test5.THREE'"
+  },
+  {
+    "input": "class_name = 'AnimAnimaonelal', extensions = ['CAMel', 'hOrSE', 'DoG']",
+    "output": "'AnimAnimaonelal.CAMel'"
+  },
+  {
+    "input": "class_name = '_', extensions = ['yolo', '900000000', 's3cr3tK3y', 'GIMMETH3L00TZ!']",
+    "output": "'_.GIMMETH3L00TZ!'"
+  },
+  {
+    "input": "class_name = 'ClassName', extensions = ['XXXXXXx', 'AAA', 'ffffff', 'Bbcde', 'GHIJKLMN']",
+    "output": "'ClassName.GHIJKLMN'"
+  },
+  {
+    "input": "class_name = 'My_class', extensions = ['Aaa', 'ZZZZ', 'ddd', 'E', 'HHHHHH']",
+    "output": "'My_class.HHHHHH'"
+  },
+  {
+    "input": "class_name = 'Another_class', extensions = ['AbCdEfG', 'Hijklmno', '12345', 'pqrstuvwxy', 'Z']",
+    "output": "'Another_class.AbCdEfG'"
+  },
+  {
+    "input": "class_name = 'MYCLASS', extensions = ['qwerty', 'asdfgh', 'zxcvbn', 'QWERTY', 'ASDFGHJKL', 'ZXCVBNM']",
+    "output": "'MYCLASS.ASDFGHJKL'"
+  },
+  {
+    "input": "class_name = 'testing1', extensions = ['TESTING2', 'TEST', 'test', 'tEstin3g']",
+    "output": "'testing1.TESTING2'"
+  }
+]

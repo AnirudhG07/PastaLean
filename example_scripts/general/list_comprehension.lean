@@ -9,7 +9,9 @@ open Std.Do
 set_option linter.all false
 set_option mvcgen.warning false
 
-set_option maxHeartbeats 0
+set_option maxHeartbeats 200000
+
+namespace PastaLean.User.Root
 
 def simple_lc :=
   (PastaLean.pyRange (10 : Int)).map fun x => x
@@ -89,20 +91,20 @@ def lc_with_tuple_unpacking :=
   let another_pairs := ([((4 : Int), "d"), ((5 : Int), "e")] : List (Int × String))
   let another_pairs :=
     ((List.filter
-            (fun _pair_3 =>
-              let num := Prod.fst _pair_3;
-              let char := Prod.snd _pair_3;
+            (fun (p'_pair_3 : Int × String) =>
+              let num := Prod.fst p'_pair_3;
+              let char := Prod.snd p'_pair_3;
               num %ₚ (2 : Int) = (0 : Int))
             (PastaLean.pyIter another_pairs)).map
-        fun _pair_2 =>
-        let num := Prod.fst _pair_2;
-        let char := Prod.snd _pair_2;
+        fun (p'_pair_2 : Int × String) =>
+        let num := Prod.fst p'_pair_2;
+        let char := Prod.snd p'_pair_2;
         (num, char) :
       List (Int × String))
   let _ := another_pairs
-  (PastaLean.pyIter pairs).map fun _pair_1 =>
-    let num := Prod.fst _pair_1;
-    let char := Prod.snd _pair_1;
+  (PastaLean.pyIter pairs).map fun (p'_pair_1 : Int × String) =>
+    let num := Prod.fst p'_pair_1;
+    let char := Prod.snd p'_pair_1;
     s! "{num }:{char}"
 
 attribute [simp, taste_ingr] lc_with_tuple_unpacking
@@ -112,20 +114,20 @@ def lc_with_tuple_unpacking'rn :=
   let another_pairs := ([((4 : Int), "d"), ((5 : Int), "e")] : List (Int × String))
   let another_pairs :=
     ((List.filter
-            (fun _pair_3 =>
-              let num := Prod.fst _pair_3;
-              let char := Prod.snd _pair_3;
+            (fun (p'_pair_3 : Int × String) =>
+              let num := Prod.fst p'_pair_3;
+              let char := Prod.snd p'_pair_3;
               num %ₚ (2 : Int) == (0 : Int))
             (PastaLean.pyIter another_pairs)).map
-        fun _pair_2 =>
-        let num := Prod.fst _pair_2;
-        let char := Prod.snd _pair_2;
+        fun (p'_pair_2 : Int × String) =>
+        let num := Prod.fst p'_pair_2;
+        let char := Prod.snd p'_pair_2;
         (num, char) :
       List (Int × String))
   let _ := another_pairs
-  (PastaLean.pyIter pairs).map fun _pair_1 =>
-    let num := Prod.fst _pair_1;
-    let char := Prod.snd _pair_1;
+  (PastaLean.pyIter pairs).map fun (p'_pair_1 : Int × String) =>
+    let num := Prod.fst p'_pair_1;
+    let char := Prod.snd p'_pair_1;
     s! "{num }:{char}"
 
 def lc_with_nested_conditions :=
@@ -144,11 +146,11 @@ def lc_with_nested_tuple_unpacking :=
   let triples :=
     ([((1 : Int), ((2 : Int), (3 : Int))), ((4 : Int), ((5 : Int), (6 : Int))), ((7 : Int), ((8 : Int), (9 : Int)))] :
       List (Int × Int × Int))
-  (PastaLean.pyIter triples).map fun _pair_1 =>
-    let a := Prod.fst _pair_1;
-    let _pair_2 := Prod.snd _pair_1;
-    let b := Prod.fst _pair_2;
-    let c := Prod.snd _pair_2;
+  (PastaLean.pyIter triples).map fun (p'_pair_1 : Int × Int × Int) =>
+    let a := Prod.fst p'_pair_1;
+    let p'_pair_2 := Prod.snd p'_pair_1;
+    let b := Prod.fst p'_pair_2;
+    let c := Prod.snd p'_pair_2;
     a +ₚ b +ₚ c
 
 attribute [simp, taste_ingr] lc_with_nested_tuple_unpacking
@@ -157,21 +159,21 @@ def lc_with_nested_tuple_unpacking'rn :=
   let triples :=
     ([((1 : Int), ((2 : Int), (3 : Int))), ((4 : Int), ((5 : Int), (6 : Int))), ((7 : Int), ((8 : Int), (9 : Int)))] :
       List (Int × Int × Int))
-  (PastaLean.pyIter triples).map fun _pair_1 =>
-    let a := Prod.fst _pair_1;
-    let _pair_2 := Prod.snd _pair_1;
-    let b := Prod.fst _pair_2;
-    let c := Prod.snd _pair_2;
+  (PastaLean.pyIter triples).map fun (p'_pair_1 : Int × Int × Int) =>
+    let a := Prod.fst p'_pair_1;
+    let p'_pair_2 := Prod.snd p'_pair_1;
+    let b := Prod.fst p'_pair_2;
+    let c := Prod.snd p'_pair_2;
     a +ₚ b +ₚ c
 
 def dc_with_nested_tuple_unpacking :=
   let triples := ([((1 : Int), ((2 : Int), (3 : Int))), ((4 : Int), ((5 : Int), (6 : Int)))] : List (Int × Int × Int))
   Std.HashMap.ofList
-    ((PastaLean.pyIter triples).map fun _pair_1 =>
-      let a := Prod.fst _pair_1;
-      let _pair_2 := Prod.snd _pair_1;
-      let b := Prod.fst _pair_2;
-      let c := Prod.snd _pair_2;
+    ((PastaLean.pyIter triples).map fun (p'_pair_1 : Int × Int × Int) =>
+      let a := Prod.fst p'_pair_1;
+      let p'_pair_2 := Prod.snd p'_pair_1;
+      let b := Prod.fst p'_pair_2;
+      let c := Prod.snd p'_pair_2;
       (a, b *ₚ c))
 
 attribute [simp, taste_ingr] dc_with_nested_tuple_unpacking
@@ -179,11 +181,11 @@ attribute [simp, taste_ingr] dc_with_nested_tuple_unpacking
 def dc_with_nested_tuple_unpacking'rn :=
   let triples := ([((1 : Int), ((2 : Int), (3 : Int))), ((4 : Int), ((5 : Int), (6 : Int)))] : List (Int × Int × Int))
   Std.HashMap.ofList
-    ((PastaLean.pyIter triples).map fun _pair_1 =>
-      let a := Prod.fst _pair_1;
-      let _pair_2 := Prod.snd _pair_1;
-      let b := Prod.fst _pair_2;
-      let c := Prod.snd _pair_2;
+    ((PastaLean.pyIter triples).map fun (p'_pair_1 : Int × Int × Int) =>
+      let a := Prod.fst p'_pair_1;
+      let p'_pair_2 := Prod.snd p'_pair_1;
+      let b := Prod.fst p'_pair_2;
+      let c := Prod.snd p'_pair_2;
       (a, b *ₚ c))
 
 def lc_with_side_effects :=
@@ -192,8 +194,8 @@ def lc_with_side_effects :=
       let mut result : List Int := []
       for x in (PastaLean.pyRange (5 : Int))do
         result := PastaLean.pyAppend result (x *ₚ x)
-      let __py_ret_1 := (PastaLean.pyIter result).map fun y => y
-      return __py_ret_1)
+      let p'_ret_1 := (PastaLean.pyIter result).map fun y => y
+      return p'_ret_1)
 
 attribute [simp, taste_ingr] lc_with_side_effects
 
@@ -203,8 +205,8 @@ def lc_with_side_effects'rn :=
       let mut result : List Int := []
       for x in (PastaLean.pyRange (5 : Int))do
         result := PastaLean.pyAppend result (x *ₚ x)
-      let __py_ret_1 := (PastaLean.pyIter result).map fun y => y
-      return __py_ret_1)
+      let p'_ret_1 := (PastaLean.pyIter result).map fun y => y
+      return p'_ret_1)
 
 def lc_with_generator_expression :=
   (PastaLean.pyIter ((PastaLean.pyRange (5 : Int)).map fun i => i)).map fun x => x *ₚ x
@@ -221,7 +223,7 @@ def lc_with_if_else :=
 attribute [simp, taste_ingr] lc_with_if_else
 
 def lc_with_if_else'rn :=
-  let a := ((PastaLean.pyRange (10 : Int)).map fun x => x : List Int)
+  let a := (((PastaLean.pyRange (10 : Int)).map fun x => x) |>.toArray : Array Int)
   (PastaLean.pyRange (10 : Int)).map fun x => if x %ₚ (2 : Int) == (0 : Int) then x else -x
 
 def lc_with_string_literal_list :=
@@ -234,18 +236,18 @@ def lc_with_string_literal_list'rn :=
 
 def lc_with_dict :=
   let d := (Std.HashMap.ofList [("a", (1 : Int)), ("b", (2 : Int)), ("c", (3 : Int))] : Std.HashMap String Int)
-  (PastaLean.pyIter (PastaLean.pyItems d)).map fun _pair_1 =>
-    let k := Prod.fst _pair_1;
-    let v := Prod.snd _pair_1;
+  (PastaLean.pyIter (PastaLean.pyItems d)).map fun (p'_pair_1 : String × Int) =>
+    let k := Prod.fst p'_pair_1;
+    let v := Prod.snd p'_pair_1;
     s! "{k }:{v}"
 
 attribute [simp, taste_ingr] lc_with_dict
 
 def lc_with_dict'rn :=
   let d := (Std.HashMap.ofList [("a", (1 : Int)), ("b", (2 : Int)), ("c", (3 : Int))] : Std.HashMap String Int)
-  (PastaLean.pyIter (PastaLean.pyItems d)).map fun _pair_1 =>
-    let k := Prod.fst _pair_1;
-    let v := Prod.snd _pair_1;
+  (PastaLean.pyIter (PastaLean.pyItems d)).map fun (p'_pair_1 : String × Int) =>
+    let k := Prod.fst p'_pair_1;
+    let v := Prod.snd p'_pair_1;
     s! "{k }:{v}"
 
 def lc_multi_list :=
@@ -289,3 +291,5 @@ def lc_multi_invoke'rn :=
         (PastaLean.pyRange (5 : Int)).flatMap fun y => (PastaLean.pyRange (5 : Int)).map fun z => (x, (y, z)) :
       List (Int × Int × Int))
   (a, b)
+
+end PastaLean.User.Root

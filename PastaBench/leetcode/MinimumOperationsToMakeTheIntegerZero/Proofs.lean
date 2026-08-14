@@ -1,0 +1,4 @@
+import PastaBench.leetcode.MinimumOperationsToMakeTheIntegerZero.Generated
+namespace PastaBench.leetcode.MinimumOperationsToMakeTheIntegerZero
+-- TODO.
+end PastaBench.leetcode.MinimumOperationsToMakeTheIntegerZero

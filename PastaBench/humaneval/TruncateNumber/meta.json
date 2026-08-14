@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/2",
+  "problem": "truncate-number",
+  "module": "TruncateNumber",
+  "method": "truncate_number",
+  "params": [
+    "number"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

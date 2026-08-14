@@ -40,6 +40,15 @@ def annotated_vars():
 # coercions the leetcode DP corpus depends on — regressions here are otherwise only caught by rerunning
 # the corpus.
 
+def numeric_tower_widening(flags: List[bool], a: int, b: int) -> int:
+    # Python's numeric tower `bool < int < float < ℚ`: a `bool` widens into an int accumulator, and
+    # bool comparison results take part in arithmetic. `sum` of bools counts them.
+    total = 0
+    for f in flags:
+        total += f                     # bool → int
+    return total + (a > b) + (a == b) * 2
+
+
 def mixed_scalar_accumulator(xs: List[int]) -> float:
     # int-seeded `ans` joins a float (`x / 2`) → must become float; the `0` seed coerces to `(0 : ℚ)`.
     ans = 0
@@ -65,6 +74,33 @@ def inf_dp(cost: List[int]) -> int:
     for i in range(1, n + 1):
         dp[i] = min(dp[i - 1] + cost[i - 1], dp[i])
     return dp[n]
+
+
+def grid_inf_dp(houses: List[int]) -> int:
+    # A 2-D `[[inf]*k for _ in …]` DP: the comprehension is a nested list-container seeded by the
+    # polymorphic `inf`, so it must be ascribed the twin's float type (`List (List ℚ)` / `Float`) —
+    # otherwise `inf` defaults to ℚ while the run twin's values are `Float` (a `PySetItem (List ℚ) ℤ
+    # Float` clash). Mirrors the allocate-mailboxes shape.
+    n = len(houses)
+    f = [[inf] * (n + 1) for _ in range(n)]
+    for i in range(n):
+        f[i][1] = houses[i]
+        for j in range(2, i + 2):
+            for p in range(i):
+                f[i][j] = min(f[i][j], f[p][j - 1] + houses[i])
+    return f[n - 1][n]
+
+
+def dp_sentinel_return(cost: List[int]) -> int:
+    # The canonical inf-DP ending: `return -1 if unreachable else value`. The single ternary return
+    # mixes `int` (`-1`) with the `float` DP value, so both branches are elaborated at the mode float
+    # (`ℚ`/`Float`) — the `-1` coerces up (int→ℚ / int→Float) instead of pinning the result to `ℤ`.
+    n = len(cost)
+    dp = [inf] * (n + 1)
+    dp[0] = 0
+    for i in range(1, n + 1):
+        dp[i] = min(dp[i - 1] + cost[i - 1], dp[i])
+    return -1 if dp[n] >= inf else dp[n]
 
 
 def heterogeneous_pyany():
@@ -112,3 +148,44 @@ def grid_float_dp(m: int, n: int) -> float:
             if i > 0:
                 f[i][j] += f[i - 1][j] / 2
     return f[m - 1][n - 1]
+
+
+# --- Back-inference from comparisons (unannotated params pinned by `== <literal>` / `in`) ---
+# Each param below is UN-annotated; its type is recovered from a comparison against a literal, so the
+# body type-checks WITHOUT boxing to PyAny. If the inference regressed, `PyAny == <literal>` would not
+# compile — so these compiling IS the regression test, one per PyAny subtype.
+
+def eq_pins_str(s):
+    # `s == "hello"` ⇒ s : str, so `.upper()` (a str-only method) resolves.
+    return s.upper() if s == "hello" else s
+
+def eq_pins_int(x):
+    # `x == 42` ⇒ x : int, so the int-only shift `x << 1` type-checks.
+    return x << 1 if x == 42 else x
+
+def eq_pins_float(v):
+    # `v == 3.14` ⇒ v : float.
+    return v * 2.0 if v == 3.14 else v
+
+def eq_pins_list_elem(xs):
+    # `xs == []` ⇒ xs : list; `xs[0] + 1` pins the ELEMENT to int ⇒ xs : list[int] (no PyAny box).
+    return 0 if xs == [] else xs[0] + 1
+
+def eq_pins_list_nested(a):
+    # Element int recovered from a NESTED int-forcing op: `(a[0] + a[-1]) % 2` (the SortArray pattern).
+    return (a[0] + a[-1]) % 2 if a != [] else 0
+
+def eq_pins_list_method(words):
+    # `words[0].upper()` — a str-only method on an element ⇒ words : list[str].
+    return words[0].upper() if words != [] else ""
+
+def membership_pins_str(ch):
+    # `ch in "aeiou"` ⇒ ch is an element of a str literal ⇒ ch : str.
+    return 1 if ch in "aeiou" else 0
+
+def reassign_type_change_still_ok():
+    # SAFETY: a type-CHANGING reassignment must keep working — `m` is str then int. Back-inference must
+    # not clobber it (codegen's rebind-shadow re-types the post-`int(m)` segment).
+    m = "1"
+    m = int(m)
+    return m ** 2

@@ -1,0 +1,202 @@
+[
+  {
+    "input": "value = '10'",
+    "output": "10"
+  },
+  {
+    "input": "value = '14.5'",
+    "output": "15"
+  },
+  {
+    "input": "value = '-15.5'",
+    "output": "-16"
+  },
+  {
+    "input": "value = '15.3'",
+    "output": "15"
+  },
+  {
+    "input": "value = '0'",
+    "output": "0"
+  },
+  {
+    "input": "value = '-2.8'",
+    "output": "-3"
+  },
+  {
+    "input": "value = '3.6'",
+    "output": "4"
+  },
+  {
+    "input": "value = '5.5'",
+    "output": "6"
+  },
+  {
+    "input": "value = '-6.5'",
+    "output": "-7"
+  },
+  {
+    "input": "value = '0.5'",
+    "output": "1"
+  },
+  {
+    "input": "value = '1.6'",
+    "output": "2"
+  },
+  {
+    "input": "value = '-1.6'",
+    "output": "-2"
+  },
+  {
+    "input": "value = '0.0003'",
+    "output": "0"
+  },
+  {
+    "input": "value = '99.99'",
+    "output": "100"
+  },
+  {
+    "input": "value = '-99.99'",
+    "output": "-100"
+  },
+  {
+    "input": "value = '-99.9'",
+    "output": "-100"
+  },
+  {
+    "input": "value = '00'",
+    "output": "0"
+  },
+  {
+    "input": "value = '999.99'",
+    "output": "1000"
+  },
+  {
+    "input": "value = '99.9999'",
+    "output": "100"
+  },
+  {
+    "input": "value = '99.999'",
+    "output": "100"
+  },
+  {
+    "input": "value = '9.999'",
+    "output": "10"
+  },
+  {
+    "input": "value = '999.999'",
+    "output": "1000"
+  },
+  {
+    "input": "value = '000'",
+    "output": "0"
+  },
+  {
+    "input": "value = '09.99900'",
+    "output": "10"
+  },
+  {
+    "input": "value = '-999.99'",
+    "output": "-1000"
+  },
+  {
+    "input": "value = '99.9'",
+    "output": "100"
+  },
+  {
+    "input": "value = '-99'",
+    "output": "-99"
+  },
+  {
+    "input": "value = '-6.'",
+    "output": "-6"
+  },
+  {
+    "input": "value = '0900'",
+    "output": "900"
+  },
+  {
+    "input": "value = '0000'",
+    "output": "0"
+  },
+  {
+    "input": "value = '-6.00000'",
+    "output": "-6"
+  },
+  {
+    "input": "value = '6'",
+    "output": "6"
+  },
+  {
+    "input": "value = '-999'",
+    "output": "-999"
+  },
+  {
+    "input": "value = '999'",
+    "output": "999"
+  },
+  {
+    "input": "value = '11.6'",
+    "output": "12"
+  },
+  {
+    "input": "value = '-6.00099900'",
+    "output": "-6"
+  },
+  {
+    "input": "value = '111.6'",
+    "output": "112"
+  },
+  {
+    "input": "value = '00900'",
+    "output": "900"
+  },
+  {
+    "input": "value = '-66.'",
+    "output": "-66"
+  },
+  {
+    "input": "value = '11.'",
+    "output": "11"
+  },
+  {
+    "input": "value = '-9111.699'",
+    "output": "-9112"
+  },
+  {
+    "input": "value = '-6.65'",
+    "output": "-7"
+  },
+  {
+    "input": "value = '5'",
+    "output": "5"
+  },
+  {
+    "input": "value = '0009000'",
+    "output": "9000"
+  },
+  {
+    "input": "value = '-99.'",
+    "output": "-99"
+  },
+  {
+    "input": "value = '-9.'",
+    "output": "-9"
+  },
+  {
+    "input": "value = '-99000'",
+    "output": "-99000"
+  },
+  {
+    "input": "value = '-5'",
+    "output": "-5"
+  },
+  {
+    "input": "value = '900.999'",
+    "output": "901"
+  },
+  {
+    "input": "value = '911.600'",
+    "output": "912"
+  }
+]

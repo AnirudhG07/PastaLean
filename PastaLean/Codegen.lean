@@ -53,6 +53,14 @@ initialize boxReturnRef : IO.Ref Bool ← IO.mkRef false
 /-- Read whether we're lowering inside a `PyAny`-boxed-return function body. -/
 def getBoxReturnContext : IO Bool := boxReturnRef.get
 
+/-- Set while lowering a function whose returns mix `int` and `float` (`_ret_float`): each return
+value is ascribed to the mode float (`ℚ`/`Float`) so a mixed ternary `return -1 if … else v`
+coerces the `int` branch up instead of pinning the type to `ℤ` from the first branch. -/
+initialize retFloatRef : IO.Ref Bool ← IO.mkRef false
+
+/-- Read whether we're lowering inside a float-return-reconciled function body. -/
+def getRetFloatContext : IO Bool := retFloatRef.get
+
 /-- True while lowering a *condition position* — the direct test of an `if`/`while` — where a
 comparison may be a `Prop` (`a < b`, and `a = b`/`a ≠ b` in exact mode) so it is provable, paired
 with the `if h : …` hypothesis. False everywhere else (the default): a comparison used as a *value*
@@ -64,6 +72,24 @@ initialize propConditionRef : IO.Ref Bool ← IO.mkRef false
 /-- Read whether comparisons may currently lower to a provable `Prop` (condition position). -/
 def getPropCondition : IO Bool := propConditionRef.get
 
+/-- Set while lowering an expression whose *truthiness* is what matters — e.g. an element of
+`any(...)`/`all(...)`. There a `BoolOp` (`a and b`) must stay a `Bool` connective (`pyTruthy a && b`)
+rather than the value form `if pyTruthy a then b else a`, whose branches would be different types
+(`a : List`, `b : Bool`). Unlike `propCondition` it does NOT force comparisons to `Prop` (so an
+`any(a == b for …)` stays `List Bool`), and comprehensions do NOT reset it. -/
+initialize truthinessContextRef : IO.Ref Bool ← IO.mkRef false
+
+/-- Read whether the current expression is evaluated only for its truthiness. -/
+def getTruthinessContext : IO Bool := truthinessContextRef.get
+
+/-- Inside a memoized function's body (a `@cache`/`@lru_cache` run-twin), the base name of the
+function being memoized paired with its `StateM` worker `fooMemo'rn`, so a recursive self-call lowers
+to a monadic `(← fooMemo'rn args)` threading the shared cache instead of an unmemoized plain call. -/
+initialize memoizeSelfRef : IO.Ref (Option (String × Lean.Name)) ← IO.mkRef none
+
+/-- Read the currently-memoized function's (base name, `StateM` worker name), if any. -/
+def getMemoizeSelf : IO (Option (String × Lean.Name)) := memoizeSelfRef.get
+
 /-- When emitting the runnable "twin" of a declaration in `--mode both`, this is the suffix (`'rn`)
 appended to every top-level definition name AND to references to other user-defined functions/classes
 (listed in `userNamesRef`). Empty for the single-version `prove`/`run` modes. Lets one file carry the
@@ -73,6 +99,19 @@ initialize runSuffixRef : IO.Ref String ← IO.mkRef ""
 /-- The names of the user's top-level functions/classes — references to these get `runSuffix` appended
 in a run-twin so `foo'rn` calls `bar'rn` / builds `CNN'rn`, not the `prove` `bar`/`CNN`. -/
 initialize userNamesRef : IO.Ref (List String) ← IO.mkRef []
+
+/-- Best-effort mode (set from the translate task's `best_effort`): a single statement whose codegen
+throws is degraded to a `pyUnsupported` placeholder — keeping the REST of the function — instead of the
+whole `FunctionDef` collapsing. Off by default (strict). -/
+initialize bestEffortRef : IO.Ref Bool ← IO.mkRef false
+
+/-- Set while lowering the body of a VALUE+MUTATE class method — one that mutates `self` AND returns a
+value (union-find `union`). Each `return v` is emitted as `return (v, self)` so the caller receives
+BOTH the result and the mutated receiver (which it reassigns). Empty outside such a method. -/
+initialize valueMutatorRef : IO.Ref Bool ← IO.mkRef false
+
+/-- Read whether we're lowering a value+mutate method body (so `return v` → `return (v, self)`). -/
+def getValueMutatorContext : IO Bool := valueMutatorRef.get
 
 /-- The suffix to append to a top-level def name being emitted (empty unless in a run-twin). -/
 def getRunSuffix : IO String := runSuffixRef.get
@@ -99,9 +138,31 @@ structure State where
   operation). Set comparisons (`==`, `<=`, …) are order-independent, unlike the list-backed `==`/`≤`
   the same `List` value would otherwise use — see the `Compare` lowering. -/
   setVars : HashSet Name := HashSet.emptyWithCapacity 16
+  /-- Variables holding a `sortedcontainers.SortedList` (assigned from `SortedList(...)`). Their
+  `add`/`remove`/`discard` maintain sort order instead of set semantics; the value is a plain sorted
+  `List`, so subscript/`len`/`in`/iteration use the ordinary list protocols. -/
+  sortedVars : HashSet Name := HashSet.emptyWithCapacity 8
+  /-- Variables holding a library-owned object, mapped to the owning module (`m = hashlib.md5()`
+  ↦ `m ↦ "hashlib"`), so `m.update(...)` dispatches through `Libraries.libraryMethod?` rather than
+  the builtin method map. Generalises `sortedVars` to any library that declares `constructsObject`. -/
+  libObjVars : Std.HashMap Name String := ∅
+  /-- Variables known to hold a dict (assigned from `{…}`, a dict comprehension, or `dict(…)`/
+  `defaultdict(…)`/`Counter(…)`). `d.pop(k)` on a dict is the DICT pop (remove key, return value),
+  which shares the method name with a 1-arg `list.pop(i)`; the receiver's dict-ness disambiguates. -/
+  dictVars : HashSet Name := HashSet.emptyWithCapacity 16
   /-- Variables bound with `let mut` (reassignable in place). An immutable `let` loop var that a body
   reassigns to a different type is shadowed instead; a `let mut` (incl. a `PyAny` slot) is not. -/
   mutVars : HashSet Name := HashSet.emptyWithCapacity 32
+  /-- Mut vars whose slot type is `PyAny`. A `PyAny` slot absorbs any later value by coercion, so a
+  cross-type reassignment to it is a plain reassign — NOT a type-changing `'rbN` rebind. -/
+  pyAnySlotVars : HashSet Name := HashSet.emptyWithCapacity 16
+  /-- SSA renames for type-changing rebinds. When `s = list(s)` reassigns an existing `let mut s`
+  (a `str`) to a `List`, we can neither re-`let mut s` (Lean forbids shadowing a mut var) nor
+  reassign (types differ), so we bind a fresh `let mut s'rbN` and map `s ↦ s'rbN` here; every later
+  reference to `s` resolves through this map. Scoped per top-level statement (fresh state) and
+  saved/restored around each block (a branch-local rebind stays branch-local). -/
+  renames : Std.HashMap Name Name := {}
+  renameCounter : Nat := 0
   checkExr : Bool := true
   useArrow : Bool := false
   /-- When the innermost enclosing loop has a Python `else` clause, this holds the name of the
@@ -196,6 +257,44 @@ def withBoxReturnContext {α : Type} (b : Bool) (x : PygenM α) : PygenM α := d
     boxReturnRef.set saved
     throw e
 
+/-- Run `x` with the float-return-reconcile flag set to `b` (restoring it afterwards). -/
+def withRetFloatContext {α : Type} (b : Bool) (x : PygenM α) : PygenM α := do
+  let saved ← retFloatRef.get
+  retFloatRef.set b
+  try
+    let r ← x
+    retFloatRef.set saved
+    return r
+  catch e =>
+    retFloatRef.set saved
+    throw e
+
+/-- Run `x` with the memoize-self context set (a recursive self-call to `name` lowers to
+`(← $worker args)`), restoring it afterwards. -/
+def withMemoizeSelf {α : Type} (ctx : Option (String × Lean.Name)) (x : PygenM α) : PygenM α := do
+  let saved ← memoizeSelfRef.get
+  memoizeSelfRef.set ctx
+  try
+    let r ← x
+    memoizeSelfRef.set saved
+    return r
+  catch e =>
+    memoizeSelfRef.set saved
+    throw e
+
+/-- Run `x` with the truthiness flag set to `b` (restoring it afterwards). Set by `any`/`all` around
+their element so a `BoolOp` there stays a `Bool` connective, not the mixed-type value form. -/
+def withTruthinessContext {α : Type} (b : Bool) (x : PygenM α) : PygenM α := do
+  let saved ← truthinessContextRef.get
+  truthinessContextRef.set b
+  try
+    let r ← x
+    truthinessContextRef.set saved
+    return r
+  catch e =>
+    truthinessContextRef.set saved
+    throw e
+
 /-- Run `x` with the prop-condition flag set to `b` (restoring it afterwards). `if`/`while` set it
 `true` around lowering their test; `and`/`or`/`not` operands set it back `false` (they need `Bool`). -/
 def withPropCondition {α : Type} (b : Bool) (x : PygenM α) : PygenM α := do
@@ -221,7 +320,12 @@ def withRealIfMarked {α : Type} (json : Lean.Json) (x : PygenM α) : PygenM α 
 def withFixedVariables {α : Type} (x : PygenM α) : PygenM α := do
   withPygenStateField (·.varNames) (fun st varNames => { st with varNames := varNames }) (← get).varNames <|
     withPygenStateField (·.setVars) (fun st setVars => { st with setVars := setVars }) (← get).setVars <|
-      withPygenStateField (·.mutVars) (fun st mutVars => { st with mutVars := mutVars }) (← get).mutVars x
+     withPygenStateField (·.sortedVars) (fun st sortedVars => { st with sortedVars := sortedVars }) (← get).sortedVars <|
+      withPygenStateField (·.libObjVars) (fun st libObjVars => { st with libObjVars := libObjVars }) (← get).libObjVars <|
+      withPygenStateField (·.dictVars) (fun st dictVars => { st with dictVars := dictVars }) (← get).dictVars <|
+       withPygenStateField (·.renames) (fun st renames => { st with renames := renames }) (← get).renames <|
+        withPygenStateField (·.mutVars) (fun st mutVars => { st with mutVars := mutVars }) (← get).mutVars <|
+         withPygenStateField (·.pyAnySlotVars) (fun st v => { st with pyAnySlotVars := v }) (← get).pyAnySlotVars x
 
 /-- Run `x` with the current loop's break-flag set to `flag?`. A loop body always overrides the
 flag (to its own `else` flag, or `none`) so a `break` binds to the innermost loop only. -/
@@ -295,12 +399,72 @@ def isMutVar (name : Name) : PygenM Bool := do
 def setMutVar (name : Name) : PygenM Unit := do
   modify fun st => { st with mutVars := st.mutVars.insert name }
 
+/-- Whether `name`'s `let mut` slot has type `PyAny` (so a reassign coerces, never rebinds). -/
+def isPyAnySlot (name : Name) : PygenM Bool := do
+  return (← get).pyAnySlotVars.contains name
+
+def setPyAnySlot (name : Name) (isPyAny : Bool) : PygenM Unit := do
+  modify fun st => { st with
+    pyAnySlotVars := if isPyAny then st.pyAnySlotVars.insert name else st.pyAnySlotVars.erase name }
+
+/-- Resolve a local name through the SSA rename map (identity if unrenamed). -/
+def applyRename (name : Name) : PygenM Name := do
+  return (← get).renames.getD name name
+
+/-- Register `name ↦ fresh`: every later reference to `name` resolves to `fresh`. Keyed by the
+original name, so a second type-change on the same variable overwrites cleanly. -/
+def addRename (name fresh : Name) : PygenM Unit := do
+  modify fun st => { st with renames := st.renames.insert name fresh }
+
+/-- A fresh rename target for `name`, containing `'` so it can never collide with a Python name. -/
+def freshRenameName (name : Name) : PygenM Name := do
+  let n := (← get).renameCounter
+  modify fun st => { st with renameCounter := n + 1 }
+  return (name.toString ++ "'rb" ++ toString n).toName
+
 def isSetVar (name : Name) : PygenM Bool := do
   return (← get).setVars.contains name
 
 /-- Mark (`isSet := true`) or unmark a variable as holding a Python `set`. -/
 def setSetVar (name : Name) (isSet : Bool) : PygenM Unit := do
   modify fun st => { st with setVars := if isSet then st.setVars.insert name else st.setVars.erase name }
+
+def isDictVar (name : Name) : PygenM Bool := do
+  return (← get).dictVars.contains name
+
+/-- Mark (`isDict := true`) or unmark a variable as holding a dict. -/
+def setDictVar (name : Name) (isDict : Bool) : PygenM Unit := do
+  modify fun st => { st with dictVars := if isDict then st.dictVars.insert name else st.dictVars.erase name }
+
+def isSortedVar (name : Name) : PygenM Bool := do
+  return (← get).sortedVars.contains name
+
+/-- Mark (`isSorted := true`) or unmark a variable as holding a `sortedcontainers.SortedList`, so its
+`add`/`remove`/`discard` dispatch to the order-maintaining runtime rather than the set versions. -/
+def setSortedVar (name : Name) (isSorted : Bool) : PygenM Unit := do
+  modify fun st => { st with sortedVars := if isSorted then st.sortedVars.insert name else st.sortedVars.erase name }
+
+/-- The library module whose object `name` holds, if any. -/
+def libObjVarModule? (name : Name) : PygenM (Option String) := do
+  return (← get).libObjVars[name]?
+
+/-- Record (or clear) that `name` holds an object owned by `module?`. -/
+def setLibObjVar (name : Name) (module? : Option String) : PygenM Unit := do
+  modify fun st => { st with libObjVars :=
+    match module? with | some m => st.libObjVars.insert name m | none => st.libObjVars.erase name }
+
+/-- Whether `json` is a `SortedList(...)` construction (a call whose callee is the `sortedcontainers`
+member `SortedList`), OR a `Name` already known to hold one. Marks the target so its `add`/`remove`/
+`discard` maintain sort order. -/
+partial def jsonIsSortedListExpr (json : Lean.Json) : PygenM Bool := do
+  match (json.getObjValAs? String "node_type").toOption with
+  | some "Name" => match json.getObjValAs? String "id" with
+                   | .ok id => isSortedVar id.toName
+                   | _ => pure false
+  | some "Call" => match json.getObjVal? "func" with
+                   | .ok f => pure (f.getObjValAs? String "library_member" == .ok "SortedList")
+                   | _ => pure false
+  | _ => pure false
 
 /-- Whether `json` denotes a Python `set`: a `set(...)` call, a `{…}` literal / set comprehension, a
 set operation (`&`/`|`/`^`/`-` on a set operand), or a `Name` already known to hold a set. Routes set
@@ -324,6 +488,21 @@ partial def jsonIsSetExpr (json : Lean.Json) : PygenM Bool := do
       else pure false
   | _ => pure false
 
+/-- Does `json` evaluate to a dict? A `{k:v}` literal / dict comprehension, a `dict()`/`defaultdict()`/
+`Counter()` constructor, or a known dict variable. Used to route `d.pop(k)` to the DICT pop. -/
+def jsonIsDictExpr (json : Lean.Json) : PygenM Bool := do
+  match (json.getObjValAs? String "node_type").toOption with
+  | some "Name" => match json.getObjValAs? String "id" with
+                   | .ok id => isDictVar id.toName
+                   | _ => pure false
+  | some "Dict" | some "DictComp" => pure true
+  | some "Call" => match json.getObjVal? "func" with
+                   | .ok f => pure ((f.getObjValAs? String "node_type") == .ok "Name"
+                                    && (#["dict", "defaultdict", "Counter"].contains
+                                        ((f.getObjValAs? String "id").toOption.getD "")))
+                   | _ => pure false
+  | _ => pure false
+
 /-- Run `x` while lowering the body of `class name` (with mutator set `mutators`), so `self.m(..)`
 calls inside dispatch to `name.m` and reassign `self` when `m` mutates. Restored on exit. -/
 def withCurrentClass {α : Type} (name : String) (mutators : List String) (x : PygenM α) : PygenM α :=
@@ -337,6 +516,7 @@ top-level statements can dispatch instantiation (`C(..)` → `C.mk`) and method 
 structure ClassInfo where
   methods : List String := []
   mutators : List String := []
+  valueMutators : List String := []
   staticmethods : List String := []
   classmethods : List String := []
   deriving Inhabited, Repr
@@ -368,6 +548,16 @@ def registerContainerField (className field : String) : PygenM Unit := do
 def isContainerField (className field : String) : PygenM Bool := do
   return ((← heapContainerFieldsRegistry.get).getD className []).contains field
 
+/-- Process-global registry of def names emitted `noncomputable` (they reach `ℝ`, e.g. `x ** 0.5`).
+A computable `def` cannot depend on a noncomputable one, so a function that CALLS a registered name
+must itself be `noncomputable`. Closure-converted helpers are emitted before their parent (module
+order), so this is populated in time. Names are the emitted (mangled) ids, so clashes are unlikely. -/
+initialize noncomputableDefRegistry : IO.Ref (Std.HashSet String) ←
+  IO.mkRef (Std.HashSet.emptyWithCapacity 16)
+
+def registerNoncomputableDef (name : String) : PygenM Unit := do
+  noncomputableDefRegistry.modify (·.insert name)
+
 /-- The class whose body is currently being lowered (`self`'s class), if any. -/
 def getCurrentClass : PygenM (Option String) := do
   return (← get).currentClass
@@ -381,6 +571,11 @@ def classInfo? (name : String) : PygenM (Option ClassInfo) := do
 def methodIsMutator (className method : String) : PygenM Bool := do
   match (← classRegistry.get).get? className with
   | some info => return info.mutators.contains method
+  | none => return false
+
+def methodIsValueMutator (className method : String) : PygenM Bool := do
+  match (← classRegistry.get).get? className with
+  | some info => return info.valueMutators.contains method
   | none => return false
 
 /-- The unique class declaring method `m`, if exactly one does (else `none`: ambiguous or unknown).
@@ -525,6 +720,36 @@ def leanName (pyName: Name) : CoreM Name := do
   let leanName := (funcMapExt.getState (← getEnv)).getD pyName pyName
   return leanName
 
+/-- Registry mapping a Python *conversion / callable name* to the Lean function it lowers to,
+populated by the `@[py_convert "name"]` attribute. Lets a user support a new conversion
+`a = myconv(s)` by tagging ONE Lean function — no edit to `pythonBuiltinMap?`. The Python name pins
+the target type (Lean can't infer it backwards at an untyped `let mut`); the tagged function stays
+open on its *source* via its own typeclass (`def pyMyConv {α} [MyConvCast α] (x : α) : T`), so adding
+a new source type is just another instance. Consulted as a fallback after the built-in tables, so a
+user entry cannot silently shadow `int`/`str`/`list`. Composes with the SSA-rename of a
+type-changing rebind, so the retyped assignment stitches automatically. -/
+initialize pyConvertExt :
+    SimpleScopedEnvExtension (String × Name) (Std.HashMap String Name) ←
+  registerSimpleScopedEnvExtension {
+    addEntry := fun m (key, n) => m.insert key n
+    initial := {}
+  }
+
+syntax (name := pyConvert) "py_convert" str : attr
+
+initialize registerBuiltinAttribute {
+  name := `pyConvert
+  descr := "Register a Lean function as the lowering of a Python conversion/callable name"
+  add := fun decl stx _ => MetaM.run' do
+    match stx with
+    | `(attr| py_convert $s:str) => pyConvertExt.add (s.getString, decl)
+    | _ => throwUnsupportedSyntax
+}
+
+/-- Resolve a `@[py_convert]`-registered conversion name to its Lean function. -/
+def pyConvertRegistered? (name : String) : CoreM (Option Name) := do
+  return (pyConvertExt.getState (← getEnv)).get? name
+
 /--
 Get the code generation functions for a given key. The key is a string that identifies the function. If no function is found for the key, an error is thrown.
 -/
@@ -569,7 +794,12 @@ def getCode (json: Json) (kind: SyntaxNodeKind) : PygenM <| TSyntax kind := do
       code ← transformFn code
     pure (some code)
   catch e =>
-    throwError s!"Error in code generation function {f} for key '{key}' and syntax category '{kind}': {← e.toMessageData.toString}")
+    let inner ← e.toMessageData.toString
+    -- Only the INNERMOST failure is wrapped. `getCode` nests (a `Return` lowers a `Call` lowers a
+    -- `Call` …), and re-wrapping at every level prepends ~100 chars of boilerplate each time, which
+    -- pushes the actual cause out of the degraded-placeholder message entirely.
+    if inner.startsWith "Error in code generation function" then throw e
+    else throwError s!"Error in code generation function {f} for key '{key}' and syntax category '{kind}': {inner}")
   match code? with
   | some code => return code
   | none => throwError s!"pygen: no function found for key '{key}' and syntax category '{kind}'"

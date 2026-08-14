@@ -1,0 +1,13 @@
+{
+  "problem": "ransom-note",
+  "module": "RansomNote",
+  "method": "canConstruct",
+  "params": [
+    "ransomNote",
+    "magazine"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 142
+}

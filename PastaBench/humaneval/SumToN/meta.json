@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/60",
+  "problem": "sum-to-n",
+  "module": "SumToN",
+  "method": "sum_to_n",
+  "params": [
+    "n"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

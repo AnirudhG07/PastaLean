@@ -1,0 +1,12 @@
+{
+  "problem": "repeated-substring-pattern",
+  "module": "RepeatedSubstringPattern",
+  "method": "repeatedSubstringPattern",
+  "params": [
+    "s"
+  ],
+  "difficulty": "Easy",
+  "bucket": "term",
+  "feature": "term",
+  "n_tests": 87
+}

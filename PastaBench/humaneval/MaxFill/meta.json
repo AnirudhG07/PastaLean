@@ -1,0 +1,14 @@
+{
+  "task_id": "HumanEval/115",
+  "problem": "max-fill",
+  "module": "MaxFill",
+  "method": "max_fill",
+  "params": [
+    "grid",
+    "capacity"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

@@ -1,0 +1,12 @@
+{
+  "problem": "count-good-nodes-in-binary-tree",
+  "module": "CountGoodNodesInBinaryTree",
+  "method": "goodNodes",
+  "params": [
+    "root"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "class",
+  "n_tests": 85
+}

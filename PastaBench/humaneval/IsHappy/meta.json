@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/80",
+  "problem": "is-happy",
+  "module": "IsHappy",
+  "method": "is_happy",
+  "params": [
+    "s"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

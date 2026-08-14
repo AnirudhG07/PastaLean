@@ -1,4 +1,4 @@
-import Mathlib
+import PastaLean.Imports
 import PastaLean.Codegen
 import PastaLean.PyGens.Basic
 import PastaLean.PyGens.Core.Utils
@@ -39,6 +39,24 @@ def noneDefaultParamNames (initJson : Json) : List String := Id.run do
       if d.getObjValAs? String "node_type" == .ok "Constant" && (d.getObjVal? "value").toOption == some Json.null then
         if let .ok nm := args[i]!.getObjValAs? String "arg" then names := nm :: names
   return names
+
+/-- A `None` literal (`Constant` whose value is JSON null). -/
+private def isNoneConstJson (j : Json) : Bool :=
+  j.getObjValAs? String "node_type" == .ok "Constant" && (j.getObjVal? "value").toOption == some Json.null
+
+/-- A list whose elements are all `None` — `[None, None]` or `[None] * k` (`[None for _ in …]`) — the
+initial value of a recursive node's children array (a Trie's `children`, a segment tree's kids). -/
+private partial def isListOfNoneJson (j : Json) : Bool :=
+  match j.getObjValAs? String "node_type" with
+  | .ok "List" =>
+      let elts := (j.getObjValAs? (Array Json) "elts").toOption.getD #[]
+      !elts.isEmpty && elts.all isNoneConstJson
+  | .ok "BinOp" =>
+      j.getObjValAs? String "op" == .ok "mul"
+        && ((j.getObjVal? "left").toOption.any isListOfNoneJson
+            || (j.getObjVal? "right").toOption.any isListOfNoneJson)
+  | .ok "ListComp" => (j.getObjVal? "elt").toOption.any isNoneConstJson
+  | _ => false
 
 /-- The `PyType` of a class field from its `{annotation?, init?}` entry (a `None`-default param field
 is `Option className`). Used by both the plain and heap field-type renderers. -/
@@ -91,7 +109,13 @@ def classFieldNameType (className : String) (noneParams : List String) (fieldJso
     | some (.null) | none =>
         if initFromNoneParam then `(Option $(mkIdent className.toName))
         else match (fieldJson.getObjVal? "init").toOption with
-          | some initJson => pure ((← pyTypeSyntax? (TypeInfer.ofValue initJson)).getD intTy)
+          -- A DIRECT `self.x = None` (not via a None-default param) is `Option ClassName`, and
+          -- `self.children = [None]*k` is `List (Option ClassName)` — the recursive-node pattern. Both
+          -- otherwise mis-infer to `Unit` / `List Unit` from the bare `None` literal.
+          | some initJson =>
+              if isNoneConstJson initJson then `(Option $(mkIdent className.toName))
+              else if isListOfNoneJson initJson then `(List (Option $(mkIdent className.toName)))
+              else pure ((← pyTypeSyntax? (TypeInfer.ofValue initJson)).getD intTy)
           | none => pure intTy
     | some annJson => pure ((← functionArgTypeSyntax? annJson).getD intTy)
   return (fid, ty)
@@ -117,12 +141,61 @@ def classSelfThreadingValue (argInfos : Array (TSyntax `ident × Option (TSyntax
   addVar `self
   let selfDecl ← if selfIsParam then `(doElem| let mut $selfId:ident := $selfId:ident)
                  else `(doElem| let mut $selfId:ident : $classTyTerm := default)
+  -- A mutator method may also reassign/augment its OWN parameters (`x += x & -x` in a Fenwick
+  -- `update`), so each mutated param needs a `let mut` shadow — exactly as free functions do. Without
+  -- it the immutable binder throws "`x` cannot be mutated" and the whole method fails to elaborate.
+  let mut paramPrelude : Array (TSyntax `doElem) := #[]
+  for (argIdent, _) in argInfos do
+    if argIdent.getId != `self && bodyElems.any (fun b => jsonMutatesName b argIdent.getId.toString) then
+      addVar argIdent.getId
+      paramPrelude := paramPrelude.push (← `(doElem| let mut $argIdent:ident := $argIdent))
   let bodyStxArray ← monadicFunctionBodySyntax bodyElems
   let idRun := mkIdent ``Id.run
   let core ← `($idRun do
       $selfDecl:doElem
+      $[$paramPrelude:doElem]*
       $[$bodyStxArray:doElem]*
       return $selfId:term)
+  let mut result := core
+  for (argIdent, ty?) in argInfos.toList.reverse do
+    result ← match ty? with
+      | some ty => `(fun ($argIdent : $ty) ↦ $result)
+      | none => `(fun $argIdent ↦ $result)
+  pure result
+
+/-- Body of a VALUE+MUTATE method — mutates `self` AND returns a value (union-find `union`). Like
+`classSelfThreadingValue` but each `return v` is emitted as `return (v, self)` (via `valueMutatorRef`),
+so the method returns `(result × Self)`; the caller binds both, reassigns the receiver, and uses the
+result. A fall-through returns `(default, self)`. -/
+def classValueMutatorValue (argInfos : Array (TSyntax `ident × Option (TSyntax `term)))
+    (bodyElems : Array Json) : PygenM (TSyntax `term) := withFreshVariables do
+  let selfId := mkIdent `self
+  addVar `self
+  let selfDecl ← `(doElem| let mut $selfId:ident := $selfId:ident)
+  let mut paramPrelude : Array (TSyntax `doElem) := #[]
+  for (argIdent, _) in argInfos do
+    if argIdent.getId != `self && bodyElems.any (fun b => jsonMutatesName b argIdent.getId.toString) then
+      addVar argIdent.getId
+      paramPrelude := paramPrelude.push (← `(doElem| let mut $argIdent:ident := $argIdent))
+  let old ← valueMutatorRef.get
+  valueMutatorRef.set true
+  let bodyStxArray ← monadicFunctionBodySyntax bodyElems
+  valueMutatorRef.set old
+  let idRun := mkIdent ``Id.run
+  -- A trailing `return v` already emits `return (v, self)`; only supply the fall-through terminal
+  -- when the body doesn't itself end in a `return` (else the two returns collide in the do-sequence).
+  let endsInReturn := bodyElems.back?.any (jsonNodeType? · == some "Return")
+  let core ← if endsInReturn then
+      `($idRun do
+        $selfDecl:doElem
+        $[$paramPrelude:doElem]*
+        $[$bodyStxArray:doElem]*)
+    else
+      `($idRun do
+        $selfDecl:doElem
+        $[$paramPrelude:doElem]*
+        $[$bodyStxArray:doElem]*
+        return (default, $selfId:term))
   let mut result := core
   for (argIdent, ty?) in argInfos.toList.reverse do
     result ← match ty? with
@@ -239,6 +312,7 @@ def classMethodDef (className : String) (info : ClassInfo) (m : Json) : PygenM (
   let isStatic := info.staticmethods.contains mName
   let isClassM := info.classmethods.contains mName
   let isMutator := info.mutators.contains mName && !isStatic && !isClassM
+  let isValueMutator := info.valueMutators.contains mName && !isStatic && !isClassM
   let argInfos : Array (TSyntax `ident × Option (TSyntax `term)) :=
     if isStatic then allArgInfos
     else if isClassM then allArgInfos.drop 1
@@ -250,6 +324,8 @@ def classMethodDef (className : String) (info : ClassInfo) (m : Json) : PygenM (
   let valueStx ← withCurrentClass className info.mutators do
     if isMutator then
       classSelfThreadingValue bodyArgInfos classTy bodyElems (selfIsParam := true)
+    else if isValueMutator then
+      classValueMutatorValue bodyArgInfos bodyElems
     else
       functionValueSyntax bodyArgInfos bodyElems
   -- A method the per-variable pass stamped `_real_fn` (produces/handles an `ℝ` transcendental)
@@ -548,6 +624,7 @@ def classDefSyntax : (kind : SyntaxNodeKind) → Json → PygenM (TSyntax kind)
       let .ok methods := json.getObjValAs? (Array Json) "methods" | throwError
         s!"ClassDef node is missing a 'methods' array: {json}"
       let mutators := (json.getObjValAs? (Array String) "mutators").toOption.getD #[]
+      let valueMutators := (json.getObjValAs? (Array String) "value_mutators").toOption.getD #[]
       let staticmethods := (json.getObjValAs? (Array String) "staticmethods").toOption.getD #[]
       let classmethods := (json.getObjValAs? (Array String) "classmethods").toOption.getD #[]
 
@@ -556,6 +633,7 @@ def classDefSyntax : (kind : SyntaxNodeKind) → Json → PygenM (TSyntax kind)
       let info : ClassInfo := {
         methods := methodNames.toList
         mutators := mutators.toList
+        valueMutators := valueMutators.toList
         staticmethods := staticmethods.toList
         classmethods := classmethods.toList }
       registerClass name info
@@ -565,10 +643,24 @@ def classDefSyntax : (kind : SyntaxNodeKind) → Json → PygenM (TSyntax kind)
       let hasRealField := (← getNumericMode) == .exact
         && fields.any (fun f => f.getObjValAs? Bool "_real" == .ok true)
       -- The `structure` itself: under `--heap` the `HeapPrelude` generator emits every struct (so
-      -- they all precede the generated `Val` universe), so skip it here; otherwise emit it inline.
+      -- they all precede the generated `Val` universe), so skip it here; otherwise emit it inline
+      -- together with the value-semantics instances.
       let mut members : Array (TSyntax `command) := #[]
       unless (← getHeapMode) do
         members := #[← classStructCommand json]
+        -- A class instance is a non-`None` object, so Python truthiness on it is always `true`
+        -- (`if node:` / `while node:`); a nullable cursor is `Option C`, whose own `PyTruthy` handles
+        -- the `none` case. Without this, `if node:` on a bare-typed `ListNode`/`TreeNode` has no instance.
+        members := members.push
+          (← `(command| instance : PastaLean.PyTruthy $nameId where truthy _ := true))
+        -- `type(instance)` / `isinstance(instance, C)` report the class: `PyType.cls "C"`.
+        members := members.push
+          (← `(command| instance : PastaLean.PyTyped $nameId where
+                 pyTypeOf _ := TypeInfer.PyType.cls $(Syntax.mkStrLit rawName)))
+        -- Lift a bare node into `Option C` so a nullable cursor (`curr = head`, later `curr = curr.next`)
+        -- ascribed `Option C` takes its bare initial value, and `curr = ListNode(...)` reassignments fit.
+        members := members.push
+          (← `(command| instance : Coe $nameId (Option $nameId) := ⟨some⟩))
 
       -- Constructor (from `__init__`), operator/printable dunders, and the remaining methods.
       let heap ← getHeapMode

@@ -9,7 +9,9 @@ open Std.Do
 set_option linter.all false
 set_option mvcgen.warning false
 
-set_option maxHeartbeats 0
+set_option maxHeartbeats 200000
+
+namespace PastaLean.User.Root
 
 def basic_switch := fun num ↦
   match num with
@@ -119,7 +121,7 @@ def switch_with_tuple'rn := fun point ↦
   | ((0 : Int), y) => s! "y-axis at {y}"
   | (x, y) => s! "point at ({x }, {y})"
 
-def switch_with_default := fun num ↦
+def switch_with_default := fun (num : Int) ↦
   match num with
   | (1 : Int) => if num = (1 : Int) then "one" else "not one"
   | (2 : Int) => "two"
@@ -127,8 +129,10 @@ def switch_with_default := fun num ↦
 
 attribute [simp, taste_ingr] switch_with_default
 
-def switch_with_default'rn := fun num ↦
+def switch_with_default'rn := fun (num : Int) ↦
   match num with
   | (1 : Int) => if num == (1 : Int) then "one" else "not one"
   | (2 : Int) => "two"
   | _ => "other"
+
+end PastaLean.User.Root

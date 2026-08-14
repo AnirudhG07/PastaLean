@@ -1,0 +1,4 @@
+import PastaBench.leetcode.MinimumNumberOfOperationsToMakeArrayXorEqualToK.Generated
+namespace PastaBench.leetcode.MinimumNumberOfOperationsToMakeArrayXorEqualToK
+-- TODO.
+end PastaBench.leetcode.MinimumNumberOfOperationsToMakeArrayXorEqualToK

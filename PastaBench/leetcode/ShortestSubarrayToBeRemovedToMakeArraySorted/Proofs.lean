@@ -1,0 +1,4 @@
+import PastaBench.leetcode.ShortestSubarrayToBeRemovedToMakeArraySorted.Generated
+namespace PastaBench.leetcode.ShortestSubarrayToBeRemovedToMakeArraySorted
+-- TODO.
+end PastaBench.leetcode.ShortestSubarrayToBeRemovedToMakeArraySorted

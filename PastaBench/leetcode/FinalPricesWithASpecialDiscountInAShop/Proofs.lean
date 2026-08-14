@@ -1,0 +1,4 @@
+import PastaBench.leetcode.FinalPricesWithASpecialDiscountInAShop.Generated
+namespace PastaBench.leetcode.FinalPricesWithASpecialDiscountInAShop
+-- TODO.
+end PastaBench.leetcode.FinalPricesWithASpecialDiscountInAShop

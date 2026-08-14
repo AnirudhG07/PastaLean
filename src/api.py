@@ -78,7 +78,7 @@ class Session:
         target: str = "command",
         mode: str = "both",
         best_effort: bool = True,
-        prove_asserts: bool = True,
+        prove_asserts: bool = False,
         imports_add: bool = True,
         heap: bool = False,
         repo_root: Path = REPO_ROOT,
@@ -100,6 +100,9 @@ class Session:
     def start(self) -> "Session":
         """Boot the backend now (imports Mathlib) rather than on the first translation."""
         self.client.start()
+        # Pull library facts (e.g. which libraries are IO-effectful) from the Lean registry before
+        # the first translation — the effect annotation runs before any per-statement backend call.
+        driver.refresh_library_info(self.client)
         return self
 
     def close(self) -> None:

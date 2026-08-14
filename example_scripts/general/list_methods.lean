@@ -9,7 +9,9 @@ open Std.Do
 set_option linter.all false
 set_option mvcgen.warning false
 
-set_option maxHeartbeats 0
+set_option maxHeartbeats 200000
+
+namespace PastaLean.User.Root
 
 def list_append_once :=
   Id.run
@@ -52,7 +54,7 @@ def list_len :=
 attribute [simp, taste_ingr] list_len
 
 def list_len'rn :=
-  let xs := ([(10 : Int), (20 : Int), (30 : Int), (40 : Int)] : List Int)
+  let xs := (#[(10 : Int), (20 : Int), (30 : Int), (40 : Int)] : Array Int)
   PastaLean.pyLen xs
 
 def list_membership :=
@@ -68,3 +70,5 @@ def list_membership'rn :=
   let present := (PastaLean.pyContains xs (2 : Int) : Bool)
   let missing := (PastaLean.pyContains xs (9 : Int) : Bool)
   (present, missing)
+
+end PastaLean.User.Root

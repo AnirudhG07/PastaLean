@@ -1,0 +1,4 @@
+import PastaBench.leetcode.MinimumLengthOfStringAfterDeletingSimilarEnds.Generated
+namespace PastaBench.leetcode.MinimumLengthOfStringAfterDeletingSimilarEnds
+-- TODO.
+end PastaBench.leetcode.MinimumLengthOfStringAfterDeletingSimilarEnds

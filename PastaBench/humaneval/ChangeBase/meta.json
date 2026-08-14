@@ -1,0 +1,14 @@
+{
+  "task_id": "HumanEval/44",
+  "problem": "change-base",
+  "module": "ChangeBase",
+  "method": "change_base",
+  "params": [
+    "x",
+    "base"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

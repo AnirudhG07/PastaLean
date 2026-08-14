@@ -1,0 +1,202 @@
+[
+  {
+    "input": "s = 'Mary had a little lamb', n = 4",
+    "output": "['little']"
+  },
+  {
+    "input": "s = 'Mary had a little lamb', n = 3",
+    "output": "['Mary', 'lamb']"
+  },
+  {
+    "input": "s = 'simple white space', n = 2",
+    "output": "[]"
+  },
+  {
+    "input": "s = 'Hello world', n = 4",
+    "output": "['world']"
+  },
+  {
+    "input": "s = 'Uncle sam', n = 3",
+    "output": "['Uncle']"
+  },
+  {
+    "input": "s = '', n = 4",
+    "output": "[]"
+  },
+  {
+    "input": "s = 'a b c d e f', n = 1",
+    "output": "['b', 'c', 'd', 'f']"
+  },
+  {
+    "input": "s = 'apple banana cherry', n = 3",
+    "output": "['apple', 'banana']"
+  },
+  {
+    "input": "s = 'random words are fun to write', n = 5",
+    "output": "[]"
+  },
+  {
+    "input": "s = 'the quick brown fox jumps over the lazy dog', n = 6",
+    "output": "[]"
+  },
+  {
+    "input": "s = 'the cat in the hat', n = 2",
+    "output": "['the', 'cat', 'the', 'hat']"
+  },
+  {
+    "input": "s = 'jingle bells jingle bells jingle all the way', n = 8",
+    "output": "[]"
+  },
+  {
+    "input": "s = 'Python is a popular programming language', n = 3",
+    "output": "[]"
+  },
+  {
+    "input": "s = '', n = 1",
+    "output": "[]"
+  },
+  {
+    "input": "s = 'this is a test string with multiple words containing different numbers of consonants', n = 7",
+    "output": "['consonants']"
+  },
+  {
+    "input": "s = 'quack quack goes the duck', n = 2",
+    "output": "['goes', 'the']"
+  },
+  {
+    "input": "s = 'ThE qUiCk BrOwN fOx JuMpS oVeR tHe LaZy DoG', n = 6",
+    "output": "[]"
+  },
+  {
+    "input": "s = 'apple banana cherry', n = 6",
+    "output": "[]"
+  },
+  {
+    "input": "s = 'random words are fun to write', n = 2",
+    "output": "['fun']"
+  },
+  {
+    "input": "s = 'Python isp a popular programming language', n = 3",
+    "output": "[]"
+  },
+  {
+    "input": "s = 'apple banana chernry', n = 3",
+    "output": "['apple', 'banana']"
+  },
+  {
+    "input": "s = 'random words are fun to write', n = 8",
+    "output": "[]"
+  },
+  {
+    "input": "s = 'apple banana cherry', n = 2",
+    "output": "[]"
+  },
+  {
+    "input": "s = '', n = 2",
+    "output": "[]"
+  },
+  {
+    "input": "s = 'apple banana cherry', n = 1",
+    "output": "[]"
+  },
+  {
+    "input": "s = 'apple banana chethe cat in the hatrry', n = 6",
+    "output": "[]"
+  },
+  {
+    "input": "s = 'the quick brown fox jumps over the lazy dog', n = 1",
+    "output": "[]"
+  },
+  {
+    "input": "s = 'quack quack goes the duck', n = 1",
+    "output": "[]"
+  },
+  {
+    "input": "s = 'the quick browan fox jumps over the lazy dog', n = 0",
+    "output": "[]"
+  },
+  {
+    "input": "s = 'Python isp a popular programming languagePython is a popular progrmming language', n = 2",
+    "output": "['isp']"
+  },
+  {
+    "input": "s = 'appna cherry', n = 2",
+    "output": "[]"
+  },
+  {
+    "input": "s = 'the quick brown fox jumps og', n = 1",
+    "output": "['og']"
+  },
+  {
+    "input": "s = 'this is a test string with multiple words containing different numbers of consonants', n = 6",
+    "output": "['containing', 'different']"
+  },
+  {
+    "input": "s = 'Python isp a popular programmia popular progrmming language', n = 2",
+    "output": "['isp']"
+  },
+  {
+    "input": "s = 'jingle bells jingle bells jingle all the way', n = 2",
+    "output": "['all', 'the', 'way']"
+  },
+  {
+    "input": "s = 'apple banappna cherryana cherry', n = 2",
+    "output": "[]"
+  },
+  {
+    "input": "s = 'apple banappna cherryana cherry', n = 1",
+    "output": "[]"
+  },
+  {
+    "input": "s = 'apple banaapple banana chethe cat in the hatrryppna cherryana cherry', n = 8",
+    "output": "['hatrryppna']"
+  },
+  {
+    "input": "s = 'Python isp a popular programmia popular progrmming language', n = 1",
+    "output": "[]"
+  },
+  {
+    "input": "s = 'ThE qUiCk BrOwN fOx JuMpS oVeR tHe LaZy DoG', n = 5",
+    "output": "[]"
+  },
+  {
+    "input": "s = 'Python isp a popular programming language', n = 0",
+    "output": "['a']"
+  },
+  {
+    "input": "s = 'Python isp a popular programmia popular progrmming language', n = 3",
+    "output": "[]"
+  },
+  {
+    "input": "s = 'Python isp a popular mprogramming language', n = 7",
+    "output": "[]"
+  },
+  {
+    "input": "s = 'apple banana cherapple banaapple banana chethe cat ine hatrryppna cherryana cherryry', n = 2",
+    "output": "['cat']"
+  },
+  {
+    "input": "s = 'apple banana chernry', n = 1",
+    "output": "[]"
+  },
+  {
+    "input": "s = 'apple banappna cherryana cherr', n = 1",
+    "output": "[]"
+  },
+  {
+    "input": "s = 'the quick brown fox jumps over the lazy dog', n = 0",
+    "output": "[]"
+  },
+  {
+    "input": "s = 'apple banana chethe cat in the hatrry', n = 3",
+    "output": "['apple', 'banana']"
+  },
+  {
+    "input": "s = 'this is a test sThE qUiCk BrOwN fOx JuMpS oVeR tHe LaZy DoGds containing different numbers of consonants', n = 7",
+    "output": "['consonants']"
+  },
+  {
+    "input": "s = 'Pythion isp a popular programmia popular progrmming language', n = 2",
+    "output": "['isp']"
+  }
+]

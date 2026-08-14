@@ -9,7 +9,9 @@ open Std.Do
 set_option linter.all false
 set_option mvcgen.warning false
 
-set_option maxHeartbeats 0
+set_option maxHeartbeats 200000
+
+namespace PastaLean.User.Root
 
 def lmbda_expr := fun x ↦ x +ₚ (1 : Int)
 
@@ -32,7 +34,7 @@ def lmbda_with_array :=
 attribute [simp, taste_ingr] lmbda_with_array
 
 def lmbda_with_array'rn :=
-  let a := ([(1 : Int), (2 : Int), (3 : Int), (4 : Int), (5 : Int)] : List Int)
+  let a := (#[(1 : Int), (2 : Int), (3 : Int), (4 : Int), (5 : Int)] : Array Int)
   let b := fun x ↦ if PastaLean.pyContains a x then some (x *ₚ x) else none
   let c := b
   c
@@ -95,19 +97,19 @@ def lmbda_with_side_effects :=
       let mut result : List Int := []
       for x in (PastaLean.pyRange (5 : Int))do
         result := PastaLean.pyAppend result (x *ₚ x)
-      let __py_ret_1 := fun (y : Unit) ↦ result
-      return __py_ret_1)
+      let p'_ret_1 := fun (y : Unit) ↦ result
+      return p'_ret_1)
 
 attribute [simp, taste_ingr] lmbda_with_side_effects
 
 def lmbda_with_side_effects'rn :=
   Id.run
     (do
-      let mut result : List Int := []
+      let mut result : Array Int := #[]
       for x in (PastaLean.pyRange (5 : Int))do
-        result := PastaLean.pyAppend result (x *ₚ x)
-      let __py_ret_1 := fun (y : Unit) ↦ result
-      return __py_ret_1)
+        result := PastaLean.pyArrayAppend result (x *ₚ x)
+      let p'_ret_1 := fun (y : Unit) ↦ result
+      return p'_ret_1)
 
 def lmbda_with_generator_expression := fun () ↦
   (PastaLean.pyIter ((PastaLean.pyRange (5 : Int)).map fun i => i)).map fun x => x *ₚ x
@@ -116,3 +118,5 @@ attribute [simp, taste_ingr] lmbda_with_generator_expression
 
 def lmbda_with_generator_expression'rn := fun () ↦
   (PastaLean.pyIter ((PastaLean.pyRange (5 : Int)).map fun i => i)).map fun x => x *ₚ x
+
+end PastaLean.User.Root

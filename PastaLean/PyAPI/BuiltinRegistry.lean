@@ -46,10 +46,12 @@ def pythonBuiltinMap? (name : String) : Option Lean.Name :=
   | "tuple" => some ``pyList
   -- `map`/`filter`/`list` also have dedicated special-case lowering for direct calls (which
   -- wins, being matched first). The registry entries are the fallback used when the call is
-  -- IO-effectful and routed through `inlineIOTerm`, e.g. `map(int, input().split())`.
+  -- IO-effectful and routed through `inlineEffectfulTerm`, e.g. `map(int, input().split())`.
   | "map" => some ``pyMap
   | "filter" => some ``pyFilter
   | "list" => some ``pyList
+  | "type" => some ``pyType
+  | "eval" => some ``pyEval
   | _ => none
 
 /-- Exact-mode overrides for builtins whose numeric result type changes when `float` lowers to

@@ -45,6 +45,7 @@ TYPE_ONLY_IMPORTS = {"typing", "typing_extensions", "__future__"}
 # Numeric lowering mode sent to the Lean backend: "exact" → Python float becomes Lean ℚ
 # (provable + computable); "approx" → Float (fast, runnable). Set per backend send.
 _NUMERIC_MODE = "exact"
+_BEST_EFFORT = False
 # Run-twin suffix (`--mode both`): "'rn" while emitting the runnable twin of a declaration, "" for
 # the single-version modes. `_USER_NAMES` lists the user functions/classes whose references the
 # backend suffixes in a twin (so `foo'rn` calls `bar'rn`, builds `CNN'rn`).
@@ -284,12 +285,42 @@ def _body_has_direct_exception_syntax(body):
     return False
 
 
+#: Library modules whose members are `IO` (global mutable state), so a call to one makes its
+#: enclosing function IO-effectful exactly as `input()` does. Populated from the Lean registry
+#: (`Libraries.ioEffectfulLibraries`) via the `libraryInfo` backend task — the fact is DECLARED by
+#: the library, never duplicated here. Empty until the backend is reachable, which is safe: the
+#: worst case is a missed effect annotation, the same as before the query existed.
+_IO_EFFECTFUL_LIBRARIES: set[str] = set()
+
+
+def refresh_library_info(client):
+    """Pull library facts from the Lean registry once per backend process."""
+    global _IO_EFFECTFUL_LIBRARIES
+    try:
+        info = client.library_info()
+    except Exception:  # noqa: BLE001  (a missing enrichment must never break translation)
+        return
+    names = info.get("ioEffectfulLibraries")
+    if isinstance(names, list):
+        _IO_EFFECTFUL_LIBRARIES = {n for n in names if isinstance(n, str)}
+
+
+def _is_io_effectful_library_call(func):
+    """A `random.randint(...)`-style call: resolved to a library whose members live in `IO`."""
+    return (
+        isinstance(func, dict)
+        and func.get("library_module") in _IO_EFFECTFUL_LIBRARIES
+    )
+
+
 def _body_has_direct_io_syntax(body):
     for stmt in body:
         for node in _walk_json_nodes(stmt, skip_nested_function_bodies=True):
             if _node_type(node) != "Call":
                 continue
             func = node.get("func")
+            if _is_io_effectful_library_call(func):
+                return True
             if (
                 isinstance(func, dict)
                 and func.get("node_type") == "Name"
@@ -353,7 +384,9 @@ def _annotate_direct_io_calls(node):
     if isinstance(node, dict):
         if node.get("node_type") == "Call":
             func = node.get("func")
-            if (
+            if _is_io_effectful_library_call(func):
+                node.setdefault("effect_mode", "io")
+            elif (
                 isinstance(func, dict)
                 and func.get("node_type") == "Name"
             ):
@@ -875,10 +908,19 @@ def annotate_real_flow(module_json):
             node_type = node.get("node_type")
             if node_type in ("Assign", "AnnAssign", "AugAssign"):
                 base_name, target_node = _assign_base_name(node)
+                value = node.get("value")
                 # Stamp EVERY assignment whose root var is real (even a `x = 0.0` whose own RHS
                 # isn't real but `x` is real elsewhere), so the RHS is lowered in real-context
                 # (literals → `ℝ`, list literals → `List ℝ`); the mutable then infers `ℝ`.
-                if base_name in reals or _self_field_name(node.get("target")) in real_fields:
+                # ALSO stamp when the RHS itself is real even if the target is not a single Name — a
+                # TUPLE-unpack of a real-returning call (`dist, nn = find_nearest_neighbor(...)`): the
+                # real-context makes each `float`-typed element `ℝ` (an `int` element is unaffected),
+                # so an `ℝ` tuple slot is no longer mis-ascribed `ℚ` (there is no `Coe ℝ ℚ`).
+                if (
+                    base_name in reals
+                    or _self_field_name(node.get("target")) in real_fields
+                    or (value is not None and expr_is_real(value, name))
+                ):
                     node["_real"] = True
                     if target_node is not None:
                         target_node["_real"] = True
@@ -989,15 +1031,51 @@ def _function_arg_names(fn_node):
     return names
 
 
-def _annotate_library_refs_in_expr(node, import_env):
+def _comprehension_target_names(node):
+    """Names bound by a comprehension/lambda target (`Name`, or the elements of a tuple/list target)."""
+    names = set()
+    def walk(n):
+        if not isinstance(n, dict):
+            return
+        if n.get("node_type") == "Name":
+            names.add(n.get("id"))
+        elif n.get("node_type") in ("Tuple", "List"):
+            for elt in n.get("elts", []) or []:
+                walk(elt)
+    walk(node)
+    return names
+
+
+def _annotate_library_refs_in_expr(node, import_env, shadowed=frozenset()):
+    """`shadowed` are names bound LOCALLY (parameters, assignments, comprehension/lambda binders).
+    They must not be read as library references even when they happen to share a name with a
+    supported library — `def f(string)` makes `string.lower()` a method call, not `string.lower`."""
     if isinstance(node, list):
         for item in node:
-            _annotate_library_refs_in_expr(item, import_env)
+            _annotate_library_refs_in_expr(item, import_env, shadowed)
         return
     if not isinstance(node, dict):
         return
 
     node_type = node.get("node_type")
+    # A comprehension/lambda binder is a LOCAL name that SHADOWS any star-imported member of the same
+    # name (`[e for e in xs]` / `lambda e: …` under `from math import *` must not rewrite `e` to the
+    # math constant). Recurse into the sub-expression with those names removed from the import env.
+    if node_type in ("ListComp", "SetComp", "DictComp", "GeneratorExp", "Lambda"):
+        bound = set()
+        if node_type == "Lambda":
+            for arg in (node.get("args", {}) or {}).get("args", []) or []:
+                if arg.get("arg"):
+                    bound.add(arg.get("arg"))
+        else:
+            for gen in node.get("generators", []) or []:
+                bound |= _comprehension_target_names(gen.get("target"))
+        sub_env = {k: v for k, v in import_env.items() if k not in bound} if bound else import_env
+        sub_shadowed = (shadowed | bound) if bound else shadowed
+        for value in node.values():
+            _annotate_library_refs_in_expr(value, sub_env, sub_shadowed)
+        return
+
     if node_type == "Name":
         binding = import_env.get(node.get("id"))
         if binding and binding.get("kind") == "member":
@@ -1006,15 +1084,25 @@ def _annotate_library_refs_in_expr(node, import_env):
     elif node_type == "Attribute":
         value = node.get("value")
         if isinstance(value, dict) and value.get("node_type") == "Name":
-            binding = import_env.get(value.get("id"))
+            vid = value.get("id")
+            binding = import_env.get(vid)
             if binding and binding.get("kind") == "module":
                 node["library_module"] = binding["module"]
                 node["library_member"] = node.get("attr")
+            elif vid in SUPPORTED_LIBRARY_IMPORTS and vid not in shadowed:
+                # `bisect.bisect_left(...)`: a supported-library name used as `X.attr` is the MODULE,
+                # even if `from bisect import *` also bound `bisect` (the function alias) — the attribute
+                # access disambiguates to the module. Clear the receiver's stale member stamp so it is
+                # not itself lowered as a library reference.
+                node["library_module"] = vid
+                node["library_member"] = node.get("attr")
+                value.pop("library_module", None)
+                value.pop("library_member", None)
 
     for key, value in node.items():
         if node_type == "FunctionDef" and key == "body":
             continue
-        _annotate_library_refs_in_expr(value, import_env)
+        _annotate_library_refs_in_expr(value, import_env, shadowed)
 
 
 @functools.lru_cache(maxsize=None)
@@ -1024,6 +1112,12 @@ def _library_star_members(root):
     precise "unsupported member" error rather than as an unresolved Lean identifier."""
     if root == "passta":
         return frozenset(PASSTA_STAR_MEMBERS)
+    # `operator` re-exports many builtins (abs, pow, eq, …); `from operator import *` is in every
+    # dataset preamble, so binding all of them would SHADOW those builtins corpus-wide. Bind only the
+    # members the Lean registry actually maps (the operator-specific/arith/bitwise ones); everything
+    # else falls through to its builtin (`abs`, `pow`, …).
+    if root == "operator":
+        return frozenset({"xor", "or_", "and_", "add", "sub", "mul", "mod", "floordiv"})
     try:
         module = importlib.import_module(root)
     except ImportError:
@@ -1031,7 +1125,10 @@ def _library_star_members(root):
     exported = getattr(module, "__all__", None)
     if exported is None:
         exported = [n for n in dir(module) if not n.startswith("_")]
-    return frozenset(exported)
+    # The builtin `pow` is variadic: `pow(b, e, mod)` is modular exponentiation. A library `pow`
+    # (e.g. `math.pow`, which is 2-arg and float-only) must never shadow it, or a 3-arg `pow(b, e, mod)`
+    # mis-resolves to the 2-arg library function ("Function expected"). Let it fall through to builtin.
+    return frozenset(exported) - {"pow"}
 
 
 def _strip_library_annotation_from_binders(stmt):
@@ -1073,8 +1170,11 @@ def _scope_bound_names(body):
     return names
 
 
-def _annotate_library_imports_in_scope(body, inherited_env=None):
+def _annotate_library_imports_in_scope(body, inherited_env=None, shadowed=frozenset()):
     env = dict(inherited_env or {})
+    # Locally-bound names in THIS scope shadow same-named libraries for the whole scope (Python
+    # binds per-function, not per-statement), so collect them up front.
+    shadowed = set(shadowed) | set(_scope_bound_names(body))
     for stmt in body:
         if not isinstance(stmt, dict):
             continue
@@ -1123,7 +1223,7 @@ def _annotate_library_imports_in_scope(body, inherited_env=None):
                         }
             continue
 
-        _annotate_library_refs_in_expr(stmt, env)
+        _annotate_library_refs_in_expr(stmt, env, shadowed)
         _strip_library_annotation_from_binders(stmt)
 
         # A binding here shadows a star-imported member from now on (`from math import *` then
@@ -1141,25 +1241,29 @@ def _annotate_library_imports_in_scope(body, inherited_env=None):
                     child_env.pop(arg_name, None)
                 for local_name in _scope_bound_names(method.get("body", [])):
                     child_env.pop(local_name, None)
-                _annotate_library_imports_in_scope(method.get("body", []), child_env)
+                _annotate_library_imports_in_scope(
+                    method.get("body", []), child_env,
+                    shadowed | set(_function_arg_names(method)))
         elif node_type == "FunctionDef":
             child_env = dict(env)
             for arg_name in _function_arg_names(stmt):
                 child_env.pop(arg_name, None)
             for local_name in _scope_bound_names(stmt.get("body", [])):
                 child_env.pop(local_name, None)
-            _annotate_library_imports_in_scope(stmt.get("body", []), child_env)
+            _annotate_library_imports_in_scope(
+                stmt.get("body", []), child_env,
+                shadowed | set(_function_arg_names(stmt)))
         else:
             for body_key in ("body", "orelse", "finalbody"):
                 nested = stmt.get(body_key)
                 if isinstance(nested, list):
-                    _annotate_library_imports_in_scope(nested, dict(env))
+                    _annotate_library_imports_in_scope(nested, dict(env), shadowed)
             for handler in stmt.get("handlers", []):
                 if isinstance(handler, dict):
-                    _annotate_library_imports_in_scope(handler.get("body", []), dict(env))
+                    _annotate_library_imports_in_scope(handler.get("body", []), dict(env), shadowed)
             for case in stmt.get("cases", []):
                 if isinstance(case, dict):
-                    _annotate_library_imports_in_scope(case.get("body", []), dict(env))
+                    _annotate_library_imports_in_scope(case.get("body", []), dict(env), shadowed)
 
         for bound_name in _stmt_bound_names(stmt):
             env.pop(bound_name, None)
@@ -1169,6 +1273,69 @@ def annotate_library_imports(module_json):
     """Annotate names/attributes that come from imported libraries such as `math`."""
     if isinstance(module_json, dict) and module_json.get("node_type") == "Module":
         _annotate_library_imports_in_scope(module_json.get("body", []))
+
+
+# Lean/Mathlib globals brought into scope by `open PastaLean`/`open Libraries`/Mathlib. A user
+# top-level `def max(...)` lands in the root namespace alongside core's `max`, so every bare `max`
+# call is "ambiguous identifier `max`: [Max.max, max]". We rename such user functions (and their
+# references) to a name containing `'` (invalid in Python, so it can never collide with a user name).
+_RESERVED_LEAN_GLOBALS = frozenset({"max", "min", "insert", "id", "pred", "succ"})
+
+
+def _scope_binds_name(funcdef, name):
+    """Does this function scope bind `name` locally (a param, or an assignment/for-target anywhere in
+    its own body, not descending into nested defs)? If so, `name` inside refers to the local, not the
+    module-level function, and must not be renamed."""
+    args = funcdef.get("args") or {}
+    for key in ("args", "posonlyargs", "kwonlyargs"):
+        if any(a.get("arg") == name for a in args.get(key, []) or []):
+            return True
+    for va in ("vararg", "kwarg"):
+        if (args.get(va) or {}).get("arg") == name:
+            return True
+    for sub in _walk_json_nodes(funcdef.get("body", []), skip_nested_function_bodies=True):
+        if sub.get("node_type") == "Name" and sub.get("id") == name \
+                and (sub.get("ctx") or {}).get("node_type") == "Store":
+            return True
+    return False
+
+
+def _rename_name_refs(node, old, new):
+    """Rename every `Name`/`arg` reference `old` -> `new`, but stop descending into a nested function
+    scope that rebinds `old` locally (its `old` is a different variable)."""
+    if isinstance(node, list):
+        for x in node:
+            _rename_name_refs(x, old, new)
+        return
+    if not isinstance(node, dict):
+        return
+    if node.get("node_type") in ("FunctionDef", "AsyncFunctionDef") and _scope_binds_name(node, old):
+        return
+    if node.get("node_type") == "Name" and node.get("id") == old:
+        node["id"] = new
+    for v in node.values():
+        _rename_name_refs(v, old, new)
+
+
+def rename_reserved_shadows(module_json):
+    """Rename top-level user functions whose name shadows a Lean/Mathlib global (`max`, `min`, …) so
+    calls to them are unambiguous. Only fires when the module actually defines such a function."""
+    if not (isinstance(module_json, dict) and module_json.get("node_type") == "Module"):
+        return
+    body = module_json.get("body", [])
+    targets = {
+        stmt["name"]: stmt for stmt in body
+        if isinstance(stmt, dict)
+        and stmt.get("node_type") in ("FunctionDef", "AsyncFunctionDef")
+        and stmt.get("name") in _RESERVED_LEAN_GLOBALS
+    }
+    for old in targets:
+        new = f"{old}'usr"
+        # A module-level `def max` makes `max` refer to it throughout the module (Python resolves the
+        # name at call time), except inside a scope that locally rebinds it — `_rename_name_refs` skips
+        # those. The def's own `name` is not a `Name` node, so rename it explicitly.
+        targets[old]["name"] = new
+        _rename_name_refs(body, old, new)
 
 
 def _sanitize_hole_identifiers(ast_tree):
@@ -1233,6 +1400,7 @@ def translate_to_json(source_code, filepath=None, best_effort=False):
         )
         for src in translator.unsupported_log:
             logger.warning("  unsupported: %s", src)
+    rename_reserved_shadows(data)
     annotate_library_imports(data)
     annotate_exception_effects(data)
     annotate_io_effects(data)
@@ -1260,6 +1428,7 @@ def invoke_lean_backend(ast_json, target, check=True, client=None):
             numeric_mode=_NUMERIC_MODE,
             run_suffix=_RUN_SUFFIX,
             user_names=_USER_NAMES,
+            best_effort=_BEST_EFFORT,
             heap=_HEAP_MODE,
         )
     except Exception as err:
@@ -1414,6 +1583,7 @@ def _collect_class_table(body):
             table[s["name"]] = {
                 "methods": set(m.get("name") for m in s.get("methods", [])),
                 "mutators": set(s.get("mutators", [])),
+                "value_mutators": set(s.get("value_mutators", [])),
                 "fields": set(f.get("name") for f in s.get("fields", [])),
                 "statics": set(s.get("staticmethods", [])) | set(s.get("classmethods", [])),
                 "bases": [b.get("id") for b in s.get("bases", []) if isinstance(b, dict)],
@@ -1423,6 +1593,7 @@ def _collect_class_table(body):
             if base in table:
                 info["methods"] |= table[base]["methods"]
                 info["mutators"] |= table[base]["mutators"]
+                info["value_mutators"] |= table[base]["value_mutators"]
                 info["fields"] |= table[base]["fields"]
     return table
 
@@ -1529,6 +1700,7 @@ def _stamp_class_dispatch(ast_json):
                     if rcls is not None and method in table.get(rcls, {}).get("methods", set()):
                         node["_receiver_class"] = rcls
                         node["_is_mutator"] = method in table[rcls]["mutators"]
+                        node["_is_value_mutator"] = method in table[rcls]["value_mutators"]
         for v in node.values():
             walk_expr(v, scope, current_class)
 
@@ -1669,7 +1841,7 @@ def _collect_container_annotations(node, acc=None, seen=None):
     return acc
 
 
-def translate_to_lean(source_code, target="term", filepath = None, imports_add = True, best_effort=False, mode="both", prove_asserts=True, heap=False, client=None):
+def translate_to_lean(source_code, target="term", filepath = None, imports_add = True, best_effort=False, mode="both", prove_asserts=False, heap=False, client=None):
     """Translate Python source to Lean via JSON IR and the Lean backend executable.
 
     `mode` selects the numeric semantics: "prove" (exact ℚ/ℝ, provable), "run" (Float, runnable), or
@@ -1678,8 +1850,9 @@ def translate_to_lean(source_code, target="term", filepath = None, imports_add =
 
     `client` is the `LeanBackendClient` to translate through; defaults to the process-wide one. Pass
     an explicit client to reuse a single warm Lean process across many files."""
-    global _NUMERIC_MODE, _RUN_SUFFIX, _USER_NAMES, _HEAP_MODE
+    global _NUMERIC_MODE, _RUN_SUFFIX, _USER_NAMES, _BEST_EFFORT, _HEAP_MODE
     _NUMERIC_MODE = "approx" if mode == "run" else "exact"
+    _BEST_EFFORT = best_effort
     _RUN_SUFFIX, _USER_NAMES = "", []
     _HEAP_MODE = heap
     json_ir = translate_to_json(source_code, filepath, best_effort=best_effort)
@@ -1832,10 +2005,15 @@ def translate_to_lean(source_code, target="term", filepath = None, imports_add =
                 # Every `import` must precede the first command in a Lean file. We list the
                 # runtime imports, then the user's cross-file modules, then the `open`s.
                 crossfile_imports = _crossfile_import_lines(body)
-                # Heartbeats bound proof *search*. A program with no proof obligations is pure
-                # elaboration and must scale to any program size, so leave it unbounded (`0`).
+                # Heartbeats are the ONLY backstop against a non-terminating elaboration. A closed
+                # program over reducible library fns can loop the elaborator (the "closed-program
+                # kernel hang"); `maxHeartbeats 0` (unbounded) turns that into an infinite hang that
+                # blocks the whole batch/overnight run. The limit is PER-DECLARATION, so a finite cap
+                # never penalises large programs — it only fails a genuinely looping declaration.
+                # NEVER 0: a bare def gets Lean's default (200000); proving gets 4× headroom for
+                # `taste?`/`mvcgen` search.
                 proving = "taste?" in body_code or "theorem " in body_code
-                heartbeats = 800000 if proving else 0
+                heartbeats = 800000 if proving else 200000
                 preamble_lines = [
                     "import PastaLean",
                     "import Libraries",
@@ -1850,9 +2028,17 @@ def translate_to_lean(source_code, target="term", filepath = None, imports_add =
                     "set_option mvcgen.warning false",
                     "",
                     f"set_option maxHeartbeats {heartbeats}",
+                    "",
+                    # User code lives in a dedicated namespace so a `def compare`/`def unique` resolves
+                    # to the user's own definition (namespace precedence) instead of clashing with the
+                    # Lean/Mathlib global of the same name — replacing the old `_root_`-qualification.
+                    # `Root` is the placeholder for a single file; multi-file conversion uses
+                    # `PastaLean.User.<Dir>.<File>`. PastaBench renames this placeholder to its
+                    # per-problem namespace (no nesting).
+                    "namespace PastaLean.User.Root",
                     "\n",
                 ]
-                full_code = "\n".join(preamble_lines) + body_code
+                full_code = "\n".join(preamble_lines) + body_code + "\n\nend PastaLean.User.Root\n"
             else:
                 full_code = body_code
             # Lay an `mvcgen … invariants` spec's `with` closer on its own line (cosmetic), for both

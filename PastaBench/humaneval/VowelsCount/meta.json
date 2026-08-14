@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/64",
+  "problem": "vowels-count",
+  "module": "VowelsCount",
+  "method": "vowels_count",
+  "params": [
+    "s"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

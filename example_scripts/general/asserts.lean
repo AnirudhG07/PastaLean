@@ -11,13 +11,15 @@ set_option mvcgen.warning false
 
 set_option maxHeartbeats 800000
 
+namespace PastaLean.User.Root
+
 -- Assert statements: inline (inside a function) and top-level (outside any function).
 def GREETING :=
   "hi"
 
 -- top-level assert — outside any function
 @[taste_ingr]
-theorem assert_stmt_1 : PastaLean.pyLen GREETING = (2 : Int) := by aesop
+theorem assert_stmt_1 : PastaLean.pyLen GREETING = (2 : Int) := by decide
 
 def checked_add := fun (a : Int) ↦ fun (b : Int) ↦
   -- inline asserts inside a function body
@@ -30,3 +32,5 @@ attribute [simp] checked_add
 def checked_add'rn := fun (a : Int) ↦ fun (b : Int) ↦
   -- inline asserts inside a function body
   a +ₚ b
+
+end PastaLean.User.Root

@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/151",
+  "problem": "double-the-difference",
+  "module": "DoubleTheDifference",
+  "method": "double_the_difference",
+  "params": [
+    "lst"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

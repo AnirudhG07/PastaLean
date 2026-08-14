@@ -1,0 +1,202 @@
+[
+  {
+    "input": "interval1 = [1, 2], interval2 = [2, 3]",
+    "output": "'NO'"
+  },
+  {
+    "input": "interval1 = [-1, 1], interval2 = [0, 4]",
+    "output": "'NO'"
+  },
+  {
+    "input": "interval1 = [-3, -1], interval2 = [-5, 5]",
+    "output": "'YES'"
+  },
+  {
+    "input": "interval1 = [-2, 2], interval2 = [-4, 0]",
+    "output": "'YES'"
+  },
+  {
+    "input": "interval1 = [-11, 2], interval2 = [-1, -1]",
+    "output": "'NO'"
+  },
+  {
+    "input": "interval1 = [1, 2], interval2 = [3, 5]",
+    "output": "'NO'"
+  },
+  {
+    "input": "interval1 = [1, 2], interval2 = [1, 2]",
+    "output": "'NO'"
+  },
+  {
+    "input": "interval1 = [-2, -2], interval2 = [-3, -2]",
+    "output": "'NO'"
+  },
+  {
+    "input": "interval1 = [0, 0], interval2 = [0, 1]",
+    "output": "'NO'"
+  },
+  {
+    "input": "interval1 = [10, 20], interval2 = [15, 25]",
+    "output": "'YES'"
+  },
+  {
+    "input": "interval1 = [-15, 15], interval2 = [-10, 10]",
+    "output": "'NO'"
+  },
+  {
+    "input": "interval1 = [0, 5], interval2 = [6, 10]",
+    "output": "'NO'"
+  },
+  {
+    "input": "interval1 = [5, 10], interval2 = [1, 7]",
+    "output": "'YES'"
+  },
+  {
+    "input": "interval1 = [11, 11], interval2 = [11, 11]",
+    "output": "'NO'"
+  },
+  {
+    "input": "interval1 = [1, 5], interval2 = [3, 7]",
+    "output": "'YES'"
+  },
+  {
+    "input": "interval1 = [-6, -2], interval2 = [-1, 1]",
+    "output": "'NO'"
+  },
+  {
+    "input": "interval1 = [7, 13], interval2 = [10, 23]",
+    "output": "'YES'"
+  },
+  {
+    "input": "interval1 = [-10, 0], interval2 = [-2, 2]",
+    "output": "'YES'"
+  },
+  {
+    "input": "interval1 = [-6, -2], interval2 = [-6, -2]",
+    "output": "'NO'"
+  },
+  {
+    "input": "interval1 = [6, 6], interval2 = [6, 6]",
+    "output": "'NO'"
+  },
+  {
+    "input": "interval1 = [0, 1], interval2 = [0, 0]",
+    "output": "'NO'"
+  },
+  {
+    "input": "interval1 = [3, 7], interval2 = [3, 7]",
+    "output": "'NO'"
+  },
+  {
+    "input": "interval1 = [7, 12], interval2 = [10, 23]",
+    "output": "'YES'"
+  },
+  {
+    "input": "interval1 = [-6, -2], interval2 = [-1, 0]",
+    "output": "'NO'"
+  },
+  {
+    "input": "interval1 = [1, 5], interval2 = [1, 5]",
+    "output": "'NO'"
+  },
+  {
+    "input": "interval1 = [5, 6], interval2 = [5, 6]",
+    "output": "'NO'"
+  },
+  {
+    "input": "interval1 = [5, 5], interval2 = [5, 5]",
+    "output": "'NO'"
+  },
+  {
+    "input": "interval1 = [0, 0], interval2 = [0, 0]",
+    "output": "'NO'"
+  },
+  {
+    "input": "interval1 = [3, 13], interval2 = [3, 13]",
+    "output": "'NO'"
+  },
+  {
+    "input": "interval1 = [-2, -2], interval2 = [-2, -2]",
+    "output": "'NO'"
+  },
+  {
+    "input": "interval1 = [2, 3], interval2 = [2, 3]",
+    "output": "'NO'"
+  },
+  {
+    "input": "interval1 = [10, 23], interval2 = [10, 23]",
+    "output": "'YES'"
+  },
+  {
+    "input": "interval1 = [-15, 20], interval2 = [-15, 20]",
+    "output": "'NO'"
+  },
+  {
+    "input": "interval1 = [10, 20], interval2 = [10, 20]",
+    "output": "'NO'"
+  },
+  {
+    "input": "interval1 = [5, 11], interval2 = [1, 7]",
+    "output": "'YES'"
+  },
+  {
+    "input": "interval1 = [7, 12], interval2 = [7, 12]",
+    "output": "'YES'"
+  },
+  {
+    "input": "interval1 = [5, 10], interval2 = [-1, 7]",
+    "output": "'YES'"
+  },
+  {
+    "input": "interval1 = [2, 5], interval2 = [3, 7]",
+    "output": "'YES'"
+  },
+  {
+    "input": "interval1 = [0, 3], interval2 = [0, 0]",
+    "output": "'NO'"
+  },
+  {
+    "input": "interval1 = [5, 10], interval2 = [5, 10]",
+    "output": "'YES'"
+  },
+  {
+    "input": "interval1 = [-10, 0], interval2 = [-10, 0]",
+    "output": "'NO'"
+  },
+  {
+    "input": "interval1 = [2, 2], interval2 = [2, 2]",
+    "output": "'NO'"
+  },
+  {
+    "input": "interval1 = [-15, 12], interval2 = [-10, 10]",
+    "output": "'NO'"
+  },
+  {
+    "input": "interval1 = [-2, 7], interval2 = [-2, 7]",
+    "output": "'NO'"
+  },
+  {
+    "input": "interval1 = [-15, 15], interval2 = [-15, 15]",
+    "output": "'NO'"
+  },
+  {
+    "input": "interval1 = [-10, 10], interval2 = [-10, 10]",
+    "output": "'NO'"
+  },
+  {
+    "input": "interval1 = [11, 15], interval2 = [11, 15]",
+    "output": "'NO'"
+  },
+  {
+    "input": "interval1 = [-15, 6], interval2 = [-15, 6]",
+    "output": "'NO'"
+  },
+  {
+    "input": "interval1 = [-15, 1], interval2 = [-15, 1]",
+    "output": "'NO'"
+  },
+  {
+    "input": "interval1 = [12, 12], interval2 = [12, 12]",
+    "output": "'NO'"
+  }
+]

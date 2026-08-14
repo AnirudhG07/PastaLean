@@ -1,4 +1,4 @@
-import Mathlib
+import PastaLean.Imports
 import Std.Tactic.Do
 
 namespace Libraries.passta

@@ -1,0 +1,4 @@
+import PastaBench.leetcode.StepsToMakeArrayNonDecreasing.Generated
+namespace PastaBench.leetcode.StepsToMakeArrayNonDecreasing
+-- TODO.
+end PastaBench.leetcode.StepsToMakeArrayNonDecreasing

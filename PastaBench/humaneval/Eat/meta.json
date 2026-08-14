@@ -1,0 +1,15 @@
+{
+  "task_id": "HumanEval/159",
+  "problem": "eat",
+  "module": "Eat",
+  "method": "eat",
+  "params": [
+    "number",
+    "need",
+    "remaining"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

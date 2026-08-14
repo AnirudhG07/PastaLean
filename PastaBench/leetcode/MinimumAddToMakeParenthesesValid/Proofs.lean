@@ -1,0 +1,4 @@
+import PastaBench.leetcode.MinimumAddToMakeParenthesesValid.Generated
+namespace PastaBench.leetcode.MinimumAddToMakeParenthesesValid
+-- TODO.
+end PastaBench.leetcode.MinimumAddToMakeParenthesesValid

@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/3",
+  "problem": "below-zero",
+  "module": "BelowZero",
+  "method": "below_zero",
+  "params": [
+    "operations"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

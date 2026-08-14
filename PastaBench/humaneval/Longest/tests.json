@@ -1,0 +1,202 @@
+[
+  {
+    "input": "strings = []",
+    "output": "None"
+  },
+  {
+    "input": "strings = ['x', 'y', 'z']",
+    "output": "'x'"
+  },
+  {
+    "input": "strings = ['x', 'yyy', 'zzzz', 'www', 'kkkk', 'abc']",
+    "output": "'zzzz'"
+  },
+  {
+    "input": "strings = ['', 'a', 'aa', 'aaa']",
+    "output": "'aaa'"
+  },
+  {
+    "input": "strings = ['123456789', '1234', '12345', '123']",
+    "output": "'123456789'"
+  },
+  {
+    "input": "strings = ['a', 'b', 'aa', 'bb']",
+    "output": "'aa'"
+  },
+  {
+    "input": "strings = ['dog', 'cat', 'horse', 'cow']",
+    "output": "'horse'"
+  },
+  {
+    "input": "strings = ['apple', 'banana', 'pear']",
+    "output": "'banana'"
+  },
+  {
+    "input": "strings = ['123', '12', '1234', '1', '12345']",
+    "output": "'12345'"
+  },
+  {
+    "input": "strings = ['aa', 'bb', 'cc', 'aaa', 'bb', 'cccc']",
+    "output": "'cccc'"
+  },
+  {
+    "input": "strings = ['aaa', 'aa', 'a', 'aaaa']",
+    "output": "'aaaa'"
+  },
+  {
+    "input": "strings = ['a']",
+    "output": "'a'"
+  },
+  {
+    "input": "strings = ['aa', 'z', 'p', 'q']",
+    "output": "'aa'"
+  },
+  {
+    "input": "strings = ['aa', 'bb', 'cc', 'aaa', '123', 'cccc', 'cc', 'cccc']",
+    "output": "'cccc'"
+  },
+  {
+    "input": "strings = ['dog', 'cat', 'horse', 'cow', 'q']",
+    "output": "'horse'"
+  },
+  {
+    "input": "strings = ['', 'a', 'aa', 'aaa', 'aa']",
+    "output": "'aaa'"
+  },
+  {
+    "input": "strings = ['apple', 'banana', 'banna', 'banana']",
+    "output": "'banana'"
+  },
+  {
+    "input": "strings = ['aa', 'bb', 'cc', 'aaa', '123', 'cccc', 'cccc', 'ccaaa']",
+    "output": "'ccaaa'"
+  },
+  {
+    "input": "strings = ['', 'a', 'cow', 'aaa', 'aa']",
+    "output": "'cow'"
+  },
+  {
+    "input": "strings = ['aa', 'z', 'p', 'qq']",
+    "output": "'aa'"
+  },
+  {
+    "input": "strings = ['aa', 'apple', 'p', 'qq', 'apple']",
+    "output": "'apple'"
+  },
+  {
+    "input": "strings = ['dog', 'cat', 'horse']",
+    "output": "'horse'"
+  },
+  {
+    "input": "strings = ['apple', 'banana', 'pear', 'horse', 'pear']",
+    "output": "'banana'"
+  },
+  {
+    "input": "strings = ['aa', 'bb', 'cc', 'aaa', '1233', 'cccc', 'cccc', 'ccaaa']",
+    "output": "'ccaaa'"
+  },
+  {
+    "input": "strings = ['aa', 'bb', 'cc', 'aaa', '123', 'cccc', 'cc', 'cccc', '123']",
+    "output": "'cccc'"
+  },
+  {
+    "input": "strings = ['', 'a', '1234', 'dog', 'aa']",
+    "output": "'1234'"
+  },
+  {
+    "input": "strings = ['aa', 'apple', 'p', 'qq', 'apple', 'p']",
+    "output": "'apple'"
+  },
+  {
+    "input": "strings = ['cat', 'horse']",
+    "output": "'horse'"
+  },
+  {
+    "input": "strings = ['dog', 'cat', 'horse', 'cow', 'hore', 'horse']",
+    "output": "'horse'"
+  },
+  {
+    "input": "strings = ['aa', 'apple', 'p', 'qq', 'apple', 'p', 'p', 'aa']",
+    "output": "'apple'"
+  },
+  {
+    "input": "strings = ['apple', 'banana', 'banna', 'banana', 'banana']",
+    "output": "'banana'"
+  },
+  {
+    "input": "strings = ['apple', 'banana', 'pear', 'horse', 'pear', 'apple']",
+    "output": "'banana'"
+  },
+  {
+    "input": "strings = ['aa', 'z', 'p', 'qq', 'aa', '']",
+    "output": "'aa'"
+  },
+  {
+    "input": "strings = ['aa', 'cc', 'aaa', '123', 'cccc', 'cc', 'cccc', '123', 'aa']",
+    "output": "'cccc'"
+  },
+  {
+    "input": "strings = ['aa', 'bb', 'cc', 'aaa', 'bb', 'cccc', 'aa', 'aa']",
+    "output": "'cccc'"
+  },
+  {
+    "input": "strings = ['dog', 'cat']",
+    "output": "'dog'"
+  },
+  {
+    "input": "strings = ['apple', 'p', 'qq', 'apple', 'p', 'pear']",
+    "output": "'apple'"
+  },
+  {
+    "input": "strings = ['aaa', 'z', 'p', 'qq', 'qqq']",
+    "output": "'aaa'"
+  },
+  {
+    "input": "strings = ['', 'a', 'aa', 'aaa', 'aa', 'a']",
+    "output": "'aaa'"
+  },
+  {
+    "input": "strings = ['', 'hore', '', 'nWa', 'aaa', 'pear', 'wRQ', 'qq']",
+    "output": "'hore'"
+  },
+  {
+    "input": "strings = ['', 'a', 'aaa', 'aa', 'a']",
+    "output": "'aaa'"
+  },
+  {
+    "input": "strings = ['aa', 'bb', 'cc', 'aaa', '123', 'cccc', 'ccaaa', 'ccaaa', 'aa']",
+    "output": "'ccaaa'"
+  },
+  {
+    "input": "strings = ['aa', 'bb', 'cc', 'aaa', '123', 'cccc', 'cc', '123']",
+    "output": "'cccc'"
+  },
+  {
+    "input": "strings = ['odog', 'catt']",
+    "output": "'odog'"
+  },
+  {
+    "input": "strings = ['aa', 'bb', 'cc', 'aaa', 'bb', 'cccc', 'cccc']",
+    "output": "'cccc'"
+  },
+  {
+    "input": "strings = ['aa', 'bb', 'cc', 'aaa', 'bb', 'cccc', 'qaa', 'aa']",
+    "output": "'cccc'"
+  },
+  {
+    "input": "strings = ['dog', 'a', 'aa', 'aaa', 'aa', 'a', 'a']",
+    "output": "'dog'"
+  },
+  {
+    "input": "strings = ['apple', 'banaana', 'pear', 'horse', 'pear', 'apple']",
+    "output": "'banaana'"
+  },
+  {
+    "input": "strings = ['', 'a', 'aaaa', 'a']",
+    "output": "'aaaa'"
+  },
+  {
+    "input": "strings = ['dopearg', 'a', 'aa', 'aaa', 'aa', 'a', 'a']",
+    "output": "'dopearg'"
+  }
+]

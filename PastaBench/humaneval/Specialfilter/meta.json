@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/146",
+  "problem": "specialFilter",
+  "module": "Specialfilter",
+  "method": "specialFilter",
+  "params": [
+    "nums"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

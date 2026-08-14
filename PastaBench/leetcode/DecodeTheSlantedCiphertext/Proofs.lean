@@ -1,0 +1,4 @@
+import PastaBench.leetcode.DecodeTheSlantedCiphertext.Generated
+namespace PastaBench.leetcode.DecodeTheSlantedCiphertext
+-- TODO.
+end PastaBench.leetcode.DecodeTheSlantedCiphertext

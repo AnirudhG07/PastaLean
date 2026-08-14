@@ -1,4 +1,4 @@
-import Mathlib
+import PastaLean.Imports
 import PastaLean.Codegen
 import PastaLean.PyGens.Basic
 import PastaLean.PyGens.Attributes
@@ -169,7 +169,7 @@ def joinedStrSyntax : (kind : SyntaxNodeKind) → Json →
       let valueJson := valuesArray[idx]!
       let valueCode := valuesCodes[idx]!
       if stringJsonUsesMonadicEffect valueJson then
-        let binder := mkIdent (s!"__py_join{idx}").toName
+        let binder := mkIdent (s!"p'_join{idx}").toName
         bindings := bindings.push (← `(doElem| let $binder:ident ← $valueCode:term))
         res ← `($appendIdent $res $binder:term)
       else
@@ -285,9 +285,18 @@ partial def assignBackToReceiver (recvJson : Json) (newVal : TSyntax `term) :
       let containerTerm ← getCode containerJson `term
       let setItemIdent := mkIdent ``PastaLean.pySetItem
       assignBackToReceiver containerJson (← `($setItemIdent $containerTerm $indexTerm $newVal))
+  | some "Attribute" =>
+      -- `self.small.append(v)` / `heappush(self.small, x)`: rebuild the field via record update
+      -- (`self := { self with small := newVal }`), like an attribute assignment.
+      if (selfAttrTarget? recvJson).isSome && (← hasVar `self) then
+        selfRecordUpdateDoElem (selfAttrTarget? recvJson).get! newVal
+      else
+        let .ok recv := recvJson.getObjVal? "value" | throwError s!"Attribute receiver missing 'value': {recvJson}"
+        let .ok attr := recvJson.getObjValAs? String "attr" | throwError s!"Attribute receiver missing 'attr': {recvJson}"
+        attrRecordUpdateDoElem recv attr newVal (recvJson.getObjValAs? Bool "_unwrap_opt" == .ok true)
   | _ =>
-      throwError "A mutating method needs a variable or subscript receiver (`xs.append(v)`, \
-        `g[i].append(v)`) under value semantics."
+      throwError "A mutating method needs a variable, subscript, or attribute receiver (`xs.append(v)`, \
+        `g[i].append(v)`, `self.h.append(v)`) under value semantics."
 
 /-- Lower an in-place mutator `recv.m(args)` by rebuilding `recv` from `mkNewValue recv` and storing
 it back, so `g[i].append(v)` becomes `g := pySetItem g i (pyAppend g[i] v)` rather than a no-op. -/
@@ -324,6 +333,50 @@ def statementMutatorRebuild? (attr : String) : Option (Lean.Name × List Nat) :=
   | "setdefault" => some (``pyDictSetdefaultRest, [2])
   | _            => none
 
+/-- A `SortedList` instance method (`sl.add`, `sl.bisect_left`, `sl.remove`, …) resolved to its
+runtime function when the receiver `recvJson` is a variable flagged as holding a SortedList. `none`
+otherwise — so a plain `bisect.bisect_left(xs, x)` or a set's `add`/`remove` is untouched. The
+name map itself lives in the Libraries layer; codegen only supplies the receiver-type gate. -/
+def sortedVarMethod? (attr : String) (recvJson : Json) : PygenM (Option Lean.Name) := do
+  match recvJson.getObjValAs? String "id" with
+  | .ok id => if ← isSortedVar id.toName then return Libraries.sortedListMethod? attr else return none
+  | _ => return none
+
+/-- A method on a library-owned object (`m.hexdigest()` where `m = hashlib.md5()`), resolved through
+the owning library. Gated on the receiver being a variable tagged with that module, so a colliding
+name (`update`, also dict/set) still resolves normally for every other receiver. Same shape as
+`sortedVarMethod?`: the map lives in Libraries, codegen supplies only the receiver gate. -/
+def libObjVarMethod? (attr : String) (recvJson : Json) : PygenM (Option Lean.Name) := do
+  match recvJson.getObjValAs? String "id" with
+  | .ok id =>
+      match ← libObjVarModule? id.toName with
+      | some m => return Libraries.libraryMethod? m attr
+      | none => return none
+  | _ => return none
+
+/-- `bisect_left/right(range(a, b, c), x, key=f)` searches the range LAZILY (O(log n) `key` calls)
+instead of materializing it and mapping `key` over every element (O(n), and impossible for a range up
+to `10**9`). Returns the range-variant runtime name and the args with the range replaced by its
+`start, stop, step`; `none` if the first arg isn't a plain `range(...)`. -/
+def bisectRangeKeyed? (member : String) (argsArray : Array Json) (allArgs : Array (TSyntax `term)) :
+    PygenM (Option (Lean.Name × Array (TSyntax `term))) := do
+  let rv? : Option Lean.Name :=
+    if member == "bisect_left" then some ``Libraries.bisect.pyBisectLeftRangeKey
+    else if member == "bisect" || member == "bisect_right" then some ``Libraries.bisect.pyBisectRightRangeKey
+    else none
+  let some rv := rv? | return none
+  let some firstArg := argsArray[0]? | return none
+  -- The pre-pass turns `range(...)` into a `Range` node (func `range`, `args` its bounds).
+  unless jsonNodeType? firstArg == some "Range" do return none
+  let rargs := (firstArg.getObjValAs? (Array Json) "args").toOption.getD #[]
+  let zero ← `((0 : Int)); let one ← `((1 : Int))
+  let (startT, stopT, stepT) ← match rargs.size with
+    | 0 => return none
+    | 1 => pure (zero, ← getCode rargs[0]! `term, one)
+    | 2 => pure (← getCode rargs[0]! `term, ← getCode rargs[1]! `term, one)
+    | _ => pure (← getCode rargs[0]! `term, ← getCode rargs[1]! `term, ← getCode rargs[2]! `term)
+  return some (rv, #[startT, stopT, stepT] ++ allArgs.extract 1 allArgs.size)
+
 /-- The class to construct for a call `f(...)` whose callee is the `Name` `funcName`: a registered
 class (`C(..)`), or `cls(..)` inside a class body (classmethod sugar). `none` for ordinary calls. -/
 def constructorClassOfName? (funcName : String) : PygenM (Option String) := do
@@ -346,16 +399,72 @@ environment) is left bare — qualifying it would break the recursive reference.
 fix for user-name-vs-Mathlib clashes, without wrapping the program in a namespace. -/
 def userCallIdent (funcName : String) : PygenM (TSyntax `term) := do
   let mapped ← leanName (← suffixIfUserName funcName).toName
-  if (← userNamesRef.get).contains funcName && !(← hasVar funcName.toName)
-      && (← nameClashesWithGlobal funcName) then
-    return (mkIdent (`_root_ ++ mapped) : TSyntax `term)
-  else
-    return (mkIdent mapped : TSyntax `term)
+  -- User defs live in `namespace PastaLean.User.<path>`, so a bare call resolves to the user's own
+  -- function by namespace precedence — no `_root_` needed (it misfired for globals under a namespace).
+  return (mkIdent mapped : TSyntax `term)
 
-@[pygen "Call"]
-def callSyntax : (kind : SyntaxNodeKind) → Json →
-    PygenM (TSyntax kind)
-  | `term, json => do
+/-- If a `key=` argument calls a member a library declares as a comparator-to-key wrapper, the
+comparator it wraps. The wrapper has no runtime object here, so the sort routes to `pySortByCmp`.
+Which members qualify is declared by the library (`Behaviour.cmpKeyWrapper`), not listed here. -/
+def cmpKeyComparator? (keyJson : Json) : Option Json := do
+  guard (jsonNodeType? keyJson == some "Call")
+  let func ← (keyJson.getObjVal? "func").toOption
+  let memberName ←
+    (func.getObjValAs? String "library_member").toOption
+      <|> (func.getObjValAs? String "id").toOption
+      <|> (func.getObjValAs? String "attr").toOption
+  guard (Libraries.isCmpKeyWrapper memberName)
+  let args ← (keyJson.getObjValAs? (Array Json) "args").toOption
+  args[0]?
+
+/-- The sort term for a `key=`/`reverse=` pair, over an already-lowered receiver. Shared by
+`sorted(...)` and `list.sort(...)` so both support `cmp_to_key` identically. -/
+def sortWithKeyTerm (keyOpt revOpt : Option Json) (recv : TSyntax `term) : PygenM (TSyntax `term) := do
+  let revCode ← match revOpt with
+    | some rJson => getCode rJson `term
+    | none => `(false)
+  match keyOpt.bind cmpKeyComparator? with
+  | some cmpJson =>
+      let cmpCode ← mappedCallableValueCode cmpJson
+      `($(mkIdent ``pySortByCmp) $cmpCode $revCode $recv)
+  | none =>
+      let keyCode ← match keyOpt with
+        | some kJson => mappedCallableValueCode kJson
+        | none => `(fun x => x)
+      `($(mkIdent ``pySortBy) $keyCode $revCode $recv)
+
+/-- In a Prop context (a contract), lower `all(p for t in it)` to `∀ t ∈ pyIter it, p` and `any` to
+`∃`, instead of the `Bool` `pyAll (… decide p)` — whose `decide`/fold hide the quantifier from the
+tactics, making such a contract true but unprovable. Comprehension `ifs` become guards for `all`
+(`c → p`) and conjuncts for `any`. `none` (→ `Bool` lowering) for any other shape. -/
+def quantifiedAllAnyProp? (funcName : String) (callJson : Json) :
+    PygenM (Option (TSyntax `term)) := do
+  unless ← getPropCondition do return none
+  unless isQuantifiedAllAnyJson callJson do return none
+  let .ok (args : Array Json) := callJson.getObjValAs? (Array Json) "args" | return none
+  let argJson := args[0]!
+  let .ok (generators : Array Json) := argJson.getObjValAs? (Array Json) "generators" | return none
+  let gen := generators[0]!
+  let .ok target := gen.getObjVal? "target" | return none
+  let .ok iter := gen.getObjVal? "iter" | return none
+  let .ok elt := argJson.getObjVal? "elt" | return none
+  let ifs := (gen.getObjValAs? (Array Json) "ifs").toOption.getD #[]
+  let iterCode ← getCode iter `term
+  withFixedVariables do
+    let targetIdent ← getCode target `ident
+    addVar targetIdent.getId
+    let mut body ← withPropCondition true (getCode elt `term)
+    for ifJson in ifs.reverse do
+      let guard ← withPropCondition true (getCode ifJson `term)
+      body ← if funcName == "all" then `($guard → $body) else `($guard ∧ $body)
+    let iterList ← `($(mkIdent ``PastaLean.pyIter) $iterCode)
+    if funcName == "all" then
+      return some (← `(∀ $targetIdent:ident ∈ $iterList, $body))
+    else
+      return some (← `(∃ $targetIdent:ident ∈ $iterList, $body))
+
+
+def callSyntaxTerm (json : Json) : PygenM (TSyntax `term) := do
     let .ok funcJson := json.getObjValAs? Json "func" | throwError
       s!"Call node does not have a 'func' field or it is not a JSON value: {json}"
     let .ok argsJson := json.getObjValAs? Json "args" | throwError
@@ -427,11 +536,11 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
           if heap then
             -- Inline any IO await in the receiver/args (`recv.m(int(input()))`) so it lifts into the
             -- enclosing do-block rather than being spliced as a raw `IO _` action into a value position.
-            let recvCode ← inlineIOTerm valueJson
-            let inlineArgs ← argsArray.mapM inlineIOTerm
+            let recvCode ← inlineEffectfulTerm valueJson
+            let inlineArgs ← argsArray.mapM inlineEffectfulTerm
             let mut t ← `($methodIdent $recvCode $inlineArgs*)
             for (kwName, kwValueJson) in keyWordsMap.toList do
-              let kwValueCode ← inlineIOTerm kwValueJson
+              let kwValueCode ← inlineEffectfulTerm kwValueJson
               t ← `($t ($(mkIdent kwName.toName):ident := $kwValueCode))
             return ← `((← $t))
           if allJsons.toList.any basicJsonUsesIOEffect then
@@ -482,7 +591,8 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
         allArgs := allArgs.push valCode
         allArgJsons := allArgJsons.push valueJson
 
-        match pythonMethodMap attr with
+        match (← sortedVarMethod? attr valueJson) <|> (← libObjVarMethod? attr valueJson)
+              <|> pythonMethodMap attr with
         | some funcName =>
             funcIdent := mkIdent funcName
         | none =>
@@ -503,6 +613,14 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
             | none =>
                 throwError s!"Unsupported Python method '{attr}' encountered in Call node."
       else
+        -- Inside a memoized function's body, a recursive self-call lowers to the monadic `StateM`
+        -- worker `(← fooMemo'rn args)`, so the recursion threads the shared cache. Do-notation hoists
+        -- the `(←…)` to a bind in the enclosing do-block (the memoized body is a `do`).
+        if let some (memoName, memoWorker) ← getMemoizeSelf then
+          if funcJson.getObjValAs? String "id" == .ok memoName
+             && funcJson.getObjValAs? String "node_type" == .ok "Name" then
+            let argCodes ← argsArray.mapM (fun a => getCode a `term)
+            return ← `((← $(mkIdent memoWorker) $argCodes*))
         match funcJson.getObjValAs? String "node_type", funcJson.getObjValAs? String "id" with
         | .ok "Name", .ok "print" => do
             let supportedKeywords := ["sep", "end"]
@@ -584,6 +702,22 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
             return ← buildIOPureApplicationFromArgs argsArray argsCodes fun resolvedArgs => do
               let arg0 := resolvedArgs[0]!
               `($pyListIdent $arg0)
+        | .ok "Name", .ok "isinstance" => do
+            unless argsArray.size == 2 do
+              throwError "isinstance() expects exactly two positional arguments."
+            let xCode ← getCode argsArray[0]! `term
+            let tJson := argsArray[1]!
+            -- `isinstance(x, (t₁, …, tₙ))` — a tuple of types means "any of".
+            if tJson.getObjValAs? String "node_type" == .ok "Tuple" then
+              let elts := (tJson.getObjValAs? (Array Json) "elts").toOption.getD #[]
+              let tags ← elts.filterMapM pyTypeNameTag?
+              unless tags.size == elts.size do
+                throwError "isinstance(): only builtin types (int/float/str/bool/list/dict/tuple/set) are supported."
+              return ← `($(mkIdent ``PastaLean.pyIsInstanceAny) $xCode [$tags,*])
+            match ← pyTypeNameTag? tJson with
+            | some tag => return ← `($(mkIdent ``PastaLean.pyIsInstance) $xCode $tag)
+            | none =>
+                throwError "isinstance(): only builtin types (int/float/str/bool/list/dict/tuple/set) are supported."
         | .ok "Name", .ok "map" => do
             unless keyWordsMap.isEmpty do
               throwError "map() keyword arguments are not supported yet."
@@ -626,15 +760,8 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
                 return ← buildIOPureApplicationFromArgs argsArray argsCodes fun resolvedArgs => do
                   `($pySortIdent $(resolvedArgs[0]!))
             | keyOpt, revOpt =>
-                let keyCode ← match keyOpt with
-                  | some kJson => mappedCallableValueCode kJson
-                  | none => `(fun x => x)
-                let revCode ← match revOpt with
-                  | some rJson => getCode rJson `term
-                  | none => `(false)
-                let pySortByIdent := mkIdent ``pySortBy
                 return ← buildIOPureApplicationFromArgs argsArray argsCodes fun resolvedArgs => do
-                  `($pySortByIdent $keyCode $revCode $(resolvedArgs[0]!))
+                  sortWithKeyTerm keyOpt revOpt (resolvedArgs[0]!)
         | .ok "Name", .ok "round" => do
             -- `round(x)` returns an `int` (banker's rounding); `round(x, n)` returns a `float`.
             unless keyWordsMap.isEmpty do
@@ -660,6 +787,16 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
               | some d => `(($iter).headD $d)
               | none   => `(($iter).headD default)
         | .ok "Name", .ok funcName =>
+            -- `any`/`all` test each element's TRUTHINESS, so lower the iterable argument in a
+            -- truthiness context — a `BoolOp` element (`x and y` on mixed-type operands) then stays a
+            -- `Bool` (`pyTruthy x && y`) instead of the value form whose branches don't unify.
+            if (funcName == "any" || funcName == "all") && argsArray.size == 1 && keyWordsMap.isEmpty then
+              -- In a contract this becomes a real `∀`/`∃`; outside one, keep the `Bool` fold.
+              if let some quantified ← quantifiedAllAnyProp? funcName json then
+                return quantified
+              if let some mapped ← builtinMappedName? funcName then
+                let argCode ← withTruthinessContext true (getCode argsArray[0]! `term)
+                return ← `($(mkIdent mapped) $argCode)
             -- Under `--heap`, `len(x)` on a container held by reference dereferences it first.
             if funcName == "len" && argsArray.size == 1 then
               if let some deref ← heapContainerDeref? argsArray[0]! then
@@ -674,10 +811,10 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
               if ← getHeapMode then
                 -- Inline any IO await in an argument (`C(int(input()))`) so it lifts into the enclosing
                 -- do-block rather than being spliced as a raw `IO _` action into a value position.
-                let inlineArgs ← argsArray.mapM inlineIOTerm
+                let inlineArgs ← argsArray.mapM inlineEffectfulTerm
                 let mut t ← `($ctorId $inlineArgs*)
                 for (kwName, kwValueJson) in keyWordsMap.toList do
-                  let kwValueCode ← inlineIOTerm kwValueJson
+                  let kwValueCode ← inlineEffectfulTerm kwValueJson
                   t ← `($t ($(mkIdent kwName.toName):ident := $kwValueCode))
                 return ← `((← $t))
               funcIdent := ctorId
@@ -736,13 +873,39 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
       | .ok "Call", _ => allArgs := allArgs.push (← `(()))
       | _, _ => pure ()
 
+    -- A `key=` callback routes to the member's declared keyed shim variant (`Behaviour.keyedVariant`),
+    -- whose `key` parameter the named arg then binds — no member name is hardcoded here.
+    if (keyWordsMap.get? "key").isSome then
+      let member := (funcJson.getObjValAs? String "library_member").toOption.getD
+        ((funcJson.getObjValAs? String "id").toOption.getD "")
+      if let some (rv, newArgs) ← bisectRangeKeyed? member argsArray allArgs then
+        funcIdent := mkIdent rv
+        allArgs := newArgs
+      else if let some keyed := (Libraries.bareBehaviour? member).bind (·.keyedVariant) then
+        funcIdent := mkIdent keyed
     let buildApplied : Array (TSyntax `term) → PygenM (TSyntax `term) := fun resolvedArgs => do
-      let mut t ← `($funcIdent $resolvedArgs*)
-      for (kwName, kwValueJson) in keyWordsMap.toList do
-        let kwValueCode ← getCode kwValueJson `term
-        let kwId := mkIdent kwName.toName
-        t ← `($t ($kwId:ident := $kwValueCode))
-      return t
+      -- Named args go in the SAME application as the positionals (`f a b (k := v)`), NOT applied to
+      -- `(f a b)` — for a shim whose remaining params have defaults, `f a b` is already a complete
+      -- value, so `(f a b) (lo := …)` fails with "Invalid argument name" (`bisect_right(s, x, lo=…)`).
+      -- Named args go in the SAME application spine (`f a b (k := v)`), so a shim with defaulted
+      -- params (`bisect_right(s, x, lo=…)`) binds them instead of applying to the already-complete
+      -- `(f a b)`. Handled explicitly for 1–2 kwargs (the common `lo=`/`hi=`/`key=`/`reverse=`); 3+
+      -- falls to the fold (rare, and only fails when every remaining param has a default).
+      match keyWordsMap.toList with
+      | [] => `($funcIdent $resolvedArgs*)
+      | [(n, v)] =>
+          let a ← getCode v `term
+          `($funcIdent $resolvedArgs* ($(mkIdent n.toName) := $a))
+      | [(n1, v1), (n2, v2)] =>
+          let a ← getCode v1 `term
+          let b ← getCode v2 `term
+          `($funcIdent $resolvedArgs* ($(mkIdent n1.toName) := $a) ($(mkIdent n2.toName) := $b))
+      | kwPairs =>
+          let mut t ← `($funcIdent $resolvedArgs*)
+          for (kwName, kwValueJson) in kwPairs do
+            let kwValueCode ← getCode kwValueJson `term
+            t ← `($t ($(mkIdent kwName.toName):ident := $kwValueCode))
+          return t
 
     let applied ← if allArgJsons.toList.any basicJsonUsesIOEffect then
         buildIOPureApplicationFromArgs allArgJsons allArgs buildApplied
@@ -750,7 +913,8 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
     -- A call to a heap-effectful user function returns a `HeapM` action; await it inline.
     if json.getObjValAs? Bool "_heap_call" == .ok true then return ← `((← $applied))
     return applied
-  | `doElem, json => do
+
+def callSyntaxDoElem (json : Json) : PygenM (TSyntax `doElem) := do
     let .ok funcJson := json.getObjValAs? Json "func" | throwError
       s!"Call node does not have a 'func' field or it is not a JSON value: {json}"
     let .ok argsJson := json.getObjValAs? Json "args" | throwError
@@ -813,13 +977,21 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
           if ← getHeapMode then
             -- Inline any IO await in the receiver/args (`recv.m(int(input()))`) so it lifts into the
             -- enclosing do-block rather than being spliced as a raw `IO _` action into a value position.
-            let valCode ← inlineIOTerm valueJson
-            let inlineArgs ← argsArray.mapM inlineIOTerm
+            let valCode ← inlineEffectfulTerm valueJson
+            let inlineArgs ← argsArray.mapM inlineEffectfulTerm
             let mut t ← `($methodIdent $valCode $inlineArgs*)
             for (kwName, kwValueJson) in keyWordsMap.toList do
-              let kwValueCode ← inlineIOTerm kwValueJson
+              let kwValueCode ← inlineEffectfulTerm kwValueJson
               t ← `($t ($(mkIdent kwName.toName):ident := $kwValueCode))
             return ← `(doElem| let _ ← $t:term)
+          if (json.getObjValAs? Bool "_is_value_mutator").toOption.getD false then
+            -- Value+mutate method as a bare statement: reassign the receiver, drop the value.
+            if jsonNodeType? valueJson == some "Name" then
+              let targetIdent ← getCode valueJson `ident
+              return ← `(doElem| $targetIdent:ident := ($methodIdent $targetIdent $argsCodes*).2)
+            else
+              throwError s!"Value-mutating method '{attr}' on a non-variable receiver is not \
+                supported under value semantics."
           if (json.getObjValAs? Bool "_is_mutator").toOption.getD false then
             if jsonNodeType? valueJson == some "Name" then
               let targetIdent ← getCode valueJson `ident
@@ -854,6 +1026,27 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
         if let some (rebuildFn, arities) := statementMutatorRebuild? attr then
           if keyWordsMap.isEmpty && arities.contains argsArray.size then
             let argCodes ← argsArray.mapM (fun argJson => getCode argJson `term)
+            -- A SortedList receiver: `add`/`remove`/`discard` share names with the set methods but must
+            -- maintain sort order (they otherwise default to set semantics — dedup, no ordering). The
+            -- runtime name comes from the Libraries layer; codegen only supplies the receiver gate.
+            -- An `array_ok`-stamped receiver (runnable twin) uses the O(1) `Array` variant.
+            let rebuildFn ←
+              if let some fn ← sortedVarMethod? attr valueJson then
+                pure fn
+              -- A library-owned object receiver (`m.update(chunk)` where `m = hashlib.md5()`) owns
+              -- the name too — `update` otherwise rebuilds through the dict/set `pyUpdate`.
+              else if let some fn ← libObjVarMethod? attr valueJson then
+                pure fn
+              -- `d.pop(key)` on a dict removes the key (shares the name with 1-arg `list.pop(i)`);
+              -- route it to the polymorphic dict rebuild when the receiver is known to be a dict.
+              else if attr == "pop" && argsArray.size == 1 && (← jsonIsDictExpr valueJson) then
+                pure ``PastaLean.pyDictKeyPopRest
+              else if (json.getObjValAs? String "_seq" == .ok "array") && (← getNumericMode) == .approx then
+                pure (match attr with
+                  | "append" => ``PastaLean.pyArrayAppend
+                  | "extend" => ``PastaLean.pyArrayExtend
+                  | _ => rebuildFn)
+              else pure rebuildFn
             let fnIdent := mkIdent rebuildFn
             return ← mutatingMethodDoElem valueJson fun recv => `($fnIdent $recv $argCodes*)
 
@@ -889,26 +1082,20 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
               throwError s!"sort() keyword argument '{kwName}' is not supported yet."
           unless argsArray.isEmpty do
             throwError "sort() expects no positional arguments."
-          let targetIdent ← getCode valueJson `ident
+          -- Rebuild the receiver (a Name, `d[i]`, or `self.x`) via `mutatingMethodDoElem`, so
+          -- `d[i].sort()` becomes `d := pySetItem d i (pySort d[i])`, not an invalid `d[i] := …`.
           match keyWordsMap.get? "key", keyWordsMap.get? "reverse" with
           | none, none =>
               let pySortIdent := mkIdent ``pySort
-              return ← `(doElem| $targetIdent:ident := $pySortIdent $targetIdent)
+              return ← mutatingMethodDoElem valueJson (fun recv => `($pySortIdent $recv))
           | keyOpt, revOpt =>
-              let keyCode ← match keyOpt with
-                | some kJson => mappedCallableValueCode kJson
-                | none => `(fun x => x)
-              let revCode ← match revOpt with
-                | some rJson => getCode rJson `term
-                | none => `(false)
-              let pySortByIdent := mkIdent ``pySortBy
-              return ← `(doElem| $targetIdent:ident := $pySortByIdent $keyCode $revCode $targetIdent)
+              return ← mutatingMethodDoElem valueJson (fun recv => sortWithKeyTerm keyOpt revOpt recv)
 
         let valCode ← getCode valueJson `term
         allArgs := allArgs.push valCode
         allArgJsons := allArgJsons.push valueJson
 
-        match pythonMethodMap attr with
+        match (← sortedVarMethod? attr valueJson) <|> pythonMethodMap attr with
         | some funcName =>
             funcIdent := mkIdent funcName
         | none =>
@@ -922,7 +1109,20 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
                 let isMut ← match (json.getObjValAs? Bool "_is_mutator").toOption with
                   | some b => pure b
                   | none => methodIsMutator cls attr
-                if isMut then
+                let isValMut ← match (json.getObjValAs? Bool "_is_value_mutator").toOption with
+                  | some b => pure b
+                  | none => methodIsValueMutator cls attr
+                if isValMut then
+                  -- Value+mutate method in statement position: reassign the receiver, drop the
+                  -- returned value (`uf.union(a,b)` → `uf := (C.union uf a b).2`).
+                  if jsonNodeType? valueJson == some "Name" then
+                    let targetIdent ← getCode valueJson `ident
+                    let methodIdent := mkIdent (Name.mkStr (← suffixIfUserName cls).toName attr)
+                    return ← `(doElem| $targetIdent:ident := ($methodIdent $targetIdent $argsCodes*).2)
+                  else
+                    throwError s!"Value-mutating method '{attr}' on a non-variable receiver is not \
+                      supported under value semantics."
+                else if isMut then
                   if jsonNodeType? valueJson == some "Name" then
                     let targetIdent ← getCode valueJson `ident
                     let methodIdent := mkIdent (Name.mkStr (← suffixIfUserName cls).toName attr)
@@ -1067,10 +1267,10 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
               if ← getHeapMode then
                 -- Inline any IO await in an argument (`C(int(input()))`) so it lifts into the enclosing
                 -- do-block rather than being spliced as a raw `IO _` action into a value position.
-                let inlineArgs ← argsArray.mapM inlineIOTerm
+                let inlineArgs ← argsArray.mapM inlineEffectfulTerm
                 let mut t ← `($ctorId $inlineArgs*)
                 for (kwName, kwValueJson) in keyWordsMap.toList do
-                  let kwValueCode ← inlineIOTerm kwValueJson
+                  let kwValueCode ← inlineEffectfulTerm kwValueJson
                   t ← `($t ($(mkIdent kwName.toName):ident := $kwValueCode))
                 return ← `(doElem| let _ ← $t:term)
               funcIdent := ctorId
@@ -1108,13 +1308,39 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
       | .ok "Call", _ => allArgs := allArgs.push (← `(()))
       | _, _ => pure ()
 
+    -- A `key=` callback routes to the member's declared keyed shim variant (`Behaviour.keyedVariant`),
+    -- whose `key` parameter the named arg then binds — no member name is hardcoded here.
+    if (keyWordsMap.get? "key").isSome then
+      let member := (funcJson.getObjValAs? String "library_member").toOption.getD
+        ((funcJson.getObjValAs? String "id").toOption.getD "")
+      if let some (rv, newArgs) ← bisectRangeKeyed? member argsArray allArgs then
+        funcIdent := mkIdent rv
+        allArgs := newArgs
+      else if let some keyed := (Libraries.bareBehaviour? member).bind (·.keyedVariant) then
+        funcIdent := mkIdent keyed
     let buildApplied : Array (TSyntax `term) → PygenM (TSyntax `term) := fun resolvedArgs => do
-      let mut t ← `($funcIdent $resolvedArgs*)
-      for (kwName, kwValueJson) in keyWordsMap.toList do
-        let kwValueCode ← getCode kwValueJson `term
-        let kwId := mkIdent kwName.toName
-        t ← `($t ($kwId:ident := $kwValueCode))
-      return t
+      -- Named args go in the SAME application as the positionals (`f a b (k := v)`), NOT applied to
+      -- `(f a b)` — for a shim whose remaining params have defaults, `f a b` is already a complete
+      -- value, so `(f a b) (lo := …)` fails with "Invalid argument name" (`bisect_right(s, x, lo=…)`).
+      -- Named args go in the SAME application spine (`f a b (k := v)`), so a shim with defaulted
+      -- params (`bisect_right(s, x, lo=…)`) binds them instead of applying to the already-complete
+      -- `(f a b)`. Handled explicitly for 1–2 kwargs (the common `lo=`/`hi=`/`key=`/`reverse=`); 3+
+      -- falls to the fold (rare, and only fails when every remaining param has a default).
+      match keyWordsMap.toList with
+      | [] => `($funcIdent $resolvedArgs*)
+      | [(n, v)] =>
+          let a ← getCode v `term
+          `($funcIdent $resolvedArgs* ($(mkIdent n.toName) := $a))
+      | [(n1, v1), (n2, v2)] =>
+          let a ← getCode v1 `term
+          let b ← getCode v2 `term
+          `($funcIdent $resolvedArgs* ($(mkIdent n1.toName) := $a) ($(mkIdent n2.toName) := $b))
+      | kwPairs =>
+          let mut t ← `($funcIdent $resolvedArgs*)
+          for (kwName, kwValueJson) in kwPairs do
+            let kwValueCode ← getCode kwValueJson `term
+            t ← `($t ($(mkIdent kwName.toName):ident := $kwValueCode))
+          return t
 
     if allArgJsons.toList.any basicJsonUsesIOEffect then
       let t ← buildIOPureApplicationFromArgs allArgJsons allArgs buildApplied
@@ -1126,6 +1352,11 @@ def callSyntax : (kind : SyntaxNodeKind) → Json →
         `(doElem| let _ ← $t:term)
       else
         `(doElem| let _ := $t)
+
+@[pygen "Call"]
+def callSyntax : (kind : SyntaxNodeKind) → Json → PygenM (TSyntax kind)
+  | `term, json => callSyntaxTerm json
+  | `doElem, json => callSyntaxDoElem json
   | _, _ => throwError s!"Unsupported syntax category for Call node"
 
 @[pygen "Attribute"]

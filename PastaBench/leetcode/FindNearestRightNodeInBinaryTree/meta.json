@@ -1,0 +1,13 @@
+{
+  "problem": "find-nearest-right-node-in-binary-tree",
+  "module": "FindNearestRightNodeInBinaryTree",
+  "method": "findNearestRightNode",
+  "params": [
+    "root",
+    "u"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "class",
+  "n_tests": 45
+}

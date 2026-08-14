@@ -1,0 +1,13 @@
+{
+  "problem": "find-the-difference",
+  "module": "FindTheDifference",
+  "method": "findTheDifference",
+  "params": [
+    "s",
+    "t"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 96
+}

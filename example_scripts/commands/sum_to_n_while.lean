@@ -9,7 +9,9 @@ open Std.Do
 set_option linter.all false
 set_option mvcgen.warning false
 
-set_option maxHeartbeats 0
+set_option maxHeartbeats 200000
+
+namespace PastaLean.User.Root
 
 def sum_to_n := fun n ↦
   Id.run
@@ -32,3 +34,5 @@ def sum_to_n'rn := fun n ↦
         total := total +ₚ i
         i := i +ₚ (1 : Int)
       return total)
+
+end PastaLean.User.Root

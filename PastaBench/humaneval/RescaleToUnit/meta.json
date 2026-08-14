@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/21",
+  "problem": "rescale-to-unit",
+  "module": "RescaleToUnit",
+  "method": "rescale_to_unit",
+  "params": [
+    "numbers"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

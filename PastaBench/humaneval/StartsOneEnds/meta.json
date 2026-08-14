@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/83",
+  "problem": "starts-one-ends",
+  "module": "StartsOneEnds",
+  "method": "starts_one_ends",
+  "params": [
+    "n"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 39
+}

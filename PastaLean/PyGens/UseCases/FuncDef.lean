@@ -1,4 +1,4 @@
-import Mathlib
+import PastaLean.Imports
 import PastaLean.Codegen
 import PastaLean.PyGens.Basic
 import PastaLean.PyGens.Core.Utils
@@ -11,6 +11,7 @@ import PastaLean.PyVerify.AssertTactic
 import PastaLean.PyVerify.Contracts
 import PastaLean.PyGens.Transform.ClosureConvert
 import PastaLean.PyGens.Transform.Desugar
+import PastaLean.PyGens.Transform.GeneratorLower
 import PastaLean.PyGens.Transform.Decorators
 
 open Lean Meta Elab Term Qq Std
@@ -46,8 +47,12 @@ partial def functionArgTypeSyntax? (annotationJson : Json) : PygenM (Option (TSy
           | .approx => return some (mkIdent ``Float)
       | "Any" => return none -- let Lean handle the type inference for now
       -- A user class (`TreeNode`) or anything else this manual reader misses: fall back to the
-      -- `TypeInfer` lowering, which handles class names (`.cls`) and `Optional`.
-      | _ => pyTypeSyntax? (TypeInfer.ofAnnotation annotationJson)
+      -- `TypeInfer` lowering, which handles class names (`.cls`) and `Optional`. A bare class name is
+      -- run-suffixed here (`ListNode` → `ListNode'rn`) — `TypeInfer` is context-free and can't know.
+      | _ =>
+          match TypeInfer.ofAnnotation annotationJson with
+          | .cls c => return some (mkIdent (← suffixIfUserName c).toName)
+          | other => pyTypeSyntax? other
   | "Subscript" =>
       let .ok valueJson := annotationJson.getObjValAs? Json "value" | throwError
         s!"Function argument subscript annotation is missing a 'value' field: {annotationJson}"
@@ -67,7 +72,15 @@ partial def functionArgTypeSyntax? (annotationJson : Json) : PygenM (Option (TSy
       -- Sets are list-backed in the runtime, so `set[T]` lowers to `List T`.
       | "list" | "set" =>
           match ← functionArgTypeSyntax? sliceJson with
-          | some elemTy => return some (← `(List $elemTy))
+          -- The runnable (`approx`) twin backs an `array_ok`-marked `list` with `Array` for O(1)
+          -- append/index (Perceus in-place reuse); the provable twin, sets, and un-marked lists stay
+          -- `List`. Marked by the TypeInfer eligibility pass as `_seq: "array"` on this annotation node.
+          | some elemTy =>
+              let arrayBacked := container == "list"
+                && (annotationJson.getObjValAs? String "_seq" == .ok "array")
+                && (← getNumericMode) == .approx
+              if arrayBacked then return some (← `(Array $elemTy))
+              else return some (← `(List $elemTy))
           | none => return none
       -- `defaultdict`/`Counter` are backed by `PyDefaultDict`, not `Std.HashMap`.
       | "dict" | "defaultdict" =>
@@ -101,10 +114,12 @@ partial def functionArgTypeSyntax? (annotationJson : Json) : PygenM (Option (TSy
                   return some ty
               | _, _ => return none
           | _, _ => return none
-      -- `Optional[T]` and other containers this reader misses fall back to `TypeInfer`.
-      | _ => pyTypeSyntax? (TypeInfer.ofAnnotation annotationJson)
-  -- `X | None` (`Optional`) and forward-ref strings: `TypeInfer` handles them.
-  | _ => pyTypeSyntax? (TypeInfer.ofAnnotation annotationJson)
+      -- `Optional[T]` and other containers this reader misses fall back to `TypeInfer` — via
+      -- `seqAwareTypeSyntax?` so a class inside `Option`/a container is still run-suffixed
+      -- (`Optional[ListNode]` → `Option ListNode'rn` in the run twin), not left bare.
+      | _ => seqAwareTypeSyntax? annotationJson
+  -- `X | None` (`Optional`) and forward-ref strings: `TypeInfer` handles them (run-suffixed).
+  | _ => seqAwareTypeSyntax? annotationJson
 
 /-- Read Python function parameters as Lean idents plus any simple type annotations we can preserve.
 `heapRefTypes` (free-function paths under `--heap`): a container/object parameter is typed its HEAP
@@ -154,15 +169,18 @@ def functionArgInfos (json : Json) (heapRefTypes : Bool := false) :
     -- call site → ascribe `ℝ` (exact mode), overriding the annotation. Everything else stays `ℚ`.
     let isRealParam := (← getNumericMode) == .exact && arg.getObjValAs? Bool "_real" == .ok true
     let ty? ← withRealContext isRealParam do
-      match jsonFieldOption arg "annotation" with
-      -- Real-marked params lower their annotation under real-context so `float` → `ℝ` while the
-      -- container shape is preserved (`list[list[float]]` → `List (List ℝ)`, scalar → `ℝ`).
-      | some annotationJson => functionArgTypeSyntax? annotationJson
-      -- No annotation: use the type `TypeInfer` inferred (`_ty`), else a bare `ℝ` if real.
+      -- An inference `_ty` override (a nullable node param widened `TreeNode` → `Optional[TreeNode]`)
+      -- wins over the bare annotation — otherwise the emitted param would clash with the Option args
+      -- the body recurses with. Only such widened params carry `_ty` alongside an annotation.
+      match ← stampedTypeSyntax? arg with
+      | some t => pure (some t)
       | none =>
-          match ← stampedTypeSyntax? arg with
-          | some t => pure (some t)
-          | none => if isRealParam then pure (some (← `(Real))) else pure none
+        match jsonFieldOption arg "annotation" with
+        -- Real-marked params lower their annotation under real-context so `float` → `ℝ` while the
+        -- container shape is preserved (`list[list[float]]` → `List (List ℝ)`, scalar → `ℝ`).
+        | some annotationJson => functionArgTypeSyntax? annotationJson
+        -- No annotation and no `_ty`: a bare `ℝ` if real, else untyped.
+        | none => if isRealParam then pure (some (← `(Real))) else pure none
     argInfos := argInfos.push (mkIdent argName.toName, ty?)
   return argInfos
 
@@ -222,7 +240,20 @@ partial def jsonUsesRealTranscendental (json : Json) : Bool :=
     match json.getObjValAs? String "library_module", json.getObjValAs? String "library_member" with
     | .ok m, .ok mem => (Libraries.pythonLibraryMapReal? m mem).isSome
     | _, _ => false
-  if directMatch then true
+  -- `a ** <float-literal>` (e.g. `x ** 0.5` for a square root) resolves to `PyHPow Int Rat Real`
+  -- (`rpow`), which is `noncomputable` in exact mode. An integer exponent (`x ** 2`) stays computable,
+  -- so only a Constant with a non-zero decimal exponent (0.5, 2.0, …) fires this.
+  let powReal :=
+    json.getObjValAs? String "node_type" == .ok "BinOp"
+    && json.getObjValAs? String "op" == .ok "pow"
+    && (match (json.getObjVal? "right").toOption with
+        | some r =>
+            r.getObjValAs? String "node_type" == .ok "Constant"
+            && (match (r.getObjVal? "value").toOption with
+                | some (.num n) => n.exponent != 0
+                | _ => false)
+        | none => false)
+  if directMatch || powReal then true
   else
     match json with
     | .arr elems => elems.toList.any jsonUsesRealTranscendental
@@ -237,6 +268,24 @@ def bodyNeedsNoncomputable (bodyElems : Array Json) : PygenM Bool := do
   else
     return false
 
+/-- Does `j` reference (as a `Name`) any id in `reg`? -/
+partial def jsonRefsRegistered (reg : Std.HashSet String) (j : Json) : Bool :=
+  (jsonNodeType? j == some "Name" &&
+    (match j.getObjValAs? String "id" with | .ok s => reg.contains s | _ => false))
+  || (match j with
+      | .arr a => a.any (jsonRefsRegistered reg)
+      | .obj kvs => kvs.toList.any (fun (_, v) => jsonRefsRegistered reg v)
+      | _ => false)
+
+/-- Whether the body calls a def already emitted `noncomputable` (a closure-converted helper reaching
+`ℝ`, e.g. `is_prime` computing `int(a ** 0.5)`). Such a caller must itself be `noncomputable`. Only in
+exact mode — the `'rn` run-twins are approx (`Float`, computable) and must never be marked. -/
+def bodyCallsNoncomputable (bodyElems : Array Json) : PygenM Bool := do
+  if (← getNumericMode) != .exact then return false
+  let reg ← noncomputableDefRegistry.get
+  if reg.isEmpty then return false
+  return bodyElems.any (jsonRefsRegistered reg)
+
 /-- Whether a type annotation mentions `float` anywhere (`float`, `list[float]`, `dict[_,float]`). -/
 partial def annotationMentionsFloat (json : Json) : Bool :=
   if json.getObjValAs? String "node_type" == .ok "Name" then
@@ -245,6 +294,13 @@ partial def annotationMentionsFloat (json : Json) : Bool :=
     (match (json.getObjVal? "slice").toOption with | some s => annotationMentionsFloat s | none => false)
     || (match (json.getObjValAs? (Array Json) "elts").toOption with
         | some es => es.any annotationMentionsFloat | none => false)
+
+/-- Whether a return annotation is a SCALAR `float`/`Float` (a bare `Name`). Used for `retFloat`,
+whose mixed int/float→ℚ coercion applies to a scalar float return ONLY — a `list[float]` return has
+its elements coerce individually and its codomain must stay a list, never be ascribed scalar `ℚ`. -/
+def annotationIsScalarFloat (json : Json) : Bool :=
+  json.getObjValAs? String "node_type" == .ok "Name"
+    && (json.getObjValAs? String "id" == .ok "float" || json.getObjValAs? String "id" == .ok "Float")
 
 /-- Read a Python function return annotation when it maps cleanly to a Lean runtime type. -/
 def functionReturnTypeSyntax? (json : Json) : PygenM (Option (TSyntax `term)) := do
@@ -266,6 +322,53 @@ def functionReturnTypeSyntax? (json : Json) : PygenM (Option (TSyntax `term)) :=
       else
         functionArgTypeSyntax? returnJson
   | none => pure none
+
+/-- The `Option X` codomain ascription for a function whose inferred/annotated return is `Optional[X]`
+(`return None` in one branch, `return <x>` in another — e.g. `string_to_md5` returns `None` for the
+empty string, else the digest `str`). Pins the monadic/`Id.run` (or pure `if`) codomain to the CONCRETE
+`Option X` so the `None` branch and the bare-`x` branch (which Lean coerces to `some x`) unify, instead
+of the first `return None` fixing the codomain to `Option ?α`. A `.opt .unknown` return (the value
+branch's element type is not inferred) yields `none` — the coercion needs a concrete target, so an
+`Option _` hole would not fire. Complements `returnClassName?` (the `Optional[C]` *class* case). -/
+def optionalReturnAscription? (json : Json) : PygenM (Option (TSyntax `term)) := do
+  match (jsonFieldOption json "returns").orElse (fun _ => jsonFieldOption json "_ret_ty") with
+  | some r => match TypeInfer.ofAnnotation r with
+      | .opt _ => functionReturnTypeSyntax? json
+      | _ => pure none
+  | none => pure none
+
+/-- The user-class name a node-returning function's annotation names (`TreeNode` or
+`Optional[TreeNode]`), if any. Such a function mixes bare `return TreeNode(...)`, a nullable cursor
+`return slow`, and `return None` base cases — all `Optional[C]` in Python — so its non-recursive def
+must ASCRIBE the codomain as `Option C` (never bare `C`): the bare arm coerces via `Coe C (Option C)`,
+the Option arms match. Ascribing bare `C` (or letting Lean pin the codomain to the first return seen)
+makes the other arms clash. Gated to node returns so other non-recursive defs (whose unascribed body
+type is fine, e.g. `bool`-widening-to-`int`) stay untouched. -/
+def returnClassName? (json : Json) : Option String :=
+  match (jsonFieldOption json "returns").orElse (fun _ => jsonFieldOption json "_ret_ty") with
+  | some r => match TypeInfer.ofAnnotation r with
+    | .cls c | .opt (.cls c) => some c
+    | _ => none
+  | none => none
+
+/-- Return-type ascription for a RECURSIVE function: the annotated/inferred type, or `Unit` for a
+genuinely void body (no `return e` anywhere — only bare `return`/fall-through). A recursive
+`partial def` with an unconstrained return type otherwise leaves `Inhabited ?m` stuck. Guarded by
+`hasValuedReturn` so a state-threaded helper (which gains a valued `return (…threaded…)` and a
+concrete tuple return type) is never mis-pinned to `Unit`. -/
+def recursiveReturnTypeSyntax? (json : Json) : PygenM (Option (TSyntax `term)) := do
+  -- A node-returning recursive helper (`build(i,j) -> TreeNode` that also `return None`s at its base
+  -- case) has codomain `Option C`, never bare `C` — same as the non-recursive path.
+  if let some c := returnClassName? json then
+    if let some codom ← runAwareTypeSyntax? (TypeInfer.PyType.opt (.cls c)) then
+      return some codom
+  match ← functionReturnTypeSyntax? json with
+  | some rt => return some rt
+  | none =>
+    -- Check the BODY, not the def node: `hasValuedReturn` short-circuits to `false` on a
+    -- `FunctionDef` (its job is to skip *nested* defs), so passing `json` here always reads void.
+    let body := (json.getObjVal? "body").toOption.getD Json.null
+    if hasValuedReturn body then return none else return some (← `(Unit))
 
 /-- Check whether a JSON subtree references a given variable name. -/
 partial def jsonReferencesName (json : Json) (target : String) : Bool :=
@@ -317,7 +420,16 @@ partial def jsonMutatesName (json : Json) (name : String) : Bool :=
       | nodeType =>
           let mutatedHere :=
             match nodeType with
-            | .ok "Assign" | .ok "AugAssign" | .ok "AnnAssign" | .ok "For" =>
+            | .ok "For" =>
+                (json.getObjVal? "target").toOption.any (fun t => assignTargetMutatesName t name)
+                -- `for x in name: <mutate x in place>` writes each element back into `name`, so it
+                -- mutates `name` and the container must be a `let mut` — see `forElemWriteback?`.
+                || (match (json.getObjVal? "iter").toOption, (json.getObjVal? "target").toOption,
+                         (json.getObjValAs? (Array Json) "body").toOption with
+                    | some it, some tgt, some body =>
+                        forElemWriteback? it tgt body == some name
+                    | _, _, _ => false)
+            | .ok "Assign" | .ok "AugAssign" | .ok "AnnAssign" =>
                 (json.getObjVal? "target").toOption.any (fun t => assignTargetMutatesName t name)
             | .ok "Delete" =>
                 -- `del name[i]` rebuilds and reassigns the container, so it mutates `name`.
@@ -346,6 +458,57 @@ partial def jsonMutatesName (json : Json) (name : String) : Bool :=
           mutatedHere || fields.toList.any (fun (_, v) => jsonMutatesName v name)
   | _ => false
 
+/-- `(param-name, class-name)` for each node param TypeInfer marked `_mut_opt` (annotated `c` but
+reassigned from `.next`/`.left`, so nullable) — codegen seeds its mut shadow as `Option c`. -/
+def optMutParamsOf (json : Json) : Array (String × String) :=
+  (((json.getObjVal? "args").toOption.bind
+      (·.getObjValAs? (Array Json) "args" |>.toOption)).getD #[]).filterMap fun a =>
+    match a.getObjValAs? String "arg", a.getObjValAs? String "_mut_opt" with
+    | .ok n, .ok c => some (n, c)
+    | _, _ => none
+
+/-- Emit a `let mut p := p` shadow for each parameter the body reassigns (a Lean binder is
+immutable, but Python freely mutates params — `i -= 1`, `n >>= 1`, `a.append(x)`). Registers each as
+a mutable var so later reassignments resolve against the shadow. Shared by the plain monadic emission
+(`functionValueSyntax`) and the contracted Track M/`Id _` emission, so both handle param mutation. -/
+def mutatedParamPrelude (argInfos : Array (TSyntax `ident × Option (TSyntax `term)))
+    (bodyElems : Array Json) (optMutParams : Array (String × String) := #[]) :
+    PygenM (Array (TSyntax `doElem)) := do
+  let mut paramPrelude : Array (TSyntax `doElem) := #[]
+  for (argIdent, _) in argInfos do
+    if bodyElems.any (fun b => jsonMutatesName b argIdent.getId.toString) then
+      addVar argIdent.getId
+      -- The shadow below is a real `let mut`, so record it as mutable: a later type-changing rebind
+      -- (`s = list(s)`) must SSA-rename rather than illegally re-`let mut` the same name.
+      setMutVar argIdent.getId
+      -- A node param the body treats as nullable (`while head; head = head.next`, marked `_mut_opt` by
+      -- TypeInfer) seeds its mut shadow as `Option c` (`some p`), so `Option`-unwrap field access and
+      -- truthiness line up while the param itself stays a plain `c` (callers unaffected).
+      match optMutParams.find? (·.1 == argIdent.getId.toString) with
+      | some (_, cls) =>
+          let clsId := mkIdent (← suffixIfUserName cls).toName
+          paramPrelude := paramPrelude.push
+            (← `(doElem| let mut $argIdent:ident : Option $clsId := some $argIdent))
+      | none =>
+          paramPrelude := paramPrelude.push (← `(doElem| let mut $argIdent:ident := $argIdent))
+  return paramPrelude
+
+/-- Wrap a function body as `((do <prelude> <body>) : <monad> <codomain>)`, lambda-abstracting the
+params unless the function is nullary. Shared by every effectful monad (`PyProofM`/`PyExcept`/`IO`/
+heap) — they differ only in the monad term. -/
+def emitMonadicFunctionDef (monad effCodomain : TSyntax `term) (paramPrelude : Array (TSyntax `doElem))
+    (bodyElems : Array Json) (argInfos : Array (TSyntax `ident × Option (TSyntax `term))) :
+    PygenM (TSyntax `term) := do
+  let bodyStxArray ← monadicFunctionBodySyntax bodyElems
+  let mut body ← `(((do
+        $[$paramPrelude:doElem]*
+        $[$bodyStxArray:doElem]*) : $monad $effCodomain))
+  for (argIdent, ty?) in argInfos.toList.reverse do
+    body ← match ty? with
+      | some ty => `(fun ($argIdent : $ty) ↦ $body)
+      | none => `(fun $argIdent ↦ $body)
+  pure body
+
 /-- Build the Lean value for a Python function body, using a pure term when possible and
 falling back to `do` notation for effectful bodies. This helper is reused for top-level
 definitions, nested local functions, and `Head_FunctionDef` threading.
@@ -355,10 +518,16 @@ inside a nested function do not leak into the enclosing scope's `let`/`let mut` 
 leak would otherwise cause a later same-named outer assignment to be emitted as a reassignment
 of a variable that was never declared `let mut`. -/
 def functionValueSyntax (argInfos : Array (TSyntax `ident × Option (TSyntax `term))) (bodyElems : Array Json)
-    (boxReturn : Bool := false) (retFloat : Bool := false)
+    (boxReturn : Bool := false) (retFloat : Bool := false) (optMutParams : Array (String × String) := #[])
     (heapCellParams : Array (Name × Bool) := #[])
-    (heapRefParams : Array (Name × Option String) := #[]) :
+    (heapRefParams : Array (Name × Option String) := #[])
+    (retAscription : Option (TSyntax `term) := none) :
     PygenM (TSyntax `term) := withFreshVariables do
+  -- Postcondition markers (`Ensures`, `Result()`-bearing `Assert`) are verification-only and have no
+  -- runtime lowering, so they must never reach the emitted body — the spec theorem is built
+  -- separately from the unstripped source. Strip here so EVERY monad path (pure or effectful) is
+  -- covered uniformly; without it an effectful body leaks `Result()` as an unsupported member.
+  let bodyElems := stripResultMarkers bodyElems
   -- Closure-promoted cell params (`--heap`): register so body reads/mutations deref them (one
   -- `readRefM`) and container cells feed `heapContainerRef?`. Function-scoped via `withFreshVariables`.
   for (nm, isContainer) in heapCellParams do
@@ -386,22 +555,23 @@ def functionValueSyntax (argInfos : Array (TSyntax `ident × Option (TSyntax `te
         | none => `(fun $argIdent ↦ $result)
     pure result
   -- A Lean function parameter is an immutable binder, but Python lets a body reassign or
-  -- augment its parameters (`i -= 1`, `a[k] = v`). For each mutated parameter, register it and
-  -- emit a `let mut p := p` shadow at the top of the (monadic) body, then reassignments resolve
-  -- against the mutable shadow. Pure bodies never mutate, so this prelude is empty for them.
-  let mut paramPrelude : Array (TSyntax `doElem) := #[]
-  for (argIdent, _) in argInfos do
-    -- A cell/ref param is already a `Ref`; its mutations go through `writeRefM`/`modifyRefM`, so it
-    -- needs no `let mut` value shadow (shadowing it would rebind the name to a plain value).
-    if heapCellParams.any (·.1 == argIdent.getId) then continue
-    if heapRefParams.any (·.1 == argIdent.getId) then continue
-    if bodyElems.any (fun b => jsonMutatesName b argIdent.getId.toString) then
-      addVar argIdent.getId
-      paramPrelude := paramPrelude.push (← `(doElem| let mut $argIdent:ident := $argIdent))
+  -- augment its parameters (`i -= 1`, `a[k] = v`). Each mutated parameter gets a `let mut p := p`
+  -- shadow at the top of the (monadic) body, then reassignments resolve against the mutable shadow.
+  -- Pure bodies never mutate, so this prelude is empty for them. A `--heap` cell/ref param is already
+  -- a `Ref` (mutated through `writeRefM`/`modifyRefM`), so exclude it — a value shadow would rebind
+  -- the name to a plain value.
+  let valueArgInfos := argInfos.filter fun (argIdent, _) =>
+    !(heapCellParams.any (·.1 == argIdent.getId)) && !(heapRefParams.any (·.1 == argIdent.getId))
+  let paramPrelude ← mutatedParamPrelude valueArgInfos bodyElems optMutParams
   -- The monad codomain: `PyAny` when the returns disagree (`_box_return`), else a hole for Lean to
   -- infer. Without this an effectful boxed function would keep `_`, and Lean would fix the monad's
   -- type from the first `return` — forcing e.g. `Float`, so a later `return 0` (`ℤ`) fails to match.
-  let effCodomain : TSyntax `term ← if boxReturn then `(PastaLean.PyAny) else `(_)
+  -- `retAscription` pins the codomain when the returns need a common type Lean can't infer from the
+  -- first `return` — notably an `Optional[X]` return (`return None` in one branch, `return x` in
+  -- another): ascribe `Option X` so the `None` branch and the bare-`x` branch (via `Coe X (Option X)`)
+  -- unify instead of the first `return None` fixing the monad to `Option ?α`.
+  let effCodomain : TSyntax `term ← if boxReturn then `(PastaLean.PyAny)
+    else match retAscription with | some t => pure t | none => `(_)
   -- Heap tier (`--heap`): a body that touches the heap runs in `HeapM Val` (or, with IO, the
   -- `PyHeapIO`/`PyHeapProofM` stack). Takes precedence — `HeapM`'s error dimension is `PyException`,
   -- so it already subsumes exceptions. Codomain is ascribed to the body so a `_` return can infer.
@@ -410,57 +580,22 @@ def functionValueSyntax (argInfos : Array (TSyntax `ident × Option (TSyntax `te
   -- or reference params.
   if (← needsHeapMonad bodyElems) ||
       ((← getHeapMode) && (heapCellParams.size > 0 || heapRefParams.size > 0)) then
-    let bodyStxArray ← monadicFunctionBodySyntax bodyElems
     let heapVal := mkIdent `Val
     let monad ← if usesRealIO then
         if useProofMonad then `($(mkIdent ``PastaLean.PyHeapProofM) $heapVal)
         else `($(mkIdent ``PastaLean.PyHeapIO) $heapVal)
       else `($(mkIdent ``PastaLean.HeapM) $heapVal)
-    let heapBody ← `(((do
-          $[$paramPrelude:doElem]*
-          $[$bodyStxArray:doElem]*) : $monad $effCodomain))
-    if argInfos.isEmpty then return heapBody else return ← mkLambda heapBody
+    return ← emitMonadicFunctionDef monad effCodomain paramPrelude bodyElems argInfos
+  -- Proof mode → `PyProofM`; exact-mode pure exceptions → `PyExceptId`; exceptions (+IO) → `PyExcept`;
+  -- plain IO → `IO`. All four wrap the body identically save the monad, so share `emitMonadicFunctionDef`.
   if usesProofExceptions || usesProofIO then
-    -- Proof mode: use PyProofM (state monad with Python exceptions)
-    let bodyStxArray ← monadicFunctionBodySyntax bodyElems
-    let proofMonadIdent := mkIdent ``PastaLean.ProofMode.PyProofM
-    let proofBody ← `(((do
-          $[$paramPrelude:doElem]*
-          $[$bodyStxArray:doElem]*) : $proofMonadIdent $effCodomain))
-    if argInfos.isEmpty then
-      pure proofBody
-    else
-      mkLambda proofBody
+    emitMonadicFunctionDef (mkIdent ``PastaLean.ProofMode.PyProofM) effCodomain paramPrelude bodyElems argInfos
   else if usesPureExceptions then
-    let bodyStxArray ← monadicFunctionBodySyntax bodyElems
-    let exceptIdIdent := mkIdent ``PastaLean.PyExceptId
-    let exceptIdBody ← `(((do
-          $[$paramPrelude:doElem]*
-          $[$bodyStxArray:doElem]*) : $exceptIdIdent $effCodomain))
-    if argInfos.isEmpty then
-      pure exceptIdBody
-    else
-      mkLambda exceptIdBody
+    emitMonadicFunctionDef (mkIdent ``PastaLean.PyExceptId) effCodomain paramPrelude bodyElems argInfos
   else if usesExceptions then
-    let bodyStxArray ← monadicFunctionBodySyntax bodyElems
-    let exceptIdent := mkIdent ``PastaLean.PyExcept
-    let exceptBody ← `(((do
-          $[$paramPrelude:doElem]*
-          $[$bodyStxArray:doElem]*) : $exceptIdent $effCodomain))
-    if argInfos.isEmpty then
-      pure exceptBody
-    else
-      mkLambda exceptBody
+    emitMonadicFunctionDef (mkIdent ``PastaLean.PyExcept) effCodomain paramPrelude bodyElems argInfos
   else if usesRealIO then
-    let bodyStxArray ← monadicFunctionBodySyntax bodyElems
-    let ioIdent := mkIdent ``IO
-    let ioBody ← `(((do
-          $[$paramPrelude:doElem]*
-          $[$bodyStxArray:doElem]*) : $ioIdent $effCodomain))
-    if argInfos.isEmpty then
-      pure ioBody
-    else
-      mkLambda ioBody
+    emitMonadicFunctionDef (mkIdent ``IO) effCodomain paramPrelude bodyElems argInfos
   else
     -- A boxed function's returns disagree in type, so ascribe the result to `PyAny`; each branch
     -- then coerces (`return 1` / `return "neg"` both become `PyAny`). A `retFloat` (float-returning,
@@ -470,9 +605,16 @@ def functionValueSyntax (argInfos : Array (TSyntax `ident × Option (TSyntax `te
     let floatTy? : Option (TSyntax `term) ←
       if retFloat then pure (some (if (← getNumericMode) == .exact then mkIdent ``Rat else mkIdent ``Float))
       else pure none
+    -- `show T from body`, not `(body : T)`: a pure body that begins with a comment/statement `let`
+    -- (`let __PastaLean_comment := (); …`) re-parses wrong under a trailing `: T` ascription
+    -- ("expected ';' or line break"); `show … from` takes the whole `let`-expression as its argument.
     let ascribeResult (body : TSyntax `term) : PygenM (TSyntax `term) :=
-      if boxReturn then `(($body : $boxTy))
-      else match floatTy? with | some t => `(($body : $t)) | none => pure body
+      if boxReturn then `((show $boxTy from $body))
+      else match floatTy? with
+        | some t => `((show $t from $body))
+        | none => match retAscription with
+          | some t => `((show $t from $body))
+          | none => pure body
     try
       let bodyStx ← ascribeResult (← pureFunctionBodySyntax bodyElems)
       if argInfos.isEmpty then
@@ -547,7 +689,10 @@ def functionCommandWithEffectSignature? (nameIdent : TSyntax `ident)
     (argInfos : Array (TSyntax `ident × Option (TSyntax `term))) (json : Json)
     (noncomp : Bool := false) :
     PygenM (Option (TSyntax `command)) := do
-  let bodyElems ← functionBodyElems json
+  -- Strip verification-only postcondition markers: `Result()` has no runtime lowering, so an
+  -- effectful body (this path handles the IO/exception twins) would otherwise leak it as an
+  -- unsupported member. The spec theorem is built from the unstripped source elsewhere.
+  let bodyElems := stripResultMarkers (← functionBodyElems json)
   -- Heap functions run in `HeapM Val` with the codomain ascribed to the body (a `_` return type in
   -- an explicit `def` header can't be inferred); let `functionValueSyntax`'s heap tier build them.
   -- A function heap-tier ONLY via a container/object ref param carries no body heap marker, so also
@@ -592,6 +737,16 @@ def functionCommandWithEffectSignature? (nameIdent : TSyntax `ident)
   else
     return none
 
+/-- A comment, a leading `DocString`, or a bare string-literal `Expr` (a docstring in NON-leading
+position, e.g. after a `Requires`). All are no-ops that must be filtered before contract-shape
+analysis, or they wrongly knock a pure function out of the straight-line Track-P shape. -/
+def isDocstringLike (s : Json) : Bool :=
+  jsonNodeType? s == some "Comment" || jsonNodeType? s == some "DocString"
+    || (jsonNodeType? s == some "Expr"
+        && ((s.getObjVal? "value").toOption.any (fun v =>
+              v.getObjValAs? String "node_type" == .ok "Constant"
+              && (v.getObjVal? "value" |>.toOption.bind (·.getStr?.toOption)).isSome)))
+
 /-- A single theorem-shaped obligation → `(hypotheses, conclusion-test)`. A bare `assert C` gives
 `(#[], C)`; `if H: assert C` (no `else`, body a lone assert) gives the guard's conjuncts and `C` (a
 conjunction `H1 and H2` splits into separate hypotheses, so the prover gets named hyps). `none`
@@ -600,8 +755,7 @@ def obligationShape? (stmt : Json) : Option (Array Json × Json) :=
   match jsonNodeType? stmt with
   | some "Assert" => (stmt.getObjValAs? Json "test").toOption.map (fun t => (#[], t))
   | some "If" =>
-      let isSubst := fun (s : Json) =>
-        jsonNodeType? s != some "Comment" && jsonNodeType? s != some "DocString"
+      let isSubst := fun (s : Json) => !isDocstringLike s
       let body := ((stmt.getObjValAs? (Array Json) "body").toOption.getD #[]).filter isSubst
       let orelse := (stmt.getObjValAs? (Array Json) "orelse").toOption.getD #[]
       if orelse.isEmpty && body.size == 1 && jsonNodeType? body[0]! == some "Assert" then
@@ -647,8 +801,8 @@ the last component being the full `.2`-chain (Lean tuples are right-nested). `n 
 partial def whileTupleProj (base : TSyntax `term) (idx n : Nat) : PygenM (TSyntax `term) := do
   if n ≤ 1 then return base
   let mut t := base
-  for _ in [0:idx] do t ← `(($t).2)
-  if idx == n - 1 then return t else `(($t).1)
+  for _ in [0:idx] do t ← `($t.2)
+  if idx == n - 1 then return t else `($t.1)
 
 /-- Right-nested tuple `(e₀, e₁, …, e_{k-1})` from `elems` (matching `whileTupleProj`). -/
 def whileNestedTuple (elems : Array (TSyntax `term)) : PygenM (TSyntax `term) := do
@@ -659,9 +813,11 @@ def whileNestedTuple (elems : Array (TSyntax `term)) : PygenM (TSyntax `term) :=
     acc ← `(($e, $acc))
   return acc
 
-/-- `fun s => let v₁ := s.<p₁>; … ; <inner>` — a lambda over the loop state tuple that binds each state
-variable name to its projection, so `inner` (built by `getCode` over the original JSON) refers to the
-state variables by name. `inner` is run with those names registered. -/
+/-- `fun s => let v₁ := s.1; let v₂ := s.2.1; … ; <inner>` — a lambda over the loop state tuple that
+binds each state variable to its projection, so `inner` (built by `getCode` over the original JSON)
+refers to them by name. The `let`-projection form (not a `match` pattern) is deliberate: the verified
+`while` proofs `show` the generated def is defeq to their projection-based body lambdas, and `let v :=
+s.1` reduces there where a `match` matcher would not. `inner` runs with the names registered. -/
 def whileStateLambda (stateVars : Array String) (inner : PygenM (TSyntax `term)) :
     PygenM (TSyntax `term) := withFreshVariables do
   for v in stateVars do addVar v.toName
@@ -735,9 +891,9 @@ def buildWhileFunction (name : String) (json : Json) (sh : WhileShape) :
   -- The spec theorem.
   let preProps ← sh.requires.mapM (fun r => withPropCondition true (getCode r `term))
   let pre ← conjoin preProps
-  let rId := mkIdent `__py_r
+  let rId := mkIdent `p'_r
   let postProps ← sh.ensures.mapM
-    (fun e => withPropCondition true (getCode (substResultWith (nameJson "__py_r") e) `term))
+    (fun e => withPropCondition true (getCode (substResultWith (nameJson "p'_r") e) `term))
   let post ← conjoin postProps
   -- `I` and `Q` lambdas over the state tuple (`Q` uses `Result() := retExpr`).
   let iLam ← whileStateLambda stateVars
@@ -747,21 +903,15 @@ def buildWhileFunction (name : String) (json : Json) (sh : WhileShape) :
       (fun e => withPropCondition true (getCode (substResultWith sh.retExpr e) `term))))
   let paramIdents := argInfos.map (·.1)
   let nameLemma ← `(Lean.Parser.Tactic.simpLemma| $nameIdent:term)
-  -- Each `pyWhile_correct` side goal (init `I s₀`, step `I(body) ∧ μ' < μ`, exit `Q`) is a conjunction
-  -- mixing nonlinear (`nlinarith`) and `.toNat`-measure (`omega`) facts, which no single closer handles.
-  -- So: introduce, simp with the lambda β/ζ-reductions, split the conjunction (`and_intros`), then run a
-  -- closer portfolio per leaf. (`intros` covers `I s₀`, which has no binders.)
-  -- `try` guards the simplifiers (a trivial obligation can leave `simp_all`/`and_intros` no-progress,
-  -- which would otherwise error); the final `sorry` degrades an INSUFFICIENT contract (invariants that
-  -- don't entail the step) to a localized `sorry`-warning instead of a hard failure of the whole file.
-  let oblTac ← `(tactic|
-    intros <;> (try simp_all (config := { zetaDelta := true })) <;> (try and_intros) <;>
-      first | omega | nlinarith | positivity | grind | sorry)
+  -- Each `pyWhile_correct` side goal (init `I s₀`, step `I(body) ∧ μ' < μ`, exit `Q`) is left to
+  -- `taste?`, so — like the `for`/pure tracks — the prove-and-replace pipeline runs it in the backend
+  -- and splices the single winning tactic back over each `taste?`, giving a clean one-line proof per
+  -- obligation instead of an inlined closer portfolio.
   let thmCmd ← `(command| @[spec] theorem $(mkIdent (name ++ "_spec").toName) :
       ⦃⌜$pre⌝⦄ $nameIdent $paramIdents* ⦃⇓ $rId => ⌜$post⌝⦄ := by
         mvcgen [$nameLemma]
         · exact PastaLean.pyWhile_correct (I := $iLam) (Q := $qLam) $muLam $cLam $bodyLam $s0
-            (by $oblTac:tactic) (by $oblTac:tactic) (by $oblTac:tactic))
+            (by taste?) (by taste?) (by taste?))
   return #[finalDef, thmCmd]
 
 /-- Build `partial def name : <arg tys → ret> := value` for a member of a mutual group. The
@@ -804,6 +954,103 @@ def emitHelperGroup (group : Array Json) : PygenM (TSyntax `command) := do
   else if let some j := group[0]? then
     getCode j `command
   else throwError "closure conversion produced an empty helper group"
+
+/-- Does a recursive call to `name` appear inside a lazily/conditionally-evaluated expression — a
+ternary `IfExp`, a short-circuit `BoolOp`, a `Lambda`, or a comprehension? There a memoized self-call
+`(← foo'memo'rn …)` is illegal (do-notation only hoists `(←…)` from statement position, and hoisting
+out of a conditional would change *when* it runs), so such a function can't be memoized as-is. -/
+partial def selfCallUnderExpr (name : String) (json : Json) : Bool :=
+  match jsonNodeType? json with
+  | some "IfExp" | some "BoolOp" | some "Lambda"
+  | some "ListComp" | some "SetComp" | some "DictComp" | some "GeneratorExp" =>
+      containsCallTo name json
+  | _ => match json with
+    | .arr xs => xs.any (selfCallUnderExpr name)
+    | .obj fs => fs.toList.any (fun (_, v) => selfCallUnderExpr name v)
+    | _ => false
+
+/-- The memoized run-twin of a `@cache`/`@lru_cache` function: a `StateM`-threaded worker `foo'memo'rn`
+that shares one `HashMap` cache across the whole recursion, plus the pure wrapper `foo'rn` that seeds a
+fresh cache per top-level call. Recursive self-calls in the body lower to `(← foo'memo'rn args)` (via
+`withMemoizeSelf`), so the recursion is memoized — turning exponential `@cache` DP into polynomial.
+Returns `none` (fall back to a plain, unmemoized def) unless the function has a known return type and
+all-`int` params (a `Hashable`/`BEq` cache key). -/
+def memoizedRunCommand? (json : Json) (nameIdent : TSyntax `ident) (baseName : String) :
+    PygenM (Option (TSyntax `command)) := do
+  let some retTy ← functionReturnTypeSyntax? json | return none
+  -- Params live in the nested `arguments` node (`json.args.args`). The cache is keyed on the ORIGINAL
+  -- params only; a closure-`_capture` (added when lifting a nested `@cache dfs`) is constant across
+  -- the recursion and may be a non-hashable container, so it is threaded through but NOT keyed. Every
+  -- ORIGINAL param must be `int`/`bool`/`str` — a `Hashable`/`BEq` type the key (a tuple of them) uses.
+  let argNodes := ((json.getObjVal? "args").toOption.bind
+    (·.getObjValAs? (Array Json) "args" |>.toOption)).getD #[]
+  let isCapture (a : Json) : Bool := a.getObjValAs? Bool "_capture" == .ok true
+  let keyTyFor (a : Json) : Option (TSyntax `term) :=
+    match (a.getObjVal? "annotation").toOption.bind (·.getObjValAs? String "id" |>.toOption) with
+    | some "int" => some (mkIdent ``Int)
+    | some "bool" => some (mkIdent ``Bool)
+    | some "str" => some (mkIdent ``String)
+    | _ => none
+  let argInfos ← functionArgInfos json
+  unless argInfos.size == argNodes.size do return none
+  -- (ident, key-type) for each ORIGINAL param; `none` if an original isn't a scalar key type.
+  let keyPartsOpt : Array (Option (TSyntax `term × TSyntax `term)) :=
+    (argNodes.zip argInfos).filterMap fun (a, (id, _)) =>
+      if isCapture a then none else some ((keyTyFor a).map (fun kt => (⟨id.raw⟩, kt)))
+  -- every original must be keyable (else the key is incomplete → wrong cache), and there must be ≥1.
+  unless !keyPartsOpt.isEmpty && keyPartsOpt.all (·.isSome) do return none
+  let keyParts := keyPartsOpt.filterMap id
+  let keyTerms := keyParts.map (·.1)
+  let keyTys := keyParts.map (·.2)
+  let argTerms : Array (TSyntax `term) := argInfos.map (fun (i, _) => ⟨i.raw⟩)
+  -- key: one original → the param; many → the right-nested tuple `(a, b, …)`; type = the `×` product.
+  let mut keyExpr : TSyntax `term := keyTerms.back!
+  for a in keyTerms.pop.reverse do keyExpr ← `(($a, $keyExpr))
+  let mut keyTy : TSyntax `term := keyTys.back!
+  for t in keyTys.pop.reverse do keyTy ← `($t × $keyTy)
+  let worker : TSyntax `ident := mkIdent (baseName ++ "'memo'rn").toName
+  let bodyElems := stripResultMarkers (← functionBodyElems json)
+  -- A self-call in a ternary/`and`/`or`/lambda/comprehension can't be a monadic `(←…)`; fall back.
+  if bodyElems.any (selfCallUnderExpr baseName) then return none
+  -- Params are immutable binders; a body that reassigns/augments a param (`k += …`) needs a
+  -- `let mut p := p` shadow, exactly as the non-memoized path does — else "`p` cannot be mutated".
+  -- Register each as a mutable var BEFORE building the body, so a later plain assign (`x = 3*x+1`)
+  -- lowers to a reassignment (`x := …`) rather than a fresh `let mut x` that shadows the shadow.
+  let mut paramPrelude : Array (TSyntax `doElem) := #[]
+  for (argIdent, _) in argInfos do
+    if bodyElems.any (fun b => jsonMutatesName b argIdent.getId.toString) then
+      addVar argIdent.getId
+      setMutVar argIdent.getId
+      paramPrelude := paramPrelude.push (← `(doElem| let mut $argIdent:ident := $argIdent))
+  let bodyDoElems ← withMemoizeSelf (some (baseName, worker.getId)) (monadicFunctionBodySyntax bodyElems)
+  let cacheDo ← `(do
+    match (← get)[$keyExpr]? with
+    | some v => return v
+    | none =>
+        let v ← (do
+          $[$paramPrelude:doElem]*
+          $[$bodyDoElems:doElem]*)
+        modify (·.insert $keyExpr v)
+        return v)
+  let mut workerVal : TSyntax `term := cacheDo
+  for (argIdent, ty?) in argInfos.reverse do
+    workerVal ← match ty? with
+      | some t => `(fun ($argIdent : $t) ↦ $workerVal)
+      | none => `(fun $argIdent ↦ $workerVal)
+  let stateRetTy ← `(StateM (Std.HashMap $keyTy $retTy) $retTy)
+  let some workerTy ← functionArrowTypeSyntax? argInfos stateRetTy | return none
+  let workerDef ← `(command| partial def $worker : $workerTy := $workerVal)
+  -- wrapper: `fun (params) ↦ (worker args).run' ∅`
+  let mut wrapCall : TSyntax `term ← `($worker)
+  for i in argTerms do wrapCall ← `($wrapCall $i)
+  let mut wrapperVal : TSyntax `term ← `(($wrapCall).run' ∅)
+  for (argIdent, ty?) in argInfos.reverse do
+    wrapperVal ← match ty? with
+      | some t => `(fun ($argIdent : $t) ↦ $wrapperVal)
+      | none => `(fun $argIdent ↦ $wrapperVal)
+  let some wrapperTy ← functionArrowTypeSyntax? argInfos retTy | return none
+  let wrapperDef ← `(command| def $nameIdent : $wrapperTy := $wrapperVal)
+  return some ⟨mkNullNode #[workerDef.raw, wrapperDef.raw]⟩
 
 @[pygen "FunctionDef"]
 def funcDefSyntax : (kind : SyntaxNodeKind) → Json →
@@ -866,38 +1113,76 @@ def funcDefSyntax : (kind : SyntaxNodeKind) → Json →
         -- The run twin (`approx`) drops the obligation. Anything else (≥2 asserts, non-`let` statements)
         -- stays a `def` with anonymous `have`s (see `Head_Assert`).
         let bodyArr := (json.getObjValAs? (Array Json) "body").toOption.getD #[]
-        let substantive := bodyArr.filter fun (s : Json) =>
-          jsonNodeType? s != some "Comment" && jsonNodeType? s != some "DocString"
+        let substantive := bodyArr.filter fun (s : Json) => !isDocstringLike s
+        -- Postconditions (`Ensures`/`Assert`) must bookend the function, not sit mid-computation.
+        if hasMidFunctionPostcondition substantive then
+          throwError "Ensures/Assert must appear at the start or end of the function body, not \
+            interleaved with the computation — a mid-function Assert is a program-point checkpoint, \
+            not a postcondition. Move it to the end (or use Invariant inside the loop)."
         let paramNames := (← functionArgInfos json).map (fun (id, _) => id.getId.toString)
         if let some (letJsons, hypJsons, conclJson) := theoremShape? paramNames bodyArr substantive then
           if (← getNumericMode) == .approx then return ⟨mkNullNode #[]⟩
-          let thmCmd ← buildSpecTheorem nameIdent (← functionArgInfos json) letJsons hypJsons conclJson
+          let thmCmd ← buildSpecTheorem nameIdent (← functionArgInfos json) letJsons hypJsons #[conclJson]
           return ⟨mkNullNode #[thmCmd.raw]⟩
         -- Track P: a pure, straight-line contracted function (`Requires`/`Ensures` + `let`s +
-        -- `return`) emits its ordinary runnable `def` (contracts stripped) plus a `<fn>_spec` theorem.
-        if let some (cleanBody, letJsons, hypJsons, conclJson) := contractShape? paramNames bodyArr substantive then
+        -- `return`) emits its ordinary runnable `def` (contracts stripped) plus a `<fn>_correct` theorem.
+        -- No Hoare triple here (it's pure), so the single readable theorem is named `_correct`, not `_spec`.
+        -- Reference the function by name in its `_spec`/`_correct` UNLESS the name is a Python builtin
+        -- (`sum`, `max`, …), where a `Call` would dispatch to the builtin, not the user def — inline there.
+        let refFn := (← builtinMappedName? name).isNone
+        if let some (cleanBody, letJsons, hypJsons, conclJsons) := contractShape? name refFn paramNames bodyArr substantive then
           let argInfos ← functionArgInfos json
-          let valueStx ← functionValueSyntax argInfos cleanBody
-          let finalDef ← applyPrivacy name (← `(command| def $nameIdent := $valueStx))
+          -- A `float`-annotated contracted body whose `return` mixes `int` and true-division
+          -- (`median`) needs its result ascribed to `ℚ`/`Float` so the `int` branch coerces — same
+          -- `retFloat` reconcile the generic path uses below (Track P doesn't reach it).
+          let annFloat := match (jsonFieldOption json "returns").orElse (fun _ => jsonFieldOption json "_ret_ty") with
+            | some r => annotationIsScalarFloat r
+            | none => false
+          let retFloatP := ((json.getObjValAs? Bool "_ret_float" == .ok true) || annFloat) &&
+            ((← getNumericMode) != .exact || json.getObjValAs? Bool "_real_fn" != .ok true)
+          let valueStx ← withRetFloatContext retFloatP <| functionValueSyntax argInfos cleanBody false retFloatP
+          -- A Track-P body that reaches `ℝ` (a transcendental, or `x ** 0.5` via `rpow`) is
+          -- noncomputable in exact mode — same rule as the monadic path below, which this pure path
+          -- also needs (e.g. an unannotated `is_prime` helper that computes `int(a ** 0.5)`).
+          let ncP ← (pure (json.getObjValAs? Bool "_real_fn" == .ok true)) <||>
+            bodyNeedsNoncomputable cleanBody <||> bodyCallsNoncomputable cleanBody
+          if ncP then registerNoncomputableDef name
+          -- A self-recursive contracted helper (`query_gcd(a,b) = … query_gcd(b, a%b)`) is not
+          -- structurally decreasing, so it must be `partial` (Lean can't infer termination here).
+          let isRecP := cleanBody.any (jsonReferencesName · baseName)
+          let defCmdP ← match ncP, isRecP with
+            | true,  true  => `(command| noncomputable partial def $nameIdent := $valueStx)
+            | true,  false => `(command| noncomputable def $nameIdent := $valueStx)
+            | false, true  => `(command| partial def $nameIdent := $valueStx)
+            | false, false => `(command| def $nameIdent := $valueStx)
+          let finalDef ← applyPrivacy name defCmdP
           if (← getNumericMode) == .approx then
             return ⟨mkNullNode #[finalDef.raw]⟩
-          let thmName := mkIdent (name ++ "_spec").toName
-          let thmCmd ← buildSpecTheorem thmName argInfos letJsons hypJsons conclJson
+          -- The one top-level readable correctness theorem is `_correct`; a helper (`_`-prefixed,
+          -- e.g. a closure-converted nested def) is a supporting `_spec`.
+          let suffix := if pythonNameIsPrivate name then "_spec" else "_correct"
+          let thmName := mkIdent (name ++ suffix).toName
+          let thmCmd ← buildSpecTheorem thmName argInfos letJsons hypJsons conclJsons
+          -- A `partial def` has no equation lemmas, so it can't carry `@[simp]`.
+          if isRecP then return ⟨mkNullNode #[finalDef.raw, thmCmd.raw]⟩
           let attrCmd ← `(command| attribute [simp] $nameIdent)
           return ⟨mkNullNode #[finalDef.raw, attrCmd.raw, thmCmd.raw]⟩
         -- Track W: a `while`-loop contracted function (single straight-line `while` with `Invariant`
         -- + `Decreases`). Lowered through `pyWhile` + `pyWhile_correct` (the `while` rule), since core
         -- `while` is the opaque `whileM` mvcgen can't reason about. Exact mode only; the `'rn` twin
         -- keeps a real `while`.
-        if (← getNumericMode) == .exact then
-          if let some sh := whileContractShape? paramNames substantive then
-            let cmds ← buildWhileFunction name json sh
-            return ⟨mkNullNode (cmds.map (·.raw))⟩
-        -- Track M: a monadic contracted function (a `for` loop with `Invariant(...)`). Emit the
+        -- (The legacy `pyWhile` combinator track is retired: `mvcgen` now reasons about a native
+        -- `while` loop directly — `Spec.whileM`/`Spec.forIn` over `Lean.Loop` are `@[spec]` — so a
+        -- `while`-contracted function falls through to Track M below and emits a real `while`.)
+        -- Track M: a monadic contracted function (a `for` OR `while` loop with `Invariant(...)`). Emit
         -- function `Id`-typed (so `mvcgen` sees the `do`) with `Requires`/`Assume` stripped to the
         -- precondition, plus a `<fn>_spec` Hoare-triple theorem driven by `mvcgen … with taste?`.
         -- Exact mode only; the runnable `'rn` twin (approx) falls through to normal emission.
-        if (← getNumericMode) == .exact then
+        -- An IO-effectful body (e.g. one drawing from `random`) runs in the state+exception proof
+        -- monad, which this `Id`-typed mvcgen track cannot host — its awaited sub-actions would not
+        -- sequence. Skip the strict spec for it and fall through to the generic emitter, which emits a
+        -- compiling monadic `def` (contracts kept as runtime checkpoints) for hand-written proofs.
+        if (← getNumericMode) == .exact && !(bodyNeedsIOMonad substantive) then
           if let some info := monadicContractInfo? substantive then
             let argInfos ← functionArgInfos json
             -- Pick the monad mvcgen sees. A `try`/`raise` body needs a *pure* exception monad with
@@ -906,10 +1191,25 @@ def funcDefSyntax : (kind : SyntaxNodeKind) → Json →
             -- metavariables in `Spec.throw_Except` for an *uncaught* `throw`; `PyExcept` drags in `IO`
             -- (no mvcgen specs). `ExceptT … Id` avoids all three. A pure body stays `Id _`.
             let usesExc := bodyNeedsExceptionMonad info.cleanBody
-            let valueStx ← withFreshVariables do
+            -- A `float`-annotated body whose `return` is a mixed `int`/true-division ternary needs the
+            -- `retFloat` context so the `IfExp`'s `int` branch coerces to `ℚ` (see `Assign.lean`).
+            let annFloatM := match (jsonFieldOption json "returns").orElse (fun _ => jsonFieldOption json "_ret_ty") with
+              | some r => annotationIsScalarFloat r
+              | none => false
+            let retFloatM := ((json.getObjValAs? Bool "_ret_float" == .ok true) || annFloatM) &&
+              json.getObjValAs? Bool "_real_fn" != .ok true
+            let valueStx ← withRetFloatContext retFloatM <| withFreshVariables do
+              -- Shadow any mutated parameter with `let mut p := p` (as the runnable twin does via
+              -- `functionValueSyntax`); without it a contracted `while n: … n >>= 1` reassigns the
+              -- immutable binder `n` and fails to elaborate.
+              let prelude ← mutatedParamPrelude argInfos info.cleanBody (optMutParamsOf json)
               let bodyStxArray ← monadicFunctionBodySyntax info.cleanBody
-              let doStx ← `(do $[$bodyStxArray:doElem]*)
-              let monadTy ← if usesExc then `(ExceptT PastaLean.PyException Id _) else `(Id _)
+              let doStx ← `(do $[$prelude:doElem]* $[$bodyStxArray:doElem]*)
+              -- A nullable return (`return None` / `return v`) pins the codomain to `Id (Option τ)` so
+              -- the `none`/`some v` branches share a type Lean can't infer from a bare `Id _`.
+              let optRet? ← optionalReturnAscription? json
+              let monadTy ← if usesExc then `(ExceptT PastaLean.PyException Id _)
+                else match optRet? with | some t => `(Id $t) | none => `(Id _)
               let mut v ← `(($doStx : $monadTy))
               for (argIdent, ty?) in argInfos.reverse do
                 v ← match ty? with
@@ -922,13 +1222,16 @@ def funcDefSyntax : (kind : SyntaxNodeKind) → Json →
             -- additionally catches *transitive* ℝ — e.g. a function whose value comes from calling
             -- another ℝ-returning function (`euclidean_distance`), which the body scan can't see.
             let nc ← (pure (json.getObjValAs? Bool "_real_fn" == .ok true)) <||>
-              bodyNeedsNoncomputable info.cleanBody
+              bodyNeedsNoncomputable info.cleanBody <||> bodyCallsNoncomputable info.cleanBody
+            if nc then registerNoncomputableDef name
             let defCmd ← if nc then `(command| noncomputable def $nameIdent := $valueStx)
               else `(command| def $nameIdent := $valueStx)
             let finalDef ← applyPrivacy name defCmd
-            let thmCmd ← buildMonadicSpec (mkIdent (name ++ "_spec").toName) nameIdent
-              (argInfos.map (·.1)) info
-            return ⟨mkNullNode #[finalDef.raw, thmCmd.raw]⟩
+            let thmCmd ← buildMonadicSpec (mkIdent (name ++ "_spec").toName)
+              (mkIdent (name ++ "_correct").toName) nameIdent (!pythonNameIsPrivate name) argInfos info
+            -- `thmCmd` is a null node of one-or-two commands (spec + optional readable corollary);
+            -- splice its children flat so each elaborates as a command.
+            return ⟨mkNullNode (#[finalDef.raw] ++ thmCmd.raw.getArgs)⟩
         -- `_real_fn` (set by the Python per-variable pass) means the function produces or handles an
         -- `ℝ` value → it must be `noncomputable` in exact mode. This is now DECOUPLED from which
         -- floats are `ℝ`: real params carry a per-`arg` `_real` stamp (read in `functionArgInfos`)
@@ -940,21 +1243,34 @@ def funcDefSyntax : (kind : SyntaxNodeKind) → Json →
         let boxReturn := json.getObjValAs? Bool "_box_return" == .ok true
         -- A float-returning body gets its result pinned to `ℚ`/`Float`, EXCEPT for an `ℝ`-valued
         -- function (`_real_fn`, incl. transitively via a callee) in exact mode — its float is `ℝ`,
-        -- which a `ℚ` ascription would clash with, so it is left for Lean to infer.
-        let retFloat := (json.getObjValAs? Bool "_ret_float" == .ok true) &&
+        -- which a `ℚ` ascription would clash with, so it is left for Lean to infer. This fires on the
+        -- inferred `_ret_float` stamp AND on an explicit `-> float` annotation: a `float`-annotated body
+        -- whose branches mix `int` and true-division (`median`'s `s[k] if odd else (a+b)/2`) needs the
+        -- `ℚ` ascription so the `int` branch coerces — without it the `if` branches disagree in type.
+        let annFloat := match (jsonFieldOption json "returns").orElse (fun _ => jsonFieldOption json "_ret_ty") with
+          | some r => annotationIsScalarFloat r
+          | none => false
+        let retFloat := ((json.getObjValAs? Bool "_ret_float" == .ok true) || annFloat) &&
           ((← getNumericMode) != .exact || json.getObjValAs? Bool "_real_fn" != .ok true)
         let heapRefParams ← functionHeapRefParams json
         let argInfos ← functionArgInfos json (heapRefTypes := true)
-        let effectCmd? ← withBoxReturnContext boxReturn
+        let effectCmd? ← withBoxReturnContext boxReturn <| withRetFloatContext retFloat
           (functionCommandWithEffectSignature? nameIdent argInfos json isReal)
         -- Drop any `Ensures(Result() …)`/`Assert(Result() …)` markers: they are verification-only
         -- (lifted to the spec postcondition) and `Result()` has no runtime lowering, so they must not
         -- leak into a runnable body — notably the `'rn` twin, which reaches this generic path.
         let bodyElems := stripResultMarkers (← functionBodyElems json)
+        -- A `@cache`/`@lru_cache` function: the runnable twin memoizes (StateM-threaded cache) so
+        -- exponential recursion runs in polynomial time. The provable twin (exact) stays the plain
+        -- recursive def below. Falls back to the plain def for shapes memoization doesn't cover.
+        if Decorators.hasMemoizingDecorator json && (← getNumericMode) == .approx then
+          if let some memoCmd ← memoizedRunCommand? json nameIdent baseName then
+            return memoCmd
         let isRecursive := bodyElems.any (jsonReferencesName · baseName)
         -- A real-valued body (transcendental, directly or via a callee) forces `noncomputable`.
-        let nc := isReal || (← bodyNeedsNoncomputable bodyElems)
-        let cmd ← withBoxReturnContext boxReturn do match effectCmd? with
+        let nc := isReal || (← bodyNeedsNoncomputable bodyElems) || (← bodyCallsNoncomputable bodyElems)
+        if nc then registerNoncomputableDef name
+        let cmd ← withBoxReturnContext boxReturn <| withRetFloatContext retFloat do match effectCmd? with
           | some cmd => pure cmd
           | none =>
               -- Params with Python defaults become `optParam` binders on the def (`def f (b := 10)`),
@@ -963,7 +1279,8 @@ def funcDefSyntax : (kind : SyntaxNodeKind) → Json →
               | some binders =>
                   let body ← functionValueSyntax #[] bodyElems boxReturn retFloat
                     (heapRefParams := heapRefParams)
-                  let rt? ← if isRecursive then functionReturnTypeSyntax? json else pure none
+                    (retAscription := ← optionalReturnAscription? json)
+                  let rt? ← if isRecursive then recursiveReturnTypeSyntax? json else pure none
                   match isRecursive, nc, rt? with
                   | true, true, some rt => `(noncomputable partial def $nameIdent $binders* : $rt := $body)
                   | true, false, some rt => `(partial def $nameIdent $binders* : $rt := $body)
@@ -973,13 +1290,15 @@ def funcDefSyntax : (kind : SyntaxNodeKind) → Json →
                   | false, false, _ => `(def $nameIdent $binders* := $body)
               | none =>
               let valueStx ← functionValueSyntax argInfos bodyElems boxReturn retFloat
+                (optMutParams := optMutParamsOf json)
                 (heapCellParams := ← functionHeapCellParams json) (heapRefParams := heapRefParams)
+                (retAscription := ← optionalReturnAscription? json)
               -- take care of recursion function Type
               if isRecursive then
                 -- A recursive heap-tier function (touches the heap or takes a ref param) runs in
                 -- `HeapM Val`; wrap the arrow's codomain so the explicit signature matches the body.
                 let isHeap := !heapRefParams.isEmpty || (← needsHeapMonad bodyElems)
-                let fullTy? ← match ← functionReturnTypeSyntax? json with
+                let fullTy? ← match ← recursiveReturnTypeSyntax? json with
                   | some retTy =>
                       let cod ← if isHeap then `(PastaLean.HeapM $(mkIdent `Val) $retTy) else pure retTy
                       functionArrowTypeSyntax? argInfos cod
@@ -989,10 +1308,21 @@ def funcDefSyntax : (kind : SyntaxNodeKind) → Json →
                 | some fullTy, false => `(partial def $nameIdent : $fullTy := $valueStx)
                 | none, true => `(noncomputable partial def $nameIdent := $valueStx)
                 | none, false => `(partial def $nameIdent := $valueStx)
-              else if nc then
-                `(noncomputable def $nameIdent := $valueStx)
               else
-                `(def $nameIdent := $valueStx)
+                -- A node-returning function mixes bare `TreeNode(...)`, nullable cursors and `None`
+                -- base cases: ascribe the full arrow type with codomain `Option C` so every arm
+                -- coerces (`Coe C (Option C)`) instead of pinning the codomain to the first return.
+                let fullTy? ← match returnClassName? json with
+                  | some c =>
+                      match ← runAwareTypeSyntax? (TypeInfer.PyType.opt (.cls c)) with
+                      | some codom => functionArrowTypeSyntax? argInfos codom
+                      | none => pure none
+                  | none => pure none
+                match fullTy?, nc with
+                | some fullTy, true => `(noncomputable def $nameIdent : $fullTy := $valueStx)
+                | some fullTy, false => `(def $nameIdent : $fullTy := $valueStx)
+                | none, true => `(noncomputable def $nameIdent := $valueStx)
+                | none, false => `(def $nameIdent := $valueStx)
         -- Python's leading-underscore convention (`def _foo`) maps to a Lean `private def`.
         let finalCmd ← applyPrivacy name cmd
         -- Tag prove-version (exact) functions for proof search. Skip RECURSIVE/`partial` defs: Lean
@@ -1015,6 +1345,7 @@ def funcDefSyntax : (kind : SyntaxNodeKind) → Json →
         functionValueSyntax argInfos bodyElems
           (heapCellParams := ← functionHeapCellParams json)
           (heapRefParams := ← functionHeapRefParams json)
+          (retAscription := ← optionalReturnAscription? json)
     | `doElem, json => do
         let .ok name := json.getObjValAs? String "name" | throwError
           s!"FuncDef node does not have a 'name' field or it is not a string: {json}"
@@ -1024,6 +1355,7 @@ def funcDefSyntax : (kind : SyntaxNodeKind) → Json →
         let valueStx ← functionValueSyntax argInfos bodyElems
           (heapCellParams := ← functionHeapCellParams json)
           (heapRefParams := ← functionHeapRefParams json)
+          (retAscription := ← optionalReturnAscription? json)
         `(doElem| let $nameIdent := $valueStx)
     | kind, _ => throwError s!"Unsupported syntax category `{kind}` for FuncDef node"
 
@@ -1045,7 +1377,12 @@ def assignHeadSyntax : (kind : SyntaxNodeKind) → Json →
             let n := elts.size
             let valueStx ← getCode value `term
             let unpackTmpIdent := mkIdent (← freshName `__unpack_pair)
-            let isTuple := jsonNodeType? value == some "Tuple" || jsonNodeType? value == some "Call"
+            -- Inference-first (see `Core/Assign.lean`): `_list_unpack` (RHS a `list`, `a,b = map(…)`) →
+            -- index; `_tuple_unpack` → `Prod`; else the syntactic `Tuple`/`Call` fallback.
+            let isTuple :=
+              if target.getObjValAs? Bool "_list_unpack" == .ok true then false
+              else if target.getObjValAs? Bool "_tuple_unpack" == .ok true then true
+              else jsonNodeType? value == some "Tuple" || jsonNodeType? value == some "Call"
             let nestedIsTuple := target.getObjValAs? Bool "_thread_unpack" == .ok true
             let mut result := tailCode
             for i in (List.range n).reverse do
@@ -1139,6 +1476,7 @@ def functionDefHeadSyntax : (kind : SyntaxNodeKind) → Json →
           s!"FuncDef node does not have a 'rest' field or it is not a JSON value: {json}"
         let valueStx ← functionValueSyntax argInfos bodyElems
           (heapRefParams := ← functionHeapRefParams json)
+          (retAscription := ← optionalReturnAscription? json)
         let splitRest ← splitList rest
         let tailCode ← withoutCheck do
           getCode splitRest `term

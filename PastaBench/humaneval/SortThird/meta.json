@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/33",
+  "problem": "sort-third",
+  "module": "SortThird",
+  "method": "sort_third",
+  "params": [
+    "l"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

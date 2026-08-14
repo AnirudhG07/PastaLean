@@ -9,7 +9,9 @@ open Std.Do
 set_option linter.all false
 set_option mvcgen.warning false
 
-set_option maxHeartbeats 0
+set_option maxHeartbeats 200000
+
+namespace PastaLean.User.Root
 
 def dict_views :=
   let d := (Std.HashMap.ofList [("a", (1 : Int)), ("b", (2 : Int)), ("c", (3 : Int))] : Std.HashMap String Int)
@@ -52,3 +54,5 @@ def dict_spread_merge'rn :=
   let d1 := (Std.HashMap.ofList [("a", (1 : Int)), ("b", (2 : Int))] : Std.HashMap String Int)
   let d2 := (Std.HashMap.ofList [("b", (20 : Int)), ("c", (3 : Int))] : Std.HashMap String Int)
   Std.HashMap.ofList (Std.HashMap.toList d1 ++ Std.HashMap.toList d2 ++ [("d", (99 : Int))])
+
+end PastaLean.User.Root

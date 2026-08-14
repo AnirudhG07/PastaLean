@@ -30,6 +30,12 @@ abbrev DesugarM := StateT Nat (Except String)
 private def freshVar (stem : String) : DesugarM String := do
   let n ← get
   set (n + 1)
+  -- Normalise the generated stem to a Python-invalid form (`__foo` → `p'_foo`) so it can never
+  -- shadow a user variable (Python identifiers cannot contain `'`).
+  let stem := if stem.startsWith "__" then
+      let c := stem.drop 2
+      "p'_" ++ (if c.startsWith "py_" then c.drop 3 else c)
+    else stem
   return s!"{stem}{n + 1}"
 
 private def nameLoad (id : String) : Json :=
@@ -61,6 +67,17 @@ partial def rewriteStatementLists (f : Array Json → DesugarM (Array Json)) (js
   | _ => return json
 
 /-! ### Nested `for` targets -/
+
+/-- Does `json` reference (as a `Name`) any id in `names`? -/
+partial def jsonMentionsAnyName (names : Array String) (json : Json) : Bool :=
+  if jsonNodeType? json == some "Name" then
+    match json.getObjValAs? String "id" with
+    | .ok id => names.contains id
+    | _ => false
+  else match json with
+    | .arr a => a.any (jsonMentionsAnyName names)
+    | .obj kvs => kvs.toList.any (fun (_, v) => jsonMentionsAnyName names v)
+    | _ => false
 
 /-- Emit `target = value` as assignments whose tuple targets contain no further tuples. The tuple
 targets are stamped `_tuple_unpack` — a nested for-target (`for i, (a, b) in enumerate(zip(…))`)
@@ -122,9 +139,15 @@ cannot be hoisted without changing evaluation order. -/
 private def conditionalContexts : Array String :=
   #["BoolOp", "IfExp", "Lambda", "ListComp", "SetComp", "DictComp", "GeneratorExp"]
 
-/-- Is there a `NamedExpr` beneath a node of type `context` anywhere in `json`? -/
+/-- Is there a `NamedExpr` beneath a node of type `context` anywhere in `json`? A `BoolOp`'s FIRST
+operand is always evaluated (`a and b` / `a or b` runs `a`), so a walrus there is safe to hoist —
+only the short-circuited later operands are conditional. (`if (n := len(a)) > 0 and n < 10:`.) -/
 private partial def hasWalrusUnder (context : String) (json : Json) : Bool :=
-  if jsonNodeType? json == some context && jsonContainsNodeType json ["NamedExpr"] then true
+  if context == "BoolOp" && jsonNodeType? json == some "BoolOp" then
+    match ((json.getObjValAs? (Array Json) "values").toOption.getD #[]).toList with
+    | [] => false
+    | v0 :: rest => hasWalrusUnder context v0 || rest.any (fun v => jsonContainsNodeType v ["NamedExpr"])
+  else if jsonNodeType? json == some context && jsonContainsNodeType json ["NamedExpr"] then true
   else match json with
     | .arr elems => elems.any (hasWalrusUnder context)
     | .obj fields => fields.toList.any (fun (_, v) => hasWalrusUnder context v)
@@ -199,6 +222,29 @@ def hoistWalrus (stmts : Array Json) : DesugarM (Array Json) := do
     out := out.push stmt
   return out
 
+/-! ### Full-slice assignment on a non-name container -/
+
+/-- `c[i][:] = V` (a full-slice assign whose container is not a plain `Name`) → `c[i] = V`. A full
+slice replaces the whole sequence, which under our value semantics is exactly a plain
+subscript/attribute assign; only the `name[:] = V` case still routes through `pySliceSet`. -/
+def rewriteFullSliceAssign (stmts : Array Json) : DesugarM (Array Json) := do
+  let noneField (j : Json) (k : String) : Bool :=
+    match j.getObjVal? k with | .ok v => v.isNull | _ => true
+  return stmts.map fun stmt =>
+    if jsonNodeType? stmt != some "Assign" then stmt else
+    match stmt.getObjVal? "target" with
+    | .ok target =>
+        if jsonNodeType? target == some "Subscript" then
+          match target.getObjVal? "slice", target.getObjVal? "value" with
+          | .ok sliceJ, .ok containerJ =>
+              let isFullSlice := jsonNodeType? sliceJ == some "Slice"
+                && noneField sliceJ "lower" && noneField sliceJ "upper" && noneField sliceJ "step"
+              if isFullSlice && jsonNodeType? containerJ != some "Name" then stmt.setObjVal! "target" containerJ
+              else stmt
+          | _, _ => stmt
+        else stmt
+    | _ => stmt
+
 /-! ### Chained assignment -/
 
 /-- `a = b = expr` (an `Assign` carrying a `targets` list) → evaluate `expr` once into a temporary,
@@ -212,32 +258,39 @@ def splitChainedAssign (stmts : Array Json) : DesugarM (Array Json) := do
       stmt.getObjValAs? (Array Json) "targets" |>.toOption) with
     | some targets =>
         let .ok value := stmt.getObjVal? "value" | out := out.push stmt; continue
-        let tmp ← freshVar "__chain_"
-        out := out.push (assignStmt (nameLoad tmp) value)
-        for target in targets do
-          out := out.push (assignStmt target (nameLoad tmp))
+        -- A literal RHS has no side effects, so assign it DIRECTLY to each target (no shared temp).
+        -- Each target's type is then inferred on its own — `ans = pre = 0`, where `pre` later widens
+        -- to ℚ (`pre = a / b`), gets `pre : ℚ` instead of being pinned to the temp's ℤ.
+        if jsonNodeType? value == some "Constant" then
+          for target in targets do
+            out := out.push (assignStmt target value)
+        else
+          let tmp ← freshVar "__chain_"
+          out := out.push (assignStmt (nameLoad tmp) value)
+          for target in targets do
+            out := out.push (assignStmt target (nameLoad tmp))
     | none => out := out.push stmt
   return out
 
-/-- NOT YET WIRED (see below). `a, (b, c) = …` → flatten the nested tuple target into a
-temporary plus a second unpack, so
-codegen only ever sees tuple targets whose elements are names or subscripts. `flattenAssign` already
-does the work; this applies it to plain assignments (it was only wired into `for` targets).
-
-Left out of `desugarAst` for now: the second unpack (`b, c = tmp`) still lowers with list indexing
-because `_tuple_unpack` is not stamped on it, so the result compiles worse than the clean
-"unsupported nested target" error it replaces. Wire it once that stamp fires here. -/
-def flattenAssignTargets (stmts : Array Json) : DesugarM (Array Json) := do
+/-- SAFE SPLIT: flat `a, b = e1, e2` with a literal-tuple RHS of matching arity referencing no
+target (excludes swaps like `a, b = b, a+b`, which must stay simultaneous) → separate
+`a = e1; b = e2`, so each var gets its own inferred type instead of being unpacked from a boxed
+`Prod` (which boxes mixed-type elements to `PyAny`). -/
+def splitIndependentTupleAssign (stmts : Array Json) : DesugarM (Array Json) := do
   let mut out := #[]
   for stmt in stmts do
     match (do
       guard (jsonNodeType? stmt == some "Assign")
       let t ← (stmt.getObjVal? "target").toOption
       let v ← (stmt.getObjVal? "value").toOption
-      guard (isTupleTarget t)
-      guard (((t.getObjValAs? (Array Json) "elts").toOption.getD #[]).any isTupleTarget)
-      pure (t, v)) with
-    | some (t, v) => out := out ++ (← flattenAssign t v)
+      guard (isTupleTarget t && jsonNodeType? v == some "Tuple")
+      let elts := (t.getObjValAs? (Array Json) "elts").toOption.getD #[]
+      let valElts := (v.getObjValAs? (Array Json) "elts").toOption.getD #[]
+      let names := elts.filterMap (fun (e : Json) => (e.getObjValAs? String "id").toOption)
+      guard (valElts.size == elts.size && names.size == elts.size
+        && !valElts.any (jsonMentionsAnyName names))
+      pure (elts.zip valElts)) with
+    | some pairs => out := out ++ pairs.map (fun (t, v) => assignStmt t v)
     | none => out := out.push stmt
   return out
 
@@ -247,22 +300,26 @@ def flattenAssignTargets (stmts : Array Json) : DesugarM (Array Json) := do
 ordinary sub-expression (the two effects need separate statements). -/
 private def isValueMutateCall (j : Json) : Bool :=
   jsonNodeType? j == some "Call" &&
+    -- A user value+mutate method (`uf.union(a,b)`) is stamped by py2lean; it returns `(value, self)`
+    -- so a sub-expression occurrence must be hoisted just like `pop`.
+    ((j.getObjValAs? Bool "_is_value_mutator").toOption.getD false ||
     (match (j.getObjVal? "func").toOption with
      | some f =>
-         -- METHOD form on a plain receiver: `xs.pop(i)`, `dq.popleft()`.
+         -- METHOD form on a Name or single-subscript receiver: `xs.pop(i)`, `dq.popleft()`,
+         -- `g[f].pop()` — the subscript-receiver assign form lowers via `popCallSubscriptParts?`.
          (jsonNodeType? f == some "Attribute"
            && (match f.getObjValAs? String "attr" with
                | .ok a => #["pop", "popleft"].contains a
                | _ => false)
            && (match (f.getObjVal? "value").toOption with
-               | some r => jsonNodeType? r == some "Name"
+               | some r => #["Name", "Subscript"].contains (jsonNodeType? r |>.getD "")
                | none => false))
          -- LIBRARY form: `heapq.heappop(h)` etc, read from the `Libraries` mutator spec so the set
          -- stays in one place — anything declaring `valueRest?` both yields a value and mutates.
          || (match f.getObjValAs? String "library_module", f.getObjValAs? String "library_member" with
              | .ok m, .ok mem => (Libraries.libraryMutator? m mem).any (·.valueRest?.isSome)
              | _, _ => false)
-     | none => false)
+     | none => false))
 
 /-! `setdefault` is deliberately NOT hoisted. It yields a *reference* the caller then mutates
 (`d.setdefault(k, []).append(v)`); binding it to a temporary would append to the temporary and
@@ -282,6 +339,11 @@ private partial def hoistMutatingExpr (expr : Json) : DesugarM (Json × Array Js
       if isValueMutateCall expr then
         let tmp ← freshVar "__popv_"
         return (nameLoad tmp, #[assignStmt (nameLoad tmp) expr])
+      -- Never hoist a mutation out of a context that evaluates its operands conditionally or
+      -- per-element (a comprehension pops once per item; a BoolOp/IfExp branch may not run at all).
+      -- Leave the whole sub-tree intact — codegen reports it clearly rather than us mis-hoisting.
+      if conditionalContexts.contains (jsonNodeType? expr |>.getD "") then
+        return (expr, #[])
       let mut rewritten := []; let mut prelude := #[]
       for (key, value) in fields.toList do
         let (value, pre) ← hoistMutatingExpr value
@@ -304,18 +366,82 @@ def hoistMutatingCalls (stmts : Array Json) : DesugarM (Array Json) := do
       ++ (if isAssign then #["target"] else #[])
     for field in fields do
       if let .ok expr := stmt.getObjVal? field then
-        let nestedOnly := !isValueMutateCall expr
+        -- A value+mutate call that IS the whole field expr lowers directly only in `Expr`/`Assign`/
+        -- `Return` value position; elsewhere (an `If`/`Assert` test) even a whole-expr call must be
+        -- hoisted, since those positions expect a plain value, not the `(value, self)` pair.
+        let nodeTy := jsonNodeType? stmt |>.getD ""
+        let directLowerField := field == "value" && #["Expr", "Assign", "Return"].contains nodeTy
+        let leaveWholeExpr := directLowerField && isValueMutateCall expr
         let guarded := conditionalContexts.any (fun c =>
           jsonNodeType? expr == some c
           || (match expr with
               | .obj fs => fs.toList.any (fun (_, v) => jsonNodeType? v == some c)
               | _ => false))
-        if nestedOnly && !guarded then
+        if !leaveWholeExpr && !guarded then
           let (expr', prelude) ← hoistMutatingExpr expr
           if !prelude.isEmpty then
             out := out ++ prelude
             stmt := stmt.setObjVal! field expr'
     out := out.push stmt
+  return out
+
+/-! ### Short-circuit value-and-mutate calls -/
+
+/-- Does a value-and-mutate call (`uf.union(a,b)`, `xs.pop()`) appear anywhere in `j`? -/
+private partial def hasValueMutate (j : Json) : Bool :=
+  isValueMutateCall j ||
+    (match j with
+     | .obj fs => fs.toList.any (fun (_, v) => hasValueMutate v)
+     | .arr xs => xs.any hasValueMutate
+     | _ => false)
+
+private def constBool (b : Bool) : Json :=
+  Json.mkObj [("node_type", Json.str "Constant"), ("value", Json.bool b)]
+
+private def notExpr (j : Json) : Json :=
+  Json.mkObj [("node_type", Json.str "UnaryOp"), ("op", Json.str "not"), ("operand", j)]
+
+private def ifStmt (test : Json) (body : Array Json) : Json :=
+  Json.mkObj [("node_type", Json.str "If"), ("test", test),
+    ("body", Json.arr body), ("orelse", Json.arr #[])]
+
+private def boolOpJoin (op : String) (values : Array Json) : Json :=
+  if values.size == 1 then values[0]!
+  else Json.mkObj [("node_type", Json.str "BoolOp"), ("op", Json.str op), ("values", Json.arr values)]
+
+/-- `if A and M:` / `if A or M:` where `M` (the LAST operand) is a value+mutate call and every earlier
+operand is pure: rewrite into an explicit short-circuit so the mutation runs (and its receiver is
+threaded) ONLY on the branch Python would evaluate it. `A and M` → `sc = False; if A: sc = M; if sc:`;
+`A or M` → `sc = True; if not A: sc = M; if sc:`. A value+mutate call inside a `BoolOp` is otherwise a
+conditional context the plain hoist skips, leaving the `(value, self)` tuple stuck in a truthy position.
+Only the last-operand case is handled; a mutator earlier in the chain is left untouched. -/
+def hoistShortCircuitMutator (stmts : Array Json) : DesugarM (Array Json) := do
+  let mut out := #[]
+  for stmt in stmts do
+    let field? := match jsonNodeType? stmt with
+      | some "If" | some "Assert" => some "test"
+      | _ => none
+    match field? with
+    | none => out := out.push stmt
+    | some field =>
+      match (do
+        let test ← (stmt.getObjVal? field).toOption
+        guard (jsonNodeType? test == some "BoolOp")
+        let op ← (test.getObjValAs? String "op").toOption
+        let values ← (test.getObjValAs? (Array Json) "values").toOption
+        guard (values.size ≥ 2)
+        guard (hasValueMutate values.back!)
+        guard (values.pop.all (fun v => !hasValueMutate v))
+        pure (field, op, values)) with
+      | none => out := out.push stmt
+      | some (field, op, values) =>
+          let scName ← freshVar "__sc'"
+          let guardExpr := boolOpJoin op values.pop
+          let (seed, guardTest) := if op == "and" then (constBool false, guardExpr)
+                                   else (constBool true, notExpr guardExpr)
+          out := out.push (assignStmt (nameLoad scName) seed)
+          out := out.push (ifStmt guardTest #[assignStmt (nameLoad scName) values.back!])
+          out := out.push (stmt.setObjVal! field (nameLoad scName))
   return out
 
 /-! ### Unbounded iterators -/
@@ -401,10 +527,13 @@ def unrollInfiniteIter (stmts : Array Json) : DesugarM (Array Json) := do
 /-- Run every desugaring over one translation request's AST. -/
 def desugarAst (json : Json) : Except String Json := do
   let pass : DesugarM Json := do
+    let json ← rewriteStatementLists rewriteFullSliceAssign json
     let json ← rewriteStatementLists splitChainedAssign json
+    let json ← rewriteStatementLists splitIndependentTupleAssign json
     let json ← rewriteStatementLists flattenForTargets json
     let json ← rewriteStatementLists unrollInfiniteIter json
     let json ← rewriteStatementLists hoistWalrus json
+    let json ← rewriteStatementLists hoistShortCircuitMutator json
     rewriteStatementLists hoistMutatingCalls json
   return (← pass.run 0).1
 

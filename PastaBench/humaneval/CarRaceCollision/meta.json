@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/41",
+  "problem": "car-race-collision",
+  "module": "CarRaceCollision",
+  "method": "car_race_collision",
+  "params": [
+    "n"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

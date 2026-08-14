@@ -11,6 +11,8 @@ set_option mvcgen.warning false
 
 set_option maxHeartbeats 800000
 
+namespace PastaLean.User.Root
+
 /-
 2x2 matrix algebra + a discrete linear dynamical system.
 
@@ -36,96 +38,108 @@ reach the proofs directly.
 -- (a b ; c d); a product of A=(a b ; c d) and B=(e f ; g h) has the four entries below.
 -- ----------------------------------------------------------------------------------------------
 def det := fun (a : Rat) ↦ fun (b : Rat) ↦ fun (c : Rat) ↦ fun (d : Rat) ↦
-  /-
-  Determinant of (a b ; c d).
-  -/
-  a *ₚ d -ₚ b *ₚ c
+  (show Rat from
+    /-
+    Determinant of (a b ; c d).
+    -/
+    a *ₚ d -ₚ b *ₚ c)
 
 attribute [simp, taste_ingr] det
 
 def det'rn := fun (a : Float) ↦ fun (b : Float) ↦ fun (c : Float) ↦ fun (d : Float) ↦
-  /-
-  Determinant of (a b ; c d).
-  -/
-  a *ₚ d -ₚ b *ₚ c
+  (show Float from
+    /-
+    Determinant of (a b ; c d).
+    -/
+    a *ₚ d -ₚ b *ₚ c)
 
 def trace := fun (a : Rat) ↦ fun (b : Rat) ↦ fun (c : Rat) ↦ fun (d : Rat) ↦
-  /-
-  Trace of (a b ; c d).
-  -/
-  a +ₚ d
+  (show Rat from
+    /-
+    Trace of (a b ; c d).
+    -/
+    a +ₚ d)
 
 attribute [simp, taste_ingr] trace
 
 def trace'rn := fun (a : Float) ↦ fun (b : Float) ↦ fun (c : Float) ↦ fun (d : Float) ↦
-  /-
-  Trace of (a b ; c d).
-  -/
-  a +ₚ d
+  (show Float from
+    /-
+    Trace of (a b ; c d).
+    -/
+    a +ₚ d)
 
 def mul11 := fun (a : Rat) ↦ fun (b : Rat) ↦ fun (c : Rat) ↦ fun (d : Rat) ↦ fun (e : Rat) ↦ fun (f : Rat) ↦
   fun (g : Rat) ↦ fun (h : Rat) ↦
-  /-
-  (1,1) entry of A B.
-  -/
-  a *ₚ e +ₚ b *ₚ g
+  (show Rat from
+    /-
+    (1,1) entry of A B.
+    -/
+    a *ₚ e +ₚ b *ₚ g)
 
 attribute [simp, taste_ingr] mul11
 
 def mul11'rn := fun (a : Float) ↦ fun (b : Float) ↦ fun (c : Float) ↦ fun (d : Float) ↦ fun (e : Float) ↦
   fun (f : Float) ↦ fun (g : Float) ↦ fun (h : Float) ↦
-  /-
-  (1,1) entry of A B.
-  -/
-  a *ₚ e +ₚ b *ₚ g
+  (show Float from
+    /-
+    (1,1) entry of A B.
+    -/
+    a *ₚ e +ₚ b *ₚ g)
 
 def mul12 := fun (a : Rat) ↦ fun (b : Rat) ↦ fun (c : Rat) ↦ fun (d : Rat) ↦ fun (e : Rat) ↦ fun (f : Rat) ↦
   fun (g : Rat) ↦ fun (h : Rat) ↦
-  /-
-  (1,2) entry of A B.
-  -/
-  a *ₚ f +ₚ b *ₚ h
+  (show Rat from
+    /-
+    (1,2) entry of A B.
+    -/
+    a *ₚ f +ₚ b *ₚ h)
 
 attribute [simp, taste_ingr] mul12
 
 def mul12'rn := fun (a : Float) ↦ fun (b : Float) ↦ fun (c : Float) ↦ fun (d : Float) ↦ fun (e : Float) ↦
   fun (f : Float) ↦ fun (g : Float) ↦ fun (h : Float) ↦
-  /-
-  (1,2) entry of A B.
-  -/
-  a *ₚ f +ₚ b *ₚ h
+  (show Float from
+    /-
+    (1,2) entry of A B.
+    -/
+    a *ₚ f +ₚ b *ₚ h)
 
 def mul21 := fun (a : Rat) ↦ fun (b : Rat) ↦ fun (c : Rat) ↦ fun (d : Rat) ↦ fun (e : Rat) ↦ fun (f : Rat) ↦
   fun (g : Rat) ↦ fun (h : Rat) ↦
-  /-
-  (2,1) entry of A B.
-  -/
-  c *ₚ e +ₚ d *ₚ g
+  (show Rat from
+    /-
+    (2,1) entry of A B.
+    -/
+    c *ₚ e +ₚ d *ₚ g)
 
 attribute [simp, taste_ingr] mul21
 
 def mul21'rn := fun (a : Float) ↦ fun (b : Float) ↦ fun (c : Float) ↦ fun (d : Float) ↦ fun (e : Float) ↦
   fun (f : Float) ↦ fun (g : Float) ↦ fun (h : Float) ↦
-  /-
-  (2,1) entry of A B.
-  -/
-  c *ₚ e +ₚ d *ₚ g
+  (show Float from
+    /-
+    (2,1) entry of A B.
+    -/
+    c *ₚ e +ₚ d *ₚ g)
 
 def mul22 := fun (a : Rat) ↦ fun (b : Rat) ↦ fun (c : Rat) ↦ fun (d : Rat) ↦ fun (e : Rat) ↦ fun (f : Rat) ↦
   fun (g : Rat) ↦ fun (h : Rat) ↦
-  /-
-  (2,2) entry of A B.
-  -/
-  c *ₚ f +ₚ d *ₚ h
+  (show Rat from
+    /-
+    (2,2) entry of A B.
+    -/
+    c *ₚ f +ₚ d *ₚ h)
 
 attribute [simp, taste_ingr] mul22
 
 def mul22'rn := fun (a : Float) ↦ fun (b : Float) ↦ fun (c : Float) ↦ fun (d : Float) ↦ fun (e : Float) ↦
   fun (f : Float) ↦ fun (g : Float) ↦ fun (h : Float) ↦
-  /-
-  (2,2) entry of A B.
-  -/
-  c *ₚ f +ₚ d *ₚ h
+  (show Float from
+    /-
+    (2,2) entry of A B.
+    -/
+    c *ₚ f +ₚ d *ₚ h)
 
 -- ----------------------------------------------------------------------------------------------
 -- Provable invariants: ring identities  (lone `assert` -> named `theorem`, closed by `ring`)
@@ -143,7 +157,7 @@ theorem det_multiplicative :
                     det (mul11 a b c d e f g h) (mul12 a b c d e f g h) (mul21 a b c d e f g h)
                         (mul22 a b c d e f g h) =
                       det a b c d *ₚ det e f g h :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; ring
 
 @[taste_ingr]
 theorem trace_cyclic :
@@ -156,20 +170,20 @@ theorem trace_cyclic :
                 ∀ (g : Rat),
                   ∀ (h : Rat),
                     mul11 a b c d e f g h +ₚ mul22 a b c d e f g h = mul11 e f g h a b c d +ₚ mul22 e f g h a b c d :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; ring
 
 @[taste_ingr]
-theorem det_transpose : ∀ (a : Rat), ∀ (b : Rat), ∀ (c : Rat), ∀ (d : Rat), det a c b d = det a b c d := by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals
+theorem det_transpose : ∀ (a : Rat), ∀ (b : Rat), ∀ (c : Rat), ∀ (d : Rat), det a c b d = det a b c d := by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; ring
 
 @[taste_ingr]
 theorem det_scale :
     ∀ (k : Rat),
       ∀ (a : Rat),
         ∀ (b : Rat), ∀ (c : Rat), ∀ (d : Rat), det (k *ₚ a) (k *ₚ b) (k *ₚ c) (k *ₚ d) = k *ₚ k *ₚ det a b c d :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; ring
 
 @[taste_ingr]
-theorem det_adjugate : ∀ (a : Rat), ∀ (b : Rat), ∀ (c : Rat), ∀ (d : Rat), det d (-b) (-c) a = det a b c d := by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals
+theorem det_adjugate : ∀ (a : Rat), ∀ (b : Rat), ∀ (c : Rat), ∀ (d : Rat), det d (-b) (-c) a = det a b c d := by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; ring
 
 @[taste_ingr]
 theorem trace_additive :
@@ -180,26 +194,26 @@ theorem trace_additive :
             ∀ (e : Rat),
               ∀ (f : Rat),
                 ∀ (g : Rat), ∀ (h : Rat), trace (a +ₚ e) (b +ₚ f) (c +ₚ g) (d +ₚ h) = trace a b c d +ₚ trace e f g h :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; ring
 
 @[taste_ingr]
 theorem adjugate_inverse_diag :
-    ∀ (a : Rat), ∀ (b : Rat), ∀ (c : Rat), ∀ (d : Rat), mul11 a b c d d (-b) (-c) a = det a b c d := by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals
+    ∀ (a : Rat), ∀ (b : Rat), ∀ (c : Rat), ∀ (d : Rat), mul11 a b c d d (-b) (-c) a = det a b c d := by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; ring
 
 @[taste_ingr]
 theorem adjugate_inverse_offdiag :
-    ∀ (a : Rat), ∀ (b : Rat), ∀ (c : Rat), ∀ (d : Rat), mul12 a b c d d (-b) (-c) a = (0 : Int) := by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals
+    ∀ (a : Rat), ∀ (b : Rat), ∀ (c : Rat), ∀ (d : Rat), mul12 a b c d d (-b) (-c) a = (0 : Int) := by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; ring
 
 @[taste_ingr]
 theorem cayley_hamilton_diag :
     ∀ (a : Rat),
       ∀ (b : Rat), ∀ (c : Rat), ∀ (d : Rat), mul11 a b c d a b c d -ₚ trace a b c d *ₚ a +ₚ det a b c d = (0 : Int) :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; ring
 
 @[taste_ingr]
 theorem cayley_hamilton_offdiag :
     ∀ (a : Rat), ∀ (b : Rat), ∀ (c : Rat), ∀ (d : Rat), mul12 a b c d a b c d -ₚ trace a b c d *ₚ b = (0 : Int) := by
-  intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals
+  intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; ring
 
 -- ----------------------------------------------------------------------------------------------
 -- Provable invariants: constrained laws  (`if`-guard -> hypotheses; ring / nlinarith)
@@ -216,7 +230,7 @@ theorem rotation_preserves_norm :
           ∀ (y : Rat),
             c *ₚ c +ₚ s *ₚ s = (1 : Int) →
               (c *ₚ x -ₚ s *ₚ y) *ₚ (c *ₚ x -ₚ s *ₚ y) +ₚ (s *ₚ x +ₚ c *ₚ y) *ₚ (s *ₚ x +ₚ c *ₚ y) = x *ₚ x +ₚ y *ₚ y :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; grind
 
 @[taste_ingr]
 theorem det_nonneg_of_symmetric_psd :
@@ -280,7 +294,7 @@ def main : IO Unit := do
   let inputLines := String.splitOn inputText "\n"
   let inputStream : PastaLean.ProofMode.IOStream :=
     ⟨0, fun i => PastaLean.ProofMode.IOResult.success (List.getD inputLines i "")⟩
-  let initState : PastaLean.ProofMode.IOState := ⟨inputStream, []⟩
+  let initState : PastaLean.ProofMode.IOState := { input := inputStream, output := [] }
   let (result, finalState) :=
     (((do
           let _ ← main'
@@ -299,3 +313,5 @@ def main : IO Unit := do
 def main'rn : IO Unit := do
   let _ ← main''rn
   pure ()
+
+end PastaLean.User.Root

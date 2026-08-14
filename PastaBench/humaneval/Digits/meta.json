@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/131",
+  "problem": "digits",
+  "module": "Digits",
+  "method": "digits",
+  "params": [
+    "n"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

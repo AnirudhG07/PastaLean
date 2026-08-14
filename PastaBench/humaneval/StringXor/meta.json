@@ -1,0 +1,14 @@
+{
+  "task_id": "HumanEval/11",
+  "problem": "string-xor",
+  "module": "StringXor",
+  "method": "string_xor",
+  "params": [
+    "a",
+    "b"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

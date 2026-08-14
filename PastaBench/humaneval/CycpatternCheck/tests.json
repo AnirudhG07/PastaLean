@@ -1,0 +1,202 @@
+[
+  {
+    "input": "a = 'xyzw', b = 'xyw'",
+    "output": "False"
+  },
+  {
+    "input": "a = 'yello', b = 'ell'",
+    "output": "True"
+  },
+  {
+    "input": "a = 'whattup', b = 'ptut'",
+    "output": "False"
+  },
+  {
+    "input": "a = 'efef', b = 'fee'",
+    "output": "True"
+  },
+  {
+    "input": "a = 'abab', b = 'aabb'",
+    "output": "False"
+  },
+  {
+    "input": "a = 'winemtt', b = 'tinem'",
+    "output": "True"
+  },
+  {
+    "input": "a = 'hello', b = 'olelh'",
+    "output": "False"
+  },
+  {
+    "input": "a = 'abcdefg', b = 'cde'",
+    "output": "True"
+  },
+  {
+    "input": "a = 'banana', b = 'nab'",
+    "output": "False"
+  },
+  {
+    "input": "a = 'python', b = 'nthy'",
+    "output": "False"
+  },
+  {
+    "input": "a = 'onomatopoeia', b = 'onat'",
+    "output": "False"
+  },
+  {
+    "input": "a = 'racecar', b = 'race'",
+    "output": "True"
+  },
+  {
+    "input": "a = 'mississippi', b = 'sis'",
+    "output": "True"
+  },
+  {
+    "input": "a = 'coffee', b = 'ffeco'",
+    "output": "True"
+  },
+  {
+    "input": "a = 'programming', b = 'ammiprogr'",
+    "output": "True"
+  },
+  {
+    "input": "a = 'anagram', b = 'margana'",
+    "output": "False"
+  },
+  {
+    "input": "a = 'mississipi', b = 'mississipi'",
+    "output": "True"
+  },
+  {
+    "input": "a = 'scdeis', b = 'sis'",
+    "output": "False"
+  },
+  {
+    "input": "a = 'python', b = 'nythy'",
+    "output": "False"
+  },
+  {
+    "input": "a = 'marganaa', b = 'marganaa'",
+    "output": "True"
+  },
+  {
+    "input": "a = 'anagram', b = 'anagram'",
+    "output": "True"
+  },
+  {
+    "input": "a = 'nthny', b = 'nythny'",
+    "output": "False"
+  },
+  {
+    "input": "a = 'ntnabhny', b = 'nthny'",
+    "output": "False"
+  },
+  {
+    "input": "a = 'nthnyanagram', b = 'nythny'",
+    "output": "False"
+  },
+  {
+    "input": "a = 'racanagramecar', b = 'race'",
+    "output": "False"
+  },
+  {
+    "input": "a = 'racanagrameca', b = 'race'",
+    "output": "False"
+  },
+  {
+    "input": "a = 'banana', b = 'nthnyanagram'",
+    "output": "False"
+  },
+  {
+    "input": "a = 'pyammscdeisiprogrthon', b = 'pyammiprogrthon'",
+    "output": "False"
+  },
+  {
+    "input": "a = 'mississipi', b = 'mississipionomatopoeia'",
+    "output": "False"
+  },
+  {
+    "input": "a = 'missiissippi', b = 'sis'",
+    "output": "True"
+  },
+  {
+    "input": "a = 'race', b = 'race'",
+    "output": "True"
+  },
+  {
+    "input": "a = 'racanagramecaanagram', b = 'anagram'",
+    "output": "True"
+  },
+  {
+    "input": "a = 'mississippi', b = 'siss'",
+    "output": "True"
+  },
+  {
+    "input": "a = 'coffee', b = 'ffolelheco'",
+    "output": "False"
+  },
+  {
+    "input": "a = 'miffecossissipi', b = 'miffescossissipi'",
+    "output": "False"
+  },
+  {
+    "input": "a = 'ntnabhny', b = 'anagrammiffescossissipi'",
+    "output": "False"
+  },
+  {
+    "input": "a = 'mississispi', b = 'mississispi'",
+    "output": "True"
+  },
+  {
+    "input": "a = 'marganaaffolelheco', b = 'marganaaffolelheco'",
+    "output": "True"
+  },
+  {
+    "input": "a = 'mississispi', b = 'mississispii'",
+    "output": "False"
+  },
+  {
+    "input": "a = 'abcdefg', b = 'cmississipionomatopoeiade'",
+    "output": "False"
+  },
+  {
+    "input": "a = 'bananamissiissippi', b = 'nthnyanagram'",
+    "output": "False"
+  },
+  {
+    "input": "a = 'coffeemississpi', b = 'coffeemississpi'",
+    "output": "True"
+  },
+  {
+    "input": "a = 'mississispi', b = 'i'",
+    "output": "True"
+  },
+  {
+    "input": "a = 'hoeollo', b = 'olelh'",
+    "output": "False"
+  },
+  {
+    "input": "a = 'nythy', b = 'miffecossissipi'",
+    "output": "False"
+  },
+  {
+    "input": "a = 'onomatopoeia', b = 'nythy'",
+    "output": "False"
+  },
+  {
+    "input": "a = 'abcdefdg', b = 'abcdefg'",
+    "output": "False"
+  },
+  {
+    "input": "a = 'nthny', b = 'xbQkq'",
+    "output": "False"
+  },
+  {
+    "input": "a = 'mnythnyisssissipi', b = 'mississicdepi'",
+    "output": "False"
+  },
+  {
+    "input": "a = 'racanagrameca', b = 'racanagrameeca'",
+    "output": "False"
+  }
+]

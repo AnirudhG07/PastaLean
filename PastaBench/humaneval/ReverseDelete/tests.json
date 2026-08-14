@@ -1,0 +1,202 @@
+[
+  {
+    "input": "s = 'abcde', c = 'ae'",
+    "output": "('bcd', False)"
+  },
+  {
+    "input": "s = 'abcdef', c = 'b'",
+    "output": "('acdef', False)"
+  },
+  {
+    "input": "s = 'abcdedcba', c = 'ab'",
+    "output": "('cdedc', True)"
+  },
+  {
+    "input": "s = 'dwik', c = 'w'",
+    "output": "('dik', False)"
+  },
+  {
+    "input": "s = 'a', c = 'a'",
+    "output": "('', True)"
+  },
+  {
+    "input": "s = 'abcdedcba', c = ''",
+    "output": "('abcdedcba', True)"
+  },
+  {
+    "input": "s = 'abcdedcba', c = 'v'",
+    "output": "('abcdedcba', True)"
+  },
+  {
+    "input": "s = 'vabba', c = 'v'",
+    "output": "('abba', True)"
+  },
+  {
+    "input": "s = 'mamma', c = 'mia'",
+    "output": "('', True)"
+  },
+  {
+    "input": "s = 'racecar', c = 'ace'",
+    "output": "('rr', True)"
+  },
+  {
+    "input": "s = 'level', c = 've'",
+    "output": "('ll', True)"
+  },
+  {
+    "input": "s = 'noon', c = 'on'",
+    "output": "('', True)"
+  },
+  {
+    "input": "s = 'abcba', c = 'bc'",
+    "output": "('aa', True)"
+  },
+  {
+    "input": "s = 'kayak', c = 'ka'",
+    "output": "('y', True)"
+  },
+  {
+    "input": "s = 'deified', c = 'de'",
+    "output": "('ifi', True)"
+  },
+  {
+    "input": "s = 'radar', c = 'ad'",
+    "output": "('rr', True)"
+  },
+  {
+    "input": "s = 'tenet', c = 'ne'",
+    "output": "('tt', True)"
+  },
+  {
+    "input": "s = 'reviver', c = 'er'",
+    "output": "('viv', True)"
+  },
+  {
+    "input": "s = 'refer', c = 'fe'",
+    "output": "('rr', True)"
+  },
+  {
+    "input": "s = 'non', c = 'on'",
+    "output": "('', True)"
+  },
+  {
+    "input": "s = 'abcba', c = 'ne'",
+    "output": "('abcba', True)"
+  },
+  {
+    "input": "s = 'radar', c = 'a'",
+    "output": "('rdr', True)"
+  },
+  {
+    "input": "s = 'vee', c = 've'",
+    "output": "('', True)"
+  },
+  {
+    "input": "s = 'ave', c = 've'",
+    "output": "('a', True)"
+  },
+  {
+    "input": "s = 'level', c = 'ave'",
+    "output": "('ll', True)"
+  },
+  {
+    "input": "s = 've', c = 've'",
+    "output": "('', True)"
+  },
+  {
+    "input": "s = 'er', c = 'ervee'",
+    "output": "('', True)"
+  },
+  {
+    "input": "s = 'bc', c = 'ervee'",
+    "output": "('bc', False)"
+  },
+  {
+    "input": "s = 'noon', c = 've'",
+    "output": "('noon', True)"
+  },
+  {
+    "input": "s = 've', c = 'v'",
+    "output": "('e', True)"
+  },
+  {
+    "input": "s = '', c = 've'",
+    "output": "('', True)"
+  },
+  {
+    "input": "s = 'deified', c = 'ne'",
+    "output": "('difid', True)"
+  },
+  {
+    "input": "s = 'WqHkuRXIf', c = 'WqHkuRXIf'",
+    "output": "('', True)"
+  },
+  {
+    "input": "s = 'ervee', c = 'vrefere'",
+    "output": "('', True)"
+  },
+  {
+    "input": "s = 'vnonrefere', c = 've'",
+    "output": "('nonrfr', False)"
+  },
+  {
+    "input": "s = 'nooon', c = 'noon'",
+    "output": "('', True)"
+  },
+  {
+    "input": "s = 'vrevivere', c = 've'",
+    "output": "('rir', True)"
+  },
+  {
+    "input": "s = 'racecar', c = 'racecar'",
+    "output": "('', True)"
+  },
+  {
+    "input": "s = 'ratcetenetcar', c = 'racetenetcar'",
+    "output": "('', True)"
+  },
+  {
+    "input": "s = 'deified', c = 'deifiedracecar'",
+    "output": "('', True)"
+  },
+  {
+    "input": "s = 'vnonrefere', c = 'v'",
+    "output": "('nonrefere', False)"
+  },
+  {
+    "input": "s = 'er', c = 'e'",
+    "output": "('r', True)"
+  },
+  {
+    "input": "s = 'noonoa', c = 'noona'",
+    "output": "('', True)"
+  },
+  {
+    "input": "s = 've', c = 'WqHkuRXIf'",
+    "output": "('ve', False)"
+  },
+  {
+    "input": "s = 'racetenetcar', c = 'racetenetcar'",
+    "output": "('', True)"
+  },
+  {
+    "input": "s = '', c = 'e'",
+    "output": "('', True)"
+  },
+  {
+    "input": "s = 'tenet', c = 'tenet'",
+    "output": "('', True)"
+  },
+  {
+    "input": "s = 'vreviveere', c = 'vrevivere'",
+    "output": "('', True)"
+  },
+  {
+    "input": "s = 'tenet', c = 'radar'",
+    "output": "('tenet', True)"
+  },
+  {
+    "input": "s = 'racecar', c = 'deace'",
+    "output": "('rr', True)"
+  }
+]

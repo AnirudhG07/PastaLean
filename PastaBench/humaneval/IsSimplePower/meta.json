@@ -1,0 +1,14 @@
+{
+  "task_id": "HumanEval/76",
+  "problem": "is-simple-power",
+  "module": "IsSimplePower",
+  "method": "is_simple_power",
+  "params": [
+    "x",
+    "n"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

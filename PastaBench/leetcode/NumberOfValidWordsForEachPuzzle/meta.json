@@ -1,0 +1,13 @@
+{
+  "problem": "number-of-valid-words-for-each-puzzle",
+  "module": "NumberOfValidWordsForEachPuzzle",
+  "method": "findNumOfValidWords",
+  "params": [
+    "words",
+    "puzzles"
+  ],
+  "difficulty": "Hard",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 71
+}

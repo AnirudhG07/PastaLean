@@ -1,4 +1,4 @@
-import Mathlib
+import PastaLean.Imports
 import PastaLean.PyAPI.ProofMode.IOStream
 import PastaLean.PyAPI.Core
 
@@ -10,6 +10,9 @@ structure IOState where
   input : IOStream
   /-- Accumulated output lines -/
   output : List String
+  /-- Proof-mode PRNG state: the same 64-bit LCG the run-mode `random` module uses, threaded purely
+  through the state monad so `random.*` stays provable in proof mode (default seed matches run mode). -/
+  seed : Nat := 5489
 
 -- Manual Inhabited instance (can't derive because IOStream has a function field)
 instance : Inhabited IOState where

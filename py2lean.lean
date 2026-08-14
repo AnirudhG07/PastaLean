@@ -47,6 +47,8 @@ def runTranslateTask (jsonTask : Json) (ctx : Core.Context) (env : Environment) 
   -- `userNames` lists the user's functions/classes whose references should also be suffixed.
   PastaLean.runSuffixRef.set (jsonTask.getObjValAs? String "runSuffix" |>.toOption.getD "")
   PastaLean.userNamesRef.set ((jsonTask.getObjValAs? (Array String) "userNames" |>.toOption.getD #[]).toList)
+  -- Best-effort: degrade a single failing statement to `pyUnsupported` (keep the rest of the function).
+  PastaLean.bestEffortRef.set (jsonTask.getObjValAs? Bool "best_effort" |>.toOption.getD false)
   -- Opt-in reference semantics (`--heap`): generators read this to emit heap ops instead of value
   -- rebuilds. Off by default keeps the value-semantics path byte-identical.
   PastaLean.heapModeRef.set (jsonTask.getObjValAs? Bool "heap" |>.toOption.getD false)
@@ -57,9 +59,17 @@ def runTranslateTask (jsonTask : Json) (ctx : Core.Context) (env : Environment) 
   -- The whole-module `inferTypes` pass (run by the driver) marks each statement `_inferred`; only fall
   -- back to the context-free per-statement stamp when it did not run (a bare term, or on failure).
   let alreadyInferred := (json.getObjVal? "_inferred").toOption.isSome
-  -- Syntactic desugaring (nested `for` targets, walrus) runs before codegen; see
+  -- Generators (`yield`) materialise to a list-building function before anything else, so the
+  -- synthesised `append`/`extend`/`return` flow through desugaring and codegen; see
+  -- `PyGens/Transform/GeneratorLower.lean`.
+  -- When the driver pre-ran the `inferTypes` task, generators + desugaring already happened there
+  -- (before inference), so re-running them here would double-desugar; skip straight to codegen.
+  let json ← if alreadyInferred then pure json else match PastaLean.lowerGenerators json with
+    | .ok lowered => pure lowered
+    | .error message => return errorResponse s!"Error generating code: {message}"
+  -- Syntactic desugaring (nested `for` targets, walrus, chained assign) runs before codegen; see
   -- `PyGens/Transform/Desugar.lean`.
-  let json ← match PastaLean.desugarAst json with
+  let json ← if alreadyInferred then pure json else match PastaLean.desugarAst json with
     | .ok desugared => pure desugared
     | .error message => return errorResponse s!"Error generating code: {message}"
   -- Type inference stamps `_ty` on binders whose Lean type the code generator would otherwise
@@ -107,7 +117,16 @@ stamped AST for the driver to send back one node at a time. -/
 def runInferTypesTask (jsonTask : Json) : IO Json := do
   let .ok ast := jsonTask.getObjVal? "ast"
     | return errorResponse "inferTypes: missing 'ast' field"
-  pure <| Json.mkObj [("result", Json.bool true), ("ast", TypeInfer.inferModule ast)]
+  -- Materialise generators (`yield`) to list-builders AND run syntactic desugaring (chained assign,
+  -- walrus, nested for-targets) BEFORE inferring — otherwise inference sees the un-split
+  -- `a = b = expr` (a multi-`targets` node it can't learn per-target from) and later desugaring
+  -- strips the stamps it would have produced. Codegen skips both passes when `_inferred` is set.
+  match PastaLean.lowerGenerators ast with
+  | .error message => pure <| errorResponse message
+  | .ok ast =>
+    match PastaLean.desugarAst ast with
+    | .error message => pure <| errorResponse message
+    | .ok ast => pure <| Json.mkObj [("result", Json.bool true), ("ast", TypeInfer.inferModule ast)]
 
 def handleTaskJson (jsonTask : Json) (ctx : Core.Context) (env : Environment) : IO Json := do
   let .ok task := jsonTask.getObjValAs? String "task"
@@ -116,6 +135,11 @@ def handleTaskJson (jsonTask : Json) (ctx : Core.Context) (env : Environment) : 
   | "translate" => runTranslateTask jsonTask ctx env
   | "inferTypes" => runInferTypesTask jsonTask
   | "proveFile" => runProveFileTask jsonTask env
+  -- Library facts the Python driver needs but that must not be duplicated there.
+  | "libraryInfo" =>
+      pure <| Json.mkObj [
+        ("result", Json.bool true),
+        ("ioEffectfulLibraries", Json.arr (Libraries.ioEffectfulLibraries.toArray.map Json.str))]
   | _ => pure <| errorResponse s!"Unknown task: {task}"
 
 def handleTaskString (payload : String) (ctx : Core.Context) (env : Environment) : IO Json := do

@@ -1,0 +1,4 @@
+import PastaBench.leetcode.MinimumTimeToCompleteTrips.Generated
+namespace PastaBench.leetcode.MinimumTimeToCompleteTrips
+-- TODO.
+end PastaBench.leetcode.MinimumTimeToCompleteTrips

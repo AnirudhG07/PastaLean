@@ -1,0 +1,4 @@
+import PastaBench.leetcode.SwappingNodesInALinkedList.Generated
+namespace PastaBench.leetcode.SwappingNodesInALinkedList
+-- TODO.
+end PastaBench.leetcode.SwappingNodesInALinkedList

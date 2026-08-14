@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/79",
+  "problem": "decimal-to-binary",
+  "module": "DecimalToBinary",
+  "method": "decimal_to_binary",
+  "params": [
+    "decimal"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

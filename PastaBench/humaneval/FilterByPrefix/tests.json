@@ -1,0 +1,202 @@
+[
+  {
+    "input": "strings = [], prefix = 'john'",
+    "output": "[]"
+  },
+  {
+    "input": "strings = ['xxx', 'asd', 'xxy', 'john doe', 'xxxAAA', 'xxx'], prefix = 'xxx'",
+    "output": "['xxx', 'xxxAAA', 'xxx']"
+  },
+  {
+    "input": "strings = [], prefix = ''",
+    "output": "[]"
+  },
+  {
+    "input": "strings = ['abc', 'abcd', 'abcde'], prefix = 'abc'",
+    "output": "['abc', 'abcd', 'abcde']"
+  },
+  {
+    "input": "strings = ['xyz', 'efg', 'hij'], prefix = 'a'",
+    "output": "[]"
+  },
+  {
+    "input": "strings = ['cat', 'dog', 'bat'], prefix = 'elephant'",
+    "output": "[]"
+  },
+  {
+    "input": "strings = ['apple', 'banana', 'orange', 'apricot', 'kiwi'], prefix = 'ap'",
+    "output": "['apple', 'apricot']"
+  },
+  {
+    "input": "strings = ['a', 'ab', 'abc', 'ba', 'bb', 'bc'], prefix = 'a'",
+    "output": "['a', 'ab', 'abc']"
+  },
+  {
+    "input": "strings = ['zzz', 'zzz', 'zzz'], prefix = 'z'",
+    "output": "['zzz', 'zzz', 'zzz']"
+  },
+  {
+    "input": "strings = ['hello', 'world', 'house'], prefix = 'h'",
+    "output": "['hello', 'house']"
+  },
+  {
+    "input": "strings = ['apple', 'orange', 'banana'], prefix = 'b'",
+    "output": "['banana']"
+  },
+  {
+    "input": "strings = ['python', 'java', 'javascript', 'c++'], prefix = 'java'",
+    "output": "['java', 'javascript']"
+  },
+  {
+    "input": "strings = ['hello', 'world', 'heworldlo', 'house'], prefix = 'h'",
+    "output": "['hello', 'heworldlo', 'house']"
+  },
+  {
+    "input": "strings = ['cat', 'dog'], prefix = 'apricot'",
+    "output": "[]"
+  },
+  {
+    "input": "strings = ['hello', 'world', 'heworldlo', 'house'], prefix = 'hh'",
+    "output": "[]"
+  },
+  {
+    "input": "strings = 'hah', prefix = 'hah'",
+    "output": "[]"
+  },
+  {
+    "input": "strings = ['world', 'heworldlo', 'house'], prefix = 'h'",
+    "output": "['heworldlo', 'house']"
+  },
+  {
+    "input": "strings = ['apple', 'banana', 'orange', 'apricot', 'kiwi'], prefix = 'a'",
+    "output": "['apple', 'apricot']"
+  },
+  {
+    "input": "strings = 'apricot', prefix = 'apricot'",
+    "output": "[]"
+  },
+  {
+    "input": "strings = 'orange', prefix = 'apicapot'",
+    "output": "[]"
+  },
+  {
+    "input": "strings = 'aa', prefix = 'a'",
+    "output": "['a', 'a']"
+  },
+  {
+    "input": "strings = 'aaa', prefix = 'heworldlo'",
+    "output": "[]"
+  },
+  {
+    "input": "strings = ['hello', 'world', 'house'], prefix = ''",
+    "output": "['hello', 'world', 'house']"
+  },
+  {
+    "input": "strings = 'kiwi', prefix = 'z'",
+    "output": "[]"
+  },
+  {
+    "input": "strings = ['hello', 'world'], prefix = ''",
+    "output": "['hello', 'world']"
+  },
+  {
+    "input": "strings = 'zz', prefix = 'z'",
+    "output": "['z', 'z']"
+  },
+  {
+    "input": "strings = 'oapricot', prefix = 'apricot'",
+    "output": "[]"
+  },
+  {
+    "input": "strings = ['hello', 'world', 'house'], prefix = 'hh'",
+    "output": "[]"
+  },
+  {
+    "input": "strings = ['apple', 'orange', 'hello'], prefix = 'bananab'",
+    "output": "[]"
+  },
+  {
+    "input": "strings = 'aaaajavascript', prefix = 'aaaa'",
+    "output": "[]"
+  },
+  {
+    "input": "strings = '', prefix = ''",
+    "output": "[]"
+  },
+  {
+    "input": "strings = 'apriccot', prefix = 'apricot'",
+    "output": "[]"
+  },
+  {
+    "input": "strings = ['xyz', 'efg', 'hij', 'hij'], prefix = 'aaaajavascript'",
+    "output": "[]"
+  },
+  {
+    "input": "strings = ['apple', 'orange', 'banana'], prefix = 'heworldlo'",
+    "output": "[]"
+  },
+  {
+    "input": "strings = '', prefix = 'aa'",
+    "output": "[]"
+  },
+  {
+    "input": "strings = 'aaaajavascript', prefix = 'aaaajavascript'",
+    "output": "[]"
+  },
+  {
+    "input": "strings = 'zzbb', prefix = 'zz'",
+    "output": "[]"
+  },
+  {
+    "input": "strings = ['a', 'ab', 'abc', 'ba', 'bb', 'bc'], prefix = 'banana'",
+    "output": "[]"
+  },
+  {
+    "input": "strings = 'aboapricot', prefix = 'boapricot'",
+    "output": "[]"
+  },
+  {
+    "input": "strings = 'kiwwi', prefix = 'z'",
+    "output": "[]"
+  },
+  {
+    "input": "strings = 'aboapricot', prefix = 'aboapricot'",
+    "output": "[]"
+  },
+  {
+    "input": "strings = 'boaprictot', prefix = 'boapricot'",
+    "output": "[]"
+  },
+  {
+    "input": "strings = 'java', prefix = 'java'",
+    "output": "[]"
+  },
+  {
+    "input": "strings = ['apple', 'orange', 'baanana'], prefix = 'z'",
+    "output": "[]"
+  },
+  {
+    "input": "strings = 'zzbbb', prefix = 'zjavascriptz'",
+    "output": "[]"
+  },
+  {
+    "input": "strings = 'zzz', prefix = 'apicapoot'",
+    "output": "[]"
+  },
+  {
+    "input": "strings = 'oapricot', prefix = 'appricott'",
+    "output": "[]"
+  },
+  {
+    "input": "strings = ['world', 'hello', 'world', 'house'], prefix = ''",
+    "output": "['world', 'hello', 'world', 'house']"
+  },
+  {
+    "input": "strings = 'jaava', prefix = 'java'",
+    "output": "[]"
+  },
+  {
+    "input": "strings = ['world', 'hello', 'world'], prefix = ''",
+    "output": "['world', 'hello', 'world']"
+  }
+]

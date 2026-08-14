@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/26",
+  "problem": "remove-duplicates",
+  "module": "RemoveDuplicates",
+  "method": "remove_duplicates",
+  "params": [
+    "numbers"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

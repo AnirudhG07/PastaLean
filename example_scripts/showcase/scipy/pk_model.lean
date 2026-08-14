@@ -11,6 +11,8 @@ set_option mvcgen.warning false
 
 set_option maxHeartbeats 800000
 
+namespace PastaLean.User.Root
+
 /-
 A pharmacokinetic (PK) drug-concentration simulator -- the dynamical core PastaLean
 transpiles to Lean 4.
@@ -29,62 +31,70 @@ Run directly it uses real SciPy; transpiled by PastaLean it uses the Mathlib-onl
 shim. The showcase runs both and overlays the Python and Lean trajectories.
 -/
 def depot_rate := fun (ka : Rat) ↦ fun (depot : Rat) ↦
-  /-
-  dD/dt -- drug leaving the gut depot by absorption.
-  -/
-  -ka *ₚ depot
+  (show Rat from
+    /-
+    dD/dt -- drug leaving the gut depot by absorption.
+    -/
+    -ka *ₚ depot)
 
 attribute [simp, taste_ingr] depot_rate
 
 def depot_rate'rn := fun (ka : Float) ↦ fun (depot : Float) ↦
-  /-
-  dD/dt -- drug leaving the gut depot by absorption.
-  -/
-  -ka *ₚ depot
+  (show Float from
+    /-
+    dD/dt -- drug leaving the gut depot by absorption.
+    -/
+    -ka *ₚ depot)
 
 def central_rate := fun (ka : Rat) ↦ fun (ke : Rat) ↦ fun (k12 : Rat) ↦ fun (k21 : Rat) ↦ fun (depot : Rat) ↦
   fun (central : Rat) ↦ fun (periph : Rat) ↦
-  /-
-  dC/dt -- absorption in, elimination out, exchange with the peripheral compartment.
-  -/
-  ka *ₚ depot -ₚ ke *ₚ central -ₚ k12 *ₚ central +ₚ k21 *ₚ periph
+  (show Rat from
+    /-
+    dC/dt -- absorption in, elimination out, exchange with the peripheral compartment.
+    -/
+    ka *ₚ depot -ₚ ke *ₚ central -ₚ k12 *ₚ central +ₚ k21 *ₚ periph)
 
 attribute [simp, taste_ingr] central_rate
 
 def central_rate'rn := fun (ka : Float) ↦ fun (ke : Float) ↦ fun (k12 : Float) ↦ fun (k21 : Float) ↦
   fun (depot : Float) ↦ fun (central : Float) ↦ fun (periph : Float) ↦
-  /-
-  dC/dt -- absorption in, elimination out, exchange with the peripheral compartment.
-  -/
-  ka *ₚ depot -ₚ ke *ₚ central -ₚ k12 *ₚ central +ₚ k21 *ₚ periph
+  (show Float from
+    /-
+    dC/dt -- absorption in, elimination out, exchange with the peripheral compartment.
+    -/
+    ka *ₚ depot -ₚ ke *ₚ central -ₚ k12 *ₚ central +ₚ k21 *ₚ periph)
 
 def periph_rate := fun (k12 : Rat) ↦ fun (k21 : Rat) ↦ fun (central : Rat) ↦ fun (periph : Rat) ↦
-  /-
-  dP/dt -- distribution into and back out of the tissue compartment.
-  -/
-  k12 *ₚ central -ₚ k21 *ₚ periph
+  (show Rat from
+    /-
+    dP/dt -- distribution into and back out of the tissue compartment.
+    -/
+    k12 *ₚ central -ₚ k21 *ₚ periph)
 
 attribute [simp, taste_ingr] periph_rate
 
 def periph_rate'rn := fun (k12 : Float) ↦ fun (k21 : Float) ↦ fun (central : Float) ↦ fun (periph : Float) ↦
-  /-
-  dP/dt -- distribution into and back out of the tissue compartment.
-  -/
-  k12 *ₚ central -ₚ k21 *ₚ periph
+  (show Float from
+    /-
+    dP/dt -- distribution into and back out of the tissue compartment.
+    -/
+    k12 *ₚ central -ₚ k21 *ₚ periph)
 
 def concentration := fun (amount : Rat) ↦ fun (vol : Rat) ↦
-  /-
-  Convert a compartment amount (mg) to a concentration (mg/L).
-  -/
-  amount /ₚ vol
+  (show Rat from
+    /-
+    Convert a compartment amount (mg) to a concentration (mg/L).
+    -/
+    amount /ₚ vol)
 
 attribute [simp, taste_ingr] concentration
 
 def concentration'rn := fun (amount : Float) ↦ fun (vol : Float) ↦
-  /-
-  Convert a compartment amount (mg) to a concentration (mg/L).
-  -/
-  PastaLean.pyFloat amount /ₚ vol
+  (show Float from
+    /-
+    Convert a compartment amount (mg) to a concentration (mg/L).
+    -/
+    PastaLean.pyFloat amount /ₚ vol)
 
 noncomputable def body_load := fun (depot : Rat) ↦ fun (central : Rat) ↦ fun (periph : Rat) ↦
   /-
@@ -95,10 +105,11 @@ noncomputable def body_load := fun (depot : Rat) ↦ fun (central : Rat) ↦ fun
 attribute [simp] body_load
 
 def body_load'rn := fun (depot : Float) ↦ fun (central : Float) ↦ fun (periph : Float) ↦
-  /-
-  Total body drug load as the Euclidean norm of the compartment vector (via scipy).
-  -/
-  Libraries.scipy.pyScipyNorm [depot, central, periph]
+  (show Float from
+    /-
+    Total body drug load as the Euclidean norm of the compartment vector (via scipy).
+    -/
+    Libraries.scipy.pyScipyNorm [depot, central, periph])
 
 -- --- Provable invariants of the model (transpiled to `theorem ... := by taste?`) ---
 -- Each function's parameters are the universally-quantified variables; the `assert` is the property.
@@ -116,7 +127,7 @@ theorem mass_balance :
                   depot_rate ka depot +ₚ central_rate ka ke k12 k21 depot central periph +ₚ
                       periph_rate k12 k21 central periph =
                     -ke *ₚ central :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; ring
 
 @[taste_ingr]
 theorem distribution_conserves :
@@ -137,7 +148,7 @@ theorem conserved_without_elimination :
                 depot_rate ka depot +ₚ central_rate ka (0 : Int) k12 k21 depot central periph +ₚ
                     periph_rate k12 k21 central periph =
                   (0 : Int) :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; ring
 
 @[taste_ingr]
 theorem step_mass_balance :
@@ -153,7 +164,7 @@ theorem step_mass_balance :
                     let new_central := central +ₚ central_rate ka ke k12 k21 depot central periph *ₚ dt
                     let new_periph := periph +ₚ periph_rate k12 k21 central periph *ₚ dt
                     new_depot +ₚ new_central +ₚ new_periph = depot +ₚ central +ₚ periph -ₚ ke *ₚ central *ₚ dt :=
-  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; pyany_cases <;> grind +locals
+  by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; ring
 
 @[taste_ingr]
 theorem depot_nonincreasing :
@@ -273,7 +284,7 @@ noncomputable def main : IO Unit := do
   let inputLines := String.splitOn inputText "\n"
   let inputStream : PastaLean.ProofMode.IOStream :=
     ⟨0, fun i => PastaLean.ProofMode.IOResult.success (List.getD inputLines i "")⟩
-  let initState : PastaLean.ProofMode.IOState := ⟨inputStream, []⟩
+  let initState : PastaLean.ProofMode.IOState := { input := inputStream, output := [] }
   let (result, finalState) :=
     (((do
           let _ ← main'
@@ -292,3 +303,5 @@ noncomputable def main : IO Unit := do
 def main'rn : IO Unit := do
   let _ ← main''rn
   pure ()
+
+end PastaLean.User.Root

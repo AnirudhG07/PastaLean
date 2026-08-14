@@ -1,0 +1,4 @@
+import PastaBench.leetcode.SmallestMissingNonNegativeIntegerAfterOperations.Generated
+namespace PastaBench.leetcode.SmallestMissingNonNegativeIntegerAfterOperations
+-- TODO.
+end PastaBench.leetcode.SmallestMissingNonNegativeIntegerAfterOperations

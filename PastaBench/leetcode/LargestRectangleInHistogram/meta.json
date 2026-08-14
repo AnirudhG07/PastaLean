@@ -1,0 +1,12 @@
+{
+  "problem": "largest-rectangle-in-histogram",
+  "module": "LargestRectangleInHistogram",
+  "method": "largestRectangleArea",
+  "params": [
+    "heights"
+  ],
+  "difficulty": "Hard",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 96
+}

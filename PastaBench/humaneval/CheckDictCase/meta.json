@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/95",
+  "problem": "check-dict-case",
+  "module": "CheckDictCase",
+  "method": "check_dict_case",
+  "params": [
+    "dict"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

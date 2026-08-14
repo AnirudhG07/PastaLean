@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/66",
+  "problem": "digitSum",
+  "module": "Digitsum",
+  "method": "digitSum",
+  "params": [
+    "s"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

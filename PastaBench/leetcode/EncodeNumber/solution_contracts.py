@@ -1,3 +1,4 @@
+from contracts import *
 import random
 import functools
 import collections
@@ -14,9 +15,7 @@ from string import *
 from operator import *
 from math import *
 
-from contracts import *
-
-
 def encode(num: int) -> str:
     Requires(num >= 0)
+    Ensures(num + 1 == int('1' + Result(), 2))
     return bin(num + 1)[3:]

@@ -11,6 +11,8 @@ set_option mvcgen.warning false
 
 set_option maxHeartbeats 800000
 
+namespace PastaLean.User.Root
+
 def functions_append_closure :=
   ((do
       let mut f : List (Unit → String) := []
@@ -98,8 +100,8 @@ def value_capture_loop :=
           PastaLean.pyAppend fs fun () ↦
             let n := n
             n *ₚ n
-      let __py_ret_1 := (PastaLean.pyIter fs).map fun g => g ()
-      return __py_ret_1)
+      let p'_ret_1 := (PastaLean.pyIter fs).map fun g => g ()
+      return p'_ret_1)
 
 attribute [simp, taste_ingr] value_capture_loop
 
@@ -114,8 +116,8 @@ def value_capture_loop'rn :=
           PastaLean.pyAppend fs fun () ↦
             let n := n
             n *ₚ n
-      let __py_ret_1 := (PastaLean.pyIter fs).map fun g => g ()
-      return __py_ret_1)
+      let p'_ret_1 := (PastaLean.pyIter fs).map fun g => g ()
+      return p'_ret_1)
 
 private def __curry_add'f'g := fun (c : Int) ↦ fun (b : Int) ↦ fun (a : Int) ↦ a +ₚ b +ₚ c
 
@@ -191,12 +193,13 @@ def multi_capture'rn := fun (a : Int) ↦ fun (b : Int) ↦ fun (c : Int) ↦
   -- One closure capturing THREE outer variables at once.
   fun (x : Int) ↦ _multi_capture'poly'rn x a b c
 
-mutual
-  partial def _sibling_closures'lin : Int → Int → Int → Int := fun (x : Int) ↦ fun (a : Int) ↦ fun (b : Int) ↦
-    a *ₚ x +ₚ b
-  partial def _sibling_closures'apply3 : Int → Int → Int := fun (a : Int) ↦ fun (b : Int) ↦
-    _sibling_closures'lin (3 : Int) a b
-end
+private def _sibling_closures'lin := fun (x : Int) ↦ fun (a : Int) ↦ fun (b : Int) ↦ a *ₚ x +ₚ b
+
+attribute [simp, taste_ingr] _sibling_closures'lin
+
+private def _sibling_closures'apply3 := fun (a : Int) ↦ fun (b : Int) ↦ _sibling_closures'lin (3 : Int) a b
+
+attribute [simp, taste_ingr] _sibling_closures'apply3
 
 def sibling_closures := fun (a : Int) ↦ fun (b : Int) ↦
   -- `apply3` (a 0-arg closure) CALLS the sibling closure `lin`, and is RETURNED. Calling the returned
@@ -205,12 +208,9 @@ def sibling_closures := fun (a : Int) ↦ fun (b : Int) ↦
 
 attribute [simp, taste_ingr] sibling_closures
 
-mutual
-  partial def _sibling_closures'lin'rn : Int → Int → Int → Int := fun (x : Int) ↦ fun (a : Int) ↦ fun (b : Int) ↦
-    a *ₚ x +ₚ b
-  partial def _sibling_closures'apply3'rn : Int → Int → Int := fun (a : Int) ↦ fun (b : Int) ↦
-    _sibling_closures'lin'rn (3 : Int) a b
-end
+private def _sibling_closures'lin'rn := fun (x : Int) ↦ fun (a : Int) ↦ fun (b : Int) ↦ a *ₚ x +ₚ b
+
+private def _sibling_closures'apply3'rn := fun (a : Int) ↦ fun (b : Int) ↦ _sibling_closures'lin'rn (3 : Int) a b
 
 def sibling_closures'rn := fun (a : Int) ↦ fun (b : Int) ↦
   -- `apply3` (a 0-arg closure) CALLS the sibling closure `lin`, and is RETURNED. Calling the returned
@@ -222,8 +222,8 @@ private def _aliased_list_closure'push := fun (v : Int) ↦ fun (xs : List Int) 
     (do
       let mut xs := xs
       xs := PastaLean.pyAppend xs v
-      let __py_ret_1 := (PastaLean.pyLen xs, xs)
-      return __py_ret_1)
+      let p'_ret_1 := (PastaLean.pyLen xs, xs)
+      return p'_ret_1)
 
 attribute [simp, taste_ingr] _aliased_list_closure'push
 
@@ -235,12 +235,12 @@ def aliased_list_closure :=
   -- closure's appends — the two results diverge. This is the value-vs-reference contrast for lists.
   let xs := ([(1 : Int), (2 : Int)] : List Int)
   let «alias» := (xs : List Int)
-  let __unpack_pair_2 := _aliased_list_closure'push (3 : Int) xs
-  let __thread_t1 := Prod.fst __unpack_pair_2
-  let xs := Prod.snd __unpack_pair_2
-  let __unpack_pair_1 := _aliased_list_closure'push (4 : Int) xs
-  let __thread_t2 := Prod.fst __unpack_pair_1
-  let xs := Prod.snd __unpack_pair_1
+  let p'_unpack_pair_2 := _aliased_list_closure'push (3 : Int) xs
+  let p'_thread_t1 := Prod.fst p'_unpack_pair_2
+  let xs := Prod.snd p'_unpack_pair_2
+  let p'_unpack_pair_1 := _aliased_list_closure'push (4 : Int) xs
+  let p'_thread_t2 := Prod.fst p'_unpack_pair_1
+  let xs := Prod.snd p'_unpack_pair_1
   (xs, «alias»)
 
 attribute [simp, taste_ingr] aliased_list_closure
@@ -250,8 +250,8 @@ private def _aliased_list_closure'push'rn := fun (v : Int) ↦ fun (xs : List In
     (do
       let mut xs := xs
       xs := PastaLean.pyAppend xs v
-      let __py_ret_1 := (PastaLean.pyLen xs, xs)
-      return __py_ret_1)
+      let p'_ret_1 := (PastaLean.pyLen xs, xs)
+      return p'_ret_1)
 
 def aliased_list_closure'rn :=
   -- A closure over a MUTABLE list that is also ALIASED: `push` captures `xs`, and `alias` is a
@@ -261,12 +261,12 @@ def aliased_list_closure'rn :=
   -- closure's appends — the two results diverge. This is the value-vs-reference contrast for lists.
   let xs := ([(1 : Int), (2 : Int)] : List Int)
   let «alias» := (xs : List Int)
-  let __unpack_pair_2 := _aliased_list_closure'push'rn (3 : Int) xs
-  let __thread_t1 := Prod.fst __unpack_pair_2
-  let xs := Prod.snd __unpack_pair_2
-  let __unpack_pair_1 := _aliased_list_closure'push'rn (4 : Int) xs
-  let __thread_t2 := Prod.fst __unpack_pair_1
-  let xs := Prod.snd __unpack_pair_1
+  let p'_unpack_pair_2 := _aliased_list_closure'push'rn (3 : Int) xs
+  let p'_thread_t1 := Prod.fst p'_unpack_pair_2
+  let xs := Prod.snd p'_unpack_pair_2
+  let p'_unpack_pair_1 := _aliased_list_closure'push'rn (4 : Int) xs
+  let p'_thread_t2 := Prod.fst p'_unpack_pair_1
+  let xs := Prod.snd p'_unpack_pair_1
   (xs, «alias»)
 
 private def _counter_closure'bump := fun (k : Int) ↦ fun (count : Int) ↦
@@ -280,12 +280,12 @@ def counter_closure :=
   -- reference semantics (--heap) `count` becomes a shared scalar cell (`Ref Int`), so both `bump`
   -- calls accumulate into the one binding → 5 + 3 == 8. The scalar counterpart to the list case.
   let count := (0 : Int)
-  let __unpack_pair_2 := _counter_closure'bump (5 : Int) count
-  let __thread_t1 := Prod.fst __unpack_pair_2
-  let count := Prod.snd __unpack_pair_2
-  let __unpack_pair_1 := _counter_closure'bump (3 : Int) count
-  let __thread_t2 := Prod.fst __unpack_pair_1
-  let count := Prod.snd __unpack_pair_1
+  let p'_unpack_pair_2 := _counter_closure'bump (5 : Int) count
+  let p'_thread_t1 := Prod.fst p'_unpack_pair_2
+  let count := Prod.snd p'_unpack_pair_2
+  let p'_unpack_pair_1 := _counter_closure'bump (3 : Int) count
+  let p'_thread_t2 := Prod.fst p'_unpack_pair_1
+  let count := Prod.snd p'_unpack_pair_1
   count
 
 attribute [simp, taste_ingr] counter_closure
@@ -299,12 +299,12 @@ def counter_closure'rn :=
   -- reference semantics (--heap) `count` becomes a shared scalar cell (`Ref Int`), so both `bump`
   -- calls accumulate into the one binding → 5 + 3 == 8. The scalar counterpart to the list case.
   let count := (0 : Int)
-  let __unpack_pair_2 := _counter_closure'bump'rn (5 : Int) count
-  let __thread_t1 := Prod.fst __unpack_pair_2
-  let count := Prod.snd __unpack_pair_2
-  let __unpack_pair_1 := _counter_closure'bump'rn (3 : Int) count
-  let __thread_t2 := Prod.fst __unpack_pair_1
-  let count := Prod.snd __unpack_pair_1
+  let p'_unpack_pair_2 := _counter_closure'bump'rn (5 : Int) count
+  let p'_thread_t1 := Prod.fst p'_unpack_pair_2
+  let count := Prod.snd p'_unpack_pair_2
+  let p'_unpack_pair_1 := _counter_closure'bump'rn (3 : Int) count
+  let p'_thread_t2 := Prod.fst p'_unpack_pair_1
+  let count := Prod.snd p'_unpack_pair_1
   count
 
 def closure_theorems :=
@@ -314,7 +314,7 @@ def closure_theorems :=
   have ht_2 : ((curry_add (1 : Int)) (2 : Int)) (3 : Int) = (6 : Int) := by simp_all (config := { zetaDelta := true }) [taste_ingr]
   have ht_3 : (make_adder (2 : Int)) ((make_adder (3 : Int)) (10 : Int)) = (15 : Int) := by simp_all (config := { zetaDelta := true }) [taste_ingr]
   have ht_4 : (multi_capture (1 : Int) (2 : Int) (3 : Int)) (4 : Int) = (27 : Int) := by simp_all (config := { zetaDelta := true }) [taste_ingr]
-  have ht_5 : (sibling_closures (2 : Int) (1 : Int)) () = (7 : Int) := by simp_all (config := { zetaDelta := true }) [taste_ingr]; aesop
+  have ht_5 : (sibling_closures (2 : Int) (1 : Int)) () = (7 : Int) := by simp_all (config := { zetaDelta := true }) [taste_ingr]
   ()
 
 attribute [simp] closure_theorems
@@ -323,3 +323,5 @@ def closure_theorems'rn :=
   -- Properties of the closures above, PROVED automatically on conversion (`--prove-asserts`): each
   -- `assert` becomes a Lean theorem `:= by taste?` and the proof search splices the winning tactic.
   ()
+
+end PastaLean.User.Root

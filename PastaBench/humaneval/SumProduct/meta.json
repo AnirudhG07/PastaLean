@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/8",
+  "problem": "sum-product",
+  "module": "SumProduct",
+  "method": "sum_product",
+  "params": [
+    "numbers"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

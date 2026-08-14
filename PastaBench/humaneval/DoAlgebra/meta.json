@@ -1,0 +1,14 @@
+{
+  "task_id": "HumanEval/160",
+  "problem": "do-algebra",
+  "module": "DoAlgebra",
+  "method": "do_algebra",
+  "params": [
+    "operator",
+    "operand"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

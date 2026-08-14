@@ -1,0 +1,12 @@
+{
+  "problem": "maximum-height-by-stacking-cuboids",
+  "module": "MaximumHeightByStackingCuboids",
+  "method": "maxHeight",
+  "params": [
+    "cuboids"
+  ],
+  "difficulty": "Hard",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 108
+}

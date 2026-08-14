@@ -1,0 +1,13 @@
+{
+  "problem": "task-scheduler-ii",
+  "module": "TaskSchedulerIi",
+  "method": "taskSchedulerII",
+  "params": [
+    "tasks",
+    "space"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 102
+}

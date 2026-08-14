@@ -1,0 +1,14 @@
+{
+  "task_id": "HumanEval/103",
+  "problem": "rounded-avg",
+  "module": "RoundedAvg",
+  "method": "rounded_avg",
+  "params": [
+    "n",
+    "m"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

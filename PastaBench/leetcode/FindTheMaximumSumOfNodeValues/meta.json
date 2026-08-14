@@ -1,0 +1,14 @@
+{
+  "problem": "find-the-maximum-sum-of-node-values",
+  "module": "FindTheMaximumSumOfNodeValues",
+  "method": "maximumValueSum",
+  "params": [
+    "nums",
+    "k",
+    "edges"
+  ],
+  "difficulty": "Hard",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 91
+}

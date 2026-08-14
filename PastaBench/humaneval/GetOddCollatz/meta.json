@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/123",
+  "problem": "get-odd-collatz",
+  "module": "GetOddCollatz",
+  "method": "get_odd_collatz",
+  "params": [
+    "n"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

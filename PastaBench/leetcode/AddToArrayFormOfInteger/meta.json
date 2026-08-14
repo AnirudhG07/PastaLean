@@ -1,0 +1,13 @@
+{
+  "problem": "add-to-array-form-of-integer",
+  "module": "AddToArrayFormOfInteger",
+  "method": "addToArrayForm",
+  "params": [
+    "num",
+    "k"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 75
+}

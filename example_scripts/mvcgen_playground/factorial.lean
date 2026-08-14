@@ -9,7 +9,9 @@ open Std.Do
 set_option linter.all false
 set_option mvcgen.warning false
 
-set_option maxHeartbeats 0
+set_option maxHeartbeats 200000
+
+namespace PastaLean.User.Root
 
 -- While-loop product accumulator with an explicit termination measure (Decreases).
 -- Maintainable invariant: the running product stays >= 1 (so it is never zero / negative).
@@ -34,3 +36,5 @@ def factorial'rn := fun (n : Int) ↦
         result := result *ₚ i
         i := i +ₚ (1 : Int)
       return result)
+
+end PastaLean.User.Root

@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/145",
+  "problem": "order-by-points",
+  "module": "OrderByPoints",
+  "method": "order_by_points",
+  "params": [
+    "nums"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

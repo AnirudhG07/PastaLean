@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/93",
+  "problem": "encode",
+  "module": "Encode",
+  "method": "encode",
+  "params": [
+    "message"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

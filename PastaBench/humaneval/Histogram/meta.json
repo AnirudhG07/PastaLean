@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/111",
+  "problem": "histogram",
+  "module": "Histogram",
+  "method": "histogram",
+  "params": [
+    "test"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

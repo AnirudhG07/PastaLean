@@ -1,0 +1,4 @@
+import PastaBench.leetcode.MinimumOperationsToMakeBinaryArrayElementsEqualToOneIi.Generated
+namespace PastaBench.leetcode.MinimumOperationsToMakeBinaryArrayElementsEqualToOneIi
+-- TODO.
+end PastaBench.leetcode.MinimumOperationsToMakeBinaryArrayElementsEqualToOneIi

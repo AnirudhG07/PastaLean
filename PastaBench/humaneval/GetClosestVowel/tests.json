@@ -1,0 +1,202 @@
+[
+  {
+    "input": "word = 'yogurt'",
+    "output": "'u'"
+  },
+  {
+    "input": "word = 'full'",
+    "output": "'u'"
+  },
+  {
+    "input": "word = 'easy'",
+    "output": "''"
+  },
+  {
+    "input": "word = 'eAsy'",
+    "output": "''"
+  },
+  {
+    "input": "word = 'ali'",
+    "output": "''"
+  },
+  {
+    "input": "word = 'bad'",
+    "output": "'a'"
+  },
+  {
+    "input": "word = 'most'",
+    "output": "'o'"
+  },
+  {
+    "input": "word = 'ab'",
+    "output": "''"
+  },
+  {
+    "input": "word = 'ba'",
+    "output": "''"
+  },
+  {
+    "input": "word = 'quick'",
+    "output": "''"
+  },
+  {
+    "input": "word = 'anime'",
+    "output": "'i'"
+  },
+  {
+    "input": "word = 'Asia'",
+    "output": "''"
+  },
+  {
+    "input": "word = 'Above'",
+    "output": "'o'"
+  },
+  {
+    "input": "word = 'hello'",
+    "output": "'e'"
+  },
+  {
+    "input": "word = 'cup'",
+    "output": "'u'"
+  },
+  {
+    "input": "word = 'kill'",
+    "output": "'i'"
+  },
+  {
+    "input": "word = 'bike'",
+    "output": "'i'"
+  },
+  {
+    "input": "word = 'album'",
+    "output": "'u'"
+  },
+  {
+    "input": "word = 'mute'",
+    "output": "'u'"
+  },
+  {
+    "input": "word = 'nylon'",
+    "output": "'o'"
+  },
+  {
+    "input": "word = 'jelly'",
+    "output": "'e'"
+  },
+  {
+    "input": "word = 'hi'",
+    "output": "''"
+  },
+  {
+    "input": "word = 'try'",
+    "output": "''"
+  },
+  {
+    "input": "word = 'himute'",
+    "output": "'u'"
+  },
+  {
+    "input": "word = 'jejellylly'",
+    "output": "'e'"
+  },
+  {
+    "input": "word = 'hill'",
+    "output": "'i'"
+  },
+  {
+    "input": "word = 'hilljejellylly'",
+    "output": "'e'"
+  },
+  {
+    "input": "word = ''",
+    "output": "''"
+  },
+  {
+    "input": "word = 'alb'",
+    "output": "''"
+  },
+  {
+    "input": "word = 'hilljhejellylly'",
+    "output": "'e'"
+  },
+  {
+    "input": "word = 'ttrty'",
+    "output": "''"
+  },
+  {
+    "input": "word = 'helo'",
+    "output": "'e'"
+  },
+  {
+    "input": "word = 'lalb'",
+    "output": "'a'"
+  },
+  {
+    "input": "word = 'aabuum'",
+    "output": "''"
+  },
+  {
+    "input": "word = 'ehehilo'",
+    "output": "'i'"
+  },
+  {
+    "input": "word = 'tttrjejellyllyt'",
+    "output": "'e'"
+  },
+  {
+    "input": "word = 'kilbike'",
+    "output": "'i'"
+  },
+  {
+    "input": "word = 'bkike'",
+    "output": "'i'"
+  },
+  {
+    "input": "word = 'ccup'",
+    "output": "'u'"
+  },
+  {
+    "input": "word = 'ehehi'",
+    "output": "'e'"
+  },
+  {
+    "input": "word = 'kiill'",
+    "output": "''"
+  },
+  {
+    "input": "word = 'trjejellyllyt'",
+    "output": "'e'"
+  },
+  {
+    "input": "word = 'himuhilljejellyllyte'",
+    "output": "'e'"
+  },
+  {
+    "input": "word = 'hhimute'",
+    "output": "'u'"
+  },
+  {
+    "input": "word = 'ehehilohi'",
+    "output": "'o'"
+  },
+  {
+    "input": "word = 'knylonill'",
+    "output": "'i'"
+  },
+  {
+    "input": "word = 'bik'",
+    "output": "'i'"
+  },
+  {
+    "input": "word = 'hhhimutehimute'",
+    "output": "'u'"
+  },
+  {
+    "input": "word = 'hhimutehilljhejellyllbiky'",
+    "output": "'i'"
+  },
+  {
+    "input": "word = 'hhhimutehimuute'",
+    "output": "'i'"
+  }
+]

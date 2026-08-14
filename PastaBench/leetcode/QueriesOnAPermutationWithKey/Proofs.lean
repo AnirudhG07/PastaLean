@@ -1,0 +1,4 @@
+import PastaBench.leetcode.QueriesOnAPermutationWithKey.Generated
+namespace PastaBench.leetcode.QueriesOnAPermutationWithKey
+-- TODO.
+end PastaBench.leetcode.QueriesOnAPermutationWithKey

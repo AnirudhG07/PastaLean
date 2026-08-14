@@ -1,0 +1,12 @@
+{
+  "problem": "sorting-the-sentence",
+  "module": "SortingTheSentence",
+  "method": "sortSentence",
+  "params": [
+    "s"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 145
+}

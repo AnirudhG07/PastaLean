@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/12",
+  "problem": "longest",
+  "module": "Longest",
+  "method": "longest",
+  "params": [
+    "strings"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

@@ -1,0 +1,4 @@
+import PastaBench.leetcode.QueueReconstructionByHeight.Generated
+namespace PastaBench.leetcode.QueueReconstructionByHeight
+-- TODO.
+end PastaBench.leetcode.QueueReconstructionByHeight

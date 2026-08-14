@@ -27,9 +27,16 @@ private def canonical (name : String) : String :=
 dynamic type — "no static information" — so they read as `.unknown` (⊥), NOT `.any` (⊤, which means
 concrete types that genuinely conflict, e.g. an `int | str` union that must be boxed). -/
 private def baseTypes : List (String × PyType) :=
+  -- A BARE, unparameterised `list`/`set` annotation (`def f(xs: list)`) means `list[Any]` in Python;
+  -- the element is the dynamic top (`.any`→`PyAny`), NOT `.unknown` (⊥) — ⊥ is right for an inferable
+  -- *value* (an RHS literal can fill it) but a *parameter* has no RHS, so ⊥ leaves `List ?m` stuck.
+  -- A boxed list is indexed/iterated by a concrete `Int`, which the `List PyAny` instances handle.
+  -- NOTE `dict`/`tuple` stay `.unknown`: a boxed `Std.HashMap PyAny PyAny` cannot be keyed by a
+  -- concrete `Int` (`PyDictKeyPop`'s `outParam` key resolves to `PyAny`, and an `Int` key pins it to
+  -- `ℤ` with no coercion) — a bare `dict` param needs key/value back-inference from usage instead.
   [ ("int", .int), ("bool", .bool), ("str", .str), ("float", .float),
     ("None", .none), ("Any", .unknown), ("object", .unknown),
-    ("list", .list .unknown), ("set", .set .unknown), ("frozenset", .set .unknown),
+    ("list", .list .any), ("set", .set .any), ("frozenset", .set .any),
     ("dict", .dict .unknown .unknown), ("tuple", .tuple []) ]
 
 /-- Generic containers written `c[...]`, keyed by the name before the bracket. -/

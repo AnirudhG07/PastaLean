@@ -1,4 +1,4 @@
-import Mathlib
+import PastaLean.Imports
 import PastaLean.Codegen
 import PastaLean.PyGens.Basic
 import PastaLean.PyGens.Core.Utils
@@ -7,6 +7,15 @@ import PastaLean.PyGens.Core.Assign
 open Lean Meta Elab Term Qq Std
 
 namespace PastaLean
+
+/-- Access position `i` of a comprehension pair: `pyListGetItem` (Python list-index) when the target
+was marked `_list_unpack` (`for a,b in edges`, `edges : list[list[int]]`), else `Prod` projection —
+mirroring `forTargetBinder`, so a comprehension over a list-of-lists doesn't wrongly emit `Prod.fst`. -/
+def compAccessTerm (listUnpack : Bool) (pairIdent : TSyntax `ident) (i n : Nat) : PygenM (TSyntax `term) := do
+  if listUnpack then
+    let iStx ← intToStx (i : Int)
+    `($(mkIdent ``PastaLean.pyListGetItem) $pairIdent $iStx)
+  else tupleAccessTerm pairIdent i n
 
 /-- Destructure `source` according to a comprehension target, wrapping `body` in the resulting
 `let` bindings. Recurses through nested tuples (`for a, (b, c) in …`): each tuple level binds its
@@ -23,10 +32,11 @@ partial def destructureCompTarget (targetJson : Json) (source : TSyntax `term) (
       if elts.size < 2 then
         throwError "Tuple comprehension target must have at least two elements."
       let n := elts.size
+      let listUnpack := targetJson.getObjValAs? Bool "_list_unpack" == .ok true
       let pairIdent := mkIdent (← freshName `_pair)
       let mut result := body
       for i in (List.range n).reverse do
-        let acc ← tupleAccessTerm pairIdent i n
+        let acc ← compAccessTerm listUnpack pairIdent i n
         result ← destructureCompTarget elts[i]! acc result
       `(let $pairIdent := $source; $result)
   | _ =>
@@ -39,7 +49,11 @@ def listCompTargetLambda (targetJson : Json) (body : TSyntax `term) :
   match jsonNodeType? targetJson with
   | some "Name" =>
       let targetIdent ← getCode targetJson `ident
-      `(fun $targetIdent => $body)
+      -- Ascribe the binder to the iterable's element type (`_ty`, stamped by TypeInfer), so
+      -- `for group in (groups : List String)` yields `group : String`, not the default.
+      match ← (jsonFieldOption targetJson "_ty").mapM (fun ann => pyTypeSyntax? (TypeInfer.ofAnnotation ann)) with
+      | some (some ty) => `(fun ($targetIdent : $ty) => $body)
+      | _ => `(fun $targetIdent => $body)
   | some "Tuple" =>
       -- Bind the lambda parameter directly as the pair and project each position (a flat tuple
       -- unpacks with no extra `let`); nested tuple elements recurse via `destructureCompTarget`.
@@ -48,11 +62,16 @@ def listCompTargetLambda (targetJson : Json) (body : TSyntax `term) :
       if elts.size < 2 then
         throwError "Tuple comprehension target must have at least two elements."
       let n := elts.size
+      let listUnpack := targetJson.getObjValAs? Bool "_list_unpack" == .ok true
       let pairIdent := mkIdent (← freshName `_pair)
       let mut result := body
       for i in (List.range n).reverse do
-        result ← destructureCompTarget elts[i]! (← tupleAccessTerm pairIdent i n) result
-      `(fun $pairIdent => $result)
+        result ← destructureCompTarget elts[i]! (← compAccessTerm listUnpack pairIdent i n) result
+      -- Ascribe the pair param to the iterable's element type (`_pair_ty`, stamped by TypeInfer), so
+      -- the body doesn't pin it wrong (`c *ₚ v` over `sorted(cnt.items())` would default to `ℤ × ℤ`).
+      match ← (jsonFieldOption targetJson "_pair_ty").mapM (fun ann => pyTypeSyntax? (TypeInfer.ofAnnotation ann)) with
+      | some (some ty) => `(fun ($pairIdent : $ty) => $result)
+      | _ => `(fun $pairIdent => $result)
   | _ =>
       throwError s!"Unsupported comprehension target: {targetJson}"
 
@@ -125,7 +144,7 @@ def lowerComprehensionClauses (eltJson : Json) (generators : List Json) :
           match ← heapContainerDeref? iterJson with
           | some deref => pure deref
           | none =>
-            if jsonUsesIOEffect iterJson then inlineIOTerm iterJson
+            if jsonUsesIOEffect iterJson then inlineEffectfulTerm iterJson
             else getCode iterJson `term
         let filtered ← comprehensionFilterOver compJson baseIter
         -- Emit dot-form `iterable.map (fun x => …)` so the iterable (whose element type is known,
@@ -153,7 +172,13 @@ def listCompSyntax : (kind : SyntaxNodeKind) → Json →
       let .ok generatorsJson := json.getObjValAs? Json "generators" | throwError
         s!"ListComp node does not have a 'generators' field: {json}"
       match generatorsJson with
-      | .arr arr => lowerComprehensionClauses eltJson arr.toList
+      | .arr arr =>
+          let listCode ← lowerComprehensionClauses eltJson arr.toList
+          -- An `array_ok` comprehension (a 2D-DP row builder) materialises as an `Array` in the run
+          -- twin, so nested `f[i][j]=v` can update in place; `_seq` is set only in `approx` mode.
+          if (json.getObjValAs? String "_seq" == .ok "array") && (← getNumericMode) == .approx then
+            `($listCode |>.toArray)
+          else pure listCode
       | _ => throwError s!"ListComp node 'generators' field is not an array: {generatorsJson}"
   | _, _ => throwError s!"Unsupported syntax category for ListComp node"
 

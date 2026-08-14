@@ -111,6 +111,7 @@ class ASTToJsonLeanVisitorBase:
         self.foreign_names = set()      # locally-bound names that come from foreign modules
         self.unsupported_log = []       # original source of every dropped/degraded statement
         self._next_unsup_id = 0         # for naming top-level placeholder defs
+        self.shadowed_builtins = set()  # builtins a top-level user `def` overrides (`def max(...)`)
 
     def _is_foreign_module(self, module_name):
         """A module is foreign if it is neither a supported library, a type-only module, nor a
@@ -505,6 +506,21 @@ class ASTToJsonLeanVisitorBase:
             "value": self.visit(node.value)
         }
 
+    def visit_Yield(self, node):
+        """Translates `yield e` (a generator produce). The Lean generator-lowering pass turns each
+        yield in a generator body into an append onto the materialised result list."""
+        return {
+            "node_type": "Yield",
+            "value": self.visit(node.value) if node.value is not None else None,
+        }
+
+    def visit_YieldFrom(self, node):
+        """Translates `yield from it` (delegate to a sub-iterable) — lowered to a list extend."""
+        return {
+            "node_type": "YieldFrom",
+            "value": self.visit(node.value),
+        }
+
     def visit_Pass(self, node):
         """Translates ast.Pass to a JSON IR no-op node."""
         return {
@@ -547,6 +563,7 @@ class ASTToJsonLeanVisitorBase:
         if (
             func_json.get("node_type") == "Name"
             and func_json.get("id") in {"min", "max"}
+            and func_json.get("id") not in self.shadowed_builtins
             and len(args_json) >= 2
             and not keywords_json
         ):
@@ -695,6 +712,12 @@ class ASTToJsonLeanVisitorBase:
         """Translates ast.Module to a JSON IR node."""
         if self.best_effort:
             self.foreign_names = self._compute_foreign_names(node)
+        # A top-level `def max(...)` shadows the builtin, so `max(a, b)` must NOT be normalized to the
+        # iterable form `max([a, b])` — it is an ordinary 2-arg call to the user's function.
+        self.shadowed_builtins = {
+            s.name for s in node.body
+            if isinstance(s, (ast.FunctionDef, ast.AsyncFunctionDef)) and s.name in {"min", "max"}
+        }
         return {
             "node_type": "Module",
             "body": self.visit_body_statements(
@@ -767,6 +790,16 @@ class ASTToJsonLeanVisitorBase:
             return target.attr
         return None
 
+    def _mutates_self_attr(self, target):
+        """True if `target` writes a self attribute — directly (`self.X = v`) OR through a subscript
+        chain (`self.X[i] = v`, `self.X[i][j] += v`). The latter is how Fenwick/segment-tree methods
+        mutate (`self.c[x] += v`), and missing it left those methods classified as non-mutating, so
+        the receiver was never reassigned and the mutation was silently dropped."""
+        node = target
+        while isinstance(node, ast.Subscript):
+            node = node.value
+        return self._self_attr_name(node) is not None
+
     def _add_class_field(self, fields, seen, name, annotation, default, init=None):
         """Record a class field, merging type/default info if the name is already known.
 
@@ -829,19 +862,20 @@ class ASTToJsonLeanVisitorBase:
             for handler in getattr(stmt, "handlers", []):
                 self._collect_self_fields(handler.body, fields, seen, param_types)
 
-    def _method_mutates_self(self, funcdef):
-        """True iff any statement in the method (excluding nested scopes) assigns to self.X."""
+    def _method_returns_value(self, funcdef):
+        """True if the method returns a VALUE other than `self`/`None` — so it is used for its RESULT,
+        not (only) its in-place effect, and must NOT be lowered as a pure void mutator (union-find
+        `find` does path-compression `self.p[x] = …` AND returns the root, used as `r = uf.find(i)`)."""
+        def is_self(e):
+            return isinstance(e, ast.Name) and e.id == "self"
+        def is_none(e):
+            return isinstance(e, ast.Constant) and e.value is None
         def walk(body):
             for stmt in body:
                 if isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
                     continue
-                if isinstance(stmt, ast.AnnAssign) and self._self_attr_name(stmt.target):
-                    return True
-                if isinstance(stmt, ast.Assign) and any(
-                    self._self_attr_name(t) for t in stmt.targets
-                ):
-                    return True
-                if isinstance(stmt, ast.AugAssign) and self._self_attr_name(stmt.target):
+                if isinstance(stmt, ast.Return) and stmt.value is not None \
+                        and not is_self(stmt.value) and not is_none(stmt.value):
                     return True
                 for block_attr in ("body", "orelse", "finalbody"):
                     block = getattr(stmt, block_attr, None)
@@ -852,6 +886,42 @@ class ASTToJsonLeanVisitorBase:
                         return True
             return False
         return walk(funcdef.body)
+
+    def _method_mutates_self_raw(self, funcdef):
+        """True iff the method mutates a self attribute (directly `self.X = v` or through a subscript
+        `self.X[i] = v`), regardless of whether it also returns a value."""
+        def walk(body):
+            for stmt in body:
+                if isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                    continue
+                if isinstance(stmt, ast.AnnAssign) and self._mutates_self_attr(stmt.target):
+                    return True
+                if isinstance(stmt, ast.Assign) and any(
+                    self._mutates_self_attr(t) for t in stmt.targets
+                ):
+                    return True
+                if isinstance(stmt, ast.AugAssign) and self._mutates_self_attr(stmt.target):
+                    return True
+                for block_attr in ("body", "orelse", "finalbody"):
+                    block = getattr(stmt, block_attr, None)
+                    if isinstance(block, list) and walk(block):
+                        return True
+                for handler in getattr(stmt, "handlers", []):
+                    if walk(handler.body):
+                        return True
+            return False
+        return walk(funcdef.body)
+
+    def _method_mutates_self(self, funcdef):
+        """A PURE void mutator: mutates self AND returns no value — lowered to reassign the receiver
+        (`obj := C.m obj args`)."""
+        return self._method_mutates_self_raw(funcdef) and not self._method_returns_value(funcdef)
+
+    def _method_is_value_mutator(self, funcdef):
+        """A VALUE+MUTATE method: mutates self AND returns a value (union-find `union` sets parents
+        AND returns whether it merged). Lowered to return `(returnValue, self)`; the call site binds
+        both, reassigns the receiver, and uses the value (so `if uf.union(a,b):` works)."""
+        return self._method_mutates_self_raw(funcdef) and self._method_returns_value(funcdef)
 
     def visit_ClassDef(self, node):
         """Translates ast.ClassDef to a JSON IR node (Python class -> Lean structure + namespace).
@@ -877,6 +947,7 @@ class ASTToJsonLeanVisitorBase:
         seen = {}
         methods = []
         mutators = []
+        value_mutators = []
         staticmethods = []
         classmethods = []
 
@@ -886,11 +957,18 @@ class ASTToJsonLeanVisitorBase:
         if node.body and self._is_docstring_stmt(node.body[0]):
             docstring = node.body[0].value.value
 
+        # Class-body metadata dunders (`__slots__ = [...]`, `__qualname__`, `__module__`) are storage
+        # hints, not data fields — drop them so they don't become a bogus struct field.
+        CLASS_META_DUNDERS = {"__slots__", "__qualname__", "__module__", "__dict__", "__weakref__"}
         for stmt in node.body:
             if isinstance(stmt, ast.AnnAssign) and isinstance(stmt.target, ast.Name):
+                if stmt.target.id in CLASS_META_DUNDERS:
+                    continue
                 self._add_class_field(fields, seen, stmt.target.id, stmt.annotation, stmt.value)
             elif (isinstance(stmt, ast.Assign) and len(stmt.targets) == 1
                   and isinstance(stmt.targets[0], ast.Name)):
+                if stmt.targets[0].id in CLASS_META_DUNDERS:
+                    continue
                 self._add_class_field(fields, seen, stmt.targets[0].id, None, stmt.value)
             elif isinstance(stmt, ast.FunctionDef):
                 methods.append(self.visit(stmt))
@@ -903,6 +981,8 @@ class ASTToJsonLeanVisitorBase:
                 if not is_static:
                     if self._method_mutates_self(stmt):
                         mutators.append(stmt.name)
+                    elif self._method_is_value_mutator(stmt):
+                        value_mutators.append(stmt.name)
                     param_types = {
                         a.arg: a.annotation
                         for a in stmt.args.args
@@ -925,6 +1005,7 @@ class ASTToJsonLeanVisitorBase:
             "fields": fields,
             "methods": methods,
             "mutators": mutators,
+            "value_mutators": value_mutators,
             "staticmethods": staticmethods,
             "classmethods": classmethods,
         }

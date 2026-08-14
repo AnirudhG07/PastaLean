@@ -1,0 +1,14 @@
+{
+  "task_id": "HumanEval/7",
+  "problem": "filter-by-substring",
+  "module": "FilterBySubstring",
+  "method": "filter_by_substring",
+  "params": [
+    "strings",
+    "substring"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

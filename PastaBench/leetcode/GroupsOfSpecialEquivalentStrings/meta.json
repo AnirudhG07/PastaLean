@@ -1,0 +1,12 @@
+{
+  "problem": "groups-of-special-equivalent-strings",
+  "module": "GroupsOfSpecialEquivalentStrings",
+  "method": "numSpecialEquivGroups",
+  "params": [
+    "words"
+  ],
+  "difficulty": "Medium",
+  "bucket": "term",
+  "feature": "term",
+  "n_tests": 81
+}

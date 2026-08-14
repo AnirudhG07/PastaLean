@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/31",
+  "problem": "is-prime",
+  "module": "IsPrime",
+  "method": "is_prime",
+  "params": [
+    "n"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

@@ -9,7 +9,9 @@ open Std.Do
 set_option linter.all false
 set_option mvcgen.warning false
 
-set_option maxHeartbeats 0
+set_option maxHeartbeats 200000
+
+namespace PastaLean.User.Root
 
 -- Python privacy mirrors what `from module import *` excludes: any underscore-prefixed name
 -- is private, EXCEPT dunders (`__x__`), which are the public protocol.
@@ -54,3 +56,5 @@ def PUBLIC_CONST :=
 
 private def _secret :=
   (20 : Int)
+
+end PastaLean.User.Root

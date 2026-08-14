@@ -1,0 +1,14 @@
+{
+  "problem": "closest-binary-search-tree-value-ii",
+  "module": "ClosestBinarySearchTreeValueIi",
+  "method": "closestKValues",
+  "params": [
+    "root",
+    "target",
+    "k"
+  ],
+  "difficulty": "Hard",
+  "bucket": "loop",
+  "feature": "class",
+  "n_tests": 82
+}

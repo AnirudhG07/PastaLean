@@ -1,0 +1,14 @@
+{
+  "task_id": "HumanEval/154",
+  "problem": "cycpattern-check",
+  "module": "CycpatternCheck",
+  "method": "cycpattern_check",
+  "params": [
+    "a",
+    "b"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

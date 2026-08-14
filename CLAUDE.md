@@ -19,7 +19,7 @@ only the files you actually need.
   `pastalean translate <the file you're fixing>`, not PALC.
 - **Batch builds.** `lake build` is slow (Mathlib); group related edits, build once, test once.
 - **Comments: minimal and precise** (see Code writing tips below).
-
+- **STOP** only after significant changes are done. Donot stop after any small change. Edit your fix properly, test, edit again. Only stop when it's a good place to stop.
 ---
 
 ## The pipeline (Python text → Lean text)
@@ -166,15 +166,17 @@ await into the pure position rather than letting a raw `IO _` leak — see `inli
 
 ## Tests
 
-- **`PastaLeanTest/`** (lean lib + `testDriver`) — the test suite, run by `lake test` /
-  `lake build PastaLeanTest`.
-  - `PastaLeanTest/PastaLeanCheck/` — **PALC** (PastaLean Check) golden tests. A `.py` file
-    carries `# CHECK:` / `# CHECK-EXACT:` / `# CHECK-NOT:` / `# CHECK-ERR:` directives
-    describing the expected generated Lean; the runner (`PastaLeanCheck.lean`, exe `palc`)
-    verifies the output and **fails the build on mismatch**. Many of these assert *syntax*, not
-    full elaboration — so changing a runtime instance's type won't move a syntax CHECK, but
-    changing emitted syntax will.
-  - `PastaLeanTest/PyAPI/`, `.../Libraries/` — runtime unit checks (`#eval`/`#check`).
+- **`PALC/`** (`testDriver = "palc"`, exe `palc = PALC.PastaCheck`) — the test suite, run by
+  `lake test`.
+  - **PALC (`PALC/PastaCheck.lean`)** translates *every* Python program under `example_scripts/`
+    in one warm pass and **compile-checks the generated Lean in-process** (elaborated in the
+    already-booted Mathlib env). Each file gets a verdict — `OK` / `CONVERT_FAIL` (codegen threw)
+    / `COMPILE_FAIL` (emitted Lean didn't elaborate) / `UNSUPPORTED` (unexpected `pyUnsupported`) —
+    and any non-`OK` **fails the build**. There are **no `# CHECK:` golden directives** (that
+    substring-assertion framework was removed); a test is just a `.py` that must translate + compile.
+    To add codegen coverage, drop a representative `.py` in the matching `example_scripts/` subdir.
+  - `PALC/PyAPI/`, `PALC/Libraries/` — runtime unit checks (`#eval` / `#guard` / `#guard_msgs`),
+    built by `lake build` / `lake test`; a failing `#guard` fails the build.
 - **`cp_harness/`** — an end-to-end harness over real competitive-programming Python solutions
   (`cp_harness/dataset*/<problem>/solutions/sol_*.py`). `cpasta_eval.py` wraps bare top-level code
   in a `__main__` guard, translates it through one warm `Session`, compile-checks the Lean, and
@@ -188,8 +190,8 @@ await into the pure position rather than letting a raw `IO _` leak — see `inli
 ```bash
 lake build                  # build PastaLean + py2lean (default targets)
 lake build py2lean          # just the transpiler backend
-lake test                   # run PastaLeanTest (incl. PALC golden tests)
-lake exe palc <dir|file>    # run PALC checks directly
+lake test                   # translate + compile-check every example_scripts/ program (PALC)
+lake exe palc <dir|file>    # run PALC directly on a dir/file
 ```
 
 - Toolchain pinned by `lean-toolchain`; deps in `lakefile.toml` (Mathlib, lean-regex).

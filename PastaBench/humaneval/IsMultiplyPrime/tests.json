@@ -1,0 +1,202 @@
+[
+  {
+    "input": "a = 5",
+    "output": "False"
+  },
+  {
+    "input": "a = 30",
+    "output": "True"
+  },
+  {
+    "input": "a = 8",
+    "output": "True"
+  },
+  {
+    "input": "a = 10",
+    "output": "False"
+  },
+  {
+    "input": "a = 33",
+    "output": "False"
+  },
+  {
+    "input": "a = 49",
+    "output": "False"
+  },
+  {
+    "input": "a = 77",
+    "output": "False"
+  },
+  {
+    "input": "a = 91",
+    "output": "False"
+  },
+  {
+    "input": "a = 99",
+    "output": "True"
+  },
+  {
+    "input": "a = 6",
+    "output": "False"
+  },
+  {
+    "input": "a = 90",
+    "output": "False"
+  },
+  {
+    "input": "a = 98",
+    "output": "True"
+  },
+  {
+    "input": "a = 25",
+    "output": "False"
+  },
+  {
+    "input": "a = 21",
+    "output": "False"
+  },
+  {
+    "input": "a = 48",
+    "output": "False"
+  },
+  {
+    "input": "a = 20",
+    "output": "True"
+  },
+  {
+    "input": "a = 22",
+    "output": "False"
+  },
+  {
+    "input": "a = 32",
+    "output": "False"
+  },
+  {
+    "input": "a = 26",
+    "output": "False"
+  },
+  {
+    "input": "a = 78",
+    "output": "True"
+  },
+  {
+    "input": "a = 19",
+    "output": "False"
+  },
+  {
+    "input": "a = 47",
+    "output": "False"
+  },
+  {
+    "input": "a = 31",
+    "output": "False"
+  },
+  {
+    "input": "a = 29",
+    "output": "False"
+  },
+  {
+    "input": "a = -98",
+    "output": "False"
+  },
+  {
+    "input": "a = -37",
+    "output": "False"
+  },
+  {
+    "input": "a = -38",
+    "output": "False"
+  },
+  {
+    "input": "a = 28",
+    "output": "True"
+  },
+  {
+    "input": "a = 18",
+    "output": "True"
+  },
+  {
+    "input": "a = 23",
+    "output": "False"
+  },
+  {
+    "input": "a = -92",
+    "output": "False"
+  },
+  {
+    "input": "a = -2",
+    "output": "False"
+  },
+  {
+    "input": "a = 57",
+    "output": "False"
+  },
+  {
+    "input": "a = -99",
+    "output": "False"
+  },
+  {
+    "input": "a = 58",
+    "output": "False"
+  },
+  {
+    "input": "a = 56",
+    "output": "False"
+  },
+  {
+    "input": "a = -1",
+    "output": "False"
+  },
+  {
+    "input": "a = 92",
+    "output": "True"
+  },
+  {
+    "input": "a = 1",
+    "output": "False"
+  },
+  {
+    "input": "a = -80",
+    "output": "False"
+  },
+  {
+    "input": "a = 34",
+    "output": "False"
+  },
+  {
+    "input": "a = -75",
+    "output": "False"
+  },
+  {
+    "input": "a = -100",
+    "output": "False"
+  },
+  {
+    "input": "a = -95",
+    "output": "False"
+  },
+  {
+    "input": "a = 16",
+    "output": "False"
+  },
+  {
+    "input": "a = -94",
+    "output": "False"
+  },
+  {
+    "input": "a = 17",
+    "output": "False"
+  },
+  {
+    "input": "a = 59",
+    "output": "False"
+  },
+  {
+    "input": "a = -7",
+    "output": "False"
+  },
+  {
+    "input": "a = 93",
+    "output": "False"
+  }
+]

@@ -1,0 +1,202 @@
+[
+  {
+    "input": "txt = 'apple'",
+    "output": "False"
+  },
+  {
+    "input": "txt = 'apple pi e'",
+    "output": "True"
+  },
+  {
+    "input": "txt = 'eeeee'",
+    "output": "False"
+  },
+  {
+    "input": "txt = 'A'",
+    "output": "True"
+  },
+  {
+    "input": "txt = 'Pumpkin pie '",
+    "output": "False"
+  },
+  {
+    "input": "txt = 'Pumpkin pie 1'",
+    "output": "False"
+  },
+  {
+    "input": "txt = ''",
+    "output": "False"
+  },
+  {
+    "input": "txt = 'eeeee e '",
+    "output": "False"
+  },
+  {
+    "input": "txt = 'apple pie'",
+    "output": "False"
+  },
+  {
+    "input": "txt = 'apple pi e '",
+    "output": "False"
+  },
+  {
+    "input": "txt = 'Pumpkin pi e'",
+    "output": "True"
+  },
+  {
+    "input": "txt = 'Pumpkin pie!'",
+    "output": "False"
+  },
+  {
+    "input": "txt = 'pUMPKIN PIE'",
+    "output": "False"
+  },
+  {
+    "input": "txt = '!'",
+    "output": "False"
+  },
+  {
+    "input": "txt = 'aaaaa A'",
+    "output": "True"
+  },
+  {
+    "input": "txt = 'aaaaa 1'",
+    "output": "False"
+  },
+  {
+    "input": "txt = '12'",
+    "output": "False"
+  },
+  {
+    "input": "txt = 'apple pie!'",
+    "output": "False"
+  },
+  {
+    "input": "txt = 'blueberry muffin!'",
+    "output": "False"
+  },
+  {
+    "input": "txt = 'cake?'",
+    "output": "False"
+  },
+  {
+    "input": "txt = 'pUMPKPIE'",
+    "output": "False"
+  },
+  {
+    "input": "txt = 'aaaaaa 1'",
+    "output": "False"
+  },
+  {
+    "input": "txt = 'cake?blueberry muffin!'",
+    "output": "False"
+  },
+  {
+    "input": "txt = 'pUMPKPIEPumpkin pi e'",
+    "output": "True"
+  },
+  {
+    "input": "txt = '?blueberry muffin!'",
+    "output": "False"
+  },
+  {
+    "input": "txt = 'Pumpkin pie!cake?'",
+    "output": "False"
+  },
+  {
+    "input": "txt = 'Pumpkin e!'",
+    "output": "False"
+  },
+  {
+    "input": "txt = 'applel pUMPKPIEPumpkin pi epie!'",
+    "output": "False"
+  },
+  {
+    "input": "txt = 'caake?'",
+    "output": "False"
+  },
+  {
+    "input": "txt = 'c?blueberry muffin!ke?'",
+    "output": "False"
+  },
+  {
+    "input": "txt = 'aaaaa aaaaa 1A'",
+    "output": "False"
+  },
+  {
+    "input": "txt = 'aaaaaa A'",
+    "output": "True"
+  },
+  {
+    "input": "txt = 'aaaaaa aaaaa 1A'",
+    "output": "False"
+  },
+  {
+    "input": "txt = 'cake?blueberrymuffin!'",
+    "output": "False"
+  },
+  {
+    "input": "txt = 'cake?blueberrymuffinc!'",
+    "output": "False"
+  },
+  {
+    "input": "txt = 'ceberrymuffinc!'",
+    "output": "False"
+  },
+  {
+    "input": "txt = 'pUMPK'",
+    "output": "False"
+  },
+  {
+    "input": "txt = 'aaaaa aaaaaa 1A'",
+    "output": "False"
+  },
+  {
+    "input": "txt = '1Pumpkin pie!cake?2'",
+    "output": "False"
+  },
+  {
+    "input": "txt = 'ceberrymu12ffinc!'",
+    "output": "False"
+  },
+  {
+    "input": "txt = '?blueberruy muffin!'",
+    "output": "False"
+  },
+  {
+    "input": "txt = 'ceberrymuffinc!Pumpkin pie!cake?'",
+    "output": "False"
+  },
+  {
+    "input": "txt = 'acake?'",
+    "output": "False"
+  },
+  {
+    "input": "txt = 'aaaaa aaa'",
+    "output": "False"
+  },
+  {
+    "input": "txt = '1Pumpkin pie!cake?applel pUMPKPIEPumpkin pi epie!2'",
+    "output": "False"
+  },
+  {
+    "input": "txt = 'aaaaa 1cake?'",
+    "output": "False"
+  },
+  {
+    "input": "txt = 'cakel?blueberrymuffinc!'",
+    "output": "False"
+  },
+  {
+    "input": "txt = 'aaaaaa aaaa 1A'",
+    "output": "False"
+  },
+  {
+    "input": "txt = 'cblueberry muffin!'",
+    "output": "False"
+  },
+  {
+    "input": "txt = 'cake?blueberrymuffina!'",
+    "output": "False"
+  }
+]

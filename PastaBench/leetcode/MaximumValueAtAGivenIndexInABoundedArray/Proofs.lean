@@ -1,0 +1,4 @@
+import PastaBench.leetcode.MaximumValueAtAGivenIndexInABoundedArray.Generated
+namespace PastaBench.leetcode.MaximumValueAtAGivenIndexInABoundedArray
+-- TODO.
+end PastaBench.leetcode.MaximumValueAtAGivenIndexInABoundedArray

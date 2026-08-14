@@ -9,7 +9,9 @@ open Std.Do
 set_option linter.all false
 set_option mvcgen.warning false
 
-set_option maxHeartbeats 0
+set_option maxHeartbeats 200000
+
+namespace PastaLean.User.Root
 
 -- Default parameter values (Python `def f(a, b=10)`) become Lean `optParam` binders
 -- (`def f (a) (b := 10)`), so a call with fewer args applies the defaults instead of being a partial
@@ -36,6 +38,13 @@ structure Counter where
   step : Int
   deriving Inhabited, Repr, BEq
 
+instance : PastaLean.PyTruthy Counter where truthy _ := true
+
+instance : PastaLean.PyTyped Counter where pyTypeOf _ := TypeInfer.PyType.cls "Counter"
+
+instance : Coe Counter (Option Counter) :=
+  ⟨some⟩
+
 def Counter.new (start : _ := (0 : Int)) (step : _ := (1 : Int)) : Counter :=
   ({ value := start, step := step } : Counter)
 
@@ -49,6 +58,13 @@ structure Counter'rn where
   step : Int
   deriving Inhabited, Repr, BEq
 
+instance : PastaLean.PyTruthy Counter'rn where truthy _ := true
+
+instance : PastaLean.PyTyped Counter'rn where pyTypeOf _ := TypeInfer.PyType.cls "Counter"
+
+instance : Coe Counter'rn (Option Counter'rn) :=
+  ⟨some⟩
+
 def Counter'rn.new (start : _ := (0 : Int)) (step : _ := (1 : Int)) : Counter'rn :=
   ({ value := start, step := step } : Counter'rn)
 
@@ -61,6 +77,13 @@ structure TreeNode where
   right : Option TreeNode
   deriving Inhabited, Repr, BEq
 
+instance : PastaLean.PyTruthy TreeNode where truthy _ := true
+
+instance : PastaLean.PyTyped TreeNode where pyTypeOf _ := TypeInfer.PyType.cls "TreeNode"
+
+instance : Coe TreeNode (Option TreeNode) :=
+  ⟨some⟩
+
 def TreeNode.new (val : _ := (0 : Int)) (left : Option TreeNode := Option.none)
     (right : Option TreeNode := Option.none) : TreeNode :=
   ({ val := val, left := left, right := right } : TreeNode)
@@ -71,6 +94,13 @@ structure TreeNode'rn where
   right : Option TreeNode'rn
   deriving Inhabited, Repr, BEq
 
+instance : PastaLean.PyTruthy TreeNode'rn where truthy _ := true
+
+instance : PastaLean.PyTyped TreeNode'rn where pyTypeOf _ := TypeInfer.PyType.cls "TreeNode"
+
+instance : Coe TreeNode'rn (Option TreeNode'rn) :=
+  ⟨some⟩
+
 def TreeNode'rn.new (val : _ := (0 : Int)) (left : Option TreeNode'rn := Option.none)
     (right : Option TreeNode'rn := Option.none) : TreeNode'rn :=
   ({ val := val, left := left, right := right } : TreeNode'rn)
@@ -80,7 +110,7 @@ def main : IO Unit := do
   let inputLines := String.splitOn inputText "\n"
   let inputStream : PastaLean.ProofMode.IOStream :=
     ⟨0, fun i => PastaLean.ProofMode.IOResult.success (List.getD inputLines i "")⟩
-  let initState : PastaLean.ProofMode.IOState := ⟨inputStream, []⟩
+  let initState : PastaLean.ProofMode.IOState := { input := inputStream, output := [] }
   let (result, finalState) :=
     (((do
           let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg (add (5 : Int))]
@@ -123,3 +153,5 @@ def main'rn : IO Unit := do
   let mut root := TreeNode'rn.new (1 : Int) leaf
   let _ ← pyPrintIO [pyPrintArg root.val]
   pure ()
+
+end PastaLean.User.Root

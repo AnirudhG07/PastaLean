@@ -1,4 +1,4 @@
-import Mathlib
+import PastaLean.Imports
 import PastaLean.PyAPI
 
 namespace Libraries.collections
@@ -20,6 +20,11 @@ variable {κ ν : Type} [BEq κ] [Hashable κ]
 /-- `defaultdict(f)` / `Counter()`: empty, reading missing keys as `dflt`. -/
 def PyDefaultDict.empty (dflt : ν) : PyDefaultDict κ ν := ⟨∅, [], dflt⟩
 
+/-- An empty default-dict whose missing-key default is the value type's own `default` (`0` for a
+`Counter`, `[]` for `defaultdict(list)`). Lets a hoisted `let mut d : PyDefaultDict _ _ := default`
+resolve — the block later rebinds it to the real `Counter(...)`. -/
+instance [Inhabited ν] : Inhabited (PyDefaultDict κ ν) := ⟨PyDefaultDict.empty default⟩
+
 /-- Set `k` to `v`, recording `k` at the end of `order` when it is new. -/
 def PyDefaultDict.insert (d : PyDefaultDict κ ν) (k : κ) (v : ν) : PyDefaultDict κ ν :=
   { d with
@@ -29,6 +34,13 @@ def PyDefaultDict.insert (d : PyDefaultDict κ ν) (k : κ) (v : ν) : PyDefault
 /-- The `(key, value)` pairs in insertion order. -/
 def PyDefaultDict.toPairs (d : PyDefaultDict κ ν) : List (κ × ν) :=
   d.order.filterMap (fun k => (d.map.get? k).map (fun v => (k, v)))
+
+/-- `d.pop(key)` on a `defaultdict`/`Counter`: the value at `key`, and the dict without it (dropped
+from both the map and the insertion order). -/
+instance [Inhabited ν] : PastaLean.PyDictKeyPop (PyDefaultDict κ ν) κ ν where
+  keyPopValue d key := d.map.getD key default
+  keyGetOr d key dflt := (d.map.get? key).getD dflt
+  keyPopRest d key := { d with map := d.map.erase key, order := d.order.filter (· != key) }
 
 /-- Count occurrences of each element: `ofIterable ['a','b','a'] = {'a' ↦ 2, 'b' ↦ 1}`. -/
 def PyDefaultDict.ofIterable {α : Type} [PyIterable α κ] (xs : α) : PyDefaultDict κ Int :=
@@ -100,5 +112,18 @@ instance : PyKeys (PyDefaultDict κ ν) κ where
 
 instance : PyAnys (PyDefaultDict κ ν) ν where
   pyAnys d := d.toPairs.map Prod.snd
+
+-- `sorted(d)` sorts a dict's KEYS (matching `Std.HashMap`), so a `defaultdict`/`Counter` iterated as
+-- `for x in sorted(d)` resolves.
+instance [Ord κ] : PySort (PyDefaultDict κ ν) κ where
+  pySort d := d.order.mergeSort pyOrdLe
+
+-- `if d:` / `while d:` — a dict is truthy iff non-empty (Python).
+instance : PyTruthy (PyDefaultDict κ ν) where
+  truthy d := !d.order.isEmpty
+
+-- `del d[k]` drops the key from both the map and the insertion order.
+instance : PyDelItem (PyDefaultDict κ ν) κ where
+  delItem d k := { d with map := d.map.erase k, order := d.order.filter (· != k) }
 
 end Libraries.collections

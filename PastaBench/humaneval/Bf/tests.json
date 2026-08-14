@@ -1,0 +1,202 @@
+[
+  {
+    "input": "planet1 = 'Jupiter', planet2 = 'Neptune'",
+    "output": "('Saturn', 'Uranus')"
+  },
+  {
+    "input": "planet1 = 'Earth', planet2 = 'Mercury'",
+    "output": "('Venus',)"
+  },
+  {
+    "input": "planet1 = 'Mercury', planet2 = 'Uranus'",
+    "output": "('Venus', 'Earth', 'Mars', 'Jupiter', 'Saturn')"
+  },
+  {
+    "input": "planet1 = 'Neptune', planet2 = 'Venus'",
+    "output": "('Earth', 'Mars', 'Jupiter', 'Saturn', 'Uranus')"
+  },
+  {
+    "input": "planet1 = 'Earth', planet2 = 'Earth'",
+    "output": "()"
+  },
+  {
+    "input": "planet1 = 'Mars', planet2 = 'Earth'",
+    "output": "()"
+  },
+  {
+    "input": "planet1 = 'Jupiter', planet2 = 'Makemake'",
+    "output": "()"
+  },
+  {
+    "input": "planet1 = 'Neptune', planet2 = 'Mercury'",
+    "output": "('Venus', 'Earth', 'Mars', 'Jupiter', 'Saturn', 'Uranus')"
+  },
+  {
+    "input": "planet1 = 'Jupiter', planet2 = 'Mars'",
+    "output": "()"
+  },
+  {
+    "input": "planet1 = 'Mercury', planet2 = 'Saturn'",
+    "output": "('Venus', 'Earth', 'Mars', 'Jupiter')"
+  },
+  {
+    "input": "planet1 = 'Pluto', planet2 = 'Mars'",
+    "output": "()"
+  },
+  {
+    "input": "planet1 = 'Mercury', planet2 = 'Venus'",
+    "output": "()"
+  },
+  {
+    "input": "planet1 = 'Neptune', planet2 = 'Saturn'",
+    "output": "('Uranus',)"
+  },
+  {
+    "input": "planet1 = 'Earth', planet2 = 'Neptune'",
+    "output": "('Mars', 'Jupiter', 'Saturn', 'Uranus')"
+  },
+  {
+    "input": "planet1 = 'Uranus', planet2 = 'Jupiter'",
+    "output": "('Saturn',)"
+  },
+  {
+    "input": "planet1 = 'Mercury', planet2 = 'Neptune'",
+    "output": "('Venus', 'Earth', 'Mars', 'Jupiter', 'Saturn', 'Uranus')"
+  },
+  {
+    "input": "planet1 = 'Venus', planet2 = 'Mars'",
+    "output": "('Earth',)"
+  },
+  {
+    "input": "planet1 = 'NeptunMarse', planet2 = 'MeurJupitery'",
+    "output": "()"
+  },
+  {
+    "input": "planet1 = 'MercuNeptunMarsery', planet2 = 'Neptune'",
+    "output": "()"
+  },
+  {
+    "input": "planet1 = 'Mercury', planet2 = 'Mercury'",
+    "output": "()"
+  },
+  {
+    "input": "planet1 = 'MercuNeptunMarsery', planet2 = 'Mars'",
+    "output": "()"
+  },
+  {
+    "input": "planet1 = '', planet2 = 'NeptuMarsn'",
+    "output": "()"
+  },
+  {
+    "input": "planet1 = 'Pluto', planet2 = 'Earth'",
+    "output": "()"
+  },
+  {
+    "input": "planet1 = 'rn', planet2 = 'Sturn'",
+    "output": "()"
+  },
+  {
+    "input": "planet1 = 'ury', planet2 = 'Mercrury'",
+    "output": "()"
+  },
+  {
+    "input": "planet1 = 'Mar', planet2 = 'Mar'",
+    "output": "()"
+  },
+  {
+    "input": "planet1 = 'Earth', planet2 = 'MerVenuscury'",
+    "output": "()"
+  },
+  {
+    "input": "planet1 = 'rnth', planet2 = 'Earath'",
+    "output": "()"
+  },
+  {
+    "input": "planet1 = 'Pluto', planet2 = 'Earath'",
+    "output": "()"
+  },
+  {
+    "input": "planet1 = '', planet2 = 'NepntuMarsn'",
+    "output": "()"
+  },
+  {
+    "input": "planet1 = 'Pluto', planet2 = 'UranusEarth'",
+    "output": "()"
+  },
+  {
+    "input": "planet1 = 'Pluto', planet2 = 'Pluto'",
+    "output": "()"
+  },
+  {
+    "input": "planet1 = 'Sturn', planet2 = 'Sturn'",
+    "output": "()"
+  },
+  {
+    "input": "planet1 = 'UranusEarth', planet2 = 'Pluto'",
+    "output": "()"
+  },
+  {
+    "input": "planet1 = 'UranusEarth', planet2 = 'Mars'",
+    "output": "()"
+  },
+  {
+    "input": "planet1 = 'xrON', planet2 = 'Mars'",
+    "output": "()"
+  },
+  {
+    "input": "planet1 = 'Puluto', planet2 = 'Pluto'",
+    "output": "()"
+  },
+  {
+    "input": "planet1 = 'NeptunePluto', planet2 = 'UrntVenushranusEarth'",
+    "output": "()"
+  },
+  {
+    "input": "planet1 = 'rnth', planet2 = 'MeurJupitery'",
+    "output": "()"
+  },
+  {
+    "input": "planet1 = 'Mars', planet2 = 's'",
+    "output": "()"
+  },
+  {
+    "input": "planet1 = 'tJupiter', planet2 = 'Mars'",
+    "output": "()"
+  },
+  {
+    "input": "planet1 = 'rnth', planet2 = 'rntPlutoh'",
+    "output": "()"
+  },
+  {
+    "input": "planet1 = 'rnthh', planet2 = 'UrntVenushraMercurynusEarth'",
+    "output": "()"
+  },
+  {
+    "input": "planet1 = 'Plo', planet2 = 'Pluto'",
+    "output": "()"
+  },
+  {
+    "input": "planet1 = 'Puluto', planet2 = 'Earath'",
+    "output": "()"
+  },
+  {
+    "input": "planet1 = 'Venus', planet2 = 'MaNepntuMarsnrs'",
+    "output": "()"
+  },
+  {
+    "input": "planet1 = 'Plsuto', planet2 = 'Pluto'",
+    "output": "()"
+  },
+  {
+    "input": "planet1 = 'Venus', planet2 = 'UranusEarth'",
+    "output": "()"
+  },
+  {
+    "input": "planet1 = 'Saturn', planet2 = 'Saturn'",
+    "output": "()"
+  },
+  {
+    "input": "planet1 = 'uSturnPuluto', planet2 = 'rntPlutohuSturn'",
+    "output": "()"
+  }
+]

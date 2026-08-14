@@ -1,0 +1,12 @@
+{
+  "problem": "reverse-linked-list",
+  "module": "ReverseLinkedList",
+  "method": "reverseList",
+  "params": [
+    "head"
+  ],
+  "difficulty": "Easy",
+  "bucket": "loop",
+  "feature": "class",
+  "n_tests": 99
+}

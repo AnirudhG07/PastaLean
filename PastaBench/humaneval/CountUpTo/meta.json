@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/96",
+  "problem": "count-up-to",
+  "module": "CountUpTo",
+  "method": "count_up_to",
+  "params": [
+    "n"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

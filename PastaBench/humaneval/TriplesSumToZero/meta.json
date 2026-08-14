@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/40",
+  "problem": "triples-sum-to-zero",
+  "module": "TriplesSumToZero",
+  "method": "triples_sum_to_zero",
+  "params": [
+    "l"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

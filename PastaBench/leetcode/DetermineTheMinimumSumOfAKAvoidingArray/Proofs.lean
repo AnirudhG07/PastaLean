@@ -1,0 +1,4 @@
+import PastaBench.leetcode.DetermineTheMinimumSumOfAKAvoidingArray.Generated
+namespace PastaBench.leetcode.DetermineTheMinimumSumOfAKAvoidingArray
+-- TODO.
+end PastaBench.leetcode.DetermineTheMinimumSumOfAKAvoidingArray

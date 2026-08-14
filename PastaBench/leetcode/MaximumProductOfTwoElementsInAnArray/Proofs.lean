@@ -1,0 +1,4 @@
+import PastaBench.leetcode.MaximumProductOfTwoElementsInAnArray.Generated
+namespace PastaBench.leetcode.MaximumProductOfTwoElementsInAnArray
+-- TODO.
+end PastaBench.leetcode.MaximumProductOfTwoElementsInAnArray

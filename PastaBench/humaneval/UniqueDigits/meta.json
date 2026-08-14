@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/104",
+  "problem": "unique-digits",
+  "module": "UniqueDigits",
+  "method": "unique_digits",
+  "params": [
+    "x"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

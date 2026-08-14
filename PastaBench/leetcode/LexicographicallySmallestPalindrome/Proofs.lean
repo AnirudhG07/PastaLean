@@ -1,0 +1,4 @@
+import PastaBench.leetcode.LexicographicallySmallestPalindrome.Generated
+namespace PastaBench.leetcode.LexicographicallySmallestPalindrome
+-- TODO.
+end PastaBench.leetcode.LexicographicallySmallestPalindrome

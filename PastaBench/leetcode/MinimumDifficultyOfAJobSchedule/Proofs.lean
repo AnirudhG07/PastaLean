@@ -1,0 +1,4 @@
+import PastaBench.leetcode.MinimumDifficultyOfAJobSchedule.Generated
+namespace PastaBench.leetcode.MinimumDifficultyOfAJobSchedule
+-- TODO.
+end PastaBench.leetcode.MinimumDifficultyOfAJobSchedule

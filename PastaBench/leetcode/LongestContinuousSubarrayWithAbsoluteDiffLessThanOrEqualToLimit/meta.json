@@ -1,0 +1,13 @@
+{
+  "problem": "longest-continuous-subarray-with-absolute-diff-less-than-or-equal-to-limit",
+  "module": "LongestContinuousSubarrayWithAbsoluteDiffLessThanOrEqualToLimit",
+  "method": "longestSubarray",
+  "params": [
+    "nums",
+    "limit"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 184
+}

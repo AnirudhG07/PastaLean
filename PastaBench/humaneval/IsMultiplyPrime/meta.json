@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/75",
+  "problem": "is-multiply-prime",
+  "module": "IsMultiplyPrime",
+  "method": "is_multiply_prime",
+  "params": [
+    "a"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

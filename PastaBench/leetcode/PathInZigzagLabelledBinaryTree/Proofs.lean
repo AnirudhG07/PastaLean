@@ -1,0 +1,4 @@
+import PastaBench.leetcode.PathInZigzagLabelledBinaryTree.Generated
+namespace PastaBench.leetcode.PathInZigzagLabelledBinaryTree
+-- TODO.
+end PastaBench.leetcode.PathInZigzagLabelledBinaryTree

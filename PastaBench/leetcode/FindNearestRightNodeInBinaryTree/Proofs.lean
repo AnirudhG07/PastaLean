@@ -1,0 +1,4 @@
+import PastaBench.leetcode.FindNearestRightNodeInBinaryTree.Generated
+namespace PastaBench.leetcode.FindNearestRightNodeInBinaryTree
+-- TODO.
+end PastaBench.leetcode.FindNearestRightNodeInBinaryTree

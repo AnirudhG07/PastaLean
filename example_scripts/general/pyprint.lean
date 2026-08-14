@@ -9,7 +9,9 @@ open Std.Do
 set_option linter.all false
 set_option mvcgen.warning false
 
-set_option maxHeartbeats 0
+set_option maxHeartbeats 200000
+
+namespace PastaLean.User.Root
 
 def pyprint_basic : PastaLean.ProofMode.PyProofM Int := do
   let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg "sum", pyPrintArg (3 : Int), pyPrintArg (4 : Int)]
@@ -34,3 +36,5 @@ def pyprint_keywords'rn : IO String := do
   let _ ← pyPrintIO [pyPrintArg "a", pyPrintArg "b", pyPrintArg "c"] "|" "!"
   let _ ← pyPrintIO [pyPrintArg s! "{a}"]
   return "ok"
+
+end PastaLean.User.Root

@@ -1,0 +1,12 @@
+{
+  "problem": "queue-reconstruction-by-height",
+  "module": "QueueReconstructionByHeight",
+  "method": "reconstructQueue",
+  "params": [
+    "people"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 101
+}

@@ -1,0 +1,13 @@
+{
+  "problem": "earliest-possible-day-of-full-bloom",
+  "module": "EarliestPossibleDayOfFullBloom",
+  "method": "earliestFullBloom",
+  "params": [
+    "plantTime",
+    "growTime"
+  ],
+  "difficulty": "Hard",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 102
+}

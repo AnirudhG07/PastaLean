@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/32",
+  "problem": "find-zero",
+  "module": "FindZero",
+  "method": "find_zero",
+  "params": [
+    "xs"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

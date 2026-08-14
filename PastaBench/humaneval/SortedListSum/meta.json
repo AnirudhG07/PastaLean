@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/149",
+  "problem": "sorted-list-sum",
+  "module": "SortedListSum",
+  "method": "sorted_list_sum",
+  "params": [
+    "lst"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

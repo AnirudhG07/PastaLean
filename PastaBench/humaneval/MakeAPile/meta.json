@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/100",
+  "problem": "make-a-pile",
+  "module": "MakeAPile",
+  "method": "make_a_pile",
+  "params": [
+    "n"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

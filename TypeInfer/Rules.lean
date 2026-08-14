@@ -2,6 +2,7 @@ import TypeInfer.PyType
 import TypeInfer.Annotation
 import TypeInfer.Value
 import Libraries.Registry
+import Libraries.Behaviour
 
 /-!
 # Typing rules
@@ -32,6 +33,19 @@ private def nodeType? (j : Json) : Option String := (j.getObjValAs? String "node
 private def field (j : Json) (k : String) : Option Json := (j.getObjVal? k).toOption
 private def eltsOf (j : Json) : List Json := ((j.getObjValAs? (Array Json) "elts").toOption.getD #[]).toList
 
+/-- `float('inf')` / `float('nan')` — a non-finite sentinel, not a computed float. -/
+private def isNonFiniteFloatCall (name : String) (args : List Json) : Bool :=
+  name == "float" &&
+  match args.head? with
+  | some a =>
+      nodeType? a == some "Constant" &&
+      match (a.getObjVal? "value").toOption with
+      | some (.str s) =>
+          let t := s.toLower
+          t == "inf" || t == "-inf" || t == "nan" || t == "infinity" || t == "-infinity"
+      | _ => false
+  | none => false
+
 /-- A subscript index that is a non-negative integer literal, for static tuple projection. -/
 def literalIndex? (slice : Json) : Option Nat :=
   if nodeType? slice == some "Constant" then
@@ -57,17 +71,6 @@ private def constReturnBuiltins : List (String × PyType) :=
   [ ("len", .int), ("ord", .int), ("int", .int), ("str", .str), ("input", .str),
     ("bool", .bool), ("float", .float), ("chr", .str), ("hash", .int),
     ("bin", .str), ("hex", .str), ("oct", .str) ]
-
-/-- Methods whose result type is fixed regardless of the receiver. -/
-private def constReturnMethods : List (String × PyType) :=
-  [ ("split", .list .str), ("rsplit", .list .str), ("splitlines", .list .str),
-    ("join", .str), ("strip", .str), ("lstrip", .str), ("rstrip", .str),
-    ("lower", .str), ("upper", .str), ("replace", .str), ("format", .str),
-    ("title", .str), ("swapcase", .str), ("casefold", .str), ("center", .str),
-    ("removeprefix", .str), ("removesuffix", .str), ("rjust", .str), ("ljust", .str),
-    ("count", .int), ("find", .int), ("rfind", .int), ("index", .int),
-    ("lstrip", .str), ("rstrip", .str),
-    ("startswith", .bool), ("endswith", .bool), ("isdigit", .bool), ("isalpha", .bool) ]
 
 mutual
 
@@ -97,8 +100,10 @@ partial def typeOfExpr (sigs : Sigs) (env : Env) (e : Json) : PyType :=
               | .list _, _ => lt
               | _, .list _ => rt
               | _, _ => arith lt rt
-          -- Python's `/` is always true division, so `int / int` is a `float`.
-          | some "div" => .float
+          -- Python's `/` is always true division, so `int / int` is a `float` — but a boxed operand
+          -- keeps the result boxed (`PyAny / 2` dispatches on the tag → `PyAny`), else a `_ret_float`
+          -- stamp would ascribe `ℚ` onto a body that is actually `PyAny`.
+          | some "div" => match lt, rt with | .any, _ | _, .any => .any | _, _ => .float
           | _ => arith lt rt
       | _, _ => .unknown
   | some "UnaryOp" =>
@@ -208,9 +213,13 @@ partial def typeOfCall (sigs : Sigs) (env : Env) (e : Json) : PyType :=
           let fallback : PyType :=
             match (func.getObjValAs? String "attr").toOption with
             | some attr =>
-                if ["Counter", "defaultdict", "OrderedDict", "deque"].contains attr then
-                  builtinReturn sigs env attr args
-                else methodReturn sigs env attr (field func "value") args
+                -- A module-qualified collections constructor (`collections.Counter()`) declares its
+                -- return in `collectionsBehaviour?`; `defaultdict` reads its factory arg's identifier
+                -- (so it stays in `builtinReturn`); anything else is a method call.
+                match Libraries.memberBehaviour? "collections" attr with
+                | some b => b.returns (args.map (typeOfExpr sigs env))
+                | none => if attr == "defaultdict" then builtinReturn sigs env attr args
+                          else methodReturn sigs env attr (field func "value") args
             | none => .unknown
           match (func.getObjValAs? String "library_module").toOption,
                 (func.getObjValAs? String "library_member").toOption with
@@ -224,69 +233,35 @@ partial def typeOfCall (sigs : Sigs) (env : Env) (e : Json) : PyType :=
 
 /-- Return type of a builtin `name(args)`; `unknown` for non-builtins. -/
 partial def builtinReturn (sigs : Sigs) (env : Env) (name : String) (args : List Json) : PyType :=
+  -- `float('inf')`/`float('nan')` is a POLYMORPHIC sentinel: it adapts to the numeric type of
+  -- whatever container/expression it lands in (an int DP keeps `int`, a float DP keeps `float`),
+  -- rather than forcing everything to `float`. So it is the numeric bottom (`.unknown`), joining up
+  -- to the surrounding values — codegen's `pyNonFinite` then picks the `PyNonFinite Int/Rat/Float`.
+  if isNonFiniteFloatCall name args then .unknown else
   match constReturnBuiltins.lookup name with
   | some t => t
-  | none =>
-      let arg0 := args.head?.elim .unknown (typeOfExpr sigs env)
-      match name with
-      | "range" => .list .int
-      | "list" | "sorted" | "reversed" => .list arg0.elemType
-      | "set" | "frozenset" => .set arg0.elemType
-      | "tuple" => .list arg0.elemType
-      | "dict" => arg0
-      -- collections/itertools constructors, so a captured `graph = defaultdict(list)` etc. is typed
-      -- (an untyped closure-captured binder is the biggest `stuck`/`Unknown identifier` cascade).
-      | "Counter" => .dict arg0.elemType .int
-      | "OrderedDict" => arg0
-      | "deque" => .list arg0.elemType
-      | "accumulate" => .list arg0.elemType
-      | "defaultdict" =>
-          let vt := match args.head?.bind (·.getObjValAs? String "id" |>.toOption) with
-            | some "list" => .list .unknown
-            | some "set" => .set .unknown
-            | some "dict" => .dict .unknown .unknown
-            | some "int" | some "float" => .int
-            | _ => .unknown
-          .dict .unknown vt
-      -- `min(a, b, …)` / `max(a, b, …)` return the join of all their arguments — a float sentinel
-      -- and an int accumulator (`ans = max(ans, cur - inf)`) make the result `float`, which then
-      -- flows back to the accumulator. The single-argument container form uses the element type.
-      | "min" | "max" =>
-          if args.length == 1 then
-            if arg0.elemType != .unknown then arg0.elemType else arg0
-          else PyType.joinAll (args.map (typeOfExpr sigs env))
-      | "abs" | "sum" =>
-          -- element for the container forms, else the argument itself.
-          if args.length == 1 && arg0.elemType != .unknown then arg0.elemType else arg0
-      -- `zip(a, b, …)` → list of tuples of the element types; `enumerate(a)` → list[(int, elem)];
-      -- `pairwise(a)` → list of consecutive (elem, elem) pairs.
-      | "zip" => .list (.tuple (args.map (fun a => (typeOfExpr sigs env a).elemType)))
-      | "enumerate" => .list (.tuple [.int, arg0.elemType])
-      | "pairwise" => .list (.tuple [arg0.elemType, arg0.elemType])
-      | _ => .unknown
+  -- `defaultdict(list)` reads its factory ARGUMENT's identifier (a `list`/`set`/`int` name node), not
+  -- just an argument type, so it can't be a `List PyType → PyType` behaviour and stays here.
+  | none => if name == "defaultdict" then
+      let vt := match args.head?.bind (·.getObjValAs? String "id" |>.toOption) with
+        | some "list" => .list .unknown
+        | some "set" => .set .unknown
+        | some "dict" => .dict .unknown .unknown
+        | some "int" | some "float" => .int
+        | _ => .unknown
+      .dict .unknown vt
+    -- Every other arg-dependent builtin / star-imported member declares its return SHAPE in
+    -- `Libraries.bareBehaviour?`, so this engine no longer hardcodes any member's name (§27).
+    else match Libraries.bareBehaviour? name with
+      | some b => b.returns (args.map (typeOfExpr sigs env))
+      | none => .unknown
 
-/-- Return type of `recv.attr(args)`. -/
+/-- Return type of `recv.attr(args)` — entirely `methodBehaviour?`-driven, with the RECEIVER as
+effective argument 0 (so `d.get(k, default)` reads the receiver and the default from the arg types).
+The engine names no method. -/
 partial def methodReturn (sigs : Sigs) (env : Env) (attr : String) (recv : Option Json) (args : List Json) : PyType :=
-  match constReturnMethods.lookup attr with
-  | some t => t
-  | none =>
-      let recvT := recv.elim .unknown (typeOfExpr sigs env)
-      match attr with
-      | "keys" => .list (match recvT with | .dict k _ => k | _ => .unknown)
-      | "values" => .list (match recvT with | .dict _ v => v | _ => .unknown)
-      | "items" => .list (match recvT with | .dict k v => .tuple [k, v] | _ => .unknown)
-      -- `d.get(k)` gives `Optional[V]`; `d.get(k, default)` uses the default to type the result.
-      | "get" =>
-          let fromRecv := match recvT with | .dict _ v => v | _ => recvT.elemType
-          match args[1]? with
-          | some d => fromRecv.join (typeOfExpr sigs env d)
-          | none => .opt fromRecv
-      -- `d.pop(k)`/`d.setdefault(k)` return `V`; return `xs.pop()`/`q.popleft()`/`q.popright()`
-      | "pop" | "popleft" | "popright" | "setdefault" =>
-          let fromRecv := match recvT with | .dict _ v => v | _ => recvT.elemType
-          fromRecv.join (args[1]?.elim .unknown (typeOfExpr sigs env))
-      | "copy" => recvT
-      | _ => .unknown
+  let recvT := recv.elim .unknown (typeOfExpr sigs env)
+  ((Libraries.methodBehaviour? attr).map (·.returns (recvT :: args.map (typeOfExpr sigs env)))).getD .unknown
 
 end
 

@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/73",
+  "problem": "smallest-change",
+  "module": "SmallestChange",
+  "method": "smallest_change",
+  "params": [
+    "arr"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

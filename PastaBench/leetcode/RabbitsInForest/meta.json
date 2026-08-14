@@ -1,0 +1,12 @@
+{
+  "problem": "rabbits-in-forest",
+  "module": "RabbitsInForest",
+  "method": "numRabbits",
+  "params": [
+    "answers"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "for",
+  "n_tests": 66
+}

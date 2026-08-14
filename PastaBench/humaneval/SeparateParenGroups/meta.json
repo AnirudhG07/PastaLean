@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/1",
+  "problem": "separate-paren-groups",
+  "module": "SeparateParenGroups",
+  "method": "separate_paren_groups",
+  "params": [
+    "paren_string"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

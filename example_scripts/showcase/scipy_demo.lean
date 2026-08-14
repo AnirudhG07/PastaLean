@@ -9,33 +9,37 @@ open Std.Do
 set_option linter.all false
 set_option mvcgen.warning false
 
-set_option maxHeartbeats 0
+set_option maxHeartbeats 200000
+
+namespace PastaLean.User.Root
 
 /-
 A small numeric-toolkit showcase: `typing` annotations + a `scipy` subset, all transpiled
 to Lean 4 and backed only by Mathlib (computable Float implementations).
 -/
 def variance := fun (xs : List Rat) ↦
-  Id.run
-    (do
-      let mut m := Libraries.scipy.pyScipyTmean xs
-      let mut total := (0.0 : Rat)
-      for x in (PastaLean.pyIter xs)do
-        total := total +ₚ (x -ₚ m) *ₚ (x -ₚ m)
-      let __py_ret_1 := total /ₚ PastaLean.pyLen xs
-      return __py_ret_1)
+  (show Rat from
+    Id.run
+      (do
+        let mut m := Libraries.scipy.pyScipyTmean xs
+        let mut total := (0.0 : Rat)
+        for x in (PastaLean.pyIter xs)do
+          total := total +ₚ (x -ₚ m) *ₚ (x -ₚ m)
+        let p'_ret_1 := total /ₚ PastaLean.pyLen xs
+        return p'_ret_1))
 
 attribute [simp, taste_ingr] variance
 
 def variance'rn := fun (xs : List Float) ↦
-  Id.run
-    (do
-      let mut m := Libraries.scipy.pyScipyTmean xs
-      let mut total := (0.0 : Float)
-      for x in (PastaLean.pyIter xs)do
-        total := total +ₚ (x -ₚ m) *ₚ (x -ₚ m)
-      let __py_ret_1 := PastaLean.pyFloat total /ₚ PastaLean.pyLen xs
-      return __py_ret_1)
+  (show Float from
+    Id.run
+      (do
+        let mut m := Libraries.scipy.pyScipyTmean xs
+        let mut total := (0.0 : Float)
+        for x in (PastaLean.pyIter xs)do
+          total := total +ₚ (x -ₚ m) *ₚ (x -ₚ m)
+        let p'_ret_1 := PastaLean.pyFloat total /ₚ PastaLean.pyLen xs
+        return p'_ret_1))
 
 noncomputable def main' :=
   ((do
@@ -109,3 +113,5 @@ noncomputable def main : IO Unit := do
 def main'rn : IO Unit := do
   let _ := main''rn
   pure ()
+
+end PastaLean.User.Root

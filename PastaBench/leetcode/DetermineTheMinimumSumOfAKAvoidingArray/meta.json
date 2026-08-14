@@ -1,0 +1,13 @@
+{
+  "problem": "determine-the-minimum-sum-of-a-k-avoiding-array",
+  "module": "DetermineTheMinimumSumOfAKAvoidingArray",
+  "method": "minimumSum",
+  "params": [
+    "n",
+    "k"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 77
+}

@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/162",
+  "problem": "string-to-md5",
+  "module": "StringToMd5",
+  "method": "string_to_md5",
+  "params": [
+    "text"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

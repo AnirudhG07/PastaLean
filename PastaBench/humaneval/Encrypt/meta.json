@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/89",
+  "problem": "encrypt",
+  "module": "Encrypt",
+  "method": "encrypt",
+  "params": [
+    "s"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

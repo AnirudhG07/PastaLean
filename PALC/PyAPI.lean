@@ -3,9 +3,11 @@ import PALC.PyAPI.TestLists
 import PALC.PyAPI.TestDicts
 import PALC.PyAPI.TestCommonProtocols
 import PALC.PyAPI.TestBuiltins
+import PALC.PyAPI.TestTypes
 import PALC.PyAPI.TestCasting
 import PALC.PyAPI.TestPyPrint
 import PALC.PyAPI.TestPyAny
 import PALC.PyAPI.TestPyAnyProof
+import PALC.PyAPI.TestPyConvert
 import PALC.PyAPI.TestInput
 import PALC.PyAPI.TestHeap

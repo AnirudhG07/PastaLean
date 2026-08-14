@@ -1,0 +1,4 @@
+import PastaBench.leetcode.LongestSubstringWithAtMostTwoDistinctCharacters.Generated
+namespace PastaBench.leetcode.LongestSubstringWithAtMostTwoDistinctCharacters
+-- TODO.
+end PastaBench.leetcode.LongestSubstringWithAtMostTwoDistinctCharacters

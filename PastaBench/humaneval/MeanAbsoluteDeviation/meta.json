@@ -1,0 +1,13 @@
+{
+  "task_id": "HumanEval/4",
+  "problem": "mean-absolute-deviation",
+  "module": "MeanAbsoluteDeviation",
+  "method": "mean_absolute_deviation",
+  "params": [
+    "numbers"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

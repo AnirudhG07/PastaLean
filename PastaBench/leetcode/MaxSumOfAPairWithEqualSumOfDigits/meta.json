@@ -1,0 +1,12 @@
+{
+  "problem": "max-sum-of-a-pair-with-equal-sum-of-digits",
+  "module": "MaxSumOfAPairWithEqualSumOfDigits",
+  "method": "maximumSum",
+  "params": [
+    "nums"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 122
+}

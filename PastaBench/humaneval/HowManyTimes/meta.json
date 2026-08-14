@@ -1,0 +1,14 @@
+{
+  "task_id": "HumanEval/18",
+  "problem": "how-many-times",
+  "module": "HowManyTimes",
+  "method": "how_many_times",
+  "params": [
+    "string",
+    "substring"
+  ],
+  "difficulty": "HumanEval",
+  "bucket": "humaneval",
+  "feature": "humaneval",
+  "n_tests": 50
+}

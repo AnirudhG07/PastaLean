@@ -47,7 +47,9 @@ def add(a, b):
     return a + b
 
 
-# `@cache` is transparent — emitted unchanged, recursion still resolves.
+# `@cache`/`@lru_cache`: the RUNNABLE twin memoises (a `StateM`-threaded `HashMap` cache shared across
+# the recursion, seeded fresh per top-level call) so exponential DP runs in polynomial time; recursive
+# self-calls become `(← fib'memo'rn …)`. The PROVABLE twin `fib` stays the plain pure recursion.
 @cache
 def fib(n: int) -> int:
     if n < 2:

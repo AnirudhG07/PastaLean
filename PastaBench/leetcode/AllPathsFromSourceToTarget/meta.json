@@ -1,0 +1,12 @@
+{
+  "problem": "all-paths-from-source-to-target",
+  "module": "AllPathsFromSourceToTarget",
+  "method": "allPathsSourceTarget",
+  "params": [
+    "graph"
+  ],
+  "difficulty": "Medium",
+  "bucket": "loop",
+  "feature": "while",
+  "n_tests": 92
+}

@@ -1,0 +1,12 @@
+{
+  "problem": "sort-characters-by-frequency",
+  "module": "SortCharactersByFrequency",
+  "method": "frequencySort",
+  "params": [
+    "s"
+  ],
+  "difficulty": "Medium",
+  "bucket": "term",
+  "feature": "term",
+  "n_tests": 59
+}

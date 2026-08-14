@@ -1,0 +1,4 @@
+import PastaBench.leetcode.LongestIncreasingSubsequence.Generated
+namespace PastaBench.leetcode.LongestIncreasingSubsequence
+-- TODO.
+end PastaBench.leetcode.LongestIncreasingSubsequence

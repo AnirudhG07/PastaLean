@@ -9,7 +9,9 @@ open Std.Do
 set_option linter.all false
 set_option mvcgen.warning false
 
-set_option maxHeartbeats 0
+set_option maxHeartbeats 200000
+
+namespace PastaLean.User.Root
 
 -- A captured local's type is read off its literal shape (TypeInfer.ofValue), so the lifted helper
 -- gets a typed parameter Lean can resolve; an unannotated class field is typed the same way.
@@ -18,12 +20,26 @@ structure Counter where
   tag : String
   deriving Inhabited, Repr, BEq
 
+instance : PastaLean.PyTruthy Counter where truthy _ := true
+
+instance : PastaLean.PyTyped Counter where pyTypeOf _ := TypeInfer.PyType.cls "Counter"
+
+instance : Coe Counter (Option Counter) :=
+  ⟨some⟩
+
 def Counter.new : Int → Counter := fun (n : Int) ↦ ({ c := PastaLean.pyListRepeat [(0 : Int)] n, tag := "x" } : Counter)
 
 structure Counter'rn where
   c : List Int
   tag : String
   deriving Inhabited, Repr, BEq
+
+instance : PastaLean.PyTruthy Counter'rn where truthy _ := true
+
+instance : PastaLean.PyTyped Counter'rn where pyTypeOf _ := TypeInfer.PyType.cls "Counter"
+
+instance : Coe Counter'rn (Option Counter'rn) :=
+  ⟨some⟩
 
 def Counter'rn.new : Int → Counter'rn := fun (n : Int) ↦
   ({ c := PastaLean.pyListRepeat [(0 : Int)] n, tag := "x" } : Counter'rn)
@@ -37,11 +53,11 @@ def solve := fun (n : Int) ↦
 
 attribute [simp, taste_ingr] solve
 
-private partial def _solve'go'rn : Int → Int → List Int → Int := fun (i : Int) ↦ fun (n : Int) ↦
-  fun (grid : List Int) ↦ if i ≥ n then (0 : Int) else grid⦋i⦌ +ₚ _solve'go'rn (i +ₚ (1 : Int)) n grid
+private partial def _solve'go'rn : Int → Int → Array Int → Int := fun (i : Int) ↦ fun (n : Int) ↦
+  fun (grid : Array Int) ↦ if i ≥ n then (0 : Int) else grid⦋i⦌ +ₚ _solve'go'rn (i +ₚ (1 : Int)) n grid
 
 def solve'rn := fun (n : Int) ↦
-  let grid := (PastaLean.pyListRepeat [(0 : Int)] n : List Int)
+  let grid := (PastaLean.pyArrayRepeat #[(0 : Int)] n : Array Int)
   _solve'go'rn (0 : Int) n grid
 
 def main' :=
@@ -63,3 +79,5 @@ def main : IO Unit := do
 def main'rn : IO Unit := do
   let _ := main''rn
   pure ()
+
+end PastaLean.User.Root
