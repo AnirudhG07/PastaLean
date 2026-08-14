@@ -30,6 +30,12 @@ abbrev DesugarM := StateT Nat (Except String)
 private def freshVar (stem : String) : DesugarM String := do
   let n ← get
   set (n + 1)
+  -- Normalise the generated stem to a Python-invalid form (`__foo` → `p'_foo`) so it can never
+  -- shadow a user variable (Python identifiers cannot contain `'`).
+  let stem := if stem.startsWith "__" then
+      let c := stem.drop 2
+      "p'_" ++ (if c.startsWith "py_" then c.drop 3 else c)
+    else stem
   return s!"{stem}{n + 1}"
 
 private def nameLoad (id : String) : Json :=

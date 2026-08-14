@@ -47,8 +47,8 @@ noncomputable def mean_squared_error := fun (xs : List (List Rat)) ↦ fun (ys :
       for i in (PastaLean.pyRange (PastaLean.pyLen xs))do
         let mut diff := predict xs⦋i⦌ w1 b1 w2 b2 -ₚ ys⦋i⦌
         total := total +ₚ diff *ₚ diff
-      let __py_ret_1 := total /ₚ PastaLean.pyLen xs
-      return __py_ret_1)
+      let p'_ret_1 := total /ₚ PastaLean.pyLen xs
+      return p'_ret_1)
 
 attribute [simp] mean_squared_error
 
@@ -61,8 +61,8 @@ def mean_squared_error'rn := fun (xs : List (List Float)) ↦ fun (ys : List Flo
         for i in (PastaLean.pyRange (PastaLean.pyLen xs))do
           let mut diff := predict'rn xs⦋i⦌ w1 b1 w2 b2 -ₚ ys⦋i⦌
           total := total +ₚ diff *ₚ diff
-        let __py_ret_1 := PastaLean.pyFloat total /ₚ PastaLean.pyLen xs
-        return __py_ret_1))
+        let p'_ret_1 := PastaLean.pyFloat total /ₚ PastaLean.pyLen xs
+        return p'_ret_1))
 
 noncomputable def main' :=
   ((do

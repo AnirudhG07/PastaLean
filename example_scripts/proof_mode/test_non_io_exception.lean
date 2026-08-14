@@ -17,8 +17,8 @@ namespace PastaLean.User.Root
 def divide := fun a ↦ fun b ↦
   ((do
       try
-        let __py_ret_1 := a /ₚ b
-        return __py_ret_1
+        let p'_ret_1 := a /ₚ b
+        return p'_ret_1
       catch caught =>
         if Bool.true then 
           return (0 : Int)
@@ -31,8 +31,8 @@ attribute [simp] divide
 def divide'rn := fun a ↦ fun b ↦
   ((do
       try
-        let __py_ret_1 := PastaLean.pyFloat a /ₚ b
-        return __py_ret_1
+        let p'_ret_1 := PastaLean.pyFloat a /ₚ b
+        return p'_ret_1
       catch caught =>
         if Bool.true then 
           return (0 : Int)

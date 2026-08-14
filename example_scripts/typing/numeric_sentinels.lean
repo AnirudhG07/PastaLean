@@ -123,14 +123,14 @@ def shortest_gap := fun (nums : List Int) ↦
       let mut ans : Int := inf
       for i in (PastaLean.pyRange (PastaLean.pyLen nums))do
         if h_1 : PastaLean.pyTruthy q then 
-          let mut __popv_1 := PastaLean.pyPopLeftValue q
+          let mut p'_popv_1 := PastaLean.pyPopLeftValue q
           q := PastaLean.pyPopLeftRest q
-          ans := PastaLean.pyMin [ans, i -ₚ __popv_1]
+          ans := PastaLean.pyMin [ans, i -ₚ p'_popv_1]
         else
           let _ := ()
         q := PastaLean.pyAppend q i
-      let __py_ret_1 := if ans = inf then -(1 : Int) else ans
-      return __py_ret_1)
+      let p'_ret_1 := if ans = inf then -(1 : Int) else ans
+      return p'_ret_1)
 
 attribute [simp, taste_ingr] shortest_gap
 
@@ -141,14 +141,14 @@ def shortest_gap'rn := fun (nums : List Int) ↦
       let mut ans : Int := inf
       for i in (PastaLean.pyRange (PastaLean.pyLen nums))do
         if h_1 : PastaLean.pyTruthy q then 
-          let mut __popv_1 := PastaLean.pyPopLeftValue q
+          let mut p'_popv_1 := PastaLean.pyPopLeftValue q
           q := PastaLean.pyPopLeftRest q
-          ans := PastaLean.pyMin [ans, i -ₚ __popv_1]
+          ans := PastaLean.pyMin [ans, i -ₚ p'_popv_1]
         else
           let _ := ()
         q := PastaLean.pyAppend q i
-      let __py_ret_1 := if ans == inf then -(1 : Int) else ans
-      return __py_ret_1)
+      let p'_ret_1 := if ans == inf then -(1 : Int) else ans
+      return p'_ret_1)
 
 def main' :=
   ((do

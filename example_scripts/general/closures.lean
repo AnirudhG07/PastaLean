@@ -100,8 +100,8 @@ def value_capture_loop :=
           PastaLean.pyAppend fs fun () ↦
             let n := n
             n *ₚ n
-      let __py_ret_1 := (PastaLean.pyIter fs).map fun g => g ()
-      return __py_ret_1)
+      let p'_ret_1 := (PastaLean.pyIter fs).map fun g => g ()
+      return p'_ret_1)
 
 attribute [simp, taste_ingr] value_capture_loop
 
@@ -116,8 +116,8 @@ def value_capture_loop'rn :=
           PastaLean.pyAppend fs fun () ↦
             let n := n
             n *ₚ n
-      let __py_ret_1 := (PastaLean.pyIter fs).map fun g => g ()
-      return __py_ret_1)
+      let p'_ret_1 := (PastaLean.pyIter fs).map fun g => g ()
+      return p'_ret_1)
 
 private def __curry_add'f'g := fun (c : Int) ↦ fun (b : Int) ↦ fun (a : Int) ↦ a +ₚ b +ₚ c
 
@@ -222,8 +222,8 @@ private def _aliased_list_closure'push := fun (v : Int) ↦ fun (xs : List Int) 
     (do
       let mut xs := xs
       xs := PastaLean.pyAppend xs v
-      let __py_ret_1 := (PastaLean.pyLen xs, xs)
-      return __py_ret_1)
+      let p'_ret_1 := (PastaLean.pyLen xs, xs)
+      return p'_ret_1)
 
 attribute [simp, taste_ingr] _aliased_list_closure'push
 
@@ -235,12 +235,12 @@ def aliased_list_closure :=
   -- closure's appends — the two results diverge. This is the value-vs-reference contrast for lists.
   let xs := ([(1 : Int), (2 : Int)] : List Int)
   let «alias» := (xs : List Int)
-  let __unpack_pair_2 := _aliased_list_closure'push (3 : Int) xs
-  let __thread_t1 := Prod.fst __unpack_pair_2
-  let xs := Prod.snd __unpack_pair_2
-  let __unpack_pair_1 := _aliased_list_closure'push (4 : Int) xs
-  let __thread_t2 := Prod.fst __unpack_pair_1
-  let xs := Prod.snd __unpack_pair_1
+  let p'_unpack_pair_2 := _aliased_list_closure'push (3 : Int) xs
+  let p'_thread_t1 := Prod.fst p'_unpack_pair_2
+  let xs := Prod.snd p'_unpack_pair_2
+  let p'_unpack_pair_1 := _aliased_list_closure'push (4 : Int) xs
+  let p'_thread_t2 := Prod.fst p'_unpack_pair_1
+  let xs := Prod.snd p'_unpack_pair_1
   (xs, «alias»)
 
 attribute [simp, taste_ingr] aliased_list_closure
@@ -250,8 +250,8 @@ private def _aliased_list_closure'push'rn := fun (v : Int) ↦ fun (xs : List In
     (do
       let mut xs := xs
       xs := PastaLean.pyAppend xs v
-      let __py_ret_1 := (PastaLean.pyLen xs, xs)
-      return __py_ret_1)
+      let p'_ret_1 := (PastaLean.pyLen xs, xs)
+      return p'_ret_1)
 
 def aliased_list_closure'rn :=
   -- A closure over a MUTABLE list that is also ALIASED: `push` captures `xs`, and `alias` is a
@@ -261,12 +261,12 @@ def aliased_list_closure'rn :=
   -- closure's appends — the two results diverge. This is the value-vs-reference contrast for lists.
   let xs := ([(1 : Int), (2 : Int)] : List Int)
   let «alias» := (xs : List Int)
-  let __unpack_pair_2 := _aliased_list_closure'push'rn (3 : Int) xs
-  let __thread_t1 := Prod.fst __unpack_pair_2
-  let xs := Prod.snd __unpack_pair_2
-  let __unpack_pair_1 := _aliased_list_closure'push'rn (4 : Int) xs
-  let __thread_t2 := Prod.fst __unpack_pair_1
-  let xs := Prod.snd __unpack_pair_1
+  let p'_unpack_pair_2 := _aliased_list_closure'push'rn (3 : Int) xs
+  let p'_thread_t1 := Prod.fst p'_unpack_pair_2
+  let xs := Prod.snd p'_unpack_pair_2
+  let p'_unpack_pair_1 := _aliased_list_closure'push'rn (4 : Int) xs
+  let p'_thread_t2 := Prod.fst p'_unpack_pair_1
+  let xs := Prod.snd p'_unpack_pair_1
   (xs, «alias»)
 
 private def _counter_closure'bump := fun (k : Int) ↦ fun (count : Int) ↦
@@ -280,12 +280,12 @@ def counter_closure :=
   -- reference semantics (--heap) `count` becomes a shared scalar cell (`Ref Int`), so both `bump`
   -- calls accumulate into the one binding → 5 + 3 == 8. The scalar counterpart to the list case.
   let count := (0 : Int)
-  let __unpack_pair_2 := _counter_closure'bump (5 : Int) count
-  let __thread_t1 := Prod.fst __unpack_pair_2
-  let count := Prod.snd __unpack_pair_2
-  let __unpack_pair_1 := _counter_closure'bump (3 : Int) count
-  let __thread_t2 := Prod.fst __unpack_pair_1
-  let count := Prod.snd __unpack_pair_1
+  let p'_unpack_pair_2 := _counter_closure'bump (5 : Int) count
+  let p'_thread_t1 := Prod.fst p'_unpack_pair_2
+  let count := Prod.snd p'_unpack_pair_2
+  let p'_unpack_pair_1 := _counter_closure'bump (3 : Int) count
+  let p'_thread_t2 := Prod.fst p'_unpack_pair_1
+  let count := Prod.snd p'_unpack_pair_1
   count
 
 attribute [simp, taste_ingr] counter_closure
@@ -299,12 +299,12 @@ def counter_closure'rn :=
   -- reference semantics (--heap) `count` becomes a shared scalar cell (`Ref Int`), so both `bump`
   -- calls accumulate into the one binding → 5 + 3 == 8. The scalar counterpart to the list case.
   let count := (0 : Int)
-  let __unpack_pair_2 := _counter_closure'bump'rn (5 : Int) count
-  let __thread_t1 := Prod.fst __unpack_pair_2
-  let count := Prod.snd __unpack_pair_2
-  let __unpack_pair_1 := _counter_closure'bump'rn (3 : Int) count
-  let __thread_t2 := Prod.fst __unpack_pair_1
-  let count := Prod.snd __unpack_pair_1
+  let p'_unpack_pair_2 := _counter_closure'bump'rn (5 : Int) count
+  let p'_thread_t1 := Prod.fst p'_unpack_pair_2
+  let count := Prod.snd p'_unpack_pair_2
+  let p'_unpack_pair_1 := _counter_closure'bump'rn (3 : Int) count
+  let p'_thread_t2 := Prod.fst p'_unpack_pair_1
+  let count := Prod.snd p'_unpack_pair_1
   count
 
 def closure_theorems :=

@@ -446,15 +446,25 @@ private partial def usageType (fuel : Nat) (name : String) (json : Json) : PyTyp
           -- `name + <str/list literal>` pins `name` to that type: `+` typechecks only between two
           -- `str`s or two `list`s (`class_name + "."` ⇒ `class_name : str`), so a `str`/`list` literal
           -- on the other side is decisive (`int + str` / `list + str` are `TypeError`s in Python).
-          else if op == "add" then
-            let concatType (lit : Option Json) : PyType := match lit.bind literalType? with
-              | some (.str) => .str
-              | some (.list e) => .list e
-              | _ => .unknown
-            if isName left then concatType right
-            else if isName right then concatType left
+          else
+            -- `x <arith> <numeric literal>` on a plain name (a loop/element variable, `x + 1`, `x * 2`)
+            -- pins `x` to that numeric type — the `[x + 1 for x in l]` element case. `str`/`list`
+            -- literals under `+` stay concat-typed (below); a numeric literal here is decisive
+            -- (`str`/`list` don't support `- * // ** %`). Joins with other evidence, so int+float widens.
+            let numLit (lit : Option Json) : PyType := match lit.bind literalType? with
+              | some .int => .int | some .float => .float | _ => .unknown
+            let numg := (if isName left then numLit right else .unknown).join
+                        (if isName right then numLit left else .unknown)
+            if numg != .unknown then numg
+            else if op == "add" then
+              let concatType (lit : Option Json) : PyType := match lit.bind literalType? with
+                | some (.str) => .str
+                | some (.list e) => .list e
+                | _ => .unknown
+              if isName left then concatType right
+              else if isName right then concatType left
+              else .unknown
             else .unknown
-          else .unknown
         else .unknown
     -- `~p` (bitwise NOT) is int-only.
     | some "UnaryOp" =>
@@ -500,6 +510,13 @@ private partial def usageType (fuel : Nat) (name : String) (json : Json) : PyTyp
         let right := getField json "right"
         let membership := op == "in" || op == "notin"
         let valueCmp := ["eq", "ne", "lt", "le", "gt", "ge"].contains op
+        -- An ORDERED comparison (`x < t`, `x >= r`) against a non-literal name is numeric in the
+        -- overwhelming majority of cases (`all(x < t for x in l)` ⇒ element `int`). `eq`/`ne` are
+        -- excluded (any type is `==`-comparable); a competing str/float signal still joins in.
+        let ordered := ["lt", "le", "gt", "ge"].contains op
+        let fromOrdered : PyType :=
+          if ordered && (right.bind literalType?).isNone && (left.bind literalType?).isNone
+             && (isName left || isName right) then .int else .unknown
         let elemOf : PyType → PyType
           | .list e => e | .set e => e | .tuple es => PyType.joinAll es | _ => .unknown
         let fromLeft : PyType :=
@@ -527,6 +544,7 @@ private partial def usageType (fuel : Nat) (name : String) (json : Json) : PyTyp
         let fromRightElem : PyType :=
           if valueCmp && isSubscriptOf name right then (left.bind literalType?).elim .unknown .list else .unknown
         fromLeft.join fromRight |>.join (fromLeftElem.join fromRightElem) |>.join fromRightContainer
+          |>.join fromOrdered
     | _ => .unknown
   let sub := match json with
     | .arr xs => PyType.joinAll (xs.toList.map (usageType fuel name))
@@ -723,7 +741,18 @@ partial def inferFunction (sigs : Sigs) (outer hints : Env) (fn : Json) : Env :=
   let mut env := paramUsageSeed fn
   env := outer.fold (fun m k v => m.insert k v) env
   env := hints.fold (fun m k v => m.insert k v) env
-  env := (paramSeed fn).fold (fun m k v => m.insert k v) env
+  -- An annotation overrides usage, EXCEPT a bare container annotation (`list`/`set`/`dict` whose
+  -- element is `.any`/`.unknown`) keeps a concrete element the body-usage found: `l: list` +
+  -- `[x+1 for x in l]` ⇒ `list[int]`, not the annotation's `list[Any]`. The annotation still wins on
+  -- shape and on any element it names concretely.
+  let refineElem (ann usage : PyType) : PyType :=
+    let pick (a u : PyType) : PyType := if a == .any || a == .unknown then (if u.isKnown then u else a) else a
+    match ann, usage with
+    | .list a, .list u => .list (pick a u)
+    | .set a, .set u => .set (pick a u)
+    | .dict ak av, .dict uk uv => .dict (pick ak uk) (pick av uv)
+    | _, _ => ann
+  env := (paramSeed fn).fold (fun m k v => m.insert k (refineElem v (m.get? k |>.getD .unknown))) env
   let bodyJson := Json.arr body
   -- Reflow until stable. The lattice climbs, so a small cap is a sound floor, not a correctness risk.
   for _ in [0:8] do
@@ -834,7 +863,12 @@ partial def usedInPyAnyPosition (name : String) (json : Json) : Bool :=
             (fn == "type" && nameIsArg) ||
             (fn == "isinstance" &&
               ((json.getObjValAs? (Array Json) "args").toOption.getD #[])[0]?.any (nameId? · == some name))
-          isTypeIntrospect || (nameIsArg && ["len", "sum", "sorted", "map", "reversed", "enumerate"].contains fn)
+          -- `str(x)`/`repr(x)`/`print(x)` on an otherwise-unknown `x` leave `PyPrintable ?m` stuck.
+          -- `PyAny` is printable, so box it (Python `str()` accepts any value) — fires only when no
+          -- other signal typed `x`, so it never clobbers an inferred int/str param.
+          let isStringify := nameIsArg && ["str", "repr", "print", "ascii"].contains fn
+          isTypeIntrospect || isStringify ||
+            (nameIsArg && ["len", "sum", "sorted", "map", "reversed", "enumerate"].contains fn)
       -- `x is None` / `x is not None` on an otherwise-unknown `x`: box it so `pyIsNone x` resolves
       -- (`PyIsNone PyAny`) instead of leaving `x` an untyped binder that forces `Option _`.
       | some "Compare" =>
@@ -897,8 +931,14 @@ private def stampParams (env : Env) (fn : Json) : Json :=
                         let v := if av == .unknown then ev else av
                         if (ak == .unknown && k != .unknown) || (av == .unknown && v != .unknown)
                         then some (.dict k v) else none
-                    | some (.list .unknown), some (.list e) => if e == .unknown then none else some (.list e)
-                    | some (.set .unknown), some (.set e) => if e == .unknown then none else some (.set e)
+                    -- A bare `list`/`set` annotation is `.list .any` (PyAny elements — the safe
+                    -- fallback). But when body USAGE pins a concrete element (`[x+1 for x in l]` ⇒
+                    -- `list[int]`), prefer it: `List Int` both compiles and keeps element ops in their
+                    -- native type instead of collapsing `List PyAny` against a defaulted `ℤ` lambda.
+                    | some (.list ea), some (.list e) =>
+                        if (ea == .unknown || ea == .any) && e.isKnown then some (.list e) else none
+                    | some (.set ea), some (.set e) =>
+                        if (ea == .unknown || ea == .any) && e.isKnown then some (.set e) else none
                     | _, _ => none
                   match refined?.bind toAnnotation? with
                   | some refAnn => arg.setObjVal! "_ty" refAnn

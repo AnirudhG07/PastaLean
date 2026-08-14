@@ -42,8 +42,8 @@ partial def DSU.find := fun (self : DSU) ↦ fun (x : Int) ↦
         self := { self with parent := PastaLean.pySetItem self.parent x _popval'rb1 }
       else
         let _ := ()
-      let __py_ret_1 := (self.parent⦋x⦌, self)
-      return __py_ret_1)
+      let p'_ret_1 := (self.parent⦋x⦌, self)
+      return p'_ret_1)
 
 def DSU.union := fun (self : DSU) ↦ fun (a : Int) ↦ fun (b : Int) ↦
   Id.run
@@ -58,10 +58,10 @@ def DSU.union := fun (self : DSU) ↦ fun (a : Int) ↦ fun (b : Int) ↦
       else
         let _ := ()
       if h_2 : self.rank⦋ra⦌ < self.rank⦋rb⦌ then 
-        let __unpack_value_1 := (rb, ra)
-        let __unpack_pair_1 := __unpack_value_1
-        ra := Prod.fst __unpack_pair_1
-        rb := Prod.snd __unpack_pair_1
+        let p'_unpack_value_1 := (rb, ra)
+        let p'_unpack_pair_1 := p'_unpack_value_1
+        ra := Prod.fst p'_unpack_pair_1
+        rb := Prod.snd p'_unpack_pair_1
       else
         let _ := ()
       self := { self with parent := PastaLean.pySetItem self.parent rb ra }
@@ -98,8 +98,8 @@ partial def DSU'rn.find := fun (self : DSU'rn) ↦ fun (x : Int) ↦
         self := { self with parent := PastaLean.pySetItem self.parent x _popval'rb1 }
       else
         let _ := ()
-      let __py_ret_1 := (self.parent⦋x⦌, self)
-      return __py_ret_1)
+      let p'_ret_1 := (self.parent⦋x⦌, self)
+      return p'_ret_1)
 
 def DSU'rn.union := fun (self : DSU'rn) ↦ fun (a : Int) ↦ fun (b : Int) ↦
   Id.run
@@ -114,10 +114,10 @@ def DSU'rn.union := fun (self : DSU'rn) ↦ fun (a : Int) ↦ fun (b : Int) ↦
       else
         let _ := ()
       if h_2 : self.rank⦋ra⦌ < self.rank⦋rb⦌ then 
-        let __unpack_value_1 := (rb, ra)
-        let __unpack_pair_1 := __unpack_value_1
-        ra := Prod.fst __unpack_pair_1
-        rb := Prod.snd __unpack_pair_1
+        let p'_unpack_value_1 := (rb, ra)
+        let p'_unpack_pair_1 := p'_unpack_value_1
+        ra := Prod.fst p'_unpack_pair_1
+        rb := Prod.snd p'_unpack_pair_1
       else
         let _ := ()
       self := { self with parent := PastaLean.pySetItem self.parent rb ra }
@@ -133,9 +133,9 @@ def count_components := fun (n : Int) ↦ fun (edges : List (List Int)) ↦
       let mut dsu := DSU.new n
       let mut count : Int := n
       for e in (PastaLean.pyIter edges)do
-        let mut __popv_2 := DSU.union dsu e⦋(0 : Int)⦌ e⦋(1 : Int)⦌ |>.1
+        let mut p'_popv_2 := DSU.union dsu e⦋(0 : Int)⦌ e⦋(1 : Int)⦌ |>.1
         dsu := DSU.union dsu e⦋(0 : Int)⦌ e⦋(1 : Int)⦌ |>.2
-        if h_1 : PastaLean.pyTruthy __popv_2 then 
+        if h_1 : PastaLean.pyTruthy p'_popv_2 then 
           count := count -ₚ (1 : Int)
         else
           let _ := ()
@@ -149,9 +149,9 @@ def count_components'rn := fun (n : Int) ↦ fun (edges : List (List Int)) ↦
       let mut dsu := DSU'rn.new n
       let mut count : Int := n
       for e in (PastaLean.pyIter edges)do
-        let mut __popv_2 := DSU'rn.union dsu e⦋(0 : Int)⦌ e⦋(1 : Int)⦌ |>.1
+        let mut p'_popv_2 := DSU'rn.union dsu e⦋(0 : Int)⦌ e⦋(1 : Int)⦌ |>.1
         dsu := DSU'rn.union dsu e⦋(0 : Int)⦌ e⦋(1 : Int)⦌ |>.2
-        if h_1 : PastaLean.pyTruthy __popv_2 then 
+        if h_1 : PastaLean.pyTruthy p'_popv_2 then 
           count := count -ₚ (1 : Int)
         else
           let _ := ()
@@ -163,9 +163,9 @@ def count_merges := fun (n : Int) ↦ fun (edges : List (List Int)) ↦
       let mut dsu := DSU.new n
       let mut merges : Int := (0 : Int)
       for e in (PastaLean.pyIter edges)do
-        let mut __popv_3 := DSU.union dsu e⦋(0 : Int)⦌ e⦋(1 : Int)⦌ |>.1
+        let mut p'_popv_3 := DSU.union dsu e⦋(0 : Int)⦌ e⦋(1 : Int)⦌ |>.1
         dsu := DSU.union dsu e⦋(0 : Int)⦌ e⦋(1 : Int)⦌ |>.2
-        merges := merges +ₚ __popv_3
+        merges := merges +ₚ p'_popv_3
       return merges)
 
 attribute [simp, taste_ingr] count_merges
@@ -176,9 +176,9 @@ def count_merges'rn := fun (n : Int) ↦ fun (edges : List (List Int)) ↦
       let mut dsu := DSU'rn.new n
       let mut merges : Int := (0 : Int)
       for e in (PastaLean.pyIter edges)do
-        let mut __popv_3 := DSU'rn.union dsu e⦋(0 : Int)⦌ e⦋(1 : Int)⦌ |>.1
+        let mut p'_popv_3 := DSU'rn.union dsu e⦋(0 : Int)⦌ e⦋(1 : Int)⦌ |>.1
         dsu := DSU'rn.union dsu e⦋(0 : Int)⦌ e⦋(1 : Int)⦌ |>.2
-        merges := merges +ₚ __popv_3
+        merges := merges +ₚ p'_popv_3
       return merges)
 
 def count_gated := fun (n : Int) ↦ fun (edges : List (List Int)) ↦ fun (gate : List Int) ↦
@@ -190,13 +190,13 @@ def count_gated := fun (n : Int) ↦ fun (edges : List (List Int)) ↦ fun (gate
       let mut merges : Int := (0 : Int)
       for i in (PastaLean.pyRange (PastaLean.pyLen edges))do
         let mut e : List Int := edges⦋i⦌
-        let mut __sc'1 : Bool := Bool.false
+        let mut p'_sc'1 : Bool := Bool.false
         if h_1 : gate⦋i⦌ = (1 : Int) then 
-          __sc'1 := DSU.union dsu e⦋(0 : Int)⦌ e⦋(1 : Int)⦌ |>.1
+          p'_sc'1 := DSU.union dsu e⦋(0 : Int)⦌ e⦋(1 : Int)⦌ |>.1
           dsu := DSU.union dsu e⦋(0 : Int)⦌ e⦋(1 : Int)⦌ |>.2
         else
           let _ := ()
-        if h_2 : PastaLean.pyTruthy __sc'1 then 
+        if h_2 : PastaLean.pyTruthy p'_sc'1 then 
           merges := merges +ₚ (1 : Int)
         else
           let _ := ()
@@ -213,13 +213,13 @@ def count_gated'rn := fun (n : Int) ↦ fun (edges : List (List Int)) ↦ fun (g
       let mut merges : Int := (0 : Int)
       for i in (PastaLean.pyRange (PastaLean.pyLen edges))do
         let mut e : List Int := edges⦋i⦌
-        let mut __sc'1 : Bool := Bool.false
+        let mut p'_sc'1 : Bool := Bool.false
         if h_1 : gate⦋i⦌ == (1 : Int) then 
-          __sc'1 := DSU'rn.union dsu e⦋(0 : Int)⦌ e⦋(1 : Int)⦌ |>.1
+          p'_sc'1 := DSU'rn.union dsu e⦋(0 : Int)⦌ e⦋(1 : Int)⦌ |>.1
           dsu := DSU'rn.union dsu e⦋(0 : Int)⦌ e⦋(1 : Int)⦌ |>.2
         else
           let _ := ()
-        if h_2 : PastaLean.pyTruthy __sc'1 then 
+        if h_2 : PastaLean.pyTruthy p'_sc'1 then 
           merges := merges +ₚ (1 : Int)
         else
           let _ := ()

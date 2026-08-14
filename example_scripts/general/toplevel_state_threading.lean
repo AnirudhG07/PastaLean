@@ -34,18 +34,18 @@ def main''rn :=
 def x₀ :=
   (0 : Int)
 
-def __py_for_205bfb :=
+def p'_for_205bfb :=
   List.foldl
-    (fun _state_1 i =>
+    (fun p'_state_1 i =>
       Id.run
         (do
-          let mut x := _state_1
+          let mut x := p'_state_1
           x := x +ₚ i
           return x))
     x₀ (PastaLean.pyRange (5 : Int))
 
 def x :=
-  __py_for_205bfb
+  p'_for_205bfb
 
 -- if: swap two globals (native tuple unpacking lowers through Prod.fst/snd)
 def AX₀ :=
@@ -54,25 +54,25 @@ def AX₀ :=
 def BX₀ :=
   (2 : Int)
 
-def __py_if_1cfc86 :=
+def p'_if_1cfc86 :=
   Id.run
     (do
       let mut AX := AX₀
       let mut BX := BX₀
       if h_1 : AX > BX then 
-        let __unpack_value_1 := (BX, AX)
-        let __unpack_pair_1 := __unpack_value_1
-        AX := Prod.fst __unpack_pair_1
-        BX := Prod.snd __unpack_pair_1
+        let p'_unpack_value_1 := (BX, AX)
+        let p'_unpack_pair_1 := p'_unpack_value_1
+        AX := Prod.fst p'_unpack_pair_1
+        BX := Prod.snd p'_unpack_pair_1
       else
         let _ := ()
       return (AX, BX))
 
 def AX :=
-  Prod.fst __py_if_1cfc86
+  Prod.fst p'_if_1cfc86
 
 def BX :=
-  Prod.snd __py_if_1cfc86
+  Prod.snd p'_if_1cfc86
 
 -- while: thread two globals through one Id.run block
 def total₀ :=
@@ -81,7 +81,7 @@ def total₀ :=
 def i₀ :=
   (0 : Int)
 
-def __py_while_958610 :=
+def p'_while_958610 :=
   Id.run
     (do
       let mut i := i₀
@@ -92,9 +92,9 @@ def __py_while_958610 :=
       return (i, total))
 
 def i :=
-  Prod.fst __py_while_958610
+  Prod.fst p'_while_958610
 
 def total :=
-  Prod.snd __py_while_958610
+  Prod.snd p'_while_958610
 
 end PastaLean.User.Root

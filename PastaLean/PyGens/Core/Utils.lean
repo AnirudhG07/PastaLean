@@ -61,15 +61,35 @@ partial def appendDoElems (elems : Array (TSyntax `doElem)) (elem : TSyntax `doE
   else
     elems.push elem
 
-/-- Pick a fresh local name for generated bindings. -/
+/-- Normalise a generated (compiler-invented) name stem so it can NEVER collide with a Python
+identifier. Python names cannot contain `'`, so a historical `__foo` generated stem becomes `p'_foo`
+(the leading `__`, and a redundant `py_`, are dropped). A stem that is not `__`-marked is left alone
+(it is not a generated name). -/
+def genStem (base : Name) : Name :=
+  let s := base.toString
+  if s.startsWith "__" then
+    let core := s.drop 2
+    let core := if core.startsWith "py_" then core.drop 3 else core
+    ("p'_" ++ core).toName
+  -- Single-underscore generated stems (`_pair`, `_s`, `_row` from for-targets/comprehensions) are
+  -- also valid Python, so normalise them too. Bare `_` (the discard) is left untouched.
+  else if s.startsWith "_" && s.length > 1 then
+    ("p'_" ++ s.drop 1).toName
+  else base
+
+/-- Pick a fresh local name for generated bindings. The stem is normalised to a Python-invalid form
+(`genStem`) so it can never shadow a user variable. -/
 partial def freshName (base : Name) (idx : Nat := 1) : PygenM Name := do
-  let candidate :=
-    if idx == 0 then base else base.appendIndexAfter idx
-  if ← hasVar candidate then
-    freshName base (idx + 1)
-  else
-    addVar candidate
-    pure candidate
+  freshNameAux (genStem base) idx
+where
+  freshNameAux (base : Name) (idx : Nat) : PygenM Name := do
+    let candidate :=
+      if idx == 0 then base else base.appendIndexAfter idx
+    if ← hasVar candidate then
+      freshNameAux base (idx + 1)
+    else
+      addVar candidate
+      pure candidate
 
 def isMainGuardTest (json : Json) : Bool :=
   match json.getObjValAs? String "node_type" with

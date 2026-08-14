@@ -891,9 +891,9 @@ def buildWhileFunction (name : String) (json : Json) (sh : WhileShape) :
   -- The spec theorem.
   let preProps ← sh.requires.mapM (fun r => withPropCondition true (getCode r `term))
   let pre ← conjoin preProps
-  let rId := mkIdent `__py_r
+  let rId := mkIdent `p'_r
   let postProps ← sh.ensures.mapM
-    (fun e => withPropCondition true (getCode (substResultWith (nameJson "__py_r") e) `term))
+    (fun e => withPropCondition true (getCode (substResultWith (nameJson "p'_r") e) `term))
   let post ← conjoin postProps
   -- `I` and `Q` lambdas over the state tuple (`Q` uses `Result() := retExpr`).
   let iLam ← whileStateLambda stateVars

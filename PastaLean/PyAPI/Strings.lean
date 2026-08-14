@@ -272,15 +272,21 @@ def pyStringCenter (s : String) (width : Int) (fill : String := " ") : String :=
     let right := pad.toNat - left
     String.ofList (List.replicate left ch) ++ s ++ String.ofList (List.replicate right ch)
 
+/-- Sentinel default for `split()` with NO separator (Python `s.split()` / `s.split(None)`): splits on
+runs of whitespace and drops empties. An EXPLICIT separator — even `" "` — splits on that literal and
+keeps empties (`"a  b".split(" ") == ["a", "", "b"]`), which is different from `"a  b".split()`. The
+sentinel is a control string no user would pass as a real separator. -/
+def splitNoSepSentinel : String := "\x00\x00PASTA_SPLIT_WS\x00\x00"
+
 /--
 Concrete string implementation for Python `split`.
 
-With an explicit separator, this uses `splitOn`. With no explicit separator, it uses
-Python-like whitespace splitting.
+With an explicit separator, this uses `splitOn`. With no explicit separator (the sentinel default), it
+uses Python-like whitespace splitting.
 -/
-def pyStringSplit : String → (sep : String := " ") → List String
+def pyStringSplit : String → (sep : String := splitNoSepSentinel) → List String
   | s, sep =>
-      if sep = " " then
+      if sep = splitNoSepSentinel then
         splitOnPyWhitespace s
       else
         if sep = "" then
@@ -302,7 +308,7 @@ def pyStringSplitLines : String → List String
   | s => s.splitOn "\n"
 
 /-- Public runtime surface for Python `split`. -/
-def pySplit : String → (sep : String := " ") → List String
+def pySplit : String → (sep : String := splitNoSepSentinel) → List String
   | s, sep => pyStringSplit s sep
 
 /-- Public runtime surface for Python `replace`. -/

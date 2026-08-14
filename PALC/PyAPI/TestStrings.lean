@@ -126,6 +126,12 @@ open PastaLean
 -- `str.split()` (no separator) treats Unicode blanks (NBSP U+00A0) as whitespace, like CPython.
 #guard pyStringSplit (String.ofList ['a', Char.ofNat 0xa0, 'b', '\t', 'c']) == ["a", "b", "c"]
 
+-- `split()` (no arg) collapses whitespace runs and drops empties, but `split(" ")` splits on the
+-- LITERAL space, keeps empties, and does NOT split on other whitespace (`\n`, `\t`) — they differ.
+#guard pyStringSplit "a  b\tc" == ["a", "b", "c"]              -- no-arg: whitespace mode
+#guard pyStringSplit "a  b" " " == ["a", "", "b"]             -- explicit " ": literal, keeps empties
+#guard pyStringSplit "\n\n123 456\n789\n" " " == ["\n\n123", "456\n789\n"]  -- keeps \n inside words
+
 -- `{:02x}` / `{:X}` / `{:o}` / `{:b}` format specs convert an integer to that radix (shared by
 -- `str.format` and f-strings via `pyFmtApply`).
 #guard pyFmtApply "02x" "153" == "99"

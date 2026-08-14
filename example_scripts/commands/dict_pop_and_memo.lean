@@ -50,13 +50,13 @@ def counter_pop_demo := fun (s : String) ↦
       let mut removed : Int := (0 : Int)
       for ch in (PastaLean.pyIter "abc")do
         if h_1 : PastaLean.pyContains c ch then 
-          let mut __popv_1 := PastaLean.pyDictKeyPopValue c ch
+          let mut p'_popv_1 := PastaLean.pyDictKeyPopValue c ch
           c := PastaLean.pyDictKeyPopRest c ch
-          removed := removed +ₚ __popv_1
+          removed := removed +ₚ p'_popv_1
         else
           let _ := ()
-      let __py_ret_1 := removed +ₚ PastaLean.pyLen c
-      return __py_ret_1)
+      let p'_ret_1 := removed +ₚ PastaLean.pyLen c
+      return p'_ret_1)
 
 attribute [simp, taste_ingr] counter_pop_demo
 
@@ -67,13 +67,13 @@ def counter_pop_demo'rn := fun (s : String) ↦
       let mut removed : Int := (0 : Int)
       for ch in (PastaLean.pyIter "abc")do
         if h_1 : PastaLean.pyContains c ch then 
-          let mut __popv_1 := PastaLean.pyDictKeyPopValue c ch
+          let mut p'_popv_1 := PastaLean.pyDictKeyPopValue c ch
           c := PastaLean.pyDictKeyPopRest c ch
-          removed := removed +ₚ __popv_1
+          removed := removed +ₚ p'_popv_1
         else
           let _ := ()
-      let __py_ret_1 := removed +ₚ PastaLean.pyLen c
-      return __py_ret_1)
+      let p'_ret_1 := removed +ₚ PastaLean.pyLen c
+      return p'_ret_1)
 
 -- A memoized DP whose param is reassigned to a value of the SAME type (`x = 3*x+1`) — the run-twin must
 -- reassign the param shadow, not emit a fresh (shadowing) `let mut x`.
@@ -89,8 +89,8 @@ partial def collatz_steps : Int → Int := fun (x : Int) ↦
         x := PastaLean.pyFloorDiv x (2 : Int)
       else
         x := (3 : Int) *ₚ x +ₚ (1 : Int)
-      let __py_ret_1 := (1 : Int) +ₚ collatz_steps x
-      return __py_ret_1)
+      let p'_ret_1 := (1 : Int) +ₚ collatz_steps x
+      return p'_ret_1)
 
 partial def collatz_steps'memo'rn : Int → StateM (Std.HashMap Int Int) Int := fun (x : Int) ↦ do
   match (← get)[x]? with
@@ -108,8 +108,8 @@ partial def collatz_steps'memo'rn : Int → StateM (Std.HashMap Int Int) Int := 
             x := PastaLean.pyFloorDiv x (2 : Int)
           else
             x := (3 : Int) *ₚ x +ₚ (1 : Int)
-          let __py_ret_1 := (1 : Int) +ₚ (← collatz_steps'memo'rn x)
-          return __py_ret_1)
+          let p'_ret_1 := (1 : Int) +ₚ (← collatz_steps'memo'rn x)
+          return p'_ret_1)
     modify (·.insert x v)
     return v
 

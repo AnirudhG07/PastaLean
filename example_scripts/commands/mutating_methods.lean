@@ -30,8 +30,8 @@ def take := fun (counts : Std.HashMap Int Int) ↦ fun (key : Int) ↦
       counts := PastaLean.pyDictPopRest counts key
       let mut miss := PastaLean.pyDictPopValue counts (999999 : Int) (-(1 : Int))
       counts := PastaLean.pyDictPopRest counts (999999 : Int)
-      let __py_ret_1 := hit +ₚ miss
-      return __py_ret_1)
+      let p'_ret_1 := hit +ₚ miss
+      return p'_ret_1)
 
 attribute [simp, taste_ingr] take
 
@@ -43,8 +43,8 @@ def take'rn := fun (counts : Std.HashMap Int Int) ↦ fun (key : Int) ↦
       counts := PastaLean.pyDictPopRest counts key
       let mut miss := PastaLean.pyDictPopValue counts (999999 : Int) (-(1 : Int))
       counts := PastaLean.pyDictPopRest counts (999999 : Int)
-      let __py_ret_1 := hit +ₚ miss
-      return __py_ret_1)
+      let p'_ret_1 := hit +ₚ miss
+      return p'_ret_1)
 
 -- 0-/1-arg pop is a LIST pop (optional index), value + shortened list.
 def drain := fun (xs : List Int) ↦
@@ -55,8 +55,8 @@ def drain := fun (xs : List Int) ↦
       xs := PastaLean.pyPopRest xs
       let mut first := PastaLean.pyPopValue xs (0 : Int)
       xs := PastaLean.pyPopRest xs (0 : Int)
-      let __py_ret_1 := last +ₚ first
-      return __py_ret_1)
+      let p'_ret_1 := last +ₚ first
+      return p'_ret_1)
 
 attribute [simp, taste_ingr] drain
 
@@ -68,8 +68,8 @@ def drain'rn := fun (xs : List Int) ↦
       xs := PastaLean.pyPopRest xs
       let mut first := PastaLean.pyPopValue xs (0 : Int)
       xs := PastaLean.pyPopRest xs (0 : Int)
-      let __py_ret_1 := last +ₚ first
-      return __py_ret_1)
+      let p'_ret_1 := last +ₚ first
+      return p'_ret_1)
 
 -- `setdefault` returns d[k]-or-default and inserts only when the key is absent.
 def tally := fun (nums : List Int) ↦
@@ -80,8 +80,8 @@ def tally := fun (nums : List Int) ↦
         let mut seen := PastaLean.pyGetD d n (0 : Int)
         d := PastaLean.pyDictSetdefaultRest d n (0 : Int)
         d := PastaLean.pySetItem d n (seen +ₚ (1 : Int))
-      let __py_ret_1 := PastaLean.pyLen d
-      return __py_ret_1)
+      let p'_ret_1 := PastaLean.pyLen d
+      return p'_ret_1)
 
 attribute [simp, taste_ingr] tally
 
@@ -93,8 +93,8 @@ def tally'rn := fun (nums : List Int) ↦
         let mut seen := PastaLean.pyGetD d n (0 : Int)
         d := PastaLean.pyDictSetdefaultRest d n (0 : Int)
         d := PastaLean.pySetItem d n (seen +ₚ (1 : Int))
-      let __py_ret_1 := PastaLean.pyLen d
-      return __py_ret_1)
+      let p'_ret_1 := PastaLean.pyLen d
+      return p'_ret_1)
 
 def main' :=
   ((do

@@ -635,7 +635,7 @@ private def ifExpCondLower? (old : String) (elt items : Json) : Option (Array Js
         | some op, some vals =>
             if vals.size < 2 || vals.pop.any (containsCallTo old) || !containsCallTo old vals.back! then none
             else
-              let condName := nameNode s!"{(items.getObjValAs? String "id").toOption.getD "__cc"}cond"
+              let condName := nameNode s!"{(items.getObjValAs? String "id").toOption.getD "p'_cc"}cond"
               let guardTest := if op == "or" then notNode condName else condName
               some #[assignNode condName (boolOpNode op vals.pop),
                      ifNode guardTest #[assignNode condName vals.back!],
@@ -700,7 +700,7 @@ private def expandThreadedComprehension? (old : String) (counter : IO.Ref Nat) (
   let some shape := comprShapeOf? value | return none
   unless comprThreadable old shape do return none
   let n ← counter.modifyGet (fun n => (n, n + 1))
-  let items := nameNode s!"__cc{n + 1}"
+  let items := nameNode s!"p'_cc{n + 1}"
   return some (comprLoopStmts old shape items ++ #[rebuild (shape.result items)])
 
 /-- Replace every comprehension sub-expression of `expr` that calls the threaded helper `old` with a
@@ -715,8 +715,8 @@ private partial def hoistThreadedComprs (old : String) (counter : IO.Ref Nat) (e
   if let some shape := comprShapeOf? expr then
     if comprThreadable old shape then
       let n ← counter.modifyGet (fun n => (n, n + 1))
-      let items := nameNode s!"__cc{n + 1}"
-      let tmp := nameNode s!"__cv{n + 1}"
+      let items := nameNode s!"p'_cc{n + 1}"
+      let tmp := nameNode s!"p'_cv{n + 1}"
       return (tmp, comprLoopStmts old shape items ++ #[assignNode tmp (shape.result items)])
   match expr with
   | .arr xs =>
@@ -782,7 +782,7 @@ partial def hoistThreadedCalls (old new : String) (captures threaded origParams 
     unless hasValue do
       throwError s!"nested function '{old}' returns no value but is used as one."
     let n ← counter.modifyGet (fun n => (n, n + 1))
-    let temp := s!"__thread_t{n + 1}"
+    let temp := s!"p'_thread_t{n + 1}"
     let target := tupleNode (#[nameNode temp] ++ threadedTargetsFor threaded origParams rewrittenArgs)
     return (nameNode temp, prelude.push (assignNode target call))
   match expr with
@@ -869,7 +869,7 @@ partial def rewriteThreadedStmts (old new : String) (captures threaded origParam
           let targets ←
             if hasValue then do
               let n ← counter.modifyGet (fun n => (n, n + 1))
-              pure (#[nameNode s!"__thread_t{n + 1}"] ++ threadedNodes)
+              pure (#[nameNode s!"p'_thread_t{n + 1}"] ++ threadedNodes)
             else pure threadedNodes
           out := out.push (assignNode (tupleNode targets) call)
           continue

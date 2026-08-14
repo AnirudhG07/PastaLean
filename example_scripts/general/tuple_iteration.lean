@@ -28,9 +28,9 @@ def neighbours := fun (i : Int) ↦ fun (j : Int) ↦
     (do
       let mut dirs : Int × Int × Int × Int × Int := (-(1 : Int), ((0 : Int), ((1 : Int), ((0 : Int), -(1 : Int)))))
       let mut out : List (Int × Int) := []
-      for _pair_1 in (PastaLean.pyIter (Libraries.itertools.pyPairwise dirs))do
-        let a := Prod.fst _pair_1
-        let b := Prod.snd _pair_1
+      for p'_pair_1 in (PastaLean.pyIter (Libraries.itertools.pyPairwise dirs))do
+        let a := Prod.fst p'_pair_1
+        let b := Prod.snd p'_pair_1
         out := PastaLean.pyAppend out (i +ₚ a, j +ₚ b)
       return out)
 
@@ -41,9 +41,9 @@ def neighbours'rn := fun (i : Int) ↦ fun (j : Int) ↦
     (do
       let mut dirs : Int × Int × Int × Int × Int := (-(1 : Int), ((0 : Int), ((1 : Int), ((0 : Int), -(1 : Int)))))
       let mut out : List (Int × Int) := []
-      for _pair_1 in (PastaLean.pyIter (Libraries.itertools.pyPairwise dirs))do
-        let a := Prod.fst _pair_1
-        let b := Prod.snd _pair_1
+      for p'_pair_1 in (PastaLean.pyIter (Libraries.itertools.pyPairwise dirs))do
+        let a := Prod.fst p'_pair_1
+        let b := Prod.snd p'_pair_1
         out := PastaLean.pyAppend out (i +ₚ a, j +ₚ b)
       return out)
 
@@ -54,8 +54,8 @@ def stats := fun (t : Int × Int × Int × Int × Int × Int × Int) ↦
       let mut total : Int := (0 : Int)
       for x in (PastaLean.pyIter t)do
         total := total +ₚ x
-      let __py_ret_1 := (total, (PastaLean.pyMax t, PastaLean.pyMin t))
-      return __py_ret_1)
+      let p'_ret_1 := (total, (PastaLean.pyMax t, PastaLean.pyMin t))
+      return p'_ret_1)
 
 attribute [simp, taste_ingr] stats
 
@@ -65,8 +65,8 @@ def stats'rn := fun (t : Int × Int × Int × Int × Int × Int × Int) ↦
       let mut total : Int := (0 : Int)
       for x in (PastaLean.pyIter t)do
         total := total +ₚ x
-      let __py_ret_1 := (total, (PastaLean.pyMax t, PastaLean.pyMin t))
-      return __py_ret_1)
+      let p'_ret_1 := (total, (PastaLean.pyMax t, PastaLean.pyMin t))
+      return p'_ret_1)
 
 -- A homogeneous tuple is indexable (`t[k]`) and sliceable (`t[1:]`, `t[:]`) — a variable-length
 -- slice flattens to a list, since it can't stay a fixed-arity product.
@@ -102,13 +102,13 @@ def nested_for_unpack := fun (xs : List Int) ↦ fun (ys : List Int) ↦
   Id.run
     (do
       let mut total : Int := (0 : Int)
-      for _pair_1 in (PastaLean.pyIter (PastaLean.pyEnumerate (PastaLean.pyZip xs ys) (1 : Int)))do
-        let i := Prod.fst _pair_1
-        let __for_unpack_1 := Prod.snd _pair_1
-        let __unpack_value_1 := __for_unpack_1
-        let __unpack_pair_1 := __unpack_value_1
-        let mut a : Int := Prod.fst __unpack_pair_1
-        let mut b : Int := Prod.snd __unpack_pair_1
+      for p'_pair_1 in (PastaLean.pyIter (PastaLean.pyEnumerate (PastaLean.pyZip xs ys) (1 : Int)))do
+        let i := Prod.fst p'_pair_1
+        let p'_for_unpack_1 := Prod.snd p'_pair_1
+        let p'_unpack_value_1 := p'_for_unpack_1
+        let p'_unpack_pair_1 := p'_unpack_value_1
+        let mut a : Int := Prod.fst p'_unpack_pair_1
+        let mut b : Int := Prod.snd p'_unpack_pair_1
         total := total +ₚ i *ₚ (a +ₚ b)
       return total)
 
@@ -118,13 +118,13 @@ def nested_for_unpack'rn := fun (xs : List Int) ↦ fun (ys : List Int) ↦
   Id.run
     (do
       let mut total : Int := (0 : Int)
-      for _pair_1 in (PastaLean.pyIter (PastaLean.pyEnumerate (PastaLean.pyZip xs ys) (1 : Int)))do
-        let i := Prod.fst _pair_1
-        let __for_unpack_1 := Prod.snd _pair_1
-        let __unpack_value_1 := __for_unpack_1
-        let __unpack_pair_1 := __unpack_value_1
-        let mut a : Int := Prod.fst __unpack_pair_1
-        let mut b : Int := Prod.snd __unpack_pair_1
+      for p'_pair_1 in (PastaLean.pyIter (PastaLean.pyEnumerate (PastaLean.pyZip xs ys) (1 : Int)))do
+        let i := Prod.fst p'_pair_1
+        let p'_for_unpack_1 := Prod.snd p'_pair_1
+        let p'_unpack_value_1 := p'_for_unpack_1
+        let p'_unpack_pair_1 := p'_unpack_value_1
+        let mut a : Int := Prod.fst p'_unpack_pair_1
+        let mut b : Int := Prod.snd p'_unpack_pair_1
         total := total +ₚ i *ₚ (a +ₚ b)
       return total)
 

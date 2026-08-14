@@ -169,7 +169,7 @@ def joinedStrSyntax : (kind : SyntaxNodeKind) → Json →
       let valueJson := valuesArray[idx]!
       let valueCode := valuesCodes[idx]!
       if stringJsonUsesMonadicEffect valueJson then
-        let binder := mkIdent (s!"__py_join{idx}").toName
+        let binder := mkIdent (s!"p'_join{idx}").toName
         bindings := bindings.push (← `(doElem| let $binder:ident ← $valueCode:term))
         res ← `($appendIdent $res $binder:term)
       else

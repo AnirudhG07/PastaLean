@@ -196,10 +196,10 @@ def fib := fun (n : Int) ↦
       let mut b : Int := (1 : Int)
       for _ in (PastaLean.pyRange n)do
         __gen'acc := PastaLean.pyAppend __gen'acc a
-        let __unpack_value_1 := (b, a +ₚ b)
-        let __unpack_pair_1 := __unpack_value_1
-        a := Prod.fst __unpack_pair_1
-        b := Prod.snd __unpack_pair_1
+        let p'_unpack_value_1 := (b, a +ₚ b)
+        let p'_unpack_pair_1 := p'_unpack_value_1
+        a := Prod.fst p'_unpack_pair_1
+        b := Prod.snd p'_unpack_pair_1
       return __gen'acc)
 
 attribute [simp, taste_ingr] fib
@@ -213,10 +213,10 @@ def fib'rn := fun (n : Int) ↦
       let mut b : Int := (1 : Int)
       for _ in (PastaLean.pyRange n)do
         __gen'acc := PastaLean.pyAppend __gen'acc a
-        let __unpack_value_1 := (b, a +ₚ b)
-        let __unpack_pair_1 := __unpack_value_1
-        a := Prod.fst __unpack_pair_1
-        b := Prod.snd __unpack_pair_1
+        let p'_unpack_value_1 := (b, a +ₚ b)
+        let p'_unpack_pair_1 := p'_unpack_value_1
+        a := Prod.fst p'_unpack_pair_1
+        b := Prod.snd p'_unpack_pair_1
       return __gen'acc)
 
 def use_generators :=

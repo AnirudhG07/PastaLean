@@ -38,8 +38,8 @@ def list_pipeline :=
       xs := PastaLean.pyAppend xs (2 : Int)
       xs := PastaLean.pySort xs
       let mut count : Int := PastaLean.pyLen xs
-      let __py_ret_1 := (xs, count)
-      return __py_ret_1)
+      let p'_ret_1 := (xs, count)
+      return p'_ret_1)
 
 attribute [simp, taste_ingr] list_pipeline
 
@@ -50,7 +50,7 @@ def list_pipeline'rn :=
       xs := PastaLean.pyAppend xs (2 : Int)
       xs := PastaLean.pySort xs
       let mut count : Int := PastaLean.pyLen xs
-      let __py_ret_1 := (xs, count)
-      return __py_ret_1)
+      let p'_ret_1 := (xs, count)
+      return p'_ret_1)
 
 end PastaLean.User.Root

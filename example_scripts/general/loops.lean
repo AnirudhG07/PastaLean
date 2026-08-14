@@ -182,8 +182,8 @@ def loop_leak_conflicting := fun (n : Int) ↦
           let mut z'rb0 := i
         else
           let mut z'rb1 := "odd"
-      let __py_ret_1 := PastaLean.pyStr z
-      return __py_ret_1)
+      let p'_ret_1 := PastaLean.pyStr z
+      return p'_ret_1)
 
 attribute [simp, taste_ingr] loop_leak_conflicting
 
@@ -198,7 +198,7 @@ def loop_leak_conflicting'rn := fun (n : Int) ↦
           let mut z'rb0 := i
         else
           let mut z'rb1 := "odd"
-      let __py_ret_1 := PastaLean.pyStr z
-      return __py_ret_1)
+      let p'_ret_1 := PastaLean.pyStr z
+      return p'_ret_1)
 
 end PastaLean.User.Root

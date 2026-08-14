@@ -402,7 +402,10 @@ def _lean_type_of(values):
     if "str" in seen:
         return None if seen != {"str"} else "String"
     if "float" in seen:
-        return "Float"
+        # A column mixing int AND float (e.g. `any_int`, which type-checks its args) must decode as
+        # `PyAny` so ints stay `.int` and floats stay `.float` — collapsing to `Float` would make
+        # `type(x) == int` wrongly false for the integer rows. A pure-float column stays `Float`.
+        return "PastaLean.PyAny" if "int" in seen else "Float"
     if seen == {"bool"}:
         return "Bool"
     return "Int"  # int (or int+bool, which coerces), or no information at all
@@ -571,6 +574,18 @@ def build_test_harness(converted_lean, fn_name, cases, data_path):
     body = "\n".join([
         "import Lean.Data.Json",
         converted_lean.rstrip(), "",
+        # Float results are compared with a tolerance, not exact `==`: Lean's Float parse/division can
+        # differ from CPython's by ~1 ULP, so bit-equality is the wrong test for a floating-point
+        # answer. Non-float types fall back to `BEq` (exact). Lists/tuples lift the comparison.
+        "private class _PyTestEq (α : Type) where teq : α → α → Bool",
+        "private instance : _PyTestEq Float := "
+        "⟨fun a b => (a - b).abs ≤ (1e-9 : Float) + (1e-9 : Float) * b.abs⟩",
+        "private instance (priority := 100) {α} [BEq α] : _PyTestEq α := ⟨(· == ·)⟩",
+        "private instance {α} [_PyTestEq α] : _PyTestEq (List α) := "
+        "⟨fun a b => a.length == b.length && (a.zip b).all (fun p => _PyTestEq.teq p.1 p.2)⟩",
+        "private instance {α β} [_PyTestEq α] [_PyTestEq β] : _PyTestEq (α × β) := "
+        "⟨fun a b => _PyTestEq.teq a.1 b.1 && _PyTestEq.teq a.2 b.2⟩",
+        "private def _pyTestEq {α} [_PyTestEq α] (a b : α) : Bool := _PyTestEq.teq a b", "",
         # Decode the expected JSON at the SAME type as the value the twin computed: `_pat`'s type
         # (`α`) is unified with `_got` at the call site, so no return-type annotation is needed.
         "private def _decodeLike {α : Type} [Lean.FromJson α] (_pat : α) "
@@ -598,7 +613,7 @@ def build_test_harness(converted_lean, fn_name, cases, data_path):
         "    | some e =>",
         "      _t := _t + 1",
         # `repr` prints what Lean computed so a failure is debuggable without a rerun.
-        "      if _got == e then _p := _p + 1",
+        "      if _pyTestEq _got e then _p := _p + 1",
         '      else IO.println s!"FAIL {idx}: got {repr _got}"',
         # Flush a running count each case so a native run that times out still reports partials
         # (how many passed / attempted before it hung) instead of a bare 0/N.

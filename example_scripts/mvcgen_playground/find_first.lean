@@ -23,8 +23,8 @@ def find_first := fun (xs : List Int) ↦ fun (k : Int) ↦
         return i
       else
         let _ := ()
-    let __py_ret_1 := -(1 : Int)
-    return __py_ret_1 : Id _)
+    let p'_ret_1 := -(1 : Int)
+    return p'_ret_1 : Id _)
 
 theorem find_first_spec : ⦃⌜True⌝⦄ find_first xs k ⦃⇓_ => ⌜True⌝⦄ :=
   by
@@ -40,7 +40,7 @@ def find_first'rn := fun (xs : List Int) ↦ fun (k : Int) ↦
           return i
         else
           let _ := ()
-      let __py_ret_1 := -(1 : Int)
-      return __py_ret_1)
+      let p'_ret_1 := -(1 : Int)
+      return p'_ret_1)
 
 end PastaLean.User.Root

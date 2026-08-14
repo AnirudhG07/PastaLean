@@ -8,3 +8,4 @@ import PALC.Libraries.math.math_test
 import PALC.Libraries.scipy.scipy_test
 import PALC.Libraries.pandas.pandas_test
 import PALC.Libraries.sortedcontainers.sortedlist_test
+import PALC.Libraries.hashlib_test

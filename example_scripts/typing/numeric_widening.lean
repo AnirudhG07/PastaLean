@@ -68,9 +68,9 @@ def heap_float_sum := fun (vals : List Int) ↦
           h := Libraries.heapq.pyHeappush h (v /ₚ (2 : Int))
         let mut acc := (0 : Rat)
         while (PastaLean.pyTruthy h) do
-          let mut __popv_1 := Libraries.heapq.pyHeappopVal h
+          let mut p'_popv_1 := Libraries.heapq.pyHeappopVal h
           h := Libraries.heapq.pyHeappopRest h
-          acc := acc +ₚ __popv_1
+          acc := acc +ₚ p'_popv_1
         return acc))
 
 attribute [simp, taste_ingr] heap_float_sum
@@ -84,9 +84,9 @@ def heap_float_sum'rn := fun (vals : List Int) ↦
           h := Libraries.heapq.pyHeappush h (PastaLean.pyFloat v /ₚ (2 : Int))
         let mut acc := (0 : Float)
         while (PastaLean.pyTruthy h) do
-          let mut __popv_1 := Libraries.heapq.pyHeappopVal h
+          let mut p'_popv_1 := Libraries.heapq.pyHeappopVal h
           h := Libraries.heapq.pyHeappopRest h
-          acc := acc +ₚ __popv_1
+          acc := acc +ₚ p'_popv_1
         return acc))
 
 -- Container-element widening via an indexed write: `dist` starts `list[int]` (`[0]*n`), then a float
@@ -99,8 +99,8 @@ def widen_container := fun (n : Int) ↦ fun (s : Int) ↦ fun (t : Int) ↦
         dist := PastaLean.pySetItem dist (0 : Int) (1 : Rat)
         for i in (PastaLean.pyRange n (1 : Int))do
           dist := PastaLean.pySetItem dist i (dist⦋i -ₚ (1 : Int)⦌ *ₚ s /ₚ t : Rat)
-        let __py_ret_1 := dist⦋n -ₚ (1 : Int)⦌
-        return __py_ret_1))
+        let p'_ret_1 := dist⦋n -ₚ (1 : Int)⦌
+        return p'_ret_1))
 
 attribute [simp, taste_ingr] widen_container
 
@@ -112,8 +112,8 @@ def widen_container'rn := fun (n : Int) ↦ fun (s : Int) ↦ fun (t : Int) ↦
         dist := PastaLean.pySetItem dist (0 : Int) (1 : Float)
         for i in (PastaLean.pyRange n (1 : Int))do
           dist := PastaLean.pySetItem dist i (PastaLean.pyFloat (dist⦋i -ₚ (1 : Int)⦌ *ₚ s) /ₚ t : Float)
-        let __py_ret_1 := dist⦋n -ₚ (1 : Int)⦌
-        return __py_ret_1))
+        let p'_ret_1 := dist⦋n -ₚ (1 : Int)⦌
+        return p'_ret_1))
 
 def main' :=
   ((do

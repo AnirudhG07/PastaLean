@@ -30,32 +30,32 @@ private partial def _count_components'dfs := fun (i : Int) ↦ fun (adj : List (
     (do
       let mut seen := seen
       if h_1 : PastaLean.pyContains seen i then 
-        let __py_ret_1 := ((0 : Int), seen)
-        return __py_ret_1
+        let p'_ret_1 := ((0 : Int), seen)
+        return p'_ret_1
       else
         let _ := ()
       seen := PastaLean.pySetAdd seen i
       for j in (PastaLean.pyIter adj⦋i⦌)do
-        let __unpack_value_1 := _count_components'dfs j adj seen
-        let __unpack_pair_1 := __unpack_value_1
-        let mut __thread_t1 := Prod.fst __unpack_pair_1
-        seen := Prod.snd __unpack_pair_1
-      let __py_ret_1 := ((1 : Int), seen)
-      return __py_ret_1)
+        let p'_unpack_value_1 := _count_components'dfs j adj seen
+        let p'_unpack_pair_1 := p'_unpack_value_1
+        let mut p'_thread_t1 := Prod.fst p'_unpack_pair_1
+        seen := Prod.snd p'_unpack_pair_1
+      let p'_ret_1 := ((1 : Int), seen)
+      return p'_ret_1)
 
 def count_components := fun (n : Int) ↦ fun (adj : List (List Int)) ↦
   Id.run
     (do
       let mut seen : List Int := PastaLean.pySetFromList []
-      let mut __cc2 := []
+      let mut p'_cc2 := []
       for i in (PastaLean.pyRange n)do
-        let __unpack_value_1 := _count_components'dfs i adj seen
-        let __unpack_pair_1 := __unpack_value_1
-        let mut __thread_t3 := Prod.fst __unpack_pair_1
-        seen := Prod.snd __unpack_pair_1
-        __cc2 := PastaLean.pyAppend __cc2 __thread_t3
-      let __py_ret_1 := PastaLean.pySum __cc2
-      return __py_ret_1)
+        let p'_unpack_value_1 := _count_components'dfs i adj seen
+        let p'_unpack_pair_1 := p'_unpack_value_1
+        let mut p'_thread_t3 := Prod.fst p'_unpack_pair_1
+        seen := Prod.snd p'_unpack_pair_1
+        p'_cc2 := PastaLean.pyAppend p'_cc2 p'_thread_t3
+      let p'_ret_1 := PastaLean.pySum p'_cc2
+      return p'_ret_1)
 
 attribute [simp, taste_ingr] count_components
 
@@ -64,32 +64,32 @@ private partial def _count_components'dfs'rn := fun (i : Int) ↦ fun (adj : Lis
     (do
       let mut seen := seen
       if h_1 : PastaLean.pyContains seen i then 
-        let __py_ret_1 := ((0 : Int), seen)
-        return __py_ret_1
+        let p'_ret_1 := ((0 : Int), seen)
+        return p'_ret_1
       else
         let _ := ()
       seen := PastaLean.pySetAdd seen i
       for j in (PastaLean.pyIter adj⦋i⦌)do
-        let __unpack_value_1 := _count_components'dfs'rn j adj seen
-        let __unpack_pair_1 := __unpack_value_1
-        let mut __thread_t1 := Prod.fst __unpack_pair_1
-        seen := Prod.snd __unpack_pair_1
-      let __py_ret_1 := ((1 : Int), seen)
-      return __py_ret_1)
+        let p'_unpack_value_1 := _count_components'dfs'rn j adj seen
+        let p'_unpack_pair_1 := p'_unpack_value_1
+        let mut p'_thread_t1 := Prod.fst p'_unpack_pair_1
+        seen := Prod.snd p'_unpack_pair_1
+      let p'_ret_1 := ((1 : Int), seen)
+      return p'_ret_1)
 
 def count_components'rn := fun (n : Int) ↦ fun (adj : List (List Int)) ↦
   Id.run
     (do
       let mut seen : List Int := PastaLean.pySetFromList []
-      let mut __cc2 := []
+      let mut p'_cc2 := []
       for i in (PastaLean.pyRange n)do
-        let __unpack_value_1 := _count_components'dfs'rn i adj seen
-        let __unpack_pair_1 := __unpack_value_1
-        let mut __thread_t3 := Prod.fst __unpack_pair_1
-        seen := Prod.snd __unpack_pair_1
-        __cc2 := PastaLean.pyAppend __cc2 __thread_t3
-      let __py_ret_1 := PastaLean.pySum __cc2
-      return __py_ret_1)
+        let p'_unpack_value_1 := _count_components'dfs'rn i adj seen
+        let p'_unpack_pair_1 := p'_unpack_value_1
+        let mut p'_thread_t3 := Prod.fst p'_unpack_pair_1
+        seen := Prod.snd p'_unpack_pair_1
+        p'_cc2 := PastaLean.pyAppend p'_cc2 p'_thread_t3
+      let p'_ret_1 := PastaLean.pySum p'_cc2
+      return p'_ret_1)
 
 -- A bare LIST comprehension whose element mutates captured `total` (via a helper that returns the
 -- running value): the accumulator loop threads `total` correctly.
@@ -103,14 +103,14 @@ def running := fun (xs : List Int) ↦
   Id.run
     (do
       let mut total : Int := (0 : Int)
-      let mut __cc1 := []
+      let mut p'_cc1 := []
       for x in (PastaLean.pyIter xs)do
-        let __unpack_value_1 := _running'step x total
-        let __unpack_pair_1 := __unpack_value_1
-        let mut __thread_t2 := Prod.fst __unpack_pair_1
-        total := Prod.snd __unpack_pair_1
-        __cc1 := PastaLean.pyAppend __cc1 __thread_t2
-      return __cc1)
+        let p'_unpack_value_1 := _running'step x total
+        let p'_unpack_pair_1 := p'_unpack_value_1
+        let mut p'_thread_t2 := Prod.fst p'_unpack_pair_1
+        total := Prod.snd p'_unpack_pair_1
+        p'_cc1 := PastaLean.pyAppend p'_cc1 p'_thread_t2
+      return p'_cc1)
 
 attribute [simp, taste_ingr] running
 
@@ -122,14 +122,14 @@ def running'rn := fun (xs : List Int) ↦
   Id.run
     (do
       let mut total : Int := (0 : Int)
-      let mut __cc1 := []
+      let mut p'_cc1 := []
       for x in (PastaLean.pyIter xs)do
-        let __unpack_value_1 := _running'step'rn x total
-        let __unpack_pair_1 := __unpack_value_1
-        let mut __thread_t2 := Prod.fst __unpack_pair_1
-        total := Prod.snd __unpack_pair_1
-        __cc1 := PastaLean.pyAppend __cc1 __thread_t2
-      return __cc1)
+        let p'_unpack_value_1 := _running'step'rn x total
+        let p'_unpack_pair_1 := p'_unpack_value_1
+        let mut p'_thread_t2 := Prod.fst p'_unpack_pair_1
+        total := Prod.snd p'_unpack_pair_1
+        p'_cc1 := PastaLean.pyAppend p'_cc1 p'_thread_t2
+      return p'_cc1)
 
 def main' :=
   ((do

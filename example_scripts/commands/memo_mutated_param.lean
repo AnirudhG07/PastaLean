@@ -22,8 +22,8 @@ private partial def _ways'dfs : Int → Int → String → Int → Int := fun (i
     (do
       let mut k := k
       if h_1 : i ≥ n then 
-        let __py_ret_1 := PastaLean.pyInt (k == (2 : Int))
-        return __py_ret_1
+        let p'_ret_1 := PastaLean.pyInt (k == (2 : Int))
+        return p'_ret_1
       else
         let _ := ()
       k := k +ₚ PastaLean.pyInt (corridor⦋i⦌ == "S")
@@ -54,8 +54,8 @@ partial def _ways'dfs'memo'rn : Int → Int → String → Int → StateM (Std.H
       (do
           let mut k := k
           if h_1 : i ≥ n then 
-            let __py_ret_1 := PastaLean.pyInt (k == (2 : Int))
-            return __py_ret_1
+            let p'_ret_1 := PastaLean.pyInt (k == (2 : Int))
+            return p'_ret_1
           else
             let _ := ()
           k := k +ₚ PastaLean.pyInt (corridor⦋i⦌ == "S")

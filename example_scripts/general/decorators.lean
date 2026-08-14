@@ -107,8 +107,8 @@ partial def fib'memo'rn : Int → StateM (Std.HashMap Int Int) Int := fun (n : I
             return n
           else
             let _ := ()
-          let __py_ret_1 := (← fib'memo'rn (n -ₚ (1 : Int))) +ₚ (← fib'memo'rn (n -ₚ (2 : Int)))
-          return __py_ret_1)
+          let p'_ret_1 := (← fib'memo'rn (n -ₚ (1 : Int))) +ₚ (← fib'memo'rn (n -ₚ (2 : Int)))
+          return p'_ret_1)
     modify (·.insert n v)
     return v
 

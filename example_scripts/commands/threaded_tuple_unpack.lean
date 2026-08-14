@@ -26,18 +26,18 @@ private partial def _count_components'dfs := fun (i : Int) ↦ fun (adj : List (
       let mut edges : Int := PastaLean.pyLen adj⦋i⦌
       for j in (PastaLean.pyIter adj⦋i⦌)do
         if h_1 : ¬PastaLean.pyTruthy vis⦋j⦌ = true then 
-          let __unpack_value_1 := _count_components'dfs j adj vis
-          let __unpack_pair_1 := __unpack_value_1
-          vis := Prod.snd __unpack_pair_1
-          let __unpack_nested_1 := Prod.fst __unpack_pair_1
-          let mut a := Prod.fst __unpack_nested_1
-          let mut b := Prod.snd __unpack_nested_1
+          let p'_unpack_value_1 := _count_components'dfs j adj vis
+          let p'_unpack_pair_1 := p'_unpack_value_1
+          vis := Prod.snd p'_unpack_pair_1
+          let p'_unpack_nested_1 := Prod.fst p'_unpack_pair_1
+          let mut a := Prod.fst p'_unpack_nested_1
+          let mut b := Prod.snd p'_unpack_nested_1
           nodes := nodes +ₚ a
           edges := edges +ₚ b
         else
           let _ := ()
-      let __py_ret_1 := ((nodes, edges), vis)
-      return __py_ret_1)
+      let p'_ret_1 := ((nodes, edges), vis)
+      return p'_ret_1)
 
 def count_components := fun (n : Int) ↦ fun (adj : List (List Int)) ↦
   Id.run
@@ -46,12 +46,12 @@ def count_components := fun (n : Int) ↦ fun (adj : List (List Int)) ↦
       let mut complete : Int := (0 : Int)
       for i in (PastaLean.pyRange n)do
         if h_1 : ¬PastaLean.pyTruthy vis⦋i⦌ = true then 
-          let __unpack_value_1 := _count_components'dfs i adj vis
-          let __unpack_pair_1 := __unpack_value_1
-          vis := Prod.snd __unpack_pair_1
-          let __unpack_nested_1 := Prod.fst __unpack_pair_1
-          let mut v := Prod.fst __unpack_nested_1
-          let mut e := Prod.snd __unpack_nested_1
+          let p'_unpack_value_1 := _count_components'dfs i adj vis
+          let p'_unpack_pair_1 := p'_unpack_value_1
+          vis := Prod.snd p'_unpack_pair_1
+          let p'_unpack_nested_1 := Prod.fst p'_unpack_pair_1
+          let mut v := Prod.fst p'_unpack_nested_1
+          let mut e := Prod.snd p'_unpack_nested_1
           if h_2 : e = v *ₚ (v -ₚ (1 : Int)) then 
             complete := complete +ₚ (1 : Int)
           else
@@ -71,18 +71,18 @@ private partial def _count_components'dfs'rn := fun (i : Int) ↦ fun (adj : Lis
       let mut edges : Int := PastaLean.pyLen adj⦋i⦌
       for j in (PastaLean.pyIter adj⦋i⦌)do
         if h_1 : !PastaLean.pyTruthy vis⦋j⦌ then 
-          let __unpack_value_1 := _count_components'dfs'rn j adj vis
-          let __unpack_pair_1 := __unpack_value_1
-          vis := Prod.snd __unpack_pair_1
-          let __unpack_nested_1 := Prod.fst __unpack_pair_1
-          let mut a := Prod.fst __unpack_nested_1
-          let mut b := Prod.snd __unpack_nested_1
+          let p'_unpack_value_1 := _count_components'dfs'rn j adj vis
+          let p'_unpack_pair_1 := p'_unpack_value_1
+          vis := Prod.snd p'_unpack_pair_1
+          let p'_unpack_nested_1 := Prod.fst p'_unpack_pair_1
+          let mut a := Prod.fst p'_unpack_nested_1
+          let mut b := Prod.snd p'_unpack_nested_1
           nodes := nodes +ₚ a
           edges := edges +ₚ b
         else
           let _ := ()
-      let __py_ret_1 := ((nodes, edges), vis)
-      return __py_ret_1)
+      let p'_ret_1 := ((nodes, edges), vis)
+      return p'_ret_1)
 
 def count_components'rn := fun (n : Int) ↦ fun (adj : List (List Int)) ↦
   Id.run
@@ -91,12 +91,12 @@ def count_components'rn := fun (n : Int) ↦ fun (adj : List (List Int)) ↦
       let mut complete : Int := (0 : Int)
       for i in (PastaLean.pyRange n)do
         if h_1 : !PastaLean.pyTruthy vis⦋i⦌ then 
-          let __unpack_value_1 := _count_components'dfs'rn i adj vis
-          let __unpack_pair_1 := __unpack_value_1
-          vis := Prod.snd __unpack_pair_1
-          let __unpack_nested_1 := Prod.fst __unpack_pair_1
-          let mut v := Prod.fst __unpack_nested_1
-          let mut e := Prod.snd __unpack_nested_1
+          let p'_unpack_value_1 := _count_components'dfs'rn i adj vis
+          let p'_unpack_pair_1 := p'_unpack_value_1
+          vis := Prod.snd p'_unpack_pair_1
+          let p'_unpack_nested_1 := Prod.fst p'_unpack_pair_1
+          let mut v := Prod.fst p'_unpack_nested_1
+          let mut e := Prod.snd p'_unpack_nested_1
           if h_2 : e == v *ₚ (v -ₚ (1 : Int)) then 
             complete := complete +ₚ (1 : Int)
           else

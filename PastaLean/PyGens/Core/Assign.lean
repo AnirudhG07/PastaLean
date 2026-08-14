@@ -488,7 +488,7 @@ def assignSyntax : (kind : SyntaxNodeKind) → Json →
         | some idents => do
             let n := idents.size
             let valueStx ← getCode value `term
-            let unpackTmpIdent := mkIdent (Name.mkSimple s!"__py_unpack_{idents.toList.map (·.getId.toString) |> String.intercalate "_"}")
+            let unpackTmpIdent := mkIdent (Name.mkSimple s!"p'_unpack_{idents.toList.map (·.getId.toString) |> String.intercalate "_"}")
             -- The unpack temporary is always private (an implementation detail).
             let cmd0 ← makeCommandPrivate (← `(command| def $unpackTmpIdent := $valueStx))
             -- A literal `Tuple` RHS builds a `Prod` (use `Prod.fst`/`Prod.snd`); so does a

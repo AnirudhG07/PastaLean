@@ -527,7 +527,7 @@ def topLevelForCommands (json : Json) (names : Array String) : PygenM (Array (TS
   let prelude ← stateMutPrelude stateIdent names
   let foldBody ← stateRunBlock prelude bodyElems names
   let iterCode ← rangeIterSyntax iterJson
-  let resultIdent ← blockResultIdent json "__py_for"
+  let resultIdent ← blockResultIdent json "p'_for"
   let foldlIdent := mkIdent ``List.foldl
   let foldDef ← `(command|
     def $resultIdent := $foldlIdent (fun $stateIdent $loopVarIdent => $foldBody) $initTuple $iterCode)
@@ -660,7 +660,7 @@ def whileSyntax : (kind : SyntaxNodeKind) → Json →
         -- It lowers like `if`/`match`: `Id.run do let mut n := n₀; while ...; return (n...)`.
         match blockMutatedNames? json with
         | some names =>
-            let cmds ← topLevelStmtCommands json names "__py_while" "while-loop"
+            let cmds ← topLevelStmtCommands json names "p'_while" "while-loop"
             return ⟨mkNullNode (cmds.map TSyntax.raw)⟩
         | none =>
             throwError "Top-level `while` is only supported when it mutates a module global \
@@ -864,7 +864,7 @@ def ifSyntax : (kind : SyntaxNodeKind) → Json →
         -- A top-level `if` that mutates module globals is a state transformer.
         match blockMutatedNames? json with
         | some names =>
-            let cmds ← topLevelStmtCommands json names "__py_if" "if-block"
+            let cmds ← topLevelStmtCommands json names "p'_if" "if-block"
             return ⟨mkNullNode (cmds.map TSyntax.raw)⟩
         | none => pure ()
         -- Otherwise, the only supported top-level `if` is the `__main__` guard, which

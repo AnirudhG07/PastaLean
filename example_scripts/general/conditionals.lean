@@ -142,8 +142,8 @@ def hoist_conflicting_branches := fun (c : Int) ↦
         let mut v'rb0 := (5 : Int)
       else
         let mut v'rb1 := "hi"
-      let __py_ret_1 := PastaLean.pyStr v
-      return __py_ret_1)
+      let p'_ret_1 := PastaLean.pyStr v
+      return p'_ret_1)
 
 attribute [simp, taste_ingr] hoist_conflicting_branches
 
@@ -158,8 +158,8 @@ def hoist_conflicting_branches'rn := fun (c : Int) ↦
         let mut v'rb0 := (5 : Int)
       else
         let mut v'rb1 := "hi"
-      let __py_ret_1 := PastaLean.pyStr v
-      return __py_ret_1)
+      let p'_ret_1 := PastaLean.pyStr v
+      return p'_ret_1)
 
 def hoist_partial_branch := fun (c : Int) ↦
   Id.run

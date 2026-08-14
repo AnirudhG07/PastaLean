@@ -27,12 +27,12 @@ noncomputable def euclidean_distance := fun (p1 : List Int) ↦ fun (p2 : List I
       let _ := Libraries.passta.pyPassAssert (PastaLean.pyLen p1 == PastaLean.pyLen p2)
       -- Using zip, a list comprehension, and math.pow
       let mut sq_diffs :=
-        (PastaLean.pyIter (PastaLean.pyZip p1 p2)).map fun (_pair_1 : Int × Int) =>
-          let a := Prod.fst _pair_1;
-          let b := Prod.snd _pair_1;
+        (PastaLean.pyIter (PastaLean.pyZip p1 p2)).map fun (p'_pair_1 : Int × Int) =>
+          let a := Prod.fst p'_pair_1;
+          let b := Prod.snd p'_pair_1;
           Libraries.math.pyMathPowExact (a -ₚ b) (2 : Int)
-      let __py_ret_1 := Libraries.math.pyMathSqrtR (PastaLean.pySum sq_diffs)
-      return __py_ret_1) :
+      let p'_ret_1 := Libraries.math.pyMathSqrtR (PastaLean.pySum sq_diffs)
+      return p'_ret_1) :
     PastaLean.ProofMode.PyProofM _)
 
 attribute [simp] euclidean_distance
@@ -50,12 +50,12 @@ def euclidean_distance'rn : List Int → List Int → PastaLean.PyExcept Float :
   let _ := Libraries.passta.pyPassAssert (PastaLean.pyLen p1 == PastaLean.pyLen p2)
   -- Using zip, a list comprehension, and math.pow
   let mut sq_diffs :=
-    (PastaLean.pyIter (PastaLean.pyZip p1 p2)).map fun (_pair_1 : Int × Int) =>
-      let a := Prod.fst _pair_1;
-      let b := Prod.snd _pair_1;
+    (PastaLean.pyIter (PastaLean.pyZip p1 p2)).map fun (p'_pair_1 : Int × Int) =>
+      let a := Prod.fst p'_pair_1;
+      let b := Prod.snd p'_pair_1;
       Libraries.math.pyMathPow (a -ₚ b) (2 : Int)
-  let __py_ret_1 := Libraries.math.pyMathSqrt (PastaLean.pySum sq_diffs)
-  return __py_ret_1
+  let p'_ret_1 := Libraries.math.pyMathSqrt (PastaLean.pySum sq_diffs)
+  return p'_ret_1
 
 noncomputable def find_nearest_neighbor := fun (target : List Int) ↦ fun (dataset : List (List Int)) ↦
   ((do
@@ -69,9 +69,9 @@ noncomputable def find_nearest_neighbor := fun (target : List Int) ↦ fun (data
         let _ := Libraries.passta.pyPassAssert (PastaLean.pyContains distances min_dist)
         -- Find the index of the minimum distance with an explicit loop + break
         let mut min_index : Int := -(1 : Int)
-        for _pair_1 in (PastaLean.pyIter (PastaLean.pyEnumerate distances))do
-          let i := Prod.fst _pair_1
-          let d := Prod.snd _pair_1
+        for p'_pair_1 in (PastaLean.pyIter (PastaLean.pyEnumerate distances))do
+          let i := Prod.fst p'_pair_1
+          let d := Prod.snd p'_pair_1
           -- The index stays within bounds for the whole scan.
           let _ := Libraries.passta.pyPassInvariant (decide (min_index < PastaLean.pyLen distances))
           if h_1 : d = min_dist then 
@@ -79,13 +79,13 @@ noncomputable def find_nearest_neighbor := fun (target : List Int) ↦ fun (data
             break
           else
             let _ := ()
-        let __py_ret_1 := (min_dist, dataset⦋min_index⦌)
-        return __py_ret_1
+        let p'_ret_1 := (min_dist, dataset⦋min_index⦌)
+        return p'_ret_1
       catch caught =>
         if (caught).OfKind == "ValueError" then 
           -- Fallback when a point has the wrong number of dimensions
-          let __py_ret_2 := (-(1.0 : Real), [])
-          return __py_ret_2
+          let p'_ret_2 := (-(1.0 : Real), [])
+          return p'_ret_2
         else
           throw caught) :
     PastaLean.ProofMode.PyProofM _)
@@ -104,9 +104,9 @@ def find_nearest_neighbor'rn : List Int → List (List Int) → PastaLean.PyExce
     let _ := Libraries.passta.pyPassAssert (PastaLean.pyContains distances min_dist)
     -- Find the index of the minimum distance with an explicit loop + break
     let mut min_index : Int := -(1 : Int)
-    for _pair_1 in (PastaLean.pyIter (PastaLean.pyEnumerate distances))do
-      let i := Prod.fst _pair_1
-      let d := Prod.snd _pair_1
+    for p'_pair_1 in (PastaLean.pyIter (PastaLean.pyEnumerate distances))do
+      let i := Prod.fst p'_pair_1
+      let d := Prod.snd p'_pair_1
       -- The index stays within bounds for the whole scan.
       let _ := Libraries.passta.pyPassInvariant (decide (min_index < PastaLean.pyLen distances))
       if h_1 : d == min_dist then 
@@ -114,13 +114,13 @@ def find_nearest_neighbor'rn : List Int → List (List Int) → PastaLean.PyExce
         break
       else
         let _ := ()
-    let __py_ret_1 := (min_dist, dataset⦋min_index⦌)
-    return __py_ret_1
+    let p'_ret_1 := (min_dist, dataset⦋min_index⦌)
+    return p'_ret_1
   catch caught =>
     if (caught).OfKind == "ValueError" then 
       -- Fallback when a point has the wrong number of dimensions
-      let __py_ret_2 := (-(1.0 : Float), [])
-      return __py_ret_2
+      let p'_ret_2 := (-(1.0 : Float), [])
+      return p'_ret_2
     else
       throw caught
 

@@ -367,7 +367,7 @@ partial def hoistIOTerm (json : Json) : PygenM (Array (TSyntax `doElem) × TSynt
                 let arg0 := resolvedArgs[0]!
                 `($inputIdent $arg0)
             | _ => throwError "input() expects zero or one positional argument."
-          let binder := mkIdent (s!"__py_input{bindings.size}").toName
+          let binder := mkIdent (s!"p'_input{bindings.size}").toName
           let finalBindings := bindings.push (← `(doElem| let $binder:ident ← $action:term))
           return (finalBindings, binder)
       | .ok "Name", .ok "int" => do
@@ -419,7 +419,7 @@ partial def hoistIOTerm (json : Json) : PygenM (Array (TSyntax `doElem) × TSynt
                   | some endJson => getCode endJson `term
                   | none => `("\n")
                 `($pyPrintIOIdent $printArgs $sepCode $endCode)
-          let binder := mkIdent (s!"__py_print{bindings.size}").toName
+          let binder := mkIdent (s!"p'_print{bindings.size}").toName
           let finalBindings := bindings.push (← `(doElem| let $binder:ident ← $action:term))
           return (finalBindings, binder)
       | _, _ =>
@@ -468,14 +468,14 @@ def buildIOPureApplicationFromArgs (argJsons : Array Json) (argCodes : Array (TS
     if basicJsonUsesIOEffect argJson then
       let (argBindings, argTerm) ← hoistIOTerm argJson
       if argBindings.isEmpty then
-        let binder := mkIdent (s!"__py_arg{idx}").toName
+        let binder := mkIdent (s!"p'_arg{idx}").toName
         bindings := bindings.push (← `(doElem| let $binder:ident ← $argTerm:term))
         resolvedArgs := resolvedArgs.push (binder : TSyntax `term)
       else
         bindings := bindings ++ argBindings
         resolvedArgs := resolvedArgs.push argTerm
     else if basicJsonUsesMonadicEffect argJson then
-      let binder := mkIdent (s!"__py_arg{idx}").toName
+      let binder := mkIdent (s!"p'_arg{idx}").toName
       bindings := bindings.push (← `(doElem| let $binder:ident ← $argCode:term))
       resolvedArgs := resolvedArgs.push (binder : TSyntax `term)
     else
@@ -503,14 +503,14 @@ def buildIOActionApplicationFromArgs (argJsons : Array Json) (argCodes : Array (
     if basicJsonUsesIOEffect argJson then
       let (argBindings, argTerm) ← hoistIOTerm argJson
       if argBindings.isEmpty then
-        let binder := mkIdent (s!"__py_arg{idx}").toName
+        let binder := mkIdent (s!"p'_arg{idx}").toName
         bindings := bindings.push (← `(doElem| let $binder:ident ← $argTerm:term))
         resolvedArgs := resolvedArgs.push (binder : TSyntax `term)
       else
         bindings := bindings ++ argBindings
         resolvedArgs := resolvedArgs.push argTerm
     else if basicJsonUsesMonadicEffect argJson then
-      let binder := mkIdent (s!"__py_arg{idx}").toName
+      let binder := mkIdent (s!"p'_arg{idx}").toName
       bindings := bindings.push (← `(doElem| let $binder:ident ← $argCode:term))
       resolvedArgs := resolvedArgs.push (binder : TSyntax `term)
     else

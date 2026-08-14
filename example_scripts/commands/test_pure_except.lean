@@ -22,8 +22,8 @@ def validate : Int → PastaLean.ProofMode.PyProofM Int := fun (x : Int) ↦ do
     throw (PastaLean.PyException.Raise "ValueError" (ToString.toString "negative"))
   else
     let _ := ()
-  let __py_ret_1 := x *ₚ (2 : Int)
-  return __py_ret_1
+  let p'_ret_1 := x *ₚ (2 : Int)
+  return p'_ret_1
 
 attribute [simp] validate
 
@@ -32,8 +32,8 @@ def validate'rn : Int → PastaLean.PyExcept Int := fun (x : Int) ↦ do
     throw (PastaLean.PyException.Raise "ValueError" (ToString.toString "negative"))
   else
     let _ := ()
-  let __py_ret_1 := x *ₚ (2 : Int)
-  return __py_ret_1
+  let p'_ret_1 := x *ₚ (2 : Int)
+  return p'_ret_1
 
 def validate_with_print : Int → PastaLean.ProofMode.PyProofM Int := fun (x : Int) ↦ do
   let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg x]
@@ -41,8 +41,8 @@ def validate_with_print : Int → PastaLean.ProofMode.PyProofM Int := fun (x : I
     throw (PastaLean.PyException.Raise "ValueError" (ToString.toString "negative"))
   else
     let _ := ()
-  let __py_ret_1 := x *ₚ (2 : Int)
-  return __py_ret_1
+  let p'_ret_1 := x *ₚ (2 : Int)
+  return p'_ret_1
 
 attribute [simp] validate_with_print
 
@@ -52,7 +52,7 @@ def validate_with_print'rn : Int → PastaLean.PyExcept Int := fun (x : Int) ↦
     throw (PastaLean.PyException.Raise "ValueError" (ToString.toString "negative"))
   else
     let _ := ()
-  let __py_ret_1 := x *ₚ (2 : Int)
-  return __py_ret_1
+  let p'_ret_1 := x *ₚ (2 : Int)
+  return p'_ret_1
 
 end PastaLean.User.Root

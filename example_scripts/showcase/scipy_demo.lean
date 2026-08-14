@@ -25,8 +25,8 @@ def variance := fun (xs : List Rat) ↦
         let mut total := (0.0 : Rat)
         for x in (PastaLean.pyIter xs)do
           total := total +ₚ (x -ₚ m) *ₚ (x -ₚ m)
-        let __py_ret_1 := total /ₚ PastaLean.pyLen xs
-        return __py_ret_1))
+        let p'_ret_1 := total /ₚ PastaLean.pyLen xs
+        return p'_ret_1))
 
 attribute [simp, taste_ingr] variance
 
@@ -38,8 +38,8 @@ def variance'rn := fun (xs : List Float) ↦
         let mut total := (0.0 : Float)
         for x in (PastaLean.pyIter xs)do
           total := total +ₚ (x -ₚ m) *ₚ (x -ₚ m)
-        let __py_ret_1 := PastaLean.pyFloat total /ₚ PastaLean.pyLen xs
-        return __py_ret_1))
+        let p'_ret_1 := PastaLean.pyFloat total /ₚ PastaLean.pyLen xs
+        return p'_ret_1))
 
 noncomputable def main' :=
   ((do

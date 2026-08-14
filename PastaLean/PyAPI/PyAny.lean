@@ -445,4 +445,18 @@ instance : PySort PyAny PyAny where
     | .str s => PySort.pySort (s.toList.map (fun c => PyAny.str c.toString))
     | _ => []
 
+/-- Decode a JSON value into `PyAny`, PRESERVING Python's int-vs-float distinction (a JSON number with
+no fractional part is `.int`, otherwise `.float`). Used by the test harness to feed a `PyAny`-typed
+parameter (e.g. `any_int`, which does `type(x) == int`) without collapsing every number to `Float`. -/
+partial def PyAny.ofJson? : Lean.Json → Except String PyAny
+  | .null   => .ok .none
+  | .bool b => .ok (.bool b)
+  | .str s  => .ok (.str s)
+  | .num n  => .ok (if n.exponent == 0 then .int n.mantissa
+                    else .float ((n.mantissa : Rat) / ((10 ^ n.exponent : Nat) : Rat)))
+  | .arr xs => do let l ← xs.toList.mapM PyAny.ofJson?; .ok (.list l)
+  | .obj _  => .error "PyAny.ofJson?: JSON objects (dict) are not supported"
+
+instance : Lean.FromJson PyAny := ⟨PyAny.ofJson?⟩
+
 end PastaLean

@@ -55,21 +55,21 @@ def starred_unpacking := fun (lst : List Int) ↦
     (do
       -- `*` collects the middle into a list; elements after the star read from the end, so `last` is
       -- always `lst[-1]` regardless of length. `head, *body, last = [1,2,3,4]` → (1, [2,3], 4).
-      let __unpack_value_1 := lst
-      let __unpack_pair_1 := __unpack_value_1
-      let mut head : Int := PastaLean.pyListGetItem __unpack_pair_1 (0 : Int)
-      let mut body := PastaLean.pyListSlice __unpack_pair_1 (some (1 : Int)) (some (-1 : Int))
-      let mut last : Int := PastaLean.pyListGetItem __unpack_pair_1 (-1 : Int)
-      let __unpack_value_2 := lst
-      let __unpack_pair_2 := __unpack_value_2
-      let mut first : Int := PastaLean.pyListGetItem __unpack_pair_2 (0 : Int)
-      let mut rest := PastaLean.pyListSlice __unpack_pair_2 (some (1 : Int)) (none : Option Int)
-      let __unpack_value_3 := lst
-      let __unpack_pair_3 := __unpack_value_3
-      let mut init := PastaLean.pyListSlice __unpack_pair_3 (some (0 : Int)) (some (-1 : Int))
-      let mut tail : Int := PastaLean.pyListGetItem __unpack_pair_3 (-1 : Int)
-      let __py_ret_1 := (head, (body, (last, (rest, init))))
-      return __py_ret_1)
+      let p'_unpack_value_1 := lst
+      let p'_unpack_pair_1 := p'_unpack_value_1
+      let mut head : Int := PastaLean.pyListGetItem p'_unpack_pair_1 (0 : Int)
+      let mut body := PastaLean.pyListSlice p'_unpack_pair_1 (some (1 : Int)) (some (-1 : Int))
+      let mut last : Int := PastaLean.pyListGetItem p'_unpack_pair_1 (-1 : Int)
+      let p'_unpack_value_2 := lst
+      let p'_unpack_pair_2 := p'_unpack_value_2
+      let mut first : Int := PastaLean.pyListGetItem p'_unpack_pair_2 (0 : Int)
+      let mut rest := PastaLean.pyListSlice p'_unpack_pair_2 (some (1 : Int)) (none : Option Int)
+      let p'_unpack_value_3 := lst
+      let p'_unpack_pair_3 := p'_unpack_value_3
+      let mut init := PastaLean.pyListSlice p'_unpack_pair_3 (some (0 : Int)) (some (-1 : Int))
+      let mut tail : Int := PastaLean.pyListGetItem p'_unpack_pair_3 (-1 : Int)
+      let p'_ret_1 := (head, (body, (last, (rest, init))))
+      return p'_ret_1)
 
 attribute [simp, taste_ingr] starred_unpacking
 
@@ -78,21 +78,21 @@ def starred_unpacking'rn := fun (lst : List Int) ↦
     (do
       -- `*` collects the middle into a list; elements after the star read from the end, so `last` is
       -- always `lst[-1]` regardless of length. `head, *body, last = [1,2,3,4]` → (1, [2,3], 4).
-      let __unpack_value_1 := lst
-      let __unpack_pair_1 := __unpack_value_1
-      let mut head : Int := PastaLean.pyListGetItem __unpack_pair_1 (0 : Int)
-      let mut body := PastaLean.pyListSlice __unpack_pair_1 (some (1 : Int)) (some (-1 : Int))
-      let mut last : Int := PastaLean.pyListGetItem __unpack_pair_1 (-1 : Int)
-      let __unpack_value_2 := lst
-      let __unpack_pair_2 := __unpack_value_2
-      let mut first : Int := PastaLean.pyListGetItem __unpack_pair_2 (0 : Int)
-      let mut rest := PastaLean.pyListSlice __unpack_pair_2 (some (1 : Int)) (none : Option Int)
-      let __unpack_value_3 := lst
-      let __unpack_pair_3 := __unpack_value_3
-      let mut init := PastaLean.pyListSlice __unpack_pair_3 (some (0 : Int)) (some (-1 : Int))
-      let mut tail : Int := PastaLean.pyListGetItem __unpack_pair_3 (-1 : Int)
-      let __py_ret_1 := (head, (body, (last, (rest, init))))
-      return __py_ret_1)
+      let p'_unpack_value_1 := lst
+      let p'_unpack_pair_1 := p'_unpack_value_1
+      let mut head : Int := PastaLean.pyListGetItem p'_unpack_pair_1 (0 : Int)
+      let mut body := PastaLean.pyListSlice p'_unpack_pair_1 (some (1 : Int)) (some (-1 : Int))
+      let mut last : Int := PastaLean.pyListGetItem p'_unpack_pair_1 (-1 : Int)
+      let p'_unpack_value_2 := lst
+      let p'_unpack_pair_2 := p'_unpack_value_2
+      let mut first : Int := PastaLean.pyListGetItem p'_unpack_pair_2 (0 : Int)
+      let mut rest := PastaLean.pyListSlice p'_unpack_pair_2 (some (1 : Int)) (none : Option Int)
+      let p'_unpack_value_3 := lst
+      let p'_unpack_pair_3 := p'_unpack_value_3
+      let mut init := PastaLean.pyListSlice p'_unpack_pair_3 (some (0 : Int)) (some (-1 : Int))
+      let mut tail : Int := PastaLean.pyListGetItem p'_unpack_pair_3 (-1 : Int)
+      let p'_ret_1 := (head, (body, (last, (rest, init))))
+      return p'_ret_1)
 
 def fstring :=
   let s1 := ("Hello" : String)
@@ -131,8 +131,8 @@ def numeric_tower_widening := fun (flags : List Bool) ↦ fun (a : Int) ↦ fun 
       let mut total : Int := (0 : Int)
       for f in (PastaLean.pyIter flags)do
         total := total +ₚ f
-      let __py_ret_1 := total +ₚ decide (a > b) +ₚ (a == b) *ₚ (2 : Int)
-      return __py_ret_1)
+      let p'_ret_1 := total +ₚ decide (a > b) +ₚ (a == b) *ₚ (2 : Int)
+      return p'_ret_1)
 
 attribute [simp, taste_ingr] numeric_tower_widening
 
@@ -144,8 +144,8 @@ def numeric_tower_widening'rn := fun (flags : List Bool) ↦ fun (a : Int) ↦ f
       let mut total : Int := (0 : Int)
       for f in (PastaLean.pyIter flags)do
         total := total +ₚ f
-      let __py_ret_1 := total +ₚ decide (a > b) +ₚ (a == b) *ₚ (2 : Int)
-      return __py_ret_1)
+      let p'_ret_1 := total +ₚ decide (a > b) +ₚ (a == b) *ₚ (2 : Int)
+      return p'_ret_1)
 
 def mixed_scalar_accumulator := fun (xs : List Int) ↦
   (show Rat from
@@ -200,8 +200,8 @@ def inf_dp := fun (cost : List Int) ↦
       dp := PastaLean.pySetItem dp (0 : Int) (0 : Int)
       for i in (PastaLean.pyRange (n +ₚ (1 : Int)) (1 : Int))do
         dp := PastaLean.pySetItem dp i (PastaLean.pyMin [dp⦋i -ₚ (1 : Int)⦌ +ₚ cost⦋i -ₚ (1 : Int)⦌, dp⦋i⦌])
-      let __py_ret_1 := dp⦋n⦌
-      return __py_ret_1)
+      let p'_ret_1 := dp⦋n⦌
+      return p'_ret_1)
 
 attribute [simp, taste_ingr] inf_dp
 
@@ -214,8 +214,8 @@ def inf_dp'rn := fun (cost : List Int) ↦
       dp := PastaLean.pySetItem dp (0 : Int) (0 : Int)
       for i in (PastaLean.pyRange (n +ₚ (1 : Int)) (1 : Int))do
         dp := PastaLean.pySetItem dp i (PastaLean.pyMin [dp⦋i -ₚ (1 : Int)⦌ +ₚ cost⦋i -ₚ (1 : Int)⦌, dp⦋i⦌])
-      let __py_ret_1 := dp⦋n⦌
-      return __py_ret_1)
+      let p'_ret_1 := dp⦋n⦌
+      return p'_ret_1)
 
 def grid_inf_dp := fun (houses : List Int) ↦
   Id.run
@@ -227,15 +227,15 @@ def grid_inf_dp := fun (houses : List Int) ↦
       let mut n : Int := PastaLean.pyLen houses
       let mut f : List (List Int) := (PastaLean.pyRange n).map fun _ => PastaLean.pyListRepeat [inf] (n +ₚ (1 : Int))
       for i in (PastaLean.pyRange n)do
-        f := PastaLean.pyModifyItem f i (fun __row_1 => PastaLean.pySetItem __row_1 (1 : Int) houses⦋i⦌)
+        f := PastaLean.pyModifyItem f i (fun p'_row_1 => PastaLean.pySetItem p'_row_1 (1 : Int) houses⦋i⦌)
         for j in (PastaLean.pyRange (i +ₚ (2 : Int)) (2 : Int))do
           for p in (PastaLean.pyRange i)do
             f :=
               PastaLean.pyModifyItem f i
-                (fun __row_2 =>
-                  PastaLean.pySetItem __row_2 j (PastaLean.pyMin [f⦋i⦌⦋j⦌, f⦋p⦌⦋j -ₚ (1 : Int)⦌ +ₚ houses⦋i⦌]))
-      let __py_ret_1 := f⦋n -ₚ (1 : Int)⦌⦋n⦌
-      return __py_ret_1)
+                (fun p'_row_2 =>
+                  PastaLean.pySetItem p'_row_2 j (PastaLean.pyMin [f⦋i⦌⦋j⦌, f⦋p⦌⦋j -ₚ (1 : Int)⦌ +ₚ houses⦋i⦌]))
+      let p'_ret_1 := f⦋n -ₚ (1 : Int)⦌⦋n⦌
+      return p'_ret_1)
 
 attribute [simp, taste_ingr] grid_inf_dp
 
@@ -250,15 +250,15 @@ def grid_inf_dp'rn := fun (houses : List Int) ↦
       let mut f : Array (Array Int) :=
         ((PastaLean.pyRange n).map fun _ => PastaLean.pyArrayRepeat #[inf] (n +ₚ (1 : Int))) |>.toArray
       for i in (PastaLean.pyRange n)do
-        f := PastaLean.pyModifyItem f i (fun __row_1 => PastaLean.pySetItem __row_1 (1 : Int) houses⦋i⦌)
+        f := PastaLean.pyModifyItem f i (fun p'_row_1 => PastaLean.pySetItem p'_row_1 (1 : Int) houses⦋i⦌)
         for j in (PastaLean.pyRange (i +ₚ (2 : Int)) (2 : Int))do
           for p in (PastaLean.pyRange i)do
             f :=
               PastaLean.pyModifyItem f i
-                (fun __row_2 =>
-                  PastaLean.pySetItem __row_2 j (PastaLean.pyMin [f⦋i⦌⦋j⦌, f⦋p⦌⦋j -ₚ (1 : Int)⦌ +ₚ houses⦋i⦌]))
-      let __py_ret_1 := f⦋n -ₚ (1 : Int)⦌⦋n⦌
-      return __py_ret_1)
+                (fun p'_row_2 =>
+                  PastaLean.pySetItem p'_row_2 j (PastaLean.pyMin [f⦋i⦌⦋j⦌, f⦋p⦌⦋j -ₚ (1 : Int)⦌ +ₚ houses⦋i⦌]))
+      let p'_ret_1 := f⦋n -ₚ (1 : Int)⦌⦋n⦌
+      return p'_ret_1)
 
 def dp_sentinel_return := fun (cost : List Int) ↦
   Id.run
@@ -271,8 +271,8 @@ def dp_sentinel_return := fun (cost : List Int) ↦
       dp := PastaLean.pySetItem dp (0 : Int) (0 : Int)
       for i in (PastaLean.pyRange (n +ₚ (1 : Int)) (1 : Int))do
         dp := PastaLean.pySetItem dp i (PastaLean.pyMin [dp⦋i -ₚ (1 : Int)⦌ +ₚ cost⦋i -ₚ (1 : Int)⦌, dp⦋i⦌])
-      let __py_ret_1 := if dp⦋n⦌ ≥ inf then -(1 : Int) else dp⦋n⦌
-      return __py_ret_1)
+      let p'_ret_1 := if dp⦋n⦌ ≥ inf then -(1 : Int) else dp⦋n⦌
+      return p'_ret_1)
 
 attribute [simp, taste_ingr] dp_sentinel_return
 
@@ -287,8 +287,8 @@ def dp_sentinel_return'rn := fun (cost : List Int) ↦
       dp := PastaLean.pySetItem dp (0 : Int) (0 : Int)
       for i in (PastaLean.pyRange (n +ₚ (1 : Int)) (1 : Int))do
         dp := PastaLean.pySetItem dp i (PastaLean.pyMin [dp⦋i -ₚ (1 : Int)⦌ +ₚ cost⦋i -ₚ (1 : Int)⦌, dp⦋i⦌])
-      let __py_ret_1 := if dp⦋n⦌ ≥ inf then -(1 : Int) else dp⦋n⦌
-      return __py_ret_1)
+      let p'_ret_1 := if dp⦋n⦌ ≥ inf then -(1 : Int) else dp⦋n⦌
+      return p'_ret_1)
 
 def heterogeneous_pyany :=
   (show PastaLean.PyAny from
@@ -344,8 +344,8 @@ def untyped_param_compare_and_div := fun (nums : PyAny) ↦
             best := x +ₚ x %ₚ (3 : Int)
           else
             let _ := ()
-        let __py_ret_1 := (best /ₚ (2 : Int) : PastaLean.PyAny)
-        return __py_ret_1))
+        let p'_ret_1 := (best /ₚ (2 : Int) : PastaLean.PyAny)
+        return p'_ret_1))
 
 attribute [simp] untyped_param_compare_and_div
 
@@ -361,8 +361,8 @@ def untyped_param_compare_and_div'rn := fun (nums : PyAny) ↦
             best := x +ₚ x %ₚ (3 : Int)
           else
             let _ := ()
-        let __py_ret_1 := (PastaLean.pyFloat best /ₚ (2 : Int) : PastaLean.PyAny)
-        return __py_ret_1))
+        let p'_ret_1 := (PastaLean.pyFloat best /ₚ (2 : Int) : PastaLean.PyAny)
+        return p'_ret_1))
 
 def untyped_param_bitwise := fun (nums : PyAny) ↦
   (show PastaLean.PyAny from
@@ -372,8 +372,8 @@ def untyped_param_bitwise := fun (nums : PyAny) ↦
         let mut r : PyAny := (0 : Int)
         for x in (PastaLean.pyIter nums)do
           r := PastaLean.pyBitOr r (PastaLean.pyBitAnd x (1 : Int)) +ₚ PastaLean.pyFloorDiv x (2 : Int)
-        let __py_ret_1 := (PastaLean.pyShiftLeft r (1 : Int) : PastaLean.PyAny)
-        return __py_ret_1))
+        let p'_ret_1 := (PastaLean.pyShiftLeft r (1 : Int) : PastaLean.PyAny)
+        return p'_ret_1))
 
 attribute [simp] untyped_param_bitwise
 
@@ -385,8 +385,8 @@ def untyped_param_bitwise'rn := fun (nums : PyAny) ↦
         let mut r : PyAny := (0 : Int)
         for x in (PastaLean.pyIter nums)do
           r := PastaLean.pyBitOr r (PastaLean.pyBitAnd x (1 : Int)) +ₚ PastaLean.pyFloorDiv x (2 : Int)
-        let __py_ret_1 := (PastaLean.pyShiftLeft r (1 : Int) : PastaLean.PyAny)
-        return __py_ret_1))
+        let p'_ret_1 := (PastaLean.pyShiftLeft r (1 : Int) : PastaLean.PyAny)
+        return p'_ret_1))
 
 def grid_float_dp := fun (m : Int) ↦ fun (n : Int) ↦
   (show Rat from
@@ -395,17 +395,17 @@ def grid_float_dp := fun (m : Int) ↦ fun (n : Int) ↦
         -- 2D grid DP initialised int (`[[0]*n ...]`) that becomes float via `/ 2` — the nested
         -- `f[i][j] = ...` teaches `f : list[list[float]]`, coercing the innermost `0`.
         let mut f := ((PastaLean.pyRange m).map fun _ => PastaLean.pyListRepeat [(0 : Rat)] n : List (List Rat))
-        f := PastaLean.pyModifyItem f (0 : Int) (fun __row_1 => PastaLean.pySetItem __row_1 (0 : Int) (1 : Rat))
+        f := PastaLean.pyModifyItem f (0 : Int) (fun p'_row_1 => PastaLean.pySetItem p'_row_1 (0 : Int) (1 : Rat))
         for i in (PastaLean.pyRange m)do
           for j in (PastaLean.pyRange n)do
             if h_1 : i > (0 : Int) then 
               f :=
                 PastaLean.pyModifyItem f i
-                  (fun __row_2 => PastaLean.pySetItem __row_2 j (f⦋i⦌⦋j⦌ +ₚ f⦋i -ₚ (1 : Int)⦌⦋j⦌ /ₚ (2 : Int)))
+                  (fun p'_row_2 => PastaLean.pySetItem p'_row_2 j (f⦋i⦌⦋j⦌ +ₚ f⦋i -ₚ (1 : Int)⦌⦋j⦌ /ₚ (2 : Int)))
             else
               let _ := ()
-        let __py_ret_1 := f⦋m -ₚ (1 : Int)⦌⦋n -ₚ (1 : Int)⦌
-        return __py_ret_1))
+        let p'_ret_1 := f⦋m -ₚ (1 : Int)⦌⦋n -ₚ (1 : Int)⦌
+        return p'_ret_1))
 
 attribute [simp, taste_ingr] grid_float_dp
 
@@ -418,18 +418,18 @@ def grid_float_dp'rn := fun (m : Int) ↦ fun (n : Int) ↦
         let mut f :=
           (((PastaLean.pyRange m).map fun _ => PastaLean.pyArrayRepeat #[(0 : Float)] n) |>.toArray :
             Array (Array Float))
-        f := PastaLean.pyModifyItem f (0 : Int) (fun __row_1 => PastaLean.pySetItem __row_1 (0 : Int) (1 : Float))
+        f := PastaLean.pyModifyItem f (0 : Int) (fun p'_row_1 => PastaLean.pySetItem p'_row_1 (0 : Int) (1 : Float))
         for i in (PastaLean.pyRange m)do
           for j in (PastaLean.pyRange n)do
             if h_1 : i > (0 : Int) then 
               f :=
                 PastaLean.pyModifyItem f i
-                  (fun __row_2 =>
-                    PastaLean.pySetItem __row_2 j (f⦋i⦌⦋j⦌ +ₚ PastaLean.pyFloat f⦋i -ₚ (1 : Int)⦌⦋j⦌ /ₚ (2 : Int)))
+                  (fun p'_row_2 =>
+                    PastaLean.pySetItem p'_row_2 j (f⦋i⦌⦋j⦌ +ₚ PastaLean.pyFloat f⦋i -ₚ (1 : Int)⦌⦋j⦌ /ₚ (2 : Int)))
             else
               let _ := ()
-        let __py_ret_1 := f⦋m -ₚ (1 : Int)⦌⦋n -ₚ (1 : Int)⦌
-        return __py_ret_1))
+        let p'_ret_1 := f⦋m -ₚ (1 : Int)⦌⦋n -ₚ (1 : Int)⦌
+        return p'_ret_1))
 
 -- --- Back-inference from comparisons (unannotated params pinned by `== <literal>` / `in`) ---
 -- Each param below is UN-annotated; its type is recovered from a comparison against a literal, so the

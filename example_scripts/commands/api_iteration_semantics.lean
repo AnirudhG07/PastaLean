@@ -23,17 +23,17 @@ def topo_order_count := fun (n : Int) ↦ fun (edges : List (List Int)) ↦
     (do
       let mut g : List (List Int) := (PastaLean.pyRange n).map fun _ => []
       let mut indeg : List Int := PastaLean.pyListRepeat [(0 : Int)] n
-      for _pair_1 in (PastaLean.pyIter edges)do
-        let a := PastaLean.pyListGetItem _pair_1 (0 : Int)
-        let b := PastaLean.pyListGetItem _pair_1 (1 : Int)
+      for p'_pair_1 in (PastaLean.pyIter edges)do
+        let a := PastaLean.pyListGetItem p'_pair_1 (0 : Int)
+        let b := PastaLean.pyListGetItem p'_pair_1 (1 : Int)
         g := PastaLean.pySetItem g b (PastaLean.pyAppend g⦋b⦌ a)
         indeg := PastaLean.pySetItem indeg a (indeg⦋a⦌ +ₚ (1 : Int))
       let mut q : List Int := (List.filter (fun i => indeg⦋i⦌ = (0 : Int)) (PastaLean.pyRange n)).map fun i => i
       let mut seen : Int := (0 : Int)
-      let mut __fi'_1 : Int := -1
-      while (__fi'_1 +ₚ (1 : Int)) < PastaLean.pyLen q do
-        __fi'_1 := __fi'_1 +ₚ (1 : Int)
-        let i := PastaLean.pyGetItem q __fi'_1
+      let mut p'_fi'_1 : Int := -1
+      while (p'_fi'_1 +ₚ (1 : Int)) < PastaLean.pyLen q do
+        p'_fi'_1 := p'_fi'_1 +ₚ (1 : Int)
+        let i := PastaLean.pyGetItem q p'_fi'_1
         seen := seen +ₚ (1 : Int)
         for j in (PastaLean.pyIter g⦋i⦌)do
           indeg := PastaLean.pySetItem indeg j (indeg⦋j⦌ -ₚ (1 : Int))
@@ -50,18 +50,18 @@ def topo_order_count'rn := fun (n : Int) ↦ fun (edges : List (List Int)) ↦
     (do
       let mut g : List (List Int) := (PastaLean.pyRange n).map fun _ => []
       let mut indeg : Array Int := PastaLean.pyArrayRepeat #[(0 : Int)] n
-      for _pair_1 in (PastaLean.pyIter edges)do
-        let a := PastaLean.pyListGetItem _pair_1 (0 : Int)
-        let b := PastaLean.pyListGetItem _pair_1 (1 : Int)
+      for p'_pair_1 in (PastaLean.pyIter edges)do
+        let a := PastaLean.pyListGetItem p'_pair_1 (0 : Int)
+        let b := PastaLean.pyListGetItem p'_pair_1 (1 : Int)
         g := PastaLean.pySetItem g b (PastaLean.pyAppend g⦋b⦌ a)
         indeg := PastaLean.pySetItem indeg a (indeg⦋a⦌ +ₚ (1 : Int))
       let mut q : Array Int :=
         ((List.filter (fun i => indeg⦋i⦌ == (0 : Int)) (PastaLean.pyRange n)).map fun i => i) |>.toArray
       let mut seen : Int := (0 : Int)
-      let mut __fi'_1 : Int := -1
-      while (__fi'_1 +ₚ (1 : Int)) < PastaLean.pyLen q do
-        __fi'_1 := __fi'_1 +ₚ (1 : Int)
-        let i := PastaLean.pyGetItem q __fi'_1
+      let mut p'_fi'_1 : Int := -1
+      while (p'_fi'_1 +ₚ (1 : Int)) < PastaLean.pyLen q do
+        p'_fi'_1 := p'_fi'_1 +ₚ (1 : Int)
+        let i := PastaLean.pyGetItem q p'_fi'_1
         seen := seen +ₚ (1 : Int)
         for j in (PastaLean.pyIter g⦋i⦌)do
           indeg := PastaLean.pySetItem indeg j (indeg⦋j⦌ -ₚ (1 : Int))
@@ -102,16 +102,16 @@ def greedy_flips := fun (nums : List Int) ↦
       -- `for i, x in enumerate(nums): nums[i+1] ^= 1` mutates a LATER index; Python's live `enumerate`
       -- sees it on the next iteration, so the container must be re-read by index.
       let mut ops : Int := (0 : Int)
-      let mut __fi'_1 : Int := -1
-      while (__fi'_1 +ₚ (1 : Int)) < PastaLean.pyLen nums do
-        __fi'_1 := __fi'_1 +ₚ (1 : Int)
-        let _pair_1 := (__fi'_1, PastaLean.pyGetItem nums __fi'_1)
-        let i := Prod.fst _pair_1
-        let x := Prod.snd _pair_1
+      let mut p'_fi'_1 : Int := -1
+      while (p'_fi'_1 +ₚ (1 : Int)) < PastaLean.pyLen nums do
+        p'_fi'_1 := p'_fi'_1 +ₚ (1 : Int)
+        let p'_pair_1 := (p'_fi'_1, PastaLean.pyGetItem nums p'_fi'_1)
+        let i := Prod.fst p'_pair_1
+        let x := Prod.snd p'_pair_1
         if h_1 : x = (0 : Int) then 
           if h_2 : i +ₚ (2 : Int) ≥ PastaLean.pyLen nums then 
-            let __py_ret_1 := -(1 : Int)
-            return __py_ret_1
+            let p'_ret_1 := -(1 : Int)
+            return p'_ret_1
           else
             let _ := ()
           nums := PastaLean.pySetItem nums (i +ₚ (1 : Int)) (PastaLean.pyBitXor nums⦋i +ₚ (1 : Int)⦌ (1 : Int))
@@ -130,16 +130,16 @@ def greedy_flips'rn := fun (nums : List Int) ↦
       -- `for i, x in enumerate(nums): nums[i+1] ^= 1` mutates a LATER index; Python's live `enumerate`
       -- sees it on the next iteration, so the container must be re-read by index.
       let mut ops : Int := (0 : Int)
-      let mut __fi'_1 : Int := -1
-      while (__fi'_1 +ₚ (1 : Int)) < PastaLean.pyLen nums do
-        __fi'_1 := __fi'_1 +ₚ (1 : Int)
-        let _pair_1 := (__fi'_1, PastaLean.pyGetItem nums __fi'_1)
-        let i := Prod.fst _pair_1
-        let x := Prod.snd _pair_1
+      let mut p'_fi'_1 : Int := -1
+      while (p'_fi'_1 +ₚ (1 : Int)) < PastaLean.pyLen nums do
+        p'_fi'_1 := p'_fi'_1 +ₚ (1 : Int)
+        let p'_pair_1 := (p'_fi'_1, PastaLean.pyGetItem nums p'_fi'_1)
+        let i := Prod.fst p'_pair_1
+        let x := Prod.snd p'_pair_1
         if h_1 : x == (0 : Int) then 
           if h_2 : i +ₚ (2 : Int) ≥ PastaLean.pyLen nums then 
-            let __py_ret_1 := -(1 : Int)
-            return __py_ret_1
+            let p'_ret_1 := -(1 : Int)
+            return p'_ret_1
           else
             let _ := ()
           nums := PastaLean.pySetItem nums (i +ₚ (1 : Int)) (PastaLean.pyBitXor nums⦋i +ₚ (1 : Int)⦌ (1 : Int))
@@ -155,15 +155,15 @@ def flip_invert := fun (image : List (List Int)) ↦
       let mut image := image
       -- `for row in image: <mutate row in place>` must write the mutated row back into `image` — the
       -- loop var is a value copy under our semantics.
-      let mut __fi'_1 : Int := -1
-      while (__fi'_1 +ₚ (1 : Int)) < PastaLean.pyLen image do
-        __fi'_1 := __fi'_1 +ₚ (1 : Int)
-        let __py_loop_1 := PastaLean.pyGetItem image __fi'_1
-        let mut row := __py_loop_1
+      let mut p'_fi'_1 : Int := -1
+      while (p'_fi'_1 +ₚ (1 : Int)) < PastaLean.pyLen image do
+        p'_fi'_1 := p'_fi'_1 +ₚ (1 : Int)
+        let p'_loop_1 := PastaLean.pyGetItem image p'_fi'_1
+        let mut row := p'_loop_1
         row := PastaLean.pyReverse row
         for i in (PastaLean.pyRange (PastaLean.pyLen row))do
           row := PastaLean.pySetItem row i (PastaLean.pyBitXor row⦋i⦌ (1 : Int))
-        image := PastaLean.pySetItem image __fi'_1 row
+        image := PastaLean.pySetItem image p'_fi'_1 row
       return image)
 
 attribute [simp, taste_ingr] flip_invert
@@ -174,15 +174,15 @@ def flip_invert'rn := fun (image : List (List Int)) ↦
       let mut image := image
       -- `for row in image: <mutate row in place>` must write the mutated row back into `image` — the
       -- loop var is a value copy under our semantics.
-      let mut __fi'_1 : Int := -1
-      while (__fi'_1 +ₚ (1 : Int)) < PastaLean.pyLen image do
-        __fi'_1 := __fi'_1 +ₚ (1 : Int)
-        let __py_loop_1 := PastaLean.pyGetItem image __fi'_1
-        let mut row := __py_loop_1
+      let mut p'_fi'_1 : Int := -1
+      while (p'_fi'_1 +ₚ (1 : Int)) < PastaLean.pyLen image do
+        p'_fi'_1 := p'_fi'_1 +ₚ (1 : Int)
+        let p'_loop_1 := PastaLean.pyGetItem image p'_fi'_1
+        let mut row := p'_loop_1
         row := PastaLean.pyReverse row
         for i in (PastaLean.pyRange (PastaLean.pyLen row))do
           row := PastaLean.pySetItem row i (PastaLean.pyBitXor row⦋i⦌ (1 : Int))
-        image := PastaLean.pySetItem image __fi'_1 row
+        image := PastaLean.pySetItem image p'_fi'_1 row
       return image)
 
 def main' :=
