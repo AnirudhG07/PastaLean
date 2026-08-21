@@ -74,7 +74,7 @@ def runTranslateTask (jsonTask : Json) (ctx : Core.Context) (env : Environment) 
     | .error message => return errorResponse s!"Error generating code: {message}"
   -- Type inference stamps `_ty` on binders whose Lean type the code generator would otherwise
   -- leave for Lean to guess (and get stuck on). See `TypeInfer/`.
-  let json := if alreadyInferred then json else TypeInfer.stampNode json
+  let json := if alreadyInferred then json else TypeInfer.stampNode (TypeInfer.ssaModule json)
   let code? ← getCodeIO json target.toName ctx env checkCode
   pure <| match code? with
     | .ok code => successResponse target code
@@ -126,7 +126,7 @@ def runInferTypesTask (jsonTask : Json) : IO Json := do
   | .ok ast =>
     match PastaLean.desugarAst ast with
     | .error message => pure <| errorResponse message
-    | .ok ast => pure <| Json.mkObj [("result", Json.bool true), ("ast", TypeInfer.inferModule ast)]
+    | .ok ast => pure <| Json.mkObj [("result", Json.bool true), ("ast", TypeInfer.inferModule (TypeInfer.ssaModule ast))]
 
 def handleTaskJson (jsonTask : Json) (ctx : Core.Context) (env : Environment) : IO Json := do
   let .ok task := jsonTask.getObjValAs? String "task"

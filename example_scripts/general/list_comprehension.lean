@@ -89,7 +89,7 @@ def lc_with_multiple_conditions'rn :=
 def lc_with_tuple_unpacking :=
   let pairs := ([((1 : Int), "a"), ((2 : Int), "b"), ((3 : Int), "c")] : List (Int × String))
   let another_pairs := ([((4 : Int), "d"), ((5 : Int), "e")] : List (Int × String))
-  let another_pairs :=
+  let another_pairs'v1 :=
     ((List.filter
             (fun (p'_pair_3 : Int × String) =>
               let num := Prod.fst p'_pair_3;
@@ -101,7 +101,7 @@ def lc_with_tuple_unpacking :=
         let char := Prod.snd p'_pair_2;
         (num, char) :
       List (Int × String))
-  let _ := another_pairs
+  let _ := another_pairs'v1
   (PastaLean.pyIter pairs).map fun (p'_pair_1 : Int × String) =>
     let num := Prod.fst p'_pair_1;
     let char := Prod.snd p'_pair_1;
@@ -112,7 +112,7 @@ attribute [simp, taste_ingr] lc_with_tuple_unpacking
 def lc_with_tuple_unpacking'rn :=
   let pairs := ([((1 : Int), "a"), ((2 : Int), "b"), ((3 : Int), "c")] : List (Int × String))
   let another_pairs := ([((4 : Int), "d"), ((5 : Int), "e")] : List (Int × String))
-  let another_pairs :=
+  let another_pairs'v1 :=
     ((List.filter
             (fun (p'_pair_3 : Int × String) =>
               let num := Prod.fst p'_pair_3;
@@ -124,7 +124,7 @@ def lc_with_tuple_unpacking'rn :=
         let char := Prod.snd p'_pair_2;
         (num, char) :
       List (Int × String))
-  let _ := another_pairs
+  let _ := another_pairs'v1
   (PastaLean.pyIter pairs).map fun (p'_pair_1 : Int × String) =>
     let num := Prod.fst p'_pair_1;
     let char := Prod.snd p'_pair_1;

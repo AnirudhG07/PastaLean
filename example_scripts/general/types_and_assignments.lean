@@ -504,21 +504,19 @@ def membership_pins_str'rn := fun ch ↦
   if PastaLean.pyContains "aeiou" ch then (1 : Int) else (0 : Int)
 
 def reassign_type_change_still_ok :=
-  (show PastaLean.PyAny from
-    -- SAFETY: a type-CHANGING reassignment must keep working — `m` is str then int. Back-inference must
-    -- not clobber it (codegen's rebind-shadow re-types the post-`int(m)` segment).
-    let m := "1"
-    let m := PastaLean.pyInt m
-    m ^ₚ (2 : Int))
+  -- SAFETY: a type-CHANGING reassignment must keep working — `m` is str then int. Back-inference must
+  -- not clobber it (codegen's rebind-shadow re-types the post-`int(m)` segment).
+  let m := ("1" : String)
+  let m'v1 := (PastaLean.pyInt m : Int)
+  m'v1 ^ₚ (2 : Int)
 
-attribute [simp] reassign_type_change_still_ok
+attribute [simp, taste_ingr] reassign_type_change_still_ok
 
 def reassign_type_change_still_ok'rn :=
-  (show PastaLean.PyAny from
-    -- SAFETY: a type-CHANGING reassignment must keep working — `m` is str then int. Back-inference must
-    -- not clobber it (codegen's rebind-shadow re-types the post-`int(m)` segment).
-    let m := "1"
-    let m := PastaLean.pyInt m
-    m ^ₚ (2 : Int))
+  -- SAFETY: a type-CHANGING reassignment must keep working — `m` is str then int. Back-inference must
+  -- not clobber it (codegen's rebind-shadow re-types the post-`int(m)` segment).
+  let m := ("1" : String)
+  let m'v1 := (PastaLean.pyInt m : Int)
+  m'v1 ^ₚ (2 : Int)
 
 end PastaLean.User.Root

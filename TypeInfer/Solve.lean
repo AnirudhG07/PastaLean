@@ -1,4 +1,5 @@
 import TypeInfer.Solve.Interproc
+import TypeInfer.Solve.SSA
 
 /-!
 The type-inference engine, split by concern under `TypeInfer/Solve/`:

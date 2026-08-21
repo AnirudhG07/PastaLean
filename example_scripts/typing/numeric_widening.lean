@@ -32,11 +32,13 @@ def car_fleet := fun (target : Int) ↦ fun (position : List Int) ↦ fun (speed
       let mut pre := (0 : Rat)
       for i in (PastaLean.pyIter (PastaLean.pySlice idx none none (some (-(1 : Int)))))do
         let mut t := (target -ₚ position⦋i⦌) /ₚ speed⦋i⦌
+        let mut pre'v1 := default
         if h_1 : t > pre then 
           ans := ans +ₚ (1 : Int)
           pre := t
+          pre'v1 := pre
         else
-          let _ := ()
+          pre'v1 := pre
       return ans)
 
 attribute [simp, taste_ingr] car_fleet
@@ -50,11 +52,13 @@ def car_fleet'rn := fun (target : Int) ↦ fun (position : List Int) ↦ fun (sp
       let mut pre := (0 : Float)
       for i in (PastaLean.pyIter (PastaLean.pySlice idx none none (some (-(1 : Int)))))do
         let mut t := PastaLean.pyFloat (target -ₚ position⦋i⦌) /ₚ speed⦋i⦌
+        let mut pre'v1 := default
         if h_1 : t > pre then 
           ans := ans +ₚ (1 : Int)
           pre := t
+          pre'v1 := pre
         else
-          let _ := ()
+          pre'v1 := pre
       return ans)
 
 -- `heappush` must teach the heap its element type and `heappop` must return it, else `x` is `unknown`,
