@@ -10,7 +10,17 @@ namespace PastaLean
 def itertoolsMember? (json : Json) : Option String :=
   match json.getObjValAs? String "library_module", json.getObjValAs? String "library_member" with
   | .ok "itertools", .ok m => some m
-  | _, _ => none
+  | _, _ =>
+    -- `chain.from_iterable(xss)`: the func is `Attribute(value = itertools.chain, attr = from_iterable)`
+    -- — the library tag rides on the inner `chain`, not the attribute node.
+    if jsonNodeType? json == some "Attribute"
+       && (json.getObjValAs? String "attr").toOption == some "from_iterable" then
+      match (json.getObjVal? "value").toOption with
+      | some v => match v.getObjValAs? String "library_module", v.getObjValAs? String "library_member" with
+          | .ok "itertools", .ok "chain" => some "from_iterable"
+          | _, _ => none
+      | none => none
+    else none
 
 /-- Stamp a unary lambda with a concrete param type so its body's operators (`x < 5`) elaborate. -/
 def typedUnaryLambdaCode (funcJson : Json) (fallback : TSyntax `term)

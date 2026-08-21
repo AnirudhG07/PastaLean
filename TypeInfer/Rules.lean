@@ -250,6 +250,13 @@ partial def builtinReturn (sigs : Sigs) (env : Env) (name : String) (args : List
         | some "int" | some "float" => .int
         | _ => .unknown
       .dict .unknown vt
+    -- `map(f, xs)` yields a list of `f`'s RESULTS, so its element is `f`'s return type — read from a
+    -- named callback (`int`→int cast, or a user fn's inferred return). Lets `list(map(int, l))` type
+    -- as `list[int]`, so a mut var reassigned str-list→int-list joins to `List PyAny` (Option A boxing).
+    else if name == "map" then
+      match args.head?.bind (·.getObjValAs? String "id" |>.toOption) with
+      | some f => .list ((constReturnBuiltins.lookup f).getD ((sigs.get? f).getD .unknown))
+      | none => .list .unknown
     -- Every other arg-dependent builtin / star-imported member declares its return SHAPE in
     -- `Libraries.bareBehaviour?`, so this engine no longer hardcodes any member's name (§27).
     else match Libraries.bareBehaviour? name with

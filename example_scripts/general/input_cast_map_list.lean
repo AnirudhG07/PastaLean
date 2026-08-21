@@ -13,21 +13,16 @@ set_option maxHeartbeats 200000
 
 namespace PastaLean.User.Root
 
-def read_int_list :=
-  ((do
-      let mut xs :=
-        PastaLean.pyList
-          (PastaLean.pyMap PastaLean.pyInt (PastaLean.pyStringSplit (← PastaLean.ProofMode.pyInputProof "")))
-      return xs) :
-    PastaLean.ProofMode.PyProofM _)
+def read_int_list : PastaLean.ProofMode.PyProofM (List Int) := do
+  let mut xs : List Int :=
+    PastaLean.pyList (PastaLean.pyMap PastaLean.pyInt (PastaLean.pyStringSplit (← PastaLean.ProofMode.pyInputProof "")))
+  return xs
 
 attribute [simp] read_int_list
 
-def read_int_list'rn :=
-  ((do
-      let mut xs :=
-        PastaLean.pyList (PastaLean.pyMap PastaLean.pyInt (PastaLean.pyStringSplit (← PastaLean.pyInputIO "")))
-      return xs) :
-    IO _)
+def read_int_list'rn : IO (List Int) := do
+  let mut xs : List Int :=
+    PastaLean.pyList (PastaLean.pyMap PastaLean.pyInt (PastaLean.pyStringSplit (← PastaLean.pyInputIO "")))
+  return xs
 
 end PastaLean.User.Root

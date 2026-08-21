@@ -124,6 +124,10 @@ def getShape : Behaviour := { returns := fun as =>
 with an optional default (arg 2). -/
 def popShape : Behaviour := { returns := fun as => (valueOf (arg as 0)).join ((as[2]?).getD .unknown) }
 
+/-- `round(x)` (1 arg) truncates to an `int`; `round(x, n)` keeps `x`'s numeric type
+(`round(area, 2) : float`). -/
+def roundReturn : Behaviour := { returns := fun as => if as.length ≥ 2 then arg as 0 else .int }
+
 /-! Mutation shapes — for a method, `container` is the receiver (argument 0). -/
 
 /-- `container` gains `.list (element's type)` — `xs.append(v)`, `xs.insert(i, v)`, `heappush(h, v)`. -/
@@ -150,6 +154,7 @@ def builtinBehaviour? (name : String) : Option Behaviour :=
   | "enumerate"                    => some enumerated
   | "min" | "max"                  => some elementOrJoin
   | "sum"                          => some sumReturn
+  | "round"                        => some roundReturn
   -- `map(f, xs)` is a list (of `f`'s results — element type left open); knowing it is a LIST is what
   -- lets `a, b = map(int, s.split())` unpack by index instead of as a `Prod`.
   | "map"                          => some (const (.list .unknown))

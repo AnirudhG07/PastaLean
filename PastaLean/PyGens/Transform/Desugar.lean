@@ -105,14 +105,15 @@ partial def flattenAssign (target value : Json) : DesugarM (Array Json) := do
     stmts := stmts ++ (← flattenAssign nestedTarget tempName)
   return stmts
 
-/-- `for i, (a, b) in xs:` → `for i, t in xs:` with `a, b = t` prepended to the body. Targets with
-`*rest` are left alone; starred unpacking is unsupported and its own error is clearer. -/
+/-- `for i, (a, b) in xs:` → `for i, t in xs:` with `a, b = t` prepended to the body. A nested tuple
+may itself hold a `*rest` (`for i, (_, *xs) in …`) — the prepended `_, *xs = t` is a starred
+assignment, which the assign lowering handles. A TOP-LEVEL starred element (`for a, *b in xs`) is left
+to the `for` lowering (line below), since it would need the `for` header itself to unpack a star. -/
 def flattenForTargets (stmts : Array Json) : DesugarM (Array Json) := do
   stmts.mapM fun stmt => do
     unless jsonNodeType? stmt == some "For" do return stmt
     let .ok target := stmt.getObjVal? "target" | return stmt
     unless isTupleTarget target do return stmt
-    if jsonContainsNodeType target ["Starred"] then return stmt
     let elts := (target.getObjValAs? (Array Json) "elts").toOption.getD #[]
     unless elts.any isTupleTarget do return stmt
     -- A subscript/attribute element is not something this pass can name; leave the diagnostic to
@@ -462,6 +463,79 @@ private def whileTrue (body : Array Json) : Json :=
      ("test", Json.mkObj [("node_type", Json.str "Constant"), ("value", Json.bool true)]),
      ("body", Json.arr body), ("orelse", Json.arr #[])]
 
+/-! ### Unfolding a conditionally-evaluated walrus in an `and`-test
+
+`if A and (x := E) < c: BODY` cannot hoist `x = E` (E must not run when A is false — it could raise or
+recurse). Instead unfold the short-circuit into nested `if`s so `x` is assigned at its real position
+and still reaches BODY: `if A: x = E; if x < c: BODY`. The `while` analogue uses `break` guards. -/
+
+private def ifNoElse (test : Json) (body : Array Json) : Json :=
+  Json.mkObj [("node_type", .str "If"), ("test", test), ("body", Json.arr body), ("orelse", Json.arr #[])]
+
+private def andOf : List Json → Json
+  | [x] => x
+  | xs  => Json.mkObj [("node_type", .str "BoolOp"), ("op", .str "and"), ("values", Json.arr xs.toArray)]
+
+/-- The walrus in `op` is evaluated unconditionally within `op` (not under a nested `and`/`or`/`IfExp`/
+comprehension) — the only shape this linear unfold is sound for. -/
+private def walrusUnconditional (op : Json) : Bool :=
+  !(conditionalContexts.any (fun ctx => hasWalrusUnder ctx op))
+
+/-- `if <and of `values`>: body`, with each conditionally-evaluated walrus turned into an assignment
+at its short-circuit position. `none` if a walrus sits under a further conditional inside an operand. -/
+partial def buildAndChainIf (values : List Json) (body : Array Json) : DesugarM (Option (Array Json)) := do
+  let hasW (j : Json) : Bool := jsonContainsNodeType j ["NamedExpr"]
+  let «prefix» := values.takeWhile (fun v => !hasW v)
+  match values.drop «prefix».length with
+  | [] => return some (if «prefix».isEmpty then body else #[ifNoElse (andOf «prefix») body])
+  | w :: tl =>
+      unless walrusUnconditional w do return none
+      let (w', stmts) ← hoistWalrusExpr w
+      let some inner ← buildAndChainIf (w' :: tl) body | return none
+      let guarded := stmts ++ inner
+      return some (if «prefix».isEmpty then guarded else #[ifNoElse (andOf «prefix») guarded])
+
+/-- `while <and of `values`>: body` → `while True:` with an `if not <op>: break` guard per operand
+(walrus operands assign first), so a walrus re-evaluated each iteration runs at its real position. -/
+partial def buildAndChainWhile (values : List Json) (body : Array Json) : DesugarM (Option (Array Json)) := do
+  let notOf (c : Json) : Json := Json.mkObj [("node_type", .str "UnaryOp"), ("op", .str "not"), ("operand", c)]
+  let breakIf (c : Json) : Json := ifNoElse (notOf c) #[Json.mkObj [("node_type", .str "Break")]]
+  let mut pre : Array Json := #[]
+  for op in values do
+    if jsonContainsNodeType op ["NamedExpr"] then
+      unless walrusUnconditional op do return none
+      let (op', stmts) ← hoistWalrusExpr op
+      pre := (pre ++ stmts).push (breakIf op')
+    else
+      pre := pre.push (breakIf op)
+  return some #[whileTrue (pre ++ body)]
+
+/-- Unfold `if`/`while` whose test is an `and` containing a conditionally-evaluated walrus. Runs
+before `hoistWalrus`, which would otherwise (correctly) refuse to hoist it. -/
+def unfoldWalrusAnd (stmts : Array Json) : DesugarM (Array Json) := do
+  let mut out : Array Json := #[]
+  for stmt in stmts do
+    let isAndWalrusTest : Option (Array Json) := do
+      let test ← (stmt.getObjVal? "test").toOption
+      guard (jsonNodeType? test == some "BoolOp"
+             && (test.getObjValAs? String "op").toOption == some "and"
+             && jsonContainsNodeType test ["NamedExpr"])
+      (test.getObjValAs? (Array Json) "values").toOption
+    match jsonNodeType? stmt, isAndWalrusTest with
+    | some "If", some values =>
+        let orelse := (stmt.getObjValAs? (Array Json) "orelse").toOption.getD #[]
+        let body := (stmt.getObjValAs? (Array Json) "body").toOption.getD #[]
+        match ← (if orelse.isEmpty then buildAndChainIf values.toList body else pure none) with
+        | some newStmts => out := out ++ newStmts
+        | none => out := out.push stmt
+    | some "While", some values =>
+        let body := (stmt.getObjValAs? (Array Json) "body").toOption.getD #[]
+        match ← buildAndChainWhile values.toList body with
+        | some newStmts => out := out ++ newStmts
+        | none => out := out.push stmt
+    | _, _ => out := out.push stmt
+  return out
+
 /-- The `InfiniteIter` a `for` header iterates over, if any, with the call's arguments. -/
 private def infiniteIter? (iter : Json) : Option (Libraries.InfiniteIter × Array Json) := do
   guard (jsonNodeType? iter == some "Call")
@@ -524,15 +598,141 @@ def unrollInfiniteIter (stmts : Array Json) : DesugarM (Array Json) := do
     | none => out := out.push stmt
   return out
 
+/-! ### Unfolding a comprehension whose element MUTATES (`[x.pop() for x in xs]`) into a loop
+
+A value-and-mutate call (`pop`) cannot be a comprehension element — it is per-iteration, so it can't be
+hoisted out (`hoistMutatingCalls` rightly skips comprehensions). Instead unfold the comprehension to an
+explicit `acc = []; for … : acc.append(elt)` loop (each generator's `ifs` becomes an `if` guard);
+`hoistMutatingCalls` then splits the `pop` inside the loop body. Sound only where the comprehension is
+evaluated once, unconditionally (same as walrus). This is the pre-pass half of the fallback whose
+contract is documented in `PyGens/UseCases/ListComp.lean` (`imperativeComprehensionElement`); a mutating
+comprehension in a position this can't reach is rejected there with a clear message. -/
+
+private partial def anyValueMutate (j : Json) : Bool :=
+  isValueMutateCall j ||
+    (match j with
+     | .arr xs => xs.any anyValueMutate
+     | .obj fs => fs.toList.any (fun (_, v) => anyValueMutate v)
+     | _ => false)
+
+private def compAppendStmt (acc elt : Json) : Json :=
+  Json.mkObj [("node_type", .str "Expr"), ("value", Json.mkObj
+    [("node_type", .str "Call"),
+     ("func", Json.mkObj [("node_type", .str "Attribute"), ("value", acc), ("attr", .str "append")]),
+     ("args", Json.arr #[elt]), ("keywords", Json.mkObj [])])]
+
+/-- `[elt for g0 for g1 …]` → nested `for` loops appending `elt` to `acc`; each generator's `ifs` guard
+its inner body. -/
+private def buildCompLoops (gens : Array Json) (acc elt : Json) : Array Json := Id.run do
+  let mut body : Array Json := #[compAppendStmt acc elt]
+  for gen in gens.reverse do
+    let target := (gen.getObjVal? "target").toOption.getD Json.null
+    let iter := (gen.getObjVal? "iter").toOption.getD Json.null
+    let ifs := (gen.getObjValAs? (Array Json) "ifs").toOption.getD #[]
+    let guarded := if ifs.isEmpty then body else #[ifNoElse (andOf ifs.toList) body]
+    body := #[Json.mkObj [("node_type", .str "For"), ("target", target), ("iter", iter),
+                          ("body", Json.arr guarded), ("orelse", Json.arr #[])]]
+  return body
+
+/-- Replace each `ListComp`/`GeneratorExp` whose element mutates with a fresh accumulator name,
+returning the `acc = []; for …` statements. Does not descend into a conditional context (a comp there
+is per-branch, so its own error is clearer). -/
+private partial def unfoldMutatingCompExpr (expr : Json) : DesugarM (Json × Array Json) := do
+  if #["ListComp", "GeneratorExp"].contains (jsonNodeType? expr |>.getD "")
+     && ((expr.getObjVal? "elt").toOption.map anyValueMutate |>.getD false) then
+    let elt := (expr.getObjVal? "elt").toOption.getD Json.null
+    let gens := (expr.getObjValAs? (Array Json) "generators").toOption.getD #[]
+    let name ← freshVar "__comp_"
+    let acc := nameLoad name
+    return (acc, #[assignStmt acc (Json.mkObj [("node_type", .str "List"), ("elts", Json.arr #[])])]
+                  ++ buildCompLoops gens acc elt)
+  if conditionalContexts.contains (jsonNodeType? expr |>.getD "") then return (expr, #[])
+  match expr with
+  | .arr elems =>
+      let mut out := #[]; let mut pre := #[]
+      for e in elems do let (e', p) ← unfoldMutatingCompExpr e; out := out.push e'; pre := pre ++ p
+      return (Json.arr out, pre)
+  | .obj fields =>
+      let mut rw := []; let mut pre := #[]
+      for (k, v) in fields.toList do
+        let (v', p) ← unfoldMutatingCompExpr v; pre := pre ++ p; rw := rw ++ [(k, v')]
+      return (Json.mkObj rw, pre)
+  | _ => return (expr, #[])
+
+/-- Unfold a mutating comprehension in a statement's once-evaluated field into a preceding loop. -/
+def unfoldMutatingComprehension (stmts : Array Json) : DesugarM (Array Json) := do
+  let mut out := #[]
+  for stmt in stmts do
+    let mut stmt := stmt
+    if let some field := hoistableField stmt then
+      if let .ok expr := stmt.getObjVal? field then
+        if anyValueMutate expr then
+          let (expr', prelude) ← unfoldMutatingCompExpr expr
+          unless prelude.isEmpty do
+            out := out ++ prelude
+            stmt := stmt.setObjVal! field expr'
+    out := out.push stmt
+  return out
+
+/-! ### `count()` bounded by a finite companion: any parallel-iteration builtin (`zip`, `map`) stops
+at its shortest argument, so an infinite `count(s)` there is bounded — `count(s)` = `range(s, s+len(c))`
+for a finite companion `c`, which lowers through the ordinary finite path. -/
+
+private def isCountCall (j : Json) : Bool :=
+  jsonNodeType? j == some "Call" &&
+    (match (j.getObjVal? "func").toOption with
+     | some f => (f.getObjValAs? String "library_module").toOption == some "itertools"
+                 && (f.getObjValAs? String "library_member").toOption == some "count"
+     | none => false)
+
+private def zipCountToRange (countCall other : Json) : Json :=
+  let lenOf (a : Json) : Json := Json.mkObj
+    [("node_type", .str "Call"), ("func", Json.mkObj [("node_type", .str "Name"), ("id", .str "len")]),
+     ("args", Json.arr #[a]), ("keywords", Json.mkObj [])]
+  let mkRange (rargs : Array Json) : Json := Json.mkObj
+    [("node_type", .str "Range"), ("func", Json.mkObj [("node_type", .str "Name"), ("id", .str "range")]),
+     ("args", Json.arr rargs), ("keywords", Json.mkObj [])]
+  match ((countCall.getObjValAs? (Array Json) "args").toOption.getD #[])[0]? with
+  | none => mkRange #[lenOf other]
+  | some start => mkRange #[start, Json.mkObj
+      [("node_type", .str "BinOp"), ("op", .str "add"), ("left", start), ("right", lenOf other)]]
+
+/-- Rewrite `count()` args of a parallel-iteration builtin (`zip(a, count())`, `map(f, a, count())`)
+anywhere in the tree, children first. `map`'s first arg is the function, so iterables start at 1. -/
+partial def rewriteZipCount (json : Json) : Json :=
+  let json := match json with
+    | .arr xs => Json.arr (xs.map rewriteZipCount)
+    | .obj fs => Json.mkObj (fs.toList.map (fun (k, v) => (k, rewriteZipCount v)))
+    | _ => json
+  let fnId := (json.getObjVal? "func").toOption.bind (·.getObjValAs? String "id" |>.toOption)
+  if jsonNodeType? json == some "Call" && (fnId == some "zip" || fnId == some "map") then
+    let args := (json.getObjValAs? (Array Json) "args").toOption.getD #[]
+    let iterStart := if fnId == some "map" then 1 else 0
+    let iters := args.extract iterStart args.size
+    -- Need a finite companion to bound the counter; if every iterable is a counter, leave it.
+    match iters.find? (fun a => !isCountCall a) with
+    | some companion =>
+        if iters.any isCountCall then
+          let newArgs := (Array.range args.size).map fun i =>
+            let a := args[i]!
+            if i ≥ iterStart && isCountCall a then zipCountToRange a companion else a
+          json.setObjVal! "args" (Json.arr newArgs)
+        else json
+    | none => json
+  else json
+
 /-- Run every desugaring over one translation request's AST. -/
 def desugarAst (json : Json) : Except String Json := do
+  let json := rewriteZipCount json
   let pass : DesugarM Json := do
     let json ← rewriteStatementLists rewriteFullSliceAssign json
     let json ← rewriteStatementLists splitChainedAssign json
     let json ← rewriteStatementLists splitIndependentTupleAssign json
     let json ← rewriteStatementLists flattenForTargets json
     let json ← rewriteStatementLists unrollInfiniteIter json
+    let json ← rewriteStatementLists unfoldWalrusAnd json
     let json ← rewriteStatementLists hoistWalrus json
+    let json ← rewriteStatementLists unfoldMutatingComprehension json
     let json ← rewriteStatementLists hoistShortCircuitMutator json
     rewriteStatementLists hoistMutatingCalls json
   return (← pass.run 0).1

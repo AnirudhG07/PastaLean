@@ -137,7 +137,7 @@ int-only operator over it (`p << 1`, `p >> 1`, `~p` — bitwise `& | ^` are int 
 a type-fixing builtin arg (`ord(p)` → str, `chr(p)` → int), or a comparison against a literal
 (`p == []` → list, `p == ""` → str, `p in "abc"` → str element). Genuinely ambiguous uses (`p[i]`,
 `for x in p`, `len(p)`, `p + q`) stay `unknown` — the fixpoint fills them in. -/
-partial def usageType (fuel : Nat) (name : String) (json : Json) : PyType :=
+partial def usageType (fnParams : Std.HashMap String (Array PyType)) (known : Env) (fuel : Nat) (name : String) (json : Json) : PyType :=
   let isName (j : Option Json) : Bool := j.bind nameId? == some name
   -- Element type of an iterable whose loop variable `c` is used as `ctx`: `ord(c)` ⇒ the iterable is
   -- a `str` (char iteration); any other concrete usage ⇒ `list[<c's type>]`. `fuel` bounds how deep
@@ -146,7 +146,7 @@ partial def usageType (fuel : Nat) (name : String) (json : Json) : PyType :=
   let loopElemType (c : String) (ctx : Json) : PyType :=
     if fuel == 0 then .unknown
     else if containsOrdOf c ctx then .str
-    else match usageType (fuel - 1) c ctx with
+    else match usageType fnParams known (fuel - 1) c ctx with
       | .unknown => .unknown
       -- a `str`-typed loop var is ambiguous: iterating a STRING yields 1-char strings, so `str` usage
       -- could mean `p : str` (char iteration) OR `p : list[str]`. Leave it to other signals rather
@@ -180,7 +180,12 @@ partial def usageType (fuel : Nat) (name : String) (json : Json) : PyType :=
                   -- inferred from the lambda body, exactly like a comprehension target (`x < 0` ⇒
                   -- `p : list[int]`). Only fires when the body pins the element; an ambiguous body
                   -- (e.g. `c in "abc"`) stays `unknown`.
-                  else if (fn == "filter" || fn == "map") && args.any (fun a => nameId? a == some name) then
+                  -- The container arg may be the name itself OR a SLICE of it (`arr[:k]`) — a slice's
+                  -- elements are the container's elements, so the inferred element applies to `name`.
+                  else if (fn == "filter" || fn == "map")
+                          && args.any (fun a => nameId? a == some name
+                             || (isSubscriptOf name (some a)
+                                 && (getField a "slice").any (nodeTypeOf · == some "Slice"))) then
                     match args[0]? with
                     | some lam =>
                         if nodeTypeOf lam == some "Lambda" then
@@ -191,7 +196,18 @@ partial def usageType (fuel : Nat) (name : String) (json : Json) : PyType :=
                         else .unknown
                     | none => .unknown
                   else if args.any (fun a => nameId? a == some name) then
-                    if fn == "ord" then .str else if fn == "chr" then .int else .unknown
+                    if fn == "ord" then .str else if fn == "chr" then .int
+                    else
+                      -- `f(x)` where user/nested fn `f` has an ANNOTATED param at x's position ⇒ `x`
+                      -- has that type: a well-typed call must match the annotation. Sound —
+                      -- `digits(x: int)` ⇒ `x : int`, so `filter(lambda x: digits(x)…, arr)` ⇒ `arr :
+                      -- list[int]`. `unknown` if `f` is unknown or its param there is unannotated.
+                      match fnParams.get? fn with
+                      | some ptys =>
+                          match (List.range args.size).find? (fun i => nameId? args[i]! == some name) with
+                          | some i => match ptys[i]? with | some t => if t.isKnown then t else .unknown | none => .unknown
+                          | none => .unknown
+                      | none => .unknown
                   else .unknown
               | none => .unknown
         | none => .unknown
@@ -218,9 +234,10 @@ partial def usageType (fuel : Nat) (name : String) (json : Json) : PyType :=
           else
             -- `x <arith> <numeric literal>` on a plain name (a loop/element variable, `x + 1`, `x * 2`)
             -- pins `x` to that numeric type — the `[x + 1 for x in l]` element case. `str`/`list`
-            -- literals under `+` stay concat-typed (below); a numeric literal here is decisive
-            -- (`str`/`list` don't support `- * // ** %`). Joins with other evidence, so int+float widens.
-            let numLit (lit : Option Json) : PyType := match lit.bind literalType? with
+            -- literals under `+` stay concat-typed (below). EXCLUDES `pow`: `a ** 0.5` (a float sqrt
+            -- bound) does NOT make the base a float — `int ** 0.5` is valid, common in primality checks.
+            let numLit (lit : Option Json) : PyType :=
+              if op == "pow" then .unknown else match lit.bind literalType? with
               | some .int => .int | some .float => .float | _ => .unknown
             let numg := (if isName left then numLit right else .unknown).join
                         (if isName right then numLit left else .unknown)
@@ -279,13 +296,20 @@ partial def usageType (fuel : Nat) (name : String) (json : Json) : PyType :=
         let right := getField json "right"
         let membership := op == "in" || op == "notin"
         let valueCmp := ["eq", "ne", "lt", "le", "gt", "ge"].contains op
-        -- An ORDERED comparison (`x < t`, `x >= r`) against a non-literal name is numeric in the
-        -- overwhelming majority of cases (`all(x < t for x in l)` ⇒ element `int`). `eq`/`ne` are
-        -- excluded (any type is `==`-comparable); a competing str/float signal still joins in.
+        -- An ORDERED comparison (`< <= > >=`) requires order-COMPATIBLE operands in Python 3
+        -- (`1 < "a"` is a `TypeError`), so `x < t` where the OTHER operand's type is already KNOWN
+        -- pins `x` to that same scalar type — soundly, and matching what Lean's `<` would infer.
+        -- `word < ans` with `ans : str` ⇒ `word : str` (NOT `int`); `x < t` with `t : int` ⇒ `x : int`.
+        -- `eq`/`ne` are excluded (any two values are `==`-comparable). Only scalar anchors (no containers).
         let ordered := ["lt", "le", "gt", "ge"].contains op
+        let anchorOf (other : Option Json) : PyType :=
+          match (other.bind nameId?).bind known.get? with
+          | some t => if [PyType.int, .float, .str, .bool].contains t then t else .unknown
+          | none => .unknown
         let fromOrdered : PyType :=
-          if ordered && (right.bind literalType?).isNone && (left.bind literalType?).isNone
-             && (isName left || isName right) then .int else .unknown
+          if ordered then (if isName left then anchorOf right else .unknown).join
+                          (if isName right then anchorOf left else .unknown)
+          else .unknown
         let elemOf : PyType → PyType
           | .list e => e | .set e => e | .tuple es => PyType.joinAll es | _ => .unknown
         let fromLeft : PyType :=
@@ -316,8 +340,8 @@ partial def usageType (fuel : Nat) (name : String) (json : Json) : PyType :=
           |>.join fromOrdered
     | _ => .unknown
   let sub := match json with
-    | .arr xs => PyType.joinAll (xs.toList.map (usageType fuel name))
-    | .obj fs => PyType.joinAll (fs.toList.map (fun (_, v) => usageType fuel name v))
+    | .arr xs => PyType.joinAll (xs.toList.map (usageType fnParams known fuel name))
+    | .obj fs => PyType.joinAll (fs.toList.map (fun (_, v) => usageType fnParams known fuel name v))
     | _ => .unknown
   here.join sub
 

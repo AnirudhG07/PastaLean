@@ -8,6 +8,50 @@ open Lean Meta Elab Term Qq Std
 
 namespace PastaLean
 
+/-! ## Comprehension lowering strategy + the imperative fallback
+
+A comprehension is a *value*, lowered to a pure `iterable.map (fun x => elt)` / `.flatMap` (below). That
+only works when `elt` is a pure expression. When `elt` **changes state** — a value-and-mutate call
+(`x.pop()`, `heappop`) or a walrus (`y := …`) — a pure `map` is wrong: each would run the side effect at
+map-time, once per element, but the *result* value must still flow out.
+
+The fallback, then, is to **open the comprehension into an explicit loop**:
+`[x.pop() for x in xs]` → `acc = []` `for x in xs: acc.append(x.pop())`, after which the ordinary
+statement lowering handles the `pop`. Because the mutation usually targets *outer* state (`mapper[k]`),
+the loop must live in the enclosing mutable scope — so the opening is done by the pre-pass
+`Desugar.unfoldMutatingComprehension`, NOT here (a term-level `do` block could not mutate that outer
+state). Desugar can only open a comprehension in a **once-evaluated** position (`return […]`, `x = […]`,
+a direct `f(…)` argument); an element that mutates but sits inside an `if`-expression / lambda / nested
+comprehension is per-branch or per-call, so opening it would run the effect at the wrong time.
+
+`imperativeComprehensionElement` is the authoritative test for "cannot be a pure map"; the codegen path
+below rejects any such element that reaches it (i.e. the un-openable residual) with a clear message,
+rather than emitting a `pop()`-as-subexpression error from deep in the call lowering. -/
+partial def imperativeComprehensionElement (j : Json) : Bool :=
+  let hitHere : Bool :=
+    match jsonNodeType? j with
+    | some "NamedExpr" => true
+    | some "Call" =>
+        (j.getObjValAs? Bool "_is_value_mutator" |>.toOption |>.getD false) ||
+        (match (j.getObjVal? "func").toOption with
+         | some f =>
+             (jsonNodeType? f == some "Attribute"
+               && (match f.getObjValAs? String "attr" with
+                   | .ok a => #["pop", "popleft"].contains a
+                   | _ => false)
+               && (match (f.getObjVal? "value").toOption with
+                   | some r => #["Name", "Subscript"].contains (jsonNodeType? r |>.getD "")
+                   | none => false))
+             || (match f.getObjValAs? String "library_member" with
+                 | .ok m => #["heappop", "heapreplace"].contains m
+                 | _ => false)
+         | none => false)
+    | _ => false
+  hitHere || (match j with
+    | .arr xs => xs.any imperativeComprehensionElement
+    | .obj fs => fs.toList.any (fun (_, v) => imperativeComprehensionElement v)
+    | _ => false)
+
 /-- Access position `i` of a comprehension pair: `pyListGetItem` (Python list-index) when the target
 was marked `_list_unpack` (`for a,b in edges`, `edges : list[list[int]]`), else `Prod` projection —
 mirroring `forTargetBinder`, so a comprehension over a list-of-lists doesn't wrongly emit `Prod.fst`. -/
@@ -124,6 +168,14 @@ comprehension sits inside an `if`/`while` test (where comparisons otherwise lowe
 Without resetting, `if all(a == b for a, b in ps):` builds a `List Prop`. -/
 def lowerComprehensionClauses (eltJson : Json) (generators : List Json) :
     PygenM (TSyntax `term) := withPropCondition false do
+  -- The imperative fallback: a state-changing element can only be lowered by OPENING the comprehension
+  -- into a loop (done by `Desugar.unfoldMutatingComprehension` in a once-evaluated position). If one
+  -- reaches codegen it sat in a position that cannot be opened soundly — reject clearly.
+  if imperativeComprehensionElement eltJson then
+    throwError "comprehension element changes state (a `pop()`/mutating call or `:=` walrus): it is \
+      auto-opened into a loop only in a once-evaluated position (`return […]`, `x = […]`, or a direct \
+      `f(…)` argument). Here it sits inside a conditional / lambda / nested comprehension, where \
+      opening it would run the effect at the wrong time — rewrite it as an explicit loop."
   match generators with
   | [] =>
       let eltCode ← getCode eltJson `term

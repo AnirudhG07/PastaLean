@@ -110,6 +110,38 @@ def normalize(text):
     return "\n".join(line.rstrip() for line in text.strip().splitlines()).strip()
 
 
+# A convert failure that traces to a Python library PastaLean does not model (concurrency, regex,
+# datetime, interactive judge APIs) is not a codegen shortcoming — it is out of scope. Detected from
+# the source so it is reported as `skipped: <reason>` instead of polluting the `convert_fail` bucket.
+# Patterns match USAGE (a call / method), never a bare import — the LeetCode preamble imports many
+# modules (`import datetime`, `import re`) that a given solution never uses.
+_OUT_OF_SCOPE = [
+    (re.compile(r"\bThread\s*\(|\.acquire\s*\(\s*\)|\.release\s*\(\s*\)|threading\."),
+     "threading / concurrency"),
+    (re.compile(r"\bre\.(sub|match|search|findall|finditer|compile|split|fullmatch)\s*\("),
+     "re (regular expressions)"),
+    (re.compile(r"datetime\.date\s*\(|datetime\.datetime\s*\(|\.strftime\s*\(|\.weekday\s*\(|\.isoweekday\s*\("),
+     "datetime"),
+    (re.compile(r"\b(PriorityQueue|LifoQueue)\s*\(|Queue\s*\(\s*\)\.(put|get)\b"),
+     "queue (Queue / PriorityQueue)"),
+    # Interactive LeetCode judge objects expose opaque methods on a handler param (no source to model).
+    (re.compile(r"\.haveSameCategory\s*\(|\.guess\s*\(|\.knows\s*\(|\.compareSub\s*\(|\.query\s*\("),
+     "interactive judge API"),
+]
+
+
+def out_of_scope_reason(source):
+    """If `source` uses a library/feature PastaLean deliberately does not model, the reason string;
+    else None. Used to reclassify a convert failure as `skipped` rather than `convert_fail`. Matches
+    against non-import lines only, so an unused preamble `import` never trips it."""
+    body = "\n".join(ln for ln in source.splitlines()
+                     if not re.match(r"\s*(import |from \S+ import )", ln))
+    for rx, reason in _OUT_OF_SCOPE:
+        if rx.search(body):
+            return reason
+    return None
+
+
 def summarize_error(status, log_text):
     """A reason string from a failing stage's output. Keeps the FULL first Lean diagnostic — the
     error message AND its continuation lines (the offending type / instance / expression), which is
@@ -1193,6 +1225,13 @@ class CPastaEval:
             error_text = result.error or "empty output"
 
         if result is None or not result.ok or not (result.lean_code or "").strip():
+            # An out-of-scope library (concurrency, regex, datetime, interactive judge) is reported as
+            # `skipped`, not `convert_fail` — it is not a codegen shortcoming we could fix.
+            reason = out_of_scope_reason(source)
+            if reason is not None:
+                status_path.write_text("skipped")
+                log_path.write_text(error_text)
+                return "skipped", reason
             status_path.write_text("convert_fail")
             log_path.write_text(error_text)
             return "convert_fail", summarize_error("convert_fail", error_text)
@@ -1213,7 +1252,7 @@ class CPastaEval:
     def convert(self):
         """Translate + compile-check every selected problem. Writes `convert_summary.json`."""
         self._prepare_tmp()
-        problems, totals, histogram = {}, {"ok": 0, "convert_fail": 0, "compile_fail": 0}, {}
+        problems, totals, histogram = {}, {"ok": 0, "convert_fail": 0, "compile_fail": 0, "skipped": 0}, {}
         for prob_dir in self.problems():
             sols_dir = prob_dir / "solutions"
             if not sols_dir.is_dir():
@@ -1239,7 +1278,7 @@ class CPastaEval:
         (self.dataset / "convert_summary.json").write_text(json.dumps(summary, indent=2))
 
         print(f"\n[*] Conversion: {totals['ok']} ok, {totals['compile_fail']} compile_fail, "
-              f"{totals['convert_fail']} convert_fail")
+              f"{totals['convert_fail']} convert_fail, {totals['skipped']} skipped (out-of-scope libs)")
         if top_errors:
             print("[*] Most common failures:")
             for reason, count in list(top_errors.items())[:10]:

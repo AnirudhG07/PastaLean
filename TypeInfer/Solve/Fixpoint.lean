@@ -5,15 +5,53 @@ namespace TypeInfer
 open Lean
 
 
+/-- Every `FunctionDef` reachable in `json` (the function itself + nested helpers) → its parameters'
+ANNOTATED types (unannotated ⇒ `.unknown`). Lets `usageType` type an argument from the callee's
+annotation: `digits(x: int)` ⇒ a value passed to `digits` is `int`. -/
+partial def collectFnParams (json : Json) : Std.HashMap String (Array PyType) := Id.run do
+  let mut m : Std.HashMap String (Array PyType) := {}
+  let here : Option (String × Array PyType) := do
+    guard (nodeTypeOf json == some "FunctionDef")
+    let nm ← (json.getObjValAs? String "name").toOption
+    let args ← ((json.getObjVal? "args").toOption).bind (fun a => (a.getObjValAs? (Array Json) "args").toOption)
+    let ptys := args.map fun a => match getField a "annotation" with
+      | some ann => if ann.isNull then PyType.unknown else ofAnnotation ann
+      | none => PyType.unknown
+    some (nm, ptys)
+  if let some (nm, ptys) := here then m := m.insert nm ptys
+  match json with
+  | .arr xs => for x in xs do m := (collectFnParams x).fold (fun a k v => a.insert k v) m
+  | .obj fs => for (_, v) in fs do m := (collectFnParams v).fold (fun a k v => a.insert k v) m
+  | _ => pure ()
+  return m
+
 /-- Seed each unannotated parameter from unambiguous body usage (`p.split()` → str, `p.append()` →
-list, `p.keys()` → dict). This is the safe part of the use-based inference the old Python pre-pass
-did. -/
+list, `p.keys()` → dict). This is the safe part of the use-based inference the old Python pre-pass did. -/
 def paramUsageSeed (fn : Json) : Env := Id.run do
   let body := fn.getObjValAs? (Array Json) "body" |>.toOption.getD #[]
+  let fnParams := collectFnParams fn
+  -- Known scalar types of names, for the ordered-comparison anchor: param annotations plus any local
+  -- assigned a literal (`ans = ""` ⇒ str, `lo = 0` ⇒ int), so `word < ans` pins `word` to `str` and
+  -- `x < lo` pins `x` to `int` — soundly (ordered comparison needs order-compatible operands).
+  let mut known : Env := paramSeed fn
+  let learnLit (m : Env) (tgt : Json) (val : Option Json) : Env :=
+    match nameId? tgt, val.bind literalType? with
+    | some nm, some t => if t == .unknown then m else m.insert nm ((m.get? nm |>.getD .unknown).join t)
+    | _, _ => m
+  for s in flatStmts body.toList do
+    if nodeTypeOf s == some "Assign" then
+      let val := getField s "value"
+      for tgt in (getField s "targets").elim #[] (fun t => (t.getArr?).toOption.getD #[]) do
+        match nodeTypeOf tgt, val.bind (fun v => getField v "elts") with
+        -- `a, b = 0, ""`: zip tuple targets with tuple-literal values.
+        | some "Tuple", some (.arr vs) =>
+            for (te, ve) in ((tgt.getObjValAs? (Array Json) "elts").toOption.getD #[]).zip vs do
+              known := learnLit known te (some ve)
+        | _, _ => known := learnLit known tgt val
   let mut env : Env := {}
   for name in paramNames fn do
     -- fuel 1: loop-variable inference may fire at the top level but not nest (see `usageType`).
-    let t := usageType 1 name (Json.arr body)
+    let t := usageType fnParams known 1 name (Json.arr body)
     if t != .unknown then env := env.insert name t
   return env
 

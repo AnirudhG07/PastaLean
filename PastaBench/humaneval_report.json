@@ -1,0 +1,658 @@
+{
+ "Add53": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "Add85": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "AddElements": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "AllPrefixes": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "AntiShuffle": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "AnyInt": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "BelowThreshold": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "BelowZero": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "Bf": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "ByLength": {
+  "verdict": "compile_fail",
+  "detail": "/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/ByLength.lean:60:60: error: Application type mismatch: The argument\n  x\nhas type\n  PyAny\nbut is expected to have type\n  \u2124\nin the application\n  _by_length'to_word x"
+ },
+ "CanArrange": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "CarRaceCollision": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "ChangeBase": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "CheckDictCase": {
+  "verdict": "compile_fail",
+  "detail": "/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/CheckDictCase.lean:32:40: error: typeclass instance problem is stuck\n  PyKeys ?m.190 String\n\nNote: Lean will not try to resolve this typeclass instance problem because the first type argument to `PyKeys` is a metavariable. This argument must be fully determined before Lean will try to resolve the typeclass.\n\nHint: Adding type annotations and supplying implicit arguments to functions can give Lean more information for typeclass resolution. For example, if you have a variable `x` that you intend to be a `Nat`, but Lean reports it as having an unresolved type like `?m`, replacing `x` with `(x : Nat)` can get typeclass resolution un-stuck."
+ },
+ "CheckIfLastCharIsALetter": {
+  "verdict": "compile_fail",
+  "detail": "/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/CheckIfLastCharIsALetter.lean:33:65: error: Application type mismatch: The argument\n  txt\nhas type\n  PyAny\nbut is expected to have type\n  String\nin the application\n  pyIsAlpha txt\n/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/CheckIfLastCharIsALetter.lean:35:49: error: Application type mismatch: The argument\n  txt\u298b-1\u298c\nhas type\n  PyAny\nbut is expected to have type\n  String\nin the application\n  pyIsAlpha txt\u298b-1\u298c\n/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/CheckIfLastCharIsALetter.lean:36:31: error: Application type mismatch: The argument\n  txt\u298b-1\u298c\nhas type\n  PyAny\nbut is expected to have type\n  String\nin the application\n  pyIsAlpha txt\u298b-1\u298c"
+ },
+ "ChooseNum": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "CircularShift": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "ClosestInteger": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "Common": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "Compare": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "CompareOne": {
+  "verdict": "compile_fail",
+  "detail": "/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/CompareOne.lean:33:27: error: Application type mismatch: The argument\n  none\nhas type\n  Option ?m.18\nbut is expected to have type\n  PyAny\nin the application\n  ite ((num_a == num_b) = true) none"
+ },
+ "Concatenate": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "CorrectBracketing56": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "CorrectBracketing61": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "CountDistinctCharacters": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "CountNums": {
+  "verdict": "compile_fail",
+  "detail": "/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/CountNums.lean:19:32: error(lean.synthInstanceFailed): failed to synthesize instance of type class\n  PyIterable String PyAny\n\nHint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.\n/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/CountNums.lean:22:13: error(lean.synthInstanceFailed): failed to synthesize instance of type class\n  PyIterable (List \u2124) PyAny\n\nHint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.\n/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/CountNums.lean:25:13: error(lean.synthInstanceFailed): failed to synthesize instance of type class\n  PyIterable (List \u2124) PyAny\n\nHint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command."
+ },
+ "CountUpTo": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "CountUpper": {
+  "verdict": "compile_fail",
+  "detail": "/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/CountUpper.lean:31:17: error(lean.synthInstanceFailed): failed to synthesize instance of type class\n  PyContains String PyAny\n\nHint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command."
+ },
+ "CycpatternCheck": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "DecimalToBinary": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "DecodeCyclic": {
+  "verdict": "compile_fail",
+  "detail": "/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/DecodeCyclic.lean:31:11: error(lean.synthInstanceFailed): failed to synthesize instance of type class\n  PyLen \u2124\n\nHint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.\n/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/DecodeCyclic.lean:32:10: error(lean.synthInstanceFailed): failed to synthesize instance of type class\n  PySlice \u2124\n\nHint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.\n/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/DecodeCyclic.lean:32:64: error(lean.synthInstanceFailed): failed to synthesize instance of type class\n  PyGetItem \u2124 \u2124 \u2124\n\nHint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.\n/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/DecodeCyclic.lean:32:10: error: Application type mismatch: The argument\n  pySlice group (some 1) none none +\u209a group\u298b0\u298c\nhas type\n  \u2124\nbut is expected to have type\n  String\nin the application\n  ite ((pyLen group == 3) = true) (pySlice group (some 1) none none +\u209a group\u298b0\u298c)\n/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/DecodeCyclic.lean:50:11: error(lean.synthInstanceFailed): failed to synthesize instance of type class\n  PyLen \u2124\n\nHint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.\n/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/DecodeCyclic.lean:51:10: error(lean.synthInstanceFailed): failed to synthesize instance of type class\n  PyGetItem \u2124 \u2124 \u2124\n\nHint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.\n/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/DecodeCyclic.lean:51:30: error(lean.synthInstanceFailed): failed to synthesize instance of type class\n  PySlice \u2124\n\nHint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.\n/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/DecodeCyclic.lean:51:10: error: Application type mismatch: The argument\n  group\u298b2\u298c +\u209a pySlice group none (some 2) none\nhas type\n  \u2124\nbut is expected to have type\n  String\nin the application\n  ite ((pyLen group == 3) = true) (group\u298b2\u298c +\u209a pySlice group none (some 2) none)"
+ },
+ "DecodeShift": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "Derivative": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "Digits": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "Digitsum": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "DoAlgebra": {
+  "verdict": "compile_fail",
+  "detail": "/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/DoAlgebra.lean:49:39: error: Application type mismatch: The argument\n  exp\nhas type\n  PyAny\nbut is expected to have type\n  String\nin the application\n  pyEval exp"
+ },
+ "DoubleTheDifference": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "Eat": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "Encode": {
+  "verdict": "compile_fail",
+  "detail": "/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/Encode.lean:43:39: error(lean.synthInstanceFailed): failed to synthesize instance of type class\n  PyIterable PyAny String\n\nHint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command."
+ },
+ "Encrypt": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "EvenOddCount": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "EvenOddPalindrome": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "Exchange": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "F": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "Factorize": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "Fib": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "Fib4": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "Fibfib": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "FileNameCheck": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "FilterByPrefix": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "FilterBySubstring": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "FilterIntegers": {
+  "verdict": "compile_fail",
+  "detail": "/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/FilterIntegers.lean:25:48: error: typeclass instance problem is stuck\n  PyTyped (?m.19 values)\n\nNote: Lean will not try to resolve this typeclass instance problem because the type argument to `PyTyped` contains metavariables. This argument must be fully determined before Lean will try to resolve the typeclass.\n\nHint: Adding type annotations and supplying implicit arguments to functions can give Lean more information for typeclass resolution. For example, if you have a variable `x` that you intend to be a `Nat`, but Lean reports it as having an unresolved type like `?m`, replacing `x` with `(x : Nat)` can get typeclass resolution un-stuck."
+ },
+ "FindClosestElements": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "FindMax": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "FindZero": {
+  "verdict": "compile_fail",
+  "detail": "/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/FindZero.lean:61:15: error: invalid reassignment, value has type\n  PyAny\nbut is expected to have type\n  Float"
+ },
+ "FixSpaces": {
+  "verdict": "compile_fail",
+  "detail": "/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/FixSpaces.lean:33:41: error: Application type mismatch: The argument\n  ans\nhas type\n  PyAny\nbut is expected to have type\n  String\nin the application\n  pyStringReplace ans\n/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/FixSpaces.lean:34:48: error: Application type mismatch: The argument\n  ans\nhas type\n  PyAny\nbut is expected to have type\n  String\nin the application\n  pyStringReplace ans"
+ },
+ "FizzBuzz": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "FlipCase": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "FruitDistribution": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "GenerateIntegers": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "GetClosestVowel": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "GetMaxTriples": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "GetOddCollatz": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "GetPositive": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "GetRow": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "GreatestCommonDivisor": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "HasCloseElements": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "HexKey": {
+  "verdict": "compile_fail",
+  "detail": "/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/HexKey.lean:36:37: error: typeclass instance problem is stuck\n  PyIterable ?m.16 String\n\nNote: Lean will not try to resolve this typeclass instance problem because the first type argument to `PyIterable` is a metavariable. This argument must be fully determined before Lean will try to resolve the typeclass.\n\nHint: Adding type annotations and supplying implicit arguments to functions can give Lean more information for typeclass resolution. For example, if you have a variable `x` that you intend to be a `Nat`, but Lean reports it as having an unresolved type like `?m`, replacing `x` with `(x : Nat)` can get typeclass resolution un-stuck."
+ },
+ "Histogram": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "HowManyTimes": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "IncrList": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "IntToMiniRoman": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "Intersection": {
+  "verdict": "compile_fail",
+  "detail": "/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/Intersection.lean:21:10: error(lean.synthInstanceFailed): failed to synthesize instance of type class\n  PyModulo PyAny \u2124 \u2124\n\nHint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command."
+ },
+ "Intersperse": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "IsBored": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "IsEqualToSumEven": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "IsHappy": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "IsMultiplyPrime": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "IsNested": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "IsPalindrome": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "IsPrime": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "IsSimplePower": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "IsSorted": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "Iscube": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "LargestDivisor": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "LargestPrimeFactor": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "LargestSmallestIntegers": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "Longest": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "MakeAPile": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "MakePalindrome": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "MatchParens": {
+  "verdict": "compile_fail",
+  "detail": "/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/MatchParens.lean:47:53: error: Application type mismatch: The argument\n  lst\u298b0\u298c +\u209a lst\u298b1\u298c\nhas type\n  PyAny\nbut is expected to have type\n  String\nin the application\n  _match_parens'valid_parens (lst\u298b0\u298c +\u209a lst\u298b1\u298c)\n/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/MatchParens.lean:48:55: error: Application type mismatch: The argument\n  lst\u298b1\u298c +\u209a lst\u298b0\u298c\nhas type\n  PyAny\nbut is expected to have type\n  String\nin the application\n  _match_parens'valid_parens (lst\u298b1\u298c +\u209a lst\u298b0\u298c)"
+ },
+ "MaxElement": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "MaxFill": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "Maximum": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "MeanAbsoluteDeviation": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "Median": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "Minpath": {
+  "verdict": "compile_fail",
+  "detail": "/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/Minpath.lean:77:108: error: Application type mismatch: The argument\n  mn\nhas type\n  PyAny\nbut is expected to have type\n  \u2124\nin the application\n  if (i %\u209a 2 == 0) = true then 1 else mn"
+ },
+ "Minsubarraysum": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "Modp": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "Monotonic": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "MoveOneBall": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "Multiply": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "NextSmallest": {
+  "verdict": "compile_fail",
+  "detail": "/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/NextSmallest.lean:33:17: error: Type mismatch\n  none\nhas type\n  Option ?m.23\nbut is expected to have type\n  PyAny"
+ },
+ "NumericalLetterGrade": {
+  "verdict": "compile_fail",
+  "detail": "/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/NumericalLetterGrade.lean:65:3: error: typeclass instance problem is stuck\n  PyIterable ?m.10 Float\n\nNote: Lean will not try to resolve this typeclass instance problem because the first type argument to `PyIterable` is a metavariable. This argument must be fully determined before Lean will try to resolve the typeclass.\n\nHint: Adding type annotations and supplying implicit arguments to functions can give Lean more information for typeclass resolution. For example, if you have a variable `x` that you intend to be a `Nat`, but Lean reports it as having an unresolved type like `?m`, replacing `x` with `(x : Nat)` can get typeclass resolution un-stuck."
+ },
+ "OddCount": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "OrderByPoints": {
+  "verdict": "compile_fail",
+  "detail": "/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/OrderByPoints.lean:20:39: error(lean.synthInstanceFailed): failed to synthesize instance of type class\n  PyIterable String PyAny\n\nHint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.\n/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/OrderByPoints.lean:23:20: error(lean.synthInstanceFailed): failed to synthesize instance of type class\n  PyIterable (List \u2124) PyAny\n\nHint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.\n/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/OrderByPoints.lean:26:20: error(lean.synthInstanceFailed): failed to synthesize instance of type class\n  PyIterable (List \u2124) PyAny\n\nHint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command."
+ },
+ "PairsSumToZero": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "ParseMusic": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "ParseNestedParens": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "Pluck": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "PrimeFib": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "PrimeLength": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "ProdSigns": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "RemoveDuplicates": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "RemoveVowels": {
+  "verdict": "compile_fail",
+  "detail": "/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/RemoveVowels.lean:37:23: error: typeclass instance problem is stuck\n  PyIterable ?m.18 String\n\nNote: Lean will not try to resolve this typeclass instance problem because the first type argument to `PyIterable` is a metavariable. This argument must be fully determined before Lean will try to resolve the typeclass.\n\nHint: Adding type annotations and supplying implicit arguments to functions can give Lean more information for typeclass resolution. For example, if you have a variable `x` that you intend to be a `Nat`, but Lean reports it as having an unresolved type like `?m`, replacing `x` with `(x : Nat)` can get typeclass resolution un-stuck."
+ },
+ "RescaleToUnit": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "ReverseDelete": {
+  "verdict": "compile_fail",
+  "detail": "/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/ReverseDelete.lean:29:71: error: typeclass instance problem is stuck\n  PyContains (?m.40 s) (?m.35 s c)\n\nNote: Lean will not try to resolve this typeclass instance problem because the first type argument to `PyContains` contains metavariables. This argument must be fully determined before Lean will try to resolve the typeclass.\n\nHint: Adding type annotations and supplying implicit arguments to functions can give Lean more information for typeclass resolution. For example, if you have a variable `x` that you intend to be a `Nat`, but Lean reports it as having an unresolved type like `?m`, replacing `x` with `(x : Nat)` can get typeclass resolution un-stuck."
+ },
+ "RightAngleTriangle": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "RollingMax": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "RoundedAvg": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "SameChars": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "Search": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "SelectWords": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "SeparateParenGroups": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "Simplify": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "Skjkasdkd": {
+  "verdict": "compile_fail",
+  "detail": "/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/Skjkasdkd.lean:21:10: error(lean.synthInstanceFailed): failed to synthesize instance of type class\n  PyModulo PyAny \u2124 \u2124\n\nHint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command."
+ },
+ "SmallestChange": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "Solution": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "Solve161": {
+  "verdict": "compile_fail",
+  "detail": "/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/Solve161.lean:35:59: error: Application type mismatch: The argument\n  ch\nhas type\n  PyAny\nbut is expected to have type\n  String\nin the application\n  pyIsAlpha ch\n/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/Solve161.lean:37:53: error: Application type mismatch: The argument\n  ch\nhas type\n  PyAny\nbut is expected to have type\n  String\nin the application\n  pyStringSwapcase ch"
+ },
+ "Solve84": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "SortArray116": {
+  "verdict": "compile_fail",
+  "detail": "/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/SortArray116.lean:34:2: error(lean.synthInstanceFailed): failed to synthesize instance of type class\n  PyIterable PyAny \u2124\n\nHint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command."
+ },
+ "SortArray88": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "SortEven": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "SortNumbers": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "SortThird": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "SortedListSum": {
+  "verdict": "compile_fail",
+  "detail": "/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/SortedListSum.lean:38:23: error: typeclass instance problem is stuck\n  PyIterable ?m.28 String\n\nNote: Lean will not try to resolve this typeclass instance problem because the first type argument to `PyIterable` is a metavariable. This argument must be fully determined before Lean will try to resolve the typeclass.\n\nHint: Adding type annotations and supplying implicit arguments to functions can give Lean more information for typeclass resolution. For example, if you have a variable `x` that you intend to be a `Nat`, but Lean reports it as having an unresolved type like `?m`, replacing `x` with `(x : Nat)` can get typeclass resolution un-stuck."
+ },
+ "SpecialFactorial": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "Specialfilter": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "SplitWords": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "StartsOneEnds": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "StrangeSortList": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "StringSequence": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "StringToMd5": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "StringXor": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "Strlen": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "StrongestExtension": {
+  "verdict": "compile_fail",
+  "detail": "/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/StrongestExtension.lean:55:49: error(lean.synthInstanceFailed): failed to synthesize instance of type class\n  PyIterable PyAny String\n\nHint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.\n/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/StrongestExtension.lean:57:49: error: Application type mismatch: The argument\n  e\nhas type\n  PyAny\nbut is expected to have type\n  String\nin the application\n  _Strongest_Extension'strength e"
+ },
+ "SumProduct": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "SumSquares133": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "SumSquares142": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "SumToN": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "TotalMatch": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "Tri": {
+  "verdict": "compile_fail",
+  "detail": "/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/Tri.lean:55:13: error: Application type mismatch: The argument\n  ans\nhas type\n  List Float\nbut is expected to have type\n  List \u2124\nin the application\n  pure ans"
+ },
+ "TriangleArea45": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "TriangleArea71": {
+  "verdict": "compile_fail",
+  "detail": "/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/TriangleArea71.lean:32:4: error: Type mismatch\n  pyRoundDigits ((p *\u209a (p -\u209a a) *\u209a (p -\u209a b) *\u209a (p -\u209a c)) ^\u209a 0.5) 2\nhas type\n  Float\nbut is expected to have type\n  \u2124"
+ },
+ "TriplesSumToZero": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "TruncateNumber": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "Unique": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "UniqueDigits": {
+  "verdict": "compile_fail",
+  "detail": "/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/UniqueDigits.lean:40:38: error: typeclass instance problem is stuck\n  PyIterable ?m.13 PyAny\n\nNote: Lean will not try to resolve this typeclass instance problem because the first type argument to `PyIterable` is a metavariable. This argument must be fully determined before Lean will try to resolve the typeclass.\n\nHint: Adding type annotations and supplying implicit arguments to functions can give Lean more information for typeclass resolution. For example, if you have a variable `x` that you intend to be a `Nat`, but Lean reports it as having an unresolved type like `?m`, replacing `x` with `(x : Nat)` can get typeclass resolution un-stuck."
+ },
+ "ValidDate": {
+  "verdict": "compile_fail",
+  "detail": "/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/ValidDate.lean:50:53: error: Application type mismatch: The argument\n  m\nhas type\n  List String\nbut is expected to have type\n  String\nin the application\n  pyIsDecimal m\n/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/ValidDate.lean:50:102: error: Application type mismatch: The argument\n  d\nhas type\n  List String\nbut is expected to have type\n  String\nin the application\n  pyIsDecimal d\n/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/ValidDate.lean:51:55: error: Application type mismatch: The argument\n  y\nhas type\n  List String\nbut is expected to have type\n  String\nin the application\n  pyIsDecimal y\n/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/ValidDate.lean:54:33: error(lean.synthInstanceFailed): failed to synthesize instance of type class\n  PyIntCast (List String)\n\nHint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.\n/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/ValidDate.lean:54:52: error(lean.synthInstanceFailed): failed to synthesize instance of type class\n  PyIntCast (List String)\n\nHint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command."
+ },
+ "VowelsCount": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "WillItFly": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "WordsInSentence": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "WordsString": {
+  "verdict": "ok",
+  "detail": ""
+ },
+ "XOrY": {
+  "verdict": "ok",
+  "detail": ""
+ }
+}

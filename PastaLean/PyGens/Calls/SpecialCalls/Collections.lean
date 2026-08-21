@@ -73,9 +73,14 @@ def lowerCollectionsCallTerm? (funcJson : Json) (argsArray : Array Json)
       | some "int"  => return some (← `($(mkIdent ``Libraries.collections.pyDefaultDictInt)))
       | some "dict" => return some (← `($(mkIdent ``Libraries.collections.pyDefaultDictDict)))
       | some "Counter" => return some (← `($(mkIdent ``Libraries.collections.pyDefaultDictCounter)))
+      -- Scalar factories default to their zero value (`defaultdict(float)` → `0.0`, `str` → `""`,
+      -- `bool` → `false`), modelled the same way as `defaultdict(lambda: <zero>)`.
+      | some "float" => return some (← `($(mkIdent ``Libraries.collections.PyDefaultDict.empty) (0.0 : Float)))
+      | some "str"   => return some (← `($(mkIdent ``Libraries.collections.PyDefaultDict.empty) ""))
+      | some "bool"  => return some (← `($(mkIdent ``Libraries.collections.PyDefaultDict.empty) false))
       | other =>
           throwError s!"defaultdict({other.getD "?"}) is not supported; only `list`, `set`, `int`, \
-            `dict` and `Counter` default factories are."
+            `float`, `str`, `bool`, `dict` and `Counter` default factories are."
   | "deque" =>
       unless keyWordsMap.isEmpty do
         throwError "deque() keyword arguments are not supported yet."

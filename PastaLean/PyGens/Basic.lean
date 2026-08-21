@@ -494,7 +494,9 @@ def isQuantifiedAllAnyJson (json : Json) : Bool :=
 /-- Lower a condition expression, applying Python truthiness (`pyTruthy`) unless it already
 produces a `Bool`. Used by `if`/`while`/`if`-expression lowering. -/
 def truthyConditionTerm (json : Json) (code : TSyntax `term) : PygenM (TSyntax `term) := do
-  if conditionIsBoolean json then pure code
+  -- A quantified `all`/`any` already lowered to a decidable `∀`/`∃` Prop — usable directly as an `if`
+  -- condition; wrapping it in `pyTruthy` (which wants a `Bool`) is a type error.
+  if conditionIsBoolean json || isQuantifiedAllAnyJson json then pure code
   else `($(mkIdent ``PastaLean.pyTruthy) $code)
 
 /-- A JSON node that lowers to a Lean `String` value: a string literal or an f-string. Used to

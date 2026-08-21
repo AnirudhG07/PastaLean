@@ -131,6 +131,18 @@ instance : CoeTail (List PyAny) PyAny where coe := .list
 instance : CoeTail (List Int) PyAny     where coe xs := .list (xs.map .int)
 instance : CoeTail (List String) PyAny  where coe xs := .list (xs.map .str)
 
+-- Element-wise boxing INTO a dynamic list (`List α → List PyAny`, not `→ PyAny`): lets a `List PyAny`
+-- slot accept a concrete list — the Option-A case where a var reassigned at conflicting element types
+-- is typed `List PyAny`, so `l = list(str(x))` (List String) and `l = list(map(int, l))` (List Int)
+-- coerce here. Enumerated by element type for the same reason as the scalar coes above (a generic
+-- `CoeTail (List α) (List PyAny)` has no synthesization order).
+instance : CoeTail (List Int) (List PyAny)    where coe xs := xs.map .int
+instance : CoeTail (List Nat) (List PyAny)    where coe xs := xs.map (.int ·)
+instance : CoeTail (List String) (List PyAny) where coe xs := xs.map .str
+instance : CoeTail (List Bool) (List PyAny)   where coe xs := xs.map .bool
+instance : CoeTail (List Float) (List PyAny)  where coe xs := xs.map (.float ·.toRat0)
+instance : CoeTail (List Rat) (List PyAny)    where coe xs := xs.map .float
+
 -- Numerals are polymorphic via `OfNat`, not coercion, so a bare `0`/`5` in a boxed position needs
 -- these (codegen usually emits typed literals like `(0 : Int)`, which coerce, but not always).
 instance (n : Nat) : OfNat PyAny n where ofNat := .int n
