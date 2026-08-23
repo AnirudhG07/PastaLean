@@ -144,8 +144,11 @@ def constantSyntax : (kind : SyntaxNodeKind) → Json →
         let falseStx := mkIdent ``false
         if b then `($trueStx) else `($falseStx)
     | .null =>
-        let noneIdent := mkIdent ``none
-        `($noneIdent)
+        -- In a boxed (`PyAny`) function, `None` is the dynamic `PyAny.none`, not `Option.none` — so a
+        -- `return None` branch unifies with the other `PyAny` returns (`ite cond none <pyany>` would
+        -- otherwise be `Option ?m` vs `PyAny`). Node/`Optional[C]` functions aren't boxed, so unaffected.
+        if ← getBoxReturnContext then `($(mkIdent ``PastaLean.PyAny.none))
+        else `($(mkIdent ``none))
     | _ => throwError s!"Unsupported constant value: {value}"
   | _, _ => throwError s!"Unsupported syntax category for Constant node"
 

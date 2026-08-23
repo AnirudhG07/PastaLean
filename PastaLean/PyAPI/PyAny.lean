@@ -138,6 +138,13 @@ instance : CoeTail (List String) PyAny  where coe xs := .list (xs.map .str)
 -- `CoeTail (List α) (List PyAny)` has no synthesization order).
 instance : CoeTail (List Int) (List PyAny)    where coe xs := xs.map .int
 instance : CoeTail (List Nat) (List PyAny)    where coe xs := xs.map (.int ·)
+-- Int/Nat element list widening into a rational/float list (numeric tower `int ⊂ ℚ`/`Float`): a
+-- function mixing `list[int]` and `list[float]` returns ascribes the codomain to `List ℚ`/`List Float`,
+-- and the `list[int]` returns coerce here (Tri: `return [1]` into a `List ℚ` codomain).
+instance : CoeTail (List Int) (List Rat)   where coe xs := xs.map (· : Int → Rat)
+instance : CoeTail (List Nat) (List Rat)   where coe xs := xs.map (· : Nat → Rat)
+instance : CoeTail (List Int) (List Float) where coe xs := xs.map Float.ofInt
+instance : CoeTail (List Nat) (List Float) where coe xs := xs.map Float.ofNat
 instance : CoeTail (List String) (List PyAny) where coe xs := xs.map .str
 instance : CoeTail (List Bool) (List PyAny)   where coe xs := xs.map .bool
 instance : CoeTail (List Float) (List PyAny)  where coe xs := xs.map (.float ·.toRat0)

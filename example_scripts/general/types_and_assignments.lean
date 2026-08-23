@@ -170,26 +170,28 @@ def mixed_scalar_accumulator'rn := fun (xs : List Int) ↦
         return ans))
 
 def int_init_float_container := fun (nums : List Int) ↦
-  Id.run
-    (do
-      -- `dp = [0]*n` later holds floats (`/ 2`) → `List float`, with the `0` element coerced.
-      let mut n : Int := PastaLean.pyLen nums
-      let mut dp := (PastaLean.pyListRepeat [(0 : Rat)] n : List Rat)
-      for i in (PastaLean.pyRange n (1 : Int))do
-        dp := PastaLean.pySetItem dp i (dp⦋i -ₚ (1 : Int)⦌ /ₚ (2 : Int) +ₚ nums⦋i⦌ : Rat)
-      return dp)
+  (show List Rat from
+    Id.run
+      (do
+        -- `dp = [0]*n` later holds floats (`/ 2`) → `List float`, with the `0` element coerced.
+        let mut n : Int := PastaLean.pyLen nums
+        let mut dp := (PastaLean.pyListRepeat [(0 : Rat)] n : List Rat)
+        for i in (PastaLean.pyRange n (1 : Int))do
+          dp := PastaLean.pySetItem dp i (dp⦋i -ₚ (1 : Int)⦌ /ₚ (2 : Int) +ₚ nums⦋i⦌ : Rat)
+        return dp))
 
 attribute [simp, taste_ingr] int_init_float_container
 
 def int_init_float_container'rn := fun (nums : List Int) ↦
-  Id.run
-    (do
-      -- `dp = [0]*n` later holds floats (`/ 2`) → `List float`, with the `0` element coerced.
-      let mut n : Int := PastaLean.pyLen nums
-      let mut dp := (PastaLean.pyListRepeat [(0 : Float)] n : List Float)
-      for i in (PastaLean.pyRange n (1 : Int))do
-        dp := PastaLean.pySetItem dp i (PastaLean.pyFloat dp⦋i -ₚ (1 : Int)⦌ /ₚ (2 : Int) +ₚ nums⦋i⦌ : Float)
-      return dp)
+  (show List Float from
+    Id.run
+      (do
+        -- `dp = [0]*n` later holds floats (`/ 2`) → `List float`, with the `0` element coerced.
+        let mut n : Int := PastaLean.pyLen nums
+        let mut dp := (PastaLean.pyListRepeat [(0 : Float)] n : List Float)
+        for i in (PastaLean.pyRange n (1 : Int))do
+          dp := PastaLean.pySetItem dp i (PastaLean.pyFloat dp⦋i -ₚ (1 : Int)⦌ /ₚ (2 : Int) +ₚ nums⦋i⦌ : Float)
+        return dp))
 
 def inf_dp := fun (cost : List Int) ↦
   Id.run

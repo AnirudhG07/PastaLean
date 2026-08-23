@@ -316,7 +316,8 @@ def functionReturnTypeSyntax? (json : Json) : PygenM (Option (TSyntax `term)) :=
   match (jsonFieldOption json "returns").orElse (fun _ => jsonFieldOption json "_ret_ty") with
   | some returnJson =>
       -- In exact mode a `float`-involving return is left UNASCRIBED so Lean infers `ℚ` (a rational
-      -- function) or `ℝ` (a transcendental one); a fixed `ℚ` would clash with an `ℝ` body.
+      -- function) or `ℝ` (a transcendental one); a fixed `ℚ` would clash with an `ℝ` body. (The list
+      -- return-mixing case that DOES need an ascription is handled in `optionalReturnAscription?`.)
       if (← getNumericMode) == .exact && annotationMentionsFloat returnJson then
         pure none
       else
@@ -334,6 +335,17 @@ def optionalReturnAscription? (json : Json) : PygenM (Option (TSyntax `term)) :=
   match (jsonFieldOption json "returns").orElse (fun _ => jsonFieldOption json "_ret_ty") with
   | some r => match TypeInfer.ofAnnotation r with
       | .opt _ => functionReturnTypeSyntax? json
+      -- A `list`/`set` return whose element is `float` pins the codomain (`List ℚ`/`List Float`), so a
+      -- body mixing `return [1]` (List Int) and `return ans` (List ℚ) unifies — the int list coerces
+      -- (`CoeTail (List Int) (List Rat)`) instead of the first int return fixing `List ℤ` (Tri). But NOT
+      -- for a transcendental (`ℝ`) body — its list is `List ℝ`, and a fixed `List ℚ` would clash (eg1).
+      | .list .float | .set .float =>
+          -- Ascribe the list[float] annotation DIRECTLY (`functionArgTypeSyntax?`, bypassing the
+          -- exact-mode float-unascribe in `functionReturnTypeSyntax?`) → `List ℚ`/`List Float`. NOT for
+          -- a transcendental (`ℝ`) body — its list is `List ℝ`, and a fixed `List ℚ` would clash.
+          let body := (json.getObjValAs? (Array Json) "body").toOption.getD #[]
+          if (← bodyCallsNoncomputable body) || (← bodyNeedsNoncomputable body) then pure none
+          else functionArgTypeSyntax? r
       | _ => pure none
   | none => pure none
 

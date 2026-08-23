@@ -99,7 +99,11 @@ partial def typeOfExpr (sigs : Sigs) (env : Env) (e : Json) : PyType :=
               match lt, rt with
               | .list _, _ => lt
               | _, .list _ => rt
+              -- string repeat `s * n` / `n * s` (`"ab" * 3`)
+              | .str, _ | _, .str => .str
               | _, _ => arith lt rt
+          -- `s % args` is %-formatting → str; `n % m` is modulo (arithmetic).
+          | some "mod" => match lt with | .str => .str | _ => arith lt rt
           -- Python's `/` is always true division, so `int / int` is a `float` — but a boxed operand
           -- keeps the result boxed (`PyAny / 2` dispatches on the tag → `PyAny`), else a `_ret_float`
           -- stamp would ascribe `ℚ` onto a body that is actually `PyAny`.
