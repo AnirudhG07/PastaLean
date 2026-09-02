@@ -131,6 +131,31 @@ partial def containsSubscriptOf (name : String) (j : Json) : Bool :=
       | .obj fs => fs.toList.any (fun (_, v) => containsSubscriptOf name v)
       | _ => false)
 
+/-- An expression built PURELY from subscripts of `name` combined by `+` (`p[0]`, `p[0] + p[1]`), so
+its type IS `name`'s element type. Used to lift a callee-annotation through element access:
+`valid(p[0] + p[1])` with `valid(s: str)` ⇒ `p : list[str]`. -/
+partial def isPureSubscriptExpr (name : String) (j : Json) : Bool :=
+  (nodeTypeOf j == some "Subscript" && (getField j "value").bind nameId? == some name)
+  || (nodeTypeOf j == some "BinOp" && (j.getObjValAs? String "op").toOption == some "add"
+      && ((getField j "left").elim false (isPureSubscriptExpr name))
+      && ((getField j "right").elim false (isPureSubscriptExpr name)))
+
+/-- The nesting depth `d` when `j` is `name` indexed `d` times by non-slice subscripts
+(`grid[i][j]` ⇒ `2`, `p[i]` ⇒ `1`), else `none`. Used to lift an element constraint through nested
+lists: `grid[i][j] == 1` ⇒ `grid : list[list[int]]`. -/
+partial def nameSubscriptDepth (name : String) (j : Json) : Option Nat :=
+  if nodeTypeOf j == some "Subscript" && (getField j "slice").all (fun s => nodeTypeOf s != some "Slice") then
+    match getField j "value" with
+    | some v =>
+        if nameId? v == some name then some 1 else (nameSubscriptDepth name v).map (· + 1)
+    | none => none
+  else none
+
+/-- `list` nested `d` deep around `t` (`nestList 2 int = list[list[int]]`, `nestList 0 t = t`). -/
+def nestList : Nat → PyType → PyType
+  | 0, t => t
+  | n+1, t => .list (nestList n t)
+
 /-- What `name`'s usage in one expression unambiguously tells us — enumerated exhaustively over the
 Python signals that pin exactly one type: a type-exclusive method on it (`p.split()` → str), an
 int-only operator over it (`p << 1`, `p >> 1`, `~p` — bitwise `& | ^` are int OR set, so NOT here),
@@ -163,7 +188,8 @@ partial def usageType (fnParams : Std.HashMap String (Array PyType)) (known : En
               if isName (getField func "value") then
                 (func.getObjValAs? String "attr").toOption.elim .unknown Libraries.builtinMethodReceiver?
               -- `p[i].method()`: a type-exclusive method on an ELEMENT ⇒ `p : list[<receiver>]`
-              -- (e.g. `words[0].upper()` ⇒ `words : list[str]`).
+              -- (e.g. `words[0].upper()` ⇒ `words : list[str]`). A conflicting DIRECT `p.upper()` (which
+              -- would force `p : str`) wins via the `decisiveScalarType` override in `paramUsageSeed`.
               else if isSubscriptOf name (getField func "value") then
                 match (func.getObjValAs? String "attr").toOption.map Libraries.builtinMethodReceiver? with
                 | some t => if t == .unknown then .unknown else .list t
@@ -195,6 +221,29 @@ partial def usageType (fnParams : Std.HashMap String (Array PyType)) (known : En
                           | none => .unknown
                         else .unknown
                     | none => .unknown
+                  -- `sorted(name, key=f)` / `key=cmp_to_key(cmp)`: the key/comparator callback's first
+                  -- param type IS `name`'s element ⇒ `name : list[T]` (`sorted(arr, key=cmp_to_key(cmp))`
+                  -- with `cmp(x: int, y)` ⇒ `arr : list[int]`). Reverse of `stampKeyLambdas` (which types
+                  -- a key LAMBDA from the collection); this types the collection from an ANNOTATED callback.
+                  else if ["sorted", "min", "max", "nlargest", "nsmallest"].contains fn
+                          && (args[0]?.bind nameId? == some name) then
+                    match (getField json "keywords").bind (getField · "key") with
+                    | some keyv =>
+                        let calleeFn : Option String := match nodeTypeOf keyv with
+                          | some "Name" => nameId? keyv
+                          | some "Call" =>
+                              if (getField keyv "func").bind nameId? == some "cmp_to_key"
+                              then (((keyv.getObjValAs? (Array Json) "args").toOption.getD #[])[0]?).bind nameId?
+                              else none
+                          | _ => none
+                        match (calleeFn.bind fnParams.get?).bind (·[0]?) with
+                        -- Exclude a `str` element: `sorted(name, key=cmp_to_key(cmp: str))` fits both
+                        -- `name : str` (sorting its chars) and `name : list[str]` — the undecidable
+                        -- str-vs-list ambiguity. A non-`str` scalar (`int`) is unambiguous (a `str`'s
+                        -- elements are never `int`), so `sorted(arr, key=cmp_to_key(cmp: int))` is sound.
+                        | some t => if t.isKnown && !t.isContainer && t != .str then .list t else .unknown
+                        | none => .unknown
+                    | none => .unknown
                   else if args.any (fun a => nameId? a == some name) then
                     if fn == "ord" then .str else if fn == "chr" then .int
                     else
@@ -208,6 +257,17 @@ partial def usageType (fnParams : Std.HashMap String (Array PyType)) (known : En
                           | some i => match ptys[i]? with | some t => if t.isKnown then t else .unknown | none => .unknown
                           | none => .unknown
                       | none => .unknown
+                  -- `f(p[i])` / `f(p[i] + p[j])`: an ELEMENT of `p` flows into an annotated scalar
+                  -- param `T` ⇒ `p : list[T]` (`valid(lst[0] + lst[1])` with `valid(s: str)`).
+                  else if args.any (isPureSubscriptExpr name) then
+                    match fnParams.get? fn with
+                    | some ptys =>
+                        match (List.range args.size).find? (fun i => isPureSubscriptExpr name args[i]!) with
+                        | some i => match ptys[i]? with
+                            | some t => if t.isKnown && !t.isContainer then .list t else .unknown
+                            | none => .unknown
+                        | none => .unknown
+                    | none => .unknown
                   else .unknown
               | none => .unknown
         | none => .unknown
@@ -331,17 +391,59 @@ partial def usageType (fnParams : Std.HashMap String (Array PyType)) (known : En
             | some t => if t == .str then .unknown else .list t
             | none => .unknown
           else .unknown
-        -- `p[i] <cmp> <literal>` pins the ELEMENT type ⇒ `p : list[<that>]`.
-        let fromLeftElem : PyType :=
-          if valueCmp && isSubscriptOf name left then (right.bind literalType?).elim .unknown .list else .unknown
-        let fromRightElem : PyType :=
-          if valueCmp && isSubscriptOf name right then (left.bind literalType?).elim .unknown .list else .unknown
+        -- `p[i] <cmp> <literal>` pins the ELEMENT type ⇒ `p : list[<that>]`; a NESTED index
+        -- `grid[i][j] == 1` ⇒ `grid : list[list[int]]` (depth-2). A conflicting DIRECT signal
+        -- (`p.isalpha()`) wins via the `decisiveScalarType` override in `paramUsageSeed`.
+        let elemCmp (subj other : Option Json) : PyType :=
+          match subj.bind (nameSubscriptDepth name), other.bind literalType? with
+          | some d, some t => nestList d t
+          | _, _ => .unknown
+        let fromLeftElem : PyType := if valueCmp then elemCmp left right else .unknown
+        let fromRightElem : PyType := if valueCmp then elemCmp right left else .unknown
         fromLeft.join fromRight |>.join (fromLeftElem.join fromRightElem) |>.join fromRightContainer
           |>.join fromOrdered
     | _ => .unknown
   let sub := match json with
     | .arr xs => PyType.joinAll (xs.toList.map (usageType fnParams known fuel name))
     | .obj fs => PyType.joinAll (fs.toList.map (fun (_, v) => usageType fnParams known fuel name v))
+    | _ => .unknown
+  here.join sub
+
+/-- A DECISIVE scalar signal on the BARE `name`: a `str`-exclusive method (`p.isalpha()` ⇒ `p : str` —
+a list/dict has no such method, so Python would `TypeError` otherwise), `ord(p)` ⇒ str, `chr(p)` ⇒ int,
+a shift `p << 1` / `~p` ⇒ int. Unlike the element rules (`p[i].upper()` ⇒ `list[str]`), this is
+UNAMBIGUOUS and OVERRIDES a conflicting container inference — used in `paramUsageSeed` to keep a direct
+`p.upper()` from joining to `any` against an element-based `list[str]`. -/
+partial def decisiveScalarType (name : String) (j : Json) : PyType :=
+  let isN (o : Option Json) : Bool := o.bind nameId? == some name
+  let here : PyType :=
+    match nodeTypeOf j with
+    | some "Call" =>
+        match getField j "func" with
+        | some func =>
+            if nodeTypeOf func == some "Attribute" && isN (getField func "value") then
+              match (func.getObjValAs? String "attr").toOption.map Libraries.builtinMethodReceiver? with
+              | some .str => .str
+              | _ => .unknown
+            else match nameId? func with
+              | some fn =>
+                  let args := (j.getObjValAs? (Array Json) "args").toOption.getD #[]
+                  if args.any (fun a => nameId? a == some name) then
+                    if fn == "ord" then .str else if fn == "chr" then .int else .unknown
+                  else .unknown
+              | none => .unknown
+        | none => .unknown
+    | some "BinOp" =>
+        let op := (j.getObjValAs? String "op").toOption.getD ""
+        if ["lshift", "rshift"].contains op && (isN (getField j "left") || isN (getField j "right"))
+        then .int else .unknown
+    | some "UnaryOp" =>
+        if (j.getObjValAs? String "op").toOption == some "invert" && isN (getField j "operand")
+        then .int else .unknown
+    | _ => .unknown
+  let sub := match j with
+    | .arr xs => PyType.joinAll (xs.toList.map (decisiveScalarType name))
+    | .obj fs => PyType.joinAll (fs.toList.map (fun (_, v) => decisiveScalarType name v))
     | _ => .unknown
   here.join sub
 

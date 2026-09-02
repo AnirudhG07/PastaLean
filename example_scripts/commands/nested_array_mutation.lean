@@ -19,20 +19,19 @@ def grid_dp := fun (n : Int) ↦ fun (m : Int) ↦
   Id.run
     (do
       let mut f : List (List Int) :=
-        (PastaLean.pyRange (n +ₚ (1 : Int))).map fun _ => PastaLean.pyListRepeat [(0 : Int)] (m +ₚ (1 : Int))
-      f := PastaLean.pyModifyItem f (0 : Int) (fun p'_row_1 => PastaLean.pySetItem p'_row_1 (0 : Int) (1 : Int))
+        (PastaLean.pyRange (n +ₚ (1 : Int))).map fun (_ : Int) => PastaLean.pyListRepeat [(0 : Int)] (m +ₚ (1 : Int))
+      let p'_setval_1 := (1 : Int)
+      f := PastaLean.pyModifyItem f (0 : Int) (fun p'_row_1 => PastaLean.pySetItem p'_row_1 (0 : Int) p'_setval_1)
       for i in (PastaLean.pyRange (n +ₚ (1 : Int)))do
         for j in (PastaLean.pyRange (m +ₚ (1 : Int)))do
           if h_1 : i > (0 : Int) then 
-            f :=
-              PastaLean.pyModifyItem f i
-                (fun p'_row_2 => PastaLean.pySetItem p'_row_2 j (f⦋i⦌⦋j⦌ +ₚ f⦋i -ₚ (1 : Int)⦌⦋j⦌))
+            let p'_setval_2 := f⦋i⦌⦋j⦌ +ₚ f⦋i -ₚ (1 : Int)⦌⦋j⦌
+            f := PastaLean.pyModifyItem f i (fun p'_row_2 => PastaLean.pySetItem p'_row_2 j p'_setval_2)
           else
             let _ := ()
           if h_2 : j > (0 : Int) then 
-            f :=
-              PastaLean.pyModifyItem f i
-                (fun p'_row_2 => PastaLean.pySetItem p'_row_2 j (f⦋i⦌⦋j⦌ +ₚ f⦋i⦌⦋j -ₚ (1 : Int)⦌))
+            let p'_setval_2 := f⦋i⦌⦋j⦌ +ₚ f⦋i⦌⦋j -ₚ (1 : Int)⦌
+            f := PastaLean.pyModifyItem f i (fun p'_row_2 => PastaLean.pySetItem p'_row_2 j p'_setval_2)
           else
             let _ := ()
       let p'_ret_1 := f⦋n⦌⦋m⦌
@@ -44,21 +43,20 @@ def grid_dp'rn := fun (n : Int) ↦ fun (m : Int) ↦
   Id.run
     (do
       let mut f : Array (Array Int) :=
-        ((PastaLean.pyRange (n +ₚ (1 : Int))).map fun _ =>
+        ((PastaLean.pyRange (n +ₚ (1 : Int))).map fun (_ : Int) =>
             PastaLean.pyArrayRepeat #[(0 : Int)] (m +ₚ (1 : Int))) |>.toArray
-      f := PastaLean.pyModifyItem f (0 : Int) (fun p'_row_1 => PastaLean.pySetItem p'_row_1 (0 : Int) (1 : Int))
+      let p'_setval_1 := (1 : Int)
+      f := PastaLean.pyModifyItem f (0 : Int) (fun p'_row_1 => PastaLean.pySetItem p'_row_1 (0 : Int) p'_setval_1)
       for i in (PastaLean.pyRange (n +ₚ (1 : Int)))do
         for j in (PastaLean.pyRange (m +ₚ (1 : Int)))do
           if h_1 : i > (0 : Int) then 
-            f :=
-              PastaLean.pyModifyItem f i
-                (fun p'_row_2 => PastaLean.pySetItem p'_row_2 j (f⦋i⦌⦋j⦌ +ₚ f⦋i -ₚ (1 : Int)⦌⦋j⦌))
+            let p'_setval_2 := f⦋i⦌⦋j⦌ +ₚ f⦋i -ₚ (1 : Int)⦌⦋j⦌
+            f := PastaLean.pyModifyItem f i (fun p'_row_2 => PastaLean.pySetItem p'_row_2 j p'_setval_2)
           else
             let _ := ()
           if h_2 : j > (0 : Int) then 
-            f :=
-              PastaLean.pyModifyItem f i
-                (fun p'_row_2 => PastaLean.pySetItem p'_row_2 j (f⦋i⦌⦋j⦌ +ₚ f⦋i⦌⦋j -ₚ (1 : Int)⦌))
+            let p'_setval_2 := f⦋i⦌⦋j⦌ +ₚ f⦋i⦌⦋j -ₚ (1 : Int)⦌
+            f := PastaLean.pyModifyItem f i (fun p'_row_2 => PastaLean.pySetItem p'_row_2 j p'_setval_2)
           else
             let _ := ()
       let p'_ret_1 := f⦋n⦌⦋m⦌
@@ -68,15 +66,16 @@ def cube_fill := fun (n : Int) ↦
   Id.run
     (do
       let mut g : List (List (List Int)) :=
-        (PastaLean.pyRange n).map fun _ => (PastaLean.pyRange n).map fun _ => PastaLean.pyListRepeat [(0 : Int)] n
+        (PastaLean.pyRange n).map fun (_ : Int) =>
+          (PastaLean.pyRange n).map fun (_ : Int) => PastaLean.pyListRepeat [(0 : Int)] n
       for i in (PastaLean.pyRange n)do
         for j in (PastaLean.pyRange n)do
           for k in (PastaLean.pyRange n)do
+            let p'_setval_1 := i *ₚ (100 : Int) +ₚ j *ₚ (10 : Int) +ₚ k
             g :=
               PastaLean.pyModifyItem g i
                 (fun p'_row_1 =>
-                  PastaLean.pyModifyItem p'_row_1 j
-                    (fun p'_row_2 => PastaLean.pySetItem p'_row_2 k (i *ₚ (100 : Int) +ₚ j *ₚ (10 : Int) +ₚ k)))
+                  PastaLean.pyModifyItem p'_row_1 j (fun p'_row_2 => PastaLean.pySetItem p'_row_2 k p'_setval_1))
       let mut total : Int := (0 : Int)
       for i in (PastaLean.pyRange n)do
         for j in (PastaLean.pyRange n)do
@@ -90,16 +89,16 @@ def cube_fill'rn := fun (n : Int) ↦
   Id.run
     (do
       let mut g : Array (Array (Array Int)) :=
-        ((PastaLean.pyRange n).map fun _ =>
-            ((PastaLean.pyRange n).map fun _ => PastaLean.pyArrayRepeat #[(0 : Int)] n) |>.toArray) |>.toArray
+        ((PastaLean.pyRange n).map fun (_ : Int) =>
+            ((PastaLean.pyRange n).map fun (_ : Int) => PastaLean.pyArrayRepeat #[(0 : Int)] n) |>.toArray) |>.toArray
       for i in (PastaLean.pyRange n)do
         for j in (PastaLean.pyRange n)do
           for k in (PastaLean.pyRange n)do
+            let p'_setval_1 := i *ₚ (100 : Int) +ₚ j *ₚ (10 : Int) +ₚ k
             g :=
               PastaLean.pyModifyItem g i
                 (fun p'_row_1 =>
-                  PastaLean.pyModifyItem p'_row_1 j
-                    (fun p'_row_2 => PastaLean.pySetItem p'_row_2 k (i *ₚ (100 : Int) +ₚ j *ₚ (10 : Int) +ₚ k)))
+                  PastaLean.pyModifyItem p'_row_1 j (fun p'_row_2 => PastaLean.pySetItem p'_row_2 k p'_setval_1))
       let mut total : Int := (0 : Int)
       for i in (PastaLean.pyRange n)do
         for j in (PastaLean.pyRange n)do
@@ -114,17 +113,18 @@ def coin_change := fun (coins : List Int) ↦ fun (amount : Int) ↦
       let mut m : Int := PastaLean.pyLen coins
       let mut n : Int := amount
       let mut f : List (List Int) :=
-        (PastaLean.pyRange (m +ₚ (1 : Int))).map fun _ => PastaLean.pyListRepeat [inf] (n +ₚ (1 : Int))
-      f := PastaLean.pyModifyItem f (0 : Int) (fun p'_row_1 => PastaLean.pySetItem p'_row_1 (0 : Int) (0 : Int))
+        (PastaLean.pyRange (m +ₚ (1 : Int))).map fun (_ : Int) => PastaLean.pyListRepeat [inf] (n +ₚ (1 : Int))
+      let p'_setval_1 := (0 : Int)
+      f := PastaLean.pyModifyItem f (0 : Int) (fun p'_row_1 => PastaLean.pySetItem p'_row_1 (0 : Int) p'_setval_1)
       for p'_pair_1 in (PastaLean.pyIter (PastaLean.pyEnumerate coins (1 : Int)))do
         let i := Prod.fst p'_pair_1
         let x := Prod.snd p'_pair_1
         for j in (PastaLean.pyRange (n +ₚ (1 : Int)))do
-          f := PastaLean.pyModifyItem f i (fun p'_row_2 => PastaLean.pySetItem p'_row_2 j f⦋i -ₚ (1 : Int)⦌⦋j⦌)
+          let p'_setval_2 := f⦋i -ₚ (1 : Int)⦌⦋j⦌
+          f := PastaLean.pyModifyItem f i (fun p'_row_2 => PastaLean.pySetItem p'_row_2 j p'_setval_2)
           if h_1 : j ≥ x then 
-            f :=
-              PastaLean.pyModifyItem f i
-                (fun p'_row_3 => PastaLean.pySetItem p'_row_3 j (PastaLean.pyMin [f⦋i⦌⦋j⦌, f⦋i⦌⦋j -ₚ x⦌ +ₚ (1 : Int)]))
+            let p'_setval_3 := PastaLean.pyMin [f⦋i⦌⦋j⦌, f⦋i⦌⦋j -ₚ x⦌ +ₚ (1 : Int)]
+            f := PastaLean.pyModifyItem f i (fun p'_row_3 => PastaLean.pySetItem p'_row_3 j p'_setval_3)
           else
             let _ := ()
       let p'_ret_1 := if f⦋m⦌⦋n⦌ ≥ inf then -(1 : Int) else f⦋m⦌⦋n⦌
@@ -139,17 +139,19 @@ def coin_change'rn := fun (coins : List Int) ↦ fun (amount : Int) ↦
       let mut m : Int := PastaLean.pyLen coins
       let mut n : Int := amount
       let mut f : Array (Array Int) :=
-        ((PastaLean.pyRange (m +ₚ (1 : Int))).map fun _ => PastaLean.pyArrayRepeat #[inf] (n +ₚ (1 : Int))) |>.toArray
-      f := PastaLean.pyModifyItem f (0 : Int) (fun p'_row_1 => PastaLean.pySetItem p'_row_1 (0 : Int) (0 : Int))
+        ((PastaLean.pyRange (m +ₚ (1 : Int))).map fun (_ : Int) =>
+            PastaLean.pyArrayRepeat #[inf] (n +ₚ (1 : Int))) |>.toArray
+      let p'_setval_1 := (0 : Int)
+      f := PastaLean.pyModifyItem f (0 : Int) (fun p'_row_1 => PastaLean.pySetItem p'_row_1 (0 : Int) p'_setval_1)
       for p'_pair_1 in (PastaLean.pyIter (PastaLean.pyEnumerate coins (1 : Int)))do
         let i := Prod.fst p'_pair_1
         let x := Prod.snd p'_pair_1
         for j in (PastaLean.pyRange (n +ₚ (1 : Int)))do
-          f := PastaLean.pyModifyItem f i (fun p'_row_2 => PastaLean.pySetItem p'_row_2 j f⦋i -ₚ (1 : Int)⦌⦋j⦌)
+          let p'_setval_2 := f⦋i -ₚ (1 : Int)⦌⦋j⦌
+          f := PastaLean.pyModifyItem f i (fun p'_row_2 => PastaLean.pySetItem p'_row_2 j p'_setval_2)
           if h_1 : j ≥ x then 
-            f :=
-              PastaLean.pyModifyItem f i
-                (fun p'_row_3 => PastaLean.pySetItem p'_row_3 j (PastaLean.pyMin [f⦋i⦌⦋j⦌, f⦋i⦌⦋j -ₚ x⦌ +ₚ (1 : Int)]))
+            let p'_setval_3 := PastaLean.pyMin [f⦋i⦌⦋j⦌, f⦋i⦌⦋j -ₚ x⦌ +ₚ (1 : Int)]
+            f := PastaLean.pyModifyItem f i (fun p'_row_3 => PastaLean.pySetItem p'_row_3 j p'_setval_3)
           else
             let _ := ()
       let p'_ret_1 := if f⦋m⦌⦋n⦌ ≥ inf then -(1 : Int) else f⦋m⦌⦋n⦌

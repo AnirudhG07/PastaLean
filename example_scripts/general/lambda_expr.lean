@@ -112,11 +112,11 @@ def lmbda_with_side_effects'rn :=
       return p'_ret_1)
 
 def lmbda_with_generator_expression := fun () ↦
-  (PastaLean.pyIter ((PastaLean.pyRange (5 : Int)).map fun i => i)).map fun x => x *ₚ x
+  (PastaLean.pyIter ((PastaLean.pyRange (5 : Int)).map fun (i : Int) => i)).map fun (x : Int) => x *ₚ x
 
 attribute [simp, taste_ingr] lmbda_with_generator_expression
 
 def lmbda_with_generator_expression'rn := fun () ↦
-  (PastaLean.pyIter ((PastaLean.pyRange (5 : Int)).map fun i => i)).map fun x => x *ₚ x
+  (PastaLean.pyIter ((PastaLean.pyRange (5 : Int)).map fun (i : Int) => i)).map fun (x : Int) => x *ₚ x
 
 end PastaLean.User.Root

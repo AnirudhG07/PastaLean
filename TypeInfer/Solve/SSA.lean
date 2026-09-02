@@ -35,6 +35,12 @@ partial def isTypeMutation : PyType → PyType → Bool
       else match old, new with
         | .list a, .list b => isTypeMutation a b
         | .set a, .set b => isTypeMutation a b
+        -- `x = None` then `x = v` (a nullable accumulator, `min_pair = None; min_pair = (l,r)`) is
+        -- Optional-WIDENING, not a type change — `x : Option τ`, handled by the nullable codegen. SSA
+        -- must NOT version it: inside a loop the loop-carried phi is unmodelled, so versioning silently
+        -- drops the update (the accumulator stays `none`). Leaving it un-versioned keeps `x` Optional.
+        | .none, _ | _, .none => false
+        | .opt _, _ | _, .opt _ => false
         | _, _ => true
 
 /-- Rewrite every `Name` use per `ren` (origName → curName). Skips nested `FunctionDef`s (own scope). -/

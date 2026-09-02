@@ -46,6 +46,25 @@ private def isNonFiniteFloatCall (name : String) (args : List Json) : Bool :=
       | _ => false
   | none => false
 
+/-- A negative integer literal (`-1`), whether folded into a `Constant` or an unary-minus node.
+    Used to detect `a ** -k`, which yields a `float` even for an `int` base (`2 ** -1 = 0.5`). -/
+private def isNegativeIntLiteral (e : Json) : Bool :=
+  match nodeType? e with
+  | some "Constant" =>
+      match e.getObjVal? "value" with
+      | .ok (.num ⟨m, 0⟩) => m < 0
+      | _ => false
+  | some "UnaryOp" =>
+      (e.getObjValAs? String "op").toOption == some "usub" &&
+      match field e "operand" with
+      | some o =>
+          nodeType? o == some "Constant" &&
+          match o.getObjVal? "value" with
+          | .ok (.num ⟨m, 0⟩) => m > 0
+          | _ => false
+      | none => false
+  | _ => false
+
 /-- A subscript index that is a non-negative integer literal, for static tuple projection. -/
 def literalIndex? (slice : Json) : Option Nat :=
   if nodeType? slice == some "Constant" then
@@ -108,6 +127,13 @@ partial def typeOfExpr (sigs : Sigs) (env : Env) (e : Json) : PyType :=
           -- keeps the result boxed (`PyAny / 2` dispatches on the tag → `PyAny`), else a `_ret_float`
           -- stamp would ascribe `ℚ` onto a body that is actually `PyAny`.
           | some "div" => match lt, rt with | .any, _ | _, .any => .any | _, _ => .float
+          -- `a ** -k` is a `float` even for an `int` base (`2 ** -1 = 0.5`); a FRACTIONAL exponent
+          -- (`x ** 0.5`, a root) is always a `float` regardless of base (pow requires a numeric base,
+          -- so this is sound even when the base type is still `unknown`); else keep the base's type.
+          | some "pow" =>
+              if rt == .float then .float
+              else if isNegativeIntLiteral r && lt == .int then .float
+              else arith lt rt
           | _ => arith lt rt
       | _, _ => .unknown
   | some "UnaryOp" =>

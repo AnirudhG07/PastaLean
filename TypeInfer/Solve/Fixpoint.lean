@@ -25,11 +25,72 @@ partial def collectFnParams (json : Json) : Std.HashMap String (Array PyType) :=
   | _ => pure ()
   return m
 
+/-- A function's parameter types for the callee-annotation rule: each annotated param's declared type,
+each UNANNOTATED param's shallow usage-inferred type (`is_prime(a)` with `a < 2` ⇒ `[int]`). Shallow —
+uses only annotation-level callee info (`collectFnParams`), so it can't recurse without bound. -/
+def nestedParamSig (fn : Json) : Array PyType :=
+  let body := (fn.getObjValAs? (Array Json) "body").toOption.getD #[]
+  let fnP := collectFnParams fn
+  let known := paramSeed fn
+  let args := (((fn.getObjVal? "args").toOption).bind (·.getObjValAs? (Array Json) "args" |>.toOption)).getD #[]
+  args.map fun a =>
+    match getField a "annotation" with
+    | some ann => if ann.isNull
+        then usageType fnP known 1 ((a.getObjValAs? String "arg").toOption.getD "") (Json.arr body)
+        else ofAnnotation ann
+    | none => usageType fnP known 1 ((a.getObjValAs? String "arg").toOption.getD "") (Json.arr body)
+
+/-- `q = sorted(p)` / `list(p)` / `reversed(p)` (possibly sliced, `sorted(p)[::-1]`): `q` is a LIST
+whose ELEMENT equals `p`'s element. Unlike a copy/slice this does NOT preserve `p`'s container (`sorted`
+turns a `str` into `list[str]`), so it only soundly back-propagates a NON-`str` element (`list[int]` ⇒
+`p : list[int]`; a `str` element would reintroduce the str-vs-`list[str]` ambiguity). -/
+partial def listProducingSource (e : Json) : Option String :=
+  match nodeTypeOf e with
+  | some "Subscript" =>
+      if (getField e "slice").any (nodeTypeOf · == some "Slice")
+      then (getField e "value").bind listProducingSource else none
+  | some "Call" =>
+      match (getField e "func").bind nameId? with
+      | some fn => if ["sorted", "list", "reversed"].contains fn
+          then (((e.getObjValAs? (Array Json) "args").toOption.getD #[])[0]?).bind nameId? else none
+      | none => none
+  | _ => none
+
+/-- `q = p.keys()` / `list(p.keys())` (`p` a Name): `q`'s element type is `p`'s KEY type, so a decisive
+use of `q` (`for k in q: k.islower()`) pins the dict key. Returns `p`. -/
+partial def dictKeysSource (e : Json) : Option String :=
+  match nodeTypeOf e with
+  | some "Call" =>
+      match getField e "func" with
+      | some func =>
+          if nodeTypeOf func == some "Attribute" && (func.getObjValAs? String "attr").toOption == some "keys"
+          then (getField func "value").bind nameId?
+          else if nameId? func == some "list"
+          then (((e.getObjValAs? (Array Json) "args").toOption.getD #[])[0]?).bind dictKeysSource
+          else none
+      | none => none
+  | _ => none
+
+/-- The loop variable of a `for <c> in <name>` anywhere in `body` (first match), else `none`. -/
+partial def loopVarOver (name : String) (j : Json) : Option String :=
+  if nodeTypeOf j == some "For" && (getField j "iter").bind nameId? == some name
+  then (getField j "target").bind nameId?
+  else match j with
+    | .arr xs => xs.findSome? (loopVarOver name)
+    | .obj fs => fs.toList.findSome? (fun (_, v) => loopVarOver name v)
+    | _ => none
+
 /-- Seed each unannotated parameter from unambiguous body usage (`p.split()` → str, `p.append()` →
 list, `p.keys()` → dict). This is the safe part of the use-based inference the old Python pre-pass did. -/
 def paramUsageSeed (fn : Json) : Env := Id.run do
   let body := fn.getObjValAs? (Array Json) "body" |>.toOption.getD #[]
-  let fnParams := collectFnParams fn
+  -- Enrich the annotation-only callee map with each nested helper's INFERRED param signature, so a
+  -- value passed to an UNannotated helper (`is_prime(x)`) picks up the helper's used-inferred type.
+  let mut fnParams := collectFnParams fn
+  for st in flatStmts body.toList do
+    if nodeTypeOf st == some "FunctionDef" then
+      if let some nm := (st.getObjValAs? String "name").toOption then
+        fnParams := fnParams.insert nm (nestedParamSig st)
   -- Known scalar types of names, for the ordered-comparison anchor: param annotations plus any local
   -- assigned a literal (`ans = ""` ⇒ str, `lo = 0` ⇒ int), so `word < ans` pins `word` to `str` and
   -- `x < lo` pins `x` to `int` — soundly (ordered comparison needs order-compatible operands).
@@ -41,17 +102,87 @@ def paramUsageSeed (fn : Json) : Env := Id.run do
   for s in flatStmts body.toList do
     if nodeTypeOf s == some "Assign" then
       let val := getField s "value"
-      for tgt in (getField s "targets").elim #[] (fun t => (t.getArr?).toOption.getD #[]) do
+      -- A single-target assign carries `target` (singular); only chained `a = b = v` uses `targets`.
+      let tgts := (getField s "target").toArray
+                  ++ (getField s "targets").elim #[] (fun t => (t.getArr?).toOption.getD #[])
+      for tgt in tgts do
         match nodeTypeOf tgt, val.bind (fun v => getField v "elts") with
         -- `a, b = 0, ""`: zip tuple targets with tuple-literal values.
         | some "Tuple", some (.arr vs) =>
             for (te, ve) in ((tgt.getObjValAs? (Array Json) "elts").toOption.getD #[]).zip vs do
               known := learnLit known te (some ve)
         | _, _ => known := learnLit known tgt val
+  -- Transparent aliases: `q = p` (copy) or `q = p[a:b]` (slice) give `q` the SAME container type as
+  -- `p` (a slice of a `str` is a `str`, of a `list` a `list`), so a type-exclusive use of `q`
+  -- (`q.replace(...)`, `q.isdigit()`) pins `p` too. `q = p[i]` (a single element) is EXCLUDED — that
+  -- is the ambiguous element case. Followed one hop; enough for `ans = text; ans.replace(...)`.
+  let aliasRoot : Std.HashMap String String := Id.run do
+    let mut m : Std.HashMap String String := {}
+    for s in flatStmts body.toList do
+      if nodeTypeOf s == some "Assign" then
+        if let some q := (getField s "target").bind nameId? then
+          match getField s "value" with
+          | some v =>
+              if let some p := nameId? v then m := m.insert q p
+              else if nodeTypeOf v == some "Subscript" && (getField v "slice").any (nodeTypeOf · == some "Slice") then
+                if let some p := (getField v "value").bind nameId? then m := m.insert q p
+          | none => pure ()
+    return m
+  -- `sorted_list = sorted(p)[::-1]`: back-propagate only a NON-`str` list element (see `listProducingSource`).
+  let listAliasRoot : Std.HashMap String String := Id.run do
+    let mut m : Std.HashMap String String := {}
+    for s in flatStmts body.toList do
+      if nodeTypeOf s == some "Assign" then
+        if let some q := (getField s "target").bind nameId? then
+          if let some p := (getField s "value").bind listProducingSource then m := m.insert q p
+    return m
+  -- `keys = list(p.keys())`: `keys`' element type is `p`'s KEY type (see `dictKeysSource`).
+  let keysAliasRoot : Std.HashMap String String := Id.run do
+    let mut m : Std.HashMap String String := {}
+    for s in flatStmts body.toList do
+      if nodeTypeOf s == some "Assign" then
+        if let some q := (getField s "target").bind nameId? then
+          if let some p := (getField s "value").bind dictKeysSource then m := m.insert q p
+    return m
   let mut env : Env := {}
   for name in paramNames fn do
     -- fuel 1: loop-variable inference may fire at the top level but not nest (see `usageType`).
-    let t := usageType fnParams known 1 name (Json.arr body)
+    let mut t := usageType fnParams known 1 name (Json.arr body)
+    -- A decisive direct scalar use (`p.isalpha()`, `ord(p)`, `p << 1`) OVERRIDES any container guess
+    -- from element access (`p[i].upper()` ⇒ `list[str]`): a `str`/`int` scalar and its element form
+    -- would otherwise join to `.any`. Sound — Python would `TypeError` if `p` were the container. A
+    -- transparent alias (`y = p[6:]; y.isdigit()`) is decisive too: a list-slice has no `.isdigit()`.
+    let mut decisive := decisiveScalarType name (Json.arr body)
+    for (q, p) in aliasRoot.toList do
+      if p == name then decisive := decisive.join (decisiveScalarType q (Json.arr body))
+    if decisive.isKnown then t := decisive
+    -- Only when the param has no direct signal, fall back to a transparent alias local's usage —
+    -- recovers a `str`/`list` param whose only decisive use is through a copy/slice binding
+    -- (`ans = text; ans.replace(...)` ⇒ `text : str`). Skip an alias whose own type is ambiguous
+    -- (`.any`/`unknown`, e.g. a type-changing local) so it never poisons the param.
+    if t == .unknown then
+      for (q, p) in aliasRoot.toList do
+        if p == name then
+          let qt := usageType fnParams known 1 q (Json.arr body)
+          if qt.isKnown && qt != .any then t := t.join qt
+      -- `sorted_list = sorted(p)[::-1]; for x in sorted_list: is_prime(x:int)` ⇒ `p : list[int]`.
+      -- Only a NON-`str` list element (see `listProducingSource`), so it never mis-types a `str` param.
+      for (q, p) in listAliasRoot.toList do
+        if p == name then
+          match usageType fnParams known 1 q (Json.arr body) with
+          | .list e => if e.isKnown && e != .str then t := t.join (.list e)
+          | _ => pure ()
+    -- `keys = list(p.keys())`: a decisive key element (`for k in keys: k.islower()` ⇒ str) makes
+    -- `p : dict[key, Any]`. Runs even when `p` is already `dict[⊥,⊥]` (from `.keys()`), refining the
+    -- key via `join`; values stay dynamic — a keys-iteration never constrains them.
+    for (q, p) in keysAliasRoot.toList do
+      if p == name then
+        -- `q` is KNOWN to be a list (`list(p.keys())`), so read its element from the loop var's
+        -- DECISIVE scalar use (`for k in q: k.islower()` ⇒ str) — bypassing `usageType`'s str-vs-list
+        -- guard, which wrongly abstains here because it can't see that `q` is a list.
+        match (loopVarOver q (Json.arr body)).map (decisiveScalarType · (Json.arr body)) with
+        | some e => if e.isKnown then t := t.join (.dict e .any)
+        | none => pure ()
     if t != .unknown then env := env.insert name t
   return env
 

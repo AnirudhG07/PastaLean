@@ -331,6 +331,15 @@ partial def nestedSubscriptSetDoElem? (target : Json) (value : TSyntax `term) :
   match jsonNodeType? root with
   | some "Name" =>
       let rootIdent ← getCode root `ident
+      -- Nested `g[i][j] = …` lowers to `pyModifyItem g i (fun row => …)`. Hoist the value into a prior
+      -- `let` so a value that reads `g` (`f[i][j] = f[i-1][j] or …`) doesn't keep a second reference to
+      -- `g` alive inside the modify closure — that would force an O(n) row copy instead of in-place.
+      if idxTerms.size ≥ 2 then
+        let vIdent := mkIdent (← freshName `__setval)
+        let bindV ← `(doElem| let $vIdent:ident := $value)
+        let rhs ← buildSubscriptSetRhs rootIdent idxTerms.toList vIdent
+        let assign ← `(doElem| $rootIdent:ident := $rhs)
+        return some ⟨mkNullNode #[bindV.raw, assign.raw]⟩
       let rhs ← buildSubscriptSetRhs rootIdent idxTerms.toList value
       return some (← `(doElem| $rootIdent:ident := $rhs))
   | some "Attribute" =>

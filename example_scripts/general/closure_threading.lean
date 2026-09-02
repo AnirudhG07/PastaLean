@@ -435,7 +435,7 @@ attribute [simp, taste_ingr] _any_valid_pair'outer
 
 def any_valid_pair := fun (s : String) ↦
   let n := (PastaLean.pyLen s : Int)
-  PastaLean.pySum ((PastaLean.pyRange n).map fun i => _any_valid_pair'outer i s n)
+  PastaLean.pySum ((PastaLean.pyRange n).map fun (i : Int) => _any_valid_pair'outer i s n)
 
 attribute [simp, taste_ingr] any_valid_pair
 
@@ -457,7 +457,7 @@ private def _any_valid_pair'outer'rn := fun (i : Int) ↦ fun (s : String) ↦ f
 
 def any_valid_pair'rn := fun (s : String) ↦
   let n := (PastaLean.pyLen s : Int)
-  PastaLean.pySum ((PastaLean.pyRange n).map fun i => _any_valid_pair'outer'rn i s n)
+  PastaLean.pySum ((PastaLean.pyRange n).map fun (i : Int) => _any_valid_pair'outer'rn i s n)
 
 -- False-positive guard: a `lambda` sort key and a threaded `find` call live in the SAME
 -- statement, but `find` is NOT inside the lambda, so it must still thread.

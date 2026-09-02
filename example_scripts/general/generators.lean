@@ -223,7 +223,7 @@ def use_generators :=
   let a := (PastaLean.pyList (squares (4 : Int)) : List Int)
   let b := (PastaLean.pyList (evens_with_tag [(1 : Int), (2 : Int), (3 : Int), (4 : Int)]) : List Int)
   let c := (PastaLean.pyList (chained [(1 : Int), (2 : Int)] [(3 : Int), (4 : Int)]) : List Int)
-  let d := ((PastaLean.pyIter (squares (3 : Int))).map fun x => x +ₚ (1 : Int) : List Int)
+  let d := ((PastaLean.pyIter (squares (3 : Int))).map fun (x : Int) => x +ₚ (1 : Int) : List Int)
   let e := (PastaLean.pyList (first_three (10 : Int)) : List Int)
   let f := (PastaLean.pyList (subsets [(1 : Int), (2 : Int), (3 : Int)] (0 : Int)) : List (List Int))
   let g :=
@@ -240,7 +240,7 @@ def use_generators'rn :=
   let a := (PastaLean.pyList (squares'rn (4 : Int)) : List Int)
   let b := (PastaLean.pyList (evens_with_tag'rn [(1 : Int), (2 : Int), (3 : Int), (4 : Int)]) : List Int)
   let c := (PastaLean.pyList (chained'rn [(1 : Int), (2 : Int)] [(3 : Int), (4 : Int)]) : List Int)
-  let d := ((PastaLean.pyIter (squares'rn (3 : Int))).map fun x => x +ₚ (1 : Int) : List Int)
+  let d := ((PastaLean.pyIter (squares'rn (3 : Int))).map fun (x : Int) => x +ₚ (1 : Int) : List Int)
   let e := (PastaLean.pyList (first_three'rn (10 : Int)) : List Int)
   let f := (PastaLean.pyList (subsets'rn [(1 : Int), (2 : Int), (3 : Int)] (0 : Int)) : List (List Int))
   let g :=

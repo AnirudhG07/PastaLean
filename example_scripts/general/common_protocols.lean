@@ -35,12 +35,12 @@ def len_protocols'rn :=
 
 def iteration_protocols :=
   let xs := ([(4 : Int), (5 : Int), (6 : Int)] : List Int)
-  (PastaLean.pyIter xs).map fun x => x
+  (PastaLean.pyIter xs).map fun (x : Int) => x
 
 attribute [simp, taste_ingr] iteration_protocols
 
 def iteration_protocols'rn :=
   let xs := ([(4 : Int), (5 : Int), (6 : Int)] : List Int)
-  (PastaLean.pyIter xs).map fun x => x
+  (PastaLean.pyIter xs).map fun (x : Int) => x
 
 end PastaLean.User.Root

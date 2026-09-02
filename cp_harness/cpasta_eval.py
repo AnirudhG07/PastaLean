@@ -606,6 +606,9 @@ def build_test_harness(converted_lean, fn_name, cases, data_path):
     body = "\n".join([
         "import Lean.Data.Json",
         converted_lean.rstrip(), "",
+        # The converted code defines the twin inside `namespace PastaLean.User.Root`; open it so the
+        # harness `main` can call `<fn>'rn` unqualified (else `unknown identifier <fn>'rn`).
+        "open PastaLean.User.Root", "",
         # Float results are compared with a tolerance, not exact `==`: Lean's Float parse/division can
         # differ from CPython's by ~1 ULP, so bit-equality is the wrong test for a floating-point
         # answer. Non-float types fall back to `BEq` (exact). Lists/tuples lift the comparison.
@@ -1613,6 +1616,9 @@ class CPastaEval:
         def restore_idle():
             # Leave valid placeholders so a plain `lake build` (which builds cpharness_run) still works.
             shutil.rmtree(ns_dir, ignore_errors=True)
+            # Per-harness C codegen (`.lake/build/ir/CpHarness`) is 8+ GB at corpus scale and fills the
+            # disk mid-run; regenerated on the next build, so drop it after the invocations ran.
+            shutil.rmtree(Path(REPO_ROOT) / ".lake" / "build" / "ir" / "CpHarness", ignore_errors=True)
             ns_dir.mkdir(parents=True, exist_ok=True)
             (native_dir / "CpHarness.lean").write_text("-- Idle placeholder (eval driver regenerates).\n")
             (native_dir / "CpHarnessMain.lean").write_text(

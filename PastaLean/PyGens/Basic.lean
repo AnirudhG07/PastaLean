@@ -786,6 +786,18 @@ def compareSyntax : (kind : SyntaxNodeKind) → Json →
     compareApplyTerm op leftJson leftCode rightCode (rightJson := some rightJson) (classCmp := classCmp)
   | _, _ => throwError s!"Unsupported syntax category for Compare node"
 
+/-- Does a `Name`-call to `name` appear anywhere in `json`? (Local mirror of `containsCallTo`, kept
+here to avoid importing the closure-conversion pass into the leaf-node generators.) -/
+partial def jsonCallsName (name : String) (json : Json) : Bool :=
+  let hereCall :=
+    json.getObjValAs? String "node_type" == .ok "Call" &&
+      (json.getObjVal? "func" |>.toOption.any (fun f =>
+        f.getObjValAs? String "node_type" == .ok "Name" && f.getObjValAs? String "id" == .ok name))
+  hereCall || (match json with
+    | .arr xs => xs.any (jsonCallsName name)
+    | .obj fs => fs.toList.any (fun (_, v) => jsonCallsName name v)
+    | _ => false)
+
 @[pygen "IfExp"]
 def ifExpSyntax : (kind : SyntaxNodeKind) → Json →
     PygenM (TSyntax kind)
@@ -817,6 +829,12 @@ def ifExpSyntax : (kind : SyntaxNodeKind) → Json →
     else
       let bodyCode ← getCode bodyJson `term
       let orelseCode ← getCode orelseJson `term
+      -- Memoized `@cache` body: a self-call in a ternary branch lowered to `(← worker …)`; wrap each
+      -- branch in its own `do return …` so the `←` stays scoped there and the branch stays lazy
+      -- (hoisting it out of the `if` would run the recursion unconditionally, breaking the base case).
+      if let some (memoName, _) ← getMemoizeSelf then
+        if jsonCallsName memoName bodyJson || jsonCallsName memoName orelseJson then
+          return ← `((← if $testCode then (do return $bodyCode) else (do return $orelseCode)))
       `(if $testCode then $bodyCode else $orelseCode)
   | _, _ => throwError s!"Unsupported syntax category for IfExp node"
 

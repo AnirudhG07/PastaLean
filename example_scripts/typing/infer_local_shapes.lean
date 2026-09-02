@@ -53,11 +53,11 @@ def solve := fun (n : Int) ↦
 
 attribute [simp, taste_ingr] solve
 
-private partial def _solve'go'rn : Int → Int → Array Int → Int := fun (i : Int) ↦ fun (n : Int) ↦
-  fun (grid : Array Int) ↦ if i ≥ n then (0 : Int) else grid⦋i⦌ +ₚ _solve'go'rn (i +ₚ (1 : Int)) n grid
+private partial def _solve'go'rn : Int → Int → List Int → Int := fun (i : Int) ↦ fun (n : Int) ↦
+  fun (grid : List Int) ↦ if i ≥ n then (0 : Int) else grid⦋i⦌ +ₚ _solve'go'rn (i +ₚ (1 : Int)) n grid
 
 def solve'rn := fun (n : Int) ↦
-  let grid := (PastaLean.pyArrayRepeat #[(0 : Int)] n : Array Int)
+  let grid := (PastaLean.pyListRepeat [(0 : Int)] n : List Int)
   _solve'go'rn (0 : Int) n grid
 
 def main' :=

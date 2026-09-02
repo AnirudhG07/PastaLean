@@ -9,10 +9,10 @@ boxes to PyAny) · 🔵 confluence/robustness.
 
 ## A. Soundness — asserts a type that need not hold
 
-- 🔴 **`x ** k` → int (`arith`/BinOp).** `Rules.arith` types `int**int` as `int`, but Python `2 ** -1 = 0.5`
-  (float), and `2 ** k` for a variable `k` is float when `k<0`. Verified: emits `(2:Int) ^ₚ (-(1:Int))`.
-  Sound only for known-non-negative exponents. Fix: `**` with a possibly-negative int exponent → float
-  (or leave `unknown`); a literal non-negative exponent stays int.
+- 🟢 **`x ** k` → int (`arith`/BinOp).** FIXED (`Rules.lean` BinOp `pow` arm): `a ** -<lit>` with an
+  `int` base now types `float` (`2 ** -1 = 0.5`); a non-negative / variable exponent keeps the base's
+  numeric type (dominant case — `2**k` for non-neg `k`). A variable exponent that is negative at runtime
+  is the residual (rare) unsound corner, and fails loudly (Int-vs-Float mismatch), never silently.
 - 🔴 **`x + 1` / `x * 2` on a plain name ⇒ that numeric literal's type** (`Usage.numLit`). `x + 1` types
   `x : int`, but `x` may be `float` (`1.5 + 1`). Pragmatic (dominant case) but not *always* correct —
   a `list[float]` written `[x+1 for x in xs]` would mis-type `int`. Now excludes `pow` (good). Consider
@@ -47,11 +47,14 @@ boxes to PyAny) · 🔵 confluence/robustness.
   literals in return position unascribed so they coerce.
 - 🟡 **`str * n` / `n * str` (string repeat) and `s % args` (%-format) → unknown** (`Rules`: `mul` only
   checks `.list` for repeat; `arith`/other ops don't handle str). Should be `str`.
-- 🟡 **Backward dataflow through a local is not followed.** `arr → sorted_list = sorted(arr) → for x in
-  sorted_list → to_word(x:int)` doesn't propagate `int` back to `arr` (ByLength, SortArray116,
-  StrongestExtension). The callee-annotation rule only fires when the value is a DIRECT arg (`f(x)` /
-  `f(arr[i])`), not when it flows through an intermediate binding. A backward/interprocedural pass would
-  close these.
+- 🟡 **Backward dataflow through a local — PARTIALLY closed.** A ONE-HOP transparent alias (`q = p`
+  copy or `q = p[a:b]` slice, same container type) now back-propagates a decisive use of `q` to the
+  param `p` (`paramUsageSeed` alias pass): `ans = text; ans.replace(...)` ⇒ `text : str` (FixSpaces),
+  `y = date[6:]; y.isdigit()` ⇒ `date : str` (ValidDate). Only fires when `p` has no direct signal and
+  the alias's own type is unambiguous (skips a type-changing local, which is `.any`). The MULTI-hop /
+  through-`sorted()` case is still open (ByLength `arr → sorted_list → for x → to_word(x:int)`,
+  SortArray116). Also: `f(p[i])` / `f(p[i] + p[j])` — an ELEMENT flowing into an annotated scalar param
+  now gives `p : list[T]` (`isPureSubscriptExpr` callee rule; MatchParens `valid(lst[0]+lst[1])`).
 - 🟡 **`is_prime(a)` where the helper param is UNannotated.** The callee-annotation rule reads only
   ANNOTATED params. A nested helper whose param type is INFERRED (`a<2`⇒int) doesn't propagate back to
   the argument's source (Skjkasdkd, Intersection). Needs the helper's *inferred* signature.
@@ -89,8 +92,31 @@ Mostly yes now:
   analogues of param issues and are the clearest next fixes.
 
 ## Priority fixes (sound + tractable)
-1. **List return-mixing** (Tri): ascribe the do-codomain to the joined container return type; emit numeric
-   list literals unascribed in return position. (Return-type correctness — user's ask.)
-2. **`return None` → `PyAny.none`** in a `_box_return` function (CompareOne, NextSmallest).
-3. **`str * n` / `s % args` → str** (`Rules`), and **`x ** negative` → float** (soundness).
-4. **Backward/inferred-helper propagation** (ByLength, Skjkasdkd cluster) — larger, interprocedural.
+DONE this batch (humaneval 139→144, PALC held): (1) List return-mixing (Tri), (2) `return None →
+PyAny.none`, (3) `str*n`/`s%args → str` and `x ** -lit → float`, plus: element-`str` signals
+(`p[i].upper()`, `p[i] == " "`) are now AMBIGUOUS `.unknown` not `list[str]` (so a decisive direct
+`p.upper()` survives the join — CheckIfLastCharIsALetter), one-hop alias back-prop (FixSpaces, ValidDate),
+`f(p[i])` element-callee rule (MatchParens), `List[Any]` → `List PyAny` (Annotation `containerOf` +
+codegen FuncDef reader — FilterIntegers), and a latent `learnLit` bug (read `target` singular, not the
+chained-only `targets`).
+
+DONE (batches 2+3, humaneval 144→148, PALC 143/143 — Skjkasdkd, ByLength, NumericalLetterGrade, SortArray116):
+- **Nested-helper param inference** — `stampFunction` now recurses into nested `def`s (`is_prime(a)` with
+  `a<2` ⇒ `a : int`); `paramUsageSeed` enriches the callee map (`fnParams`) with each nested helper's
+  INFERRED signature (`nestedParamSig`), so a value passed to an unannotated helper picks up its type.
+- **List-producing backward flow** — `sorted_list = sorted(p)[::-1]; for x in sorted_list: is_prime(x:int)`
+  ⇒ `p : list[int]` (`listProducingSource` + guarded alias). Only a NON-`str` list element back-propagates
+  (`sorted` turns a `str` into `list[str]`, so a str element would reintroduce the str-vs-list ambiguity).
+- **`sorted(name, key=cmp_to_key(cmp))`** with annotated `cmp` ⇒ `name : list[cmp's param]` (reverse of
+  `stampKeyLambdas`). Handles a bare `key=f` and `cmp_to_key(f)`. Fixed SortArray116.
+
+Remaining (harder):
+1. **Intersection** — is_prime `a` PyAny (call-site `r-l` PyAny overrides the body `a<2`⇒int via ParamSig)
+   AND intervals need deep backward through `l=interval2[0]`/`min()`.
+2. **CheckDictCase** — multi-hop backward through `keys = list(dict.keys())` to `dict[str, PyAny]`.
+3. **FindZero/Minpath** — bare-`list`→`List PyAny` numeric cascade (by design; the coefficients/grid are
+   numeric but a bare `list` annotation is `List PyAny`).
+4. **Scalar float return-mixing under a noncomputable body** (TriangleArea71: `return -1` vs
+   `round(x**0.5,2)`) — the ℝ/ℚ/Float dualism; the list fix's scalar analogue, gated by noncomputability.
+5. **str-vs-list[str]** (CountUpper/Encode/HexKey/RemoveVowels/SortedListSum/Solve161/StrongestExtension/
+   ReverseDelete/DoAlgebra/DecodeCyclic) — genuinely undecidable without a hint (see `bounded-dynamic-typing`).

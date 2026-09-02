@@ -77,12 +77,32 @@ def pyRound (x : Float) : Int :=
   else if diff > 0.5 then flI + 1
   else if flI % 2 == 0 then flI else flI + 1  -- exactly .5 → round to even
 
-/-- Python `round(x, ndigits)`: round to `ndigits` decimal places, returning a `Float`. -/
-def pyRoundDigits (x : Float) (ndigits : Int) : Float :=
+/-- Python `round(x, ndigits)`: round to `ndigits` decimal places, staying in the same numeric type.
+Polymorphic so the exact/real twin (`x : ℝ`, e.g. `round(area ** 0.5, 2)` where a root is irrational)
+rounds in `ℝ`, while the run twin rounds in `Float`. -/
+class PyRoundDigitsC (α : Type) where
+  pyRoundDigits : α → Int → α
+
+def pyRoundDigitsFloat (x : Float) (ndigits : Int) : Float :=
   let p : Float := (10.0 : Float) ^ (Float.ofInt ndigits)
   let scaled := x * p
   -- round-half-to-even on the scaled value, then unscale
   (Float.ofInt (pyRound scaled)) / p
+
+noncomputable def pyRoundDigitsReal (x : ℝ) (ndigits : Int) : ℝ :=
+  let p : ℝ := (10 : ℝ) ^ ndigits
+  ((round (x * p) : ℤ) : ℝ) / p
+
+/-- Exact-mode `round(x, n)` on a `ℚ` (`round(sum(t)/len(t), 5)` — `sum/len` is `ℚ`). Computable. -/
+def pyRoundDigitsRat (x : ℚ) (ndigits : Int) : ℚ :=
+  let p : ℚ := (10 : ℚ) ^ ndigits
+  ((round (x * p) : ℤ) : ℚ) / p
+
+instance : PyRoundDigitsC Float := ⟨pyRoundDigitsFloat⟩
+instance : PyRoundDigitsC ℚ := ⟨pyRoundDigitsRat⟩
+noncomputable instance : PyRoundDigitsC ℝ := ⟨pyRoundDigitsReal⟩
+
+export PyRoundDigitsC (pyRoundDigits)
 
 /-- `int.bit_length()`: bits needed to represent `|n|`, and `0` for `0`. `pyBitLength 5 = 3`. -/
 def pyBitLength (n : Int) : Int :=

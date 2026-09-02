@@ -13,7 +13,7 @@ set_option maxHeartbeats 200000
 
 namespace PastaLean.User.Root
 
-def count_to := fun n ↦
+def count_to := fun (n : Int) ↦
   Id.run
     (do
       let mut total : Int := (0 : Int)
@@ -23,7 +23,7 @@ def count_to := fun n ↦
 
 attribute [simp, taste_ingr] count_to
 
-def count_to'rn := fun n ↦
+def count_to'rn := fun (n : Int) ↦
   Id.run
     (do
       let mut total : Int := (0 : Int)

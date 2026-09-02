@@ -185,6 +185,15 @@ def stampParams (env : Env) (fn : Json) : Json :=
                   -- A parameter used at genuinely different types (`.any`, e.g. `add(a,b)` called
                   -- with ints and strings) is always boxed so one definition dispatches on the tag.
                   | some (.any) => arg.setObjVal! "_ty" pyAnyTy
+                  -- A dict with a KNOWN key but a dynamic value (`dict[str, Any]`, inferred from
+                  -- `for k in list(p.keys()): k.islower()`) is a genuine `Std.HashMap K PyAny` — stamp
+                  -- it even though `.any` makes `isKnown` false (which would otherwise drop it).
+                  | some (.dict k v) =>
+                      if k.isKnown then
+                        match toAnnotation? (.dict k (if v.isKnown then v else .any)) with
+                        | some ann => arg.setObjVal! "_ty" ann
+                        | none => arg
+                      else arg
                   | some t =>
                       if t.isKnown then
                         match toAnnotation? t with
@@ -380,14 +389,19 @@ every child and a bare `Name v` reached there fails. Skips nested defs/lambdas (
 partial def listUsePorted (v : String) (allowAppend : Bool) (json : Json) : Bool :=
   match nodeTypeOf json with
   | some "Name" => nameId? json != some v
-  -- A nested def that only READS `v` keeps it portable (the capture is forwarded at its own type);
-  -- one that MUTATES `v` threads it as a `List`, so `v` must not be `Array`-backed.
-  | some "FunctionDef" | some "ClassDef" | some "Lambda" => !(mutatesNameWithin v json)
+  -- A nested `def` that references `v` at all captures it, and closure conversion threads a captured
+  -- list as a `List` PARAMETER — so an `Array`-backed `v` would clash with the callee's `List` binder
+  -- (`def derivative(): return poly(dxs, x)` with `dxs` a comprehension). Disqualify any reference.
+  -- A `Lambda` (usually an inlined `map`/`filter` callback, taking `v` at its own type) only needs the
+  -- mutate guard.
+  | some "FunctionDef" | some "ClassDef" => !(refsListName v json)
+  | some "Lambda" => !(mutatesNameWithin v json)
   | some "Subscript" =>
       let val := (getField json "value").getD Json.null
       let slice := (getField json "slice").getD Json.null
-      if nameId? val == some v then
-        if nodeTypeOf slice == some "Slice" then false else listUsePorted v allowAppend slice
+      -- A slice (`v[:cnt]`) no longer disqualifies: `PySlice (Array β)` exists, so an Array-backed var
+      -- can still be sliced (O(n), but keeps the O(1) index/write everywhere else — a sieve).
+      if nameId? val == some v then listUsePorted v allowAppend slice
       else listUsePorted v allowAppend val && listUsePorted v allowAppend slice
   | some "Call" =>
       let func := (getField json "func").getD Json.null
@@ -788,6 +802,17 @@ partial def stampCompTargets (sigs : Sigs) (env : Env) (json : Json) : Json :=
                 | some target, some iter =>
                     if nodeTypeOf target == some "Tuple" then
                       g.setObjVal! "target" (stampUnpackShape target (typeOfExpr sigs env iter).elemType)
+                    -- A plain `Name` target: ascribe `_ty` to the iterable's element type so codegen
+                    -- binds `fun (x : T) => …`. Needed when the element is used in the comp's GUARD
+                    -- (`[… for group in groups if len(group)==3]`), which Lean elaborates before the
+                    -- result-type ascription would otherwise pin `x` — leaving `PyLen ?m` stuck.
+                    else if nodeTypeOf target == some "Name" && (getField target "_ty").isNone then
+                      let elemTy := (typeOfExpr sigs env iter).elemType
+                      if elemTy.isKnown then
+                        match toAnnotation? elemTy with
+                        | some ann => g.setObjVal! "target" (target.setObjVal! "_ty" ann)
+                        | none => g
+                      else g
                     else g
                 | _, _ => g))
           | _ => json
@@ -866,14 +891,27 @@ partial def keyCallbackElemTypes (sigs : Sigs) (env : Env) (name : String) (json
     Array PyType :=
   let here : Array PyType :=
     if nodeTypeOf json == some "Call" then
-      match keyCallbackColl? json, getField json "keywords" with
-      | some coll, some kwObj =>
-          match getField kwObj "key" with
-          | some keyVal =>
-              if nodeTypeOf keyVal == some "Name" && nameId? keyVal == some name
-              then #[(typeOfExpr sigs env coll).elemType] else #[]
-          | none => #[]
-      | _, _ => #[]
+      -- `filter(name, coll)` / `map(name, coll)`: the named callback's first param is `coll`'s element.
+      let fromFilterMap : Array PyType :=
+        match (getField json "func").bind nameId? with
+        | some fn =>
+            if ["filter", "map"].contains fn then
+              let args := (json.getObjValAs? (Array Json) "args").toOption.getD #[]
+              if args[0]?.bind nameId? == some name then
+                match args[1]? with | some coll => #[(typeOfExpr sigs env coll).elemType] | none => #[]
+              else #[]
+            else #[]
+        | none => #[]
+      let fromKey : Array PyType :=
+        match keyCallbackColl? json, getField json "keywords" with
+        | some coll, some kwObj =>
+            match getField kwObj "key" with
+            | some keyVal =>
+                if nodeTypeOf keyVal == some "Name" && nameId? keyVal == some name
+                then #[(typeOfExpr sigs env coll).elemType] else #[]
+            | none => #[]
+        | _, _ => #[]
+      fromFilterMap ++ fromKey
     else #[]
   let rest := match json with
     | .arr xs => xs.foldl (fun acc e => acc ++ keyCallbackElemTypes sigs env name e) #[]
@@ -925,7 +963,10 @@ partial def stampStmt (sigs : Sigs) (env : Env) (roots : Array Json) (s : Json) 
     let posHints := nestedParamHints sigs env s (roots ++ ownBody)
     let keyHints := keyCallbackHints sigs env s (roots ++ ownBody)
     let hints := keyHints.fold (fun m k v => m.insert k (((m.get? k).getD .unknown).join v)) posHints
-    stampFunction sigs env hints s
+    -- Erase names the nested def's OWN parameters shadow, so a param reusing an outer name
+    -- (`def judge(x)` inside `def f(x: list[int])`) is inferred fresh, not given the outer type.
+    let outer := (paramNames s).foldl (·.erase ·) env
+    stampFunction sigs outer hints s
   else Id.run do
     let mut s := s
     match nodeTypeOf s with
@@ -950,11 +991,11 @@ partial def stampStmt (sigs : Sigs) (env : Env) (roots : Array Json) (s : Json) 
              && typeOfExpr sigs env target == .float then
             if let some ann := toAnnotation? .float then
               s := s.setObjVal! "value" (value.setObjVal! "_ty" ann)
-          -- `x = <int literal>` where `x` is a float-typed scalar (`ans = 0; ans = max(ans, inf)`):
-          -- stamp the literal so codegen coerces `(0 : ℚ)` and Lean infers `x : ℚ`, WITHOUT ascribing
-          -- the binder — that would force `ℚ` over a transcendental `ℝ` in a pure-float var.
+          -- `x = <int expr>` where `x` is float-typed (`ans = 0` then `ans = max(ans, inf)`, or `l =
+          -- min(xs)` widened to `ℚ` by a later `l = mid`): stamp the RHS so it coerces up. Int rhs only,
+          -- so a transcendental `ℝ` init is left un-ascribed.
           else if (nameId? target).any (fun n => (env.get? n).getD .unknown == .float)
-             && nodeTypeOf value == some "Constant" && (getField value "_ty").isNone
+             && (getField value "_ty").isNone
              && typeOfExpr sigs env value == .int then
             if let some ann := toAnnotation? .float then
               s := s.setObjVal! "value" (value.setObjVal! "_ty" ann)

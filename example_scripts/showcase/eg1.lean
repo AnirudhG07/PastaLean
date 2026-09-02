@@ -53,7 +53,8 @@ noncomputable def find_nearest_neighbor := fun (target : List Int) ↦ fun (data
   ((do
       try
         -- Calculate distances using list comprehension
-        let mut distances := (← (PastaLean.pyIter dataset).mapM fun point => euclidean_distance target point)
+        let mut distances :=
+          (← (PastaLean.pyIter dataset).mapM fun (point : List Int) => euclidean_distance target point)
         -- Find the minimum distance
         let mut min_dist := PastaLean.pyMin distances
         -- Find the index of the minimum distance
@@ -85,7 +86,8 @@ def find_nearest_neighbor'rn : List Int → List (List Int) → PastaLean.PyExce
   fun (target : List Int) ↦ fun (dataset : List (List Int)) ↦ do
   try
     -- Calculate distances using list comprehension
-    let mut distances := (← (PastaLean.pyIter dataset).mapM fun point => euclidean_distance'rn target point)
+    let mut distances :=
+      (← (PastaLean.pyIter dataset).mapM fun (point : List Int) => euclidean_distance'rn target point)
     -- Find the minimum distance
     let mut min_dist := PastaLean.pyMin distances
     -- Find the index of the minimum distance

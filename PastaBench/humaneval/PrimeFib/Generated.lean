@@ -17,7 +17,6 @@ set_option maxHeartbeats 200000
 
 /- Python source converted to produce the Lean below (the exact input to PastaLean):
 
-from contracts import *
 
 
 def prime_fib(n: int):
@@ -34,16 +33,11 @@ def prime_fib(n: int):
     >>> prime_fib(5)
     89
     """
-    Requires(n > 0)
-    # The result is a prime, so it is 2, 3, or coprime to 6 — i.e. +/ -1 mod 6.
-    Ensures(Result() >= 2)
-    Ensures(Result() == 2 or Result() == 3 or Result() % 6 == 1 or Result() % 6 == 5)
+
 
     import random
     def miller_rabin(n, k=10):
         """Test if n is prime using the Miller-Rabin primality test."""
-        # Non-deterministic (random.randint) and uses 3-argument pow; treated as an opaque
-        # primality oracle. No contract is attached to it.
         if n < 2:
             return False
         if n == 2 or n == 3:
@@ -74,22 +68,9 @@ def prime_fib(n: int):
     c_prime = 0
     a, b = 0, 1
     while c_prime < n:
-        Invariant(0 <= c_prime)
-        Invariant(c_prime < n)
-        Invariant(0 <= a)
-        Invariant(a <= b)
-        # Cassini's identity. It is exactly the statement "a and b are consecutive Fibonacci
-        # numbers": it holds at (0, 1) and the step (a, b) -> (b, a + b) flips its sign,
-        # since (a+b)^2 - b(a+b) - b^2 = -(b^2 - ab - a^2). So the returned b is a Fibonacci
-        # number, which is the half of the specification the code can actually establish.
-        Invariant(b * b - a * b - a * a == 1 or b * b - a * b - a * a == -1)
-        Decreases(n - c_prime)
-
         a, b = b, a + b
         if miller_rabin(b):
             c_prime += 1
-
-    Assert(b * b - a * b - a * a == 1 or b * b - a * b - a * a == -1)
     return b
 -/
 
@@ -100,105 +81,6 @@ private def _prime_fib'miller_rabin (n : Int) (k : _ := (10 : Int)) :=
       /-
       Test if n is prime using the Miller-Rabin primality test.
       -/
-      -- Non-deterministic (random.randint) and uses 3-argument pow; treated as an opaque
-      -- primality oracle. No contract is attached to it.
-      if h_1 : n < (2 : Int) then 
-        return Bool.false
-      else
-        let _ := ()
-      if h_2 : n = (2 : Int) ∨ n = (3 : Int) then 
-        return Bool.true
-      else
-        let _ := ()
-      if h_3 : n %ₚ (2 : Int) = (0 : Int) then 
-        return Bool.false
-      else
-        let _ := ()
-      let mut r : Int := (0 : Int)
-      let mut d : Int := n -ₚ (1 : Int)
-      while (d %ₚ (2 : Int) = (0 : Int)) do
-        r := r +ₚ (1 : Int)
-        d := PastaLean.pyFloorDiv d (2 : Int)
-      for _ in (PastaLean.pyRange k)do
-        let mut a : Int := (← Libraries.random.pyRandomRandintProof (2 : Int) (n -ₚ (2 : Int)))
-        let mut x := PastaLean.pyPow a d n
-        if h_4 : x = (1 : Int) ∨ x = n -ₚ (1 : Int) then 
-          continue
-        else
-          let _ := ()
-        let mut __py_broke_1 := false
-        for _ in (PastaLean.pyRange (r -ₚ (1 : Int)))do
-          x := PastaLean.pyPow x (2 : Int) n
-          if h_5 : x = n -ₚ (1 : Int) then 
-            __py_broke_1 := true
-            break
-          else
-            let _ := ()
-        if (!__py_broke_1) then 
-          return Bool.false
-        else
-          let _ := ()
-      return Bool.true) :
-    PastaLean.ProofMode.PyProofM _)
-
-attribute [simp] _prime_fib'miller_rabin
-
-def prime_fib : Int → PastaLean.ProofMode.PyProofM Int := fun (n : Int) ↦ do
-  /-
-  
-      prime_fib returns n-th number that is a Fibonacci number and it's also prime.
-      >>> prime_fib(1)
-      2
-      >>> prime_fib(2)
-      3
-      >>> prime_fib(3)
-      5
-      >>> prime_fib(4)
-      13
-      >>> prime_fib(5)
-      89
-      
-  -/
-  let _ := Libraries.passta.pyPassRequires (decide (n > (0 : Int)))
-  -- The result is a prime, so it is 2, 3, or coprime to 6 — i.e. +/-1 mod 6.
-  let _ := ()
-  let mut c_prime : Int := (0 : Int)
-  let mut a : Int := (0 : Int)
-  let mut b : Int := (1 : Int)
-  while (c_prime < n) do
-    let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ c_prime))
-    let _ := Libraries.passta.pyPassInvariant (decide (c_prime < n))
-    let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ a))
-    let _ := Libraries.passta.pyPassInvariant (decide (a ≤ b))
-    -- Cassini's identity. It is exactly the statement "a and b are consecutive Fibonacci
-    -- numbers": it holds at (0, 1) and the step (a, b) -> (b, a + b) flips its sign,
-    -- since (a+b)^2 - b(a+b) - b^2 = -(b^2 - ab - a^2). So the returned b is a Fibonacci
-    -- number, which is the half of the specification the code can actually establish.
-    let _ :=
-      Libraries.passta.pyPassInvariant
-        (b *ₚ b -ₚ a *ₚ b -ₚ a *ₚ a == (1 : Int) || b *ₚ b -ₚ a *ₚ b -ₚ a *ₚ a == -(1 : Int))
-    let _ := Libraries.passta.pyPassDecreases (n -ₚ c_prime)
-    let __unpack_value_1 := (b, a +ₚ b)
-    let __unpack_pair_1 := __unpack_value_1
-    a := Prod.fst __unpack_pair_1
-    b := Prod.snd __unpack_pair_1
-    if h_1 : PastaLean.pyTruthy (← _prime_fib'miller_rabin b) then 
-      c_prime := c_prime +ₚ (1 : Int)
-    else
-      let _ := ()
-  let _ :=
-    Libraries.passta.pyPassAssert (b *ₚ b -ₚ a *ₚ b -ₚ a *ₚ a == (1 : Int) || b *ₚ b -ₚ a *ₚ b -ₚ a *ₚ a == -(1 : Int))
-  return b
-
-attribute [simp] prime_fib
-
-private def _prime_fib'miller_rabin'rn (n : Int) (k : _ := (10 : Int)) :=
-  ((do
-      /-
-      Test if n is prime using the Miller-Rabin primality test.
-      -/
-      -- Non-deterministic (random.randint) and uses 3-argument pow; treated as an opaque
-      -- primality oracle. No contract is attached to it.
       if h_1 : n < (2 : Int) then 
         return Bool.false
       else
@@ -223,22 +105,22 @@ private def _prime_fib'miller_rabin'rn (n : Int) (k : _ := (10 : Int)) :=
           continue
         else
           let _ := ()
-        let mut __py_broke_1 := false
+        let mut p'_broke_1 := false
         for _ in (PastaLean.pyRange (r -ₚ (1 : Int)))do
           x := PastaLean.pyPow x (2 : Int) n
           if h_5 : x == n -ₚ (1 : Int) then 
-            __py_broke_1 := true
+            p'_broke_1 := true
             break
           else
             let _ := ()
-        if (!__py_broke_1) then 
+        if (!p'_broke_1) then 
           return Bool.false
         else
           let _ := ()
       return Bool.true) :
     IO _)
 
-def prime_fib'rn : Int → IO Int := fun (n : Int) ↦ do
+def prime_fib : Int → IO Int := fun (n : Int) ↦ do
   /-
   
       prime_fib returns n-th number that is a Fibonacci number and it's also prime.
@@ -254,35 +136,19 @@ def prime_fib'rn : Int → IO Int := fun (n : Int) ↦ do
       89
       
   -/
-  let _ := Libraries.passta.pyPassRequires (decide (n > (0 : Int)))
-  -- The result is a prime, so it is 2, 3, or coprime to 6 — i.e. +/-1 mod 6.
   let _ := ()
   let mut c_prime : Int := (0 : Int)
   let mut a : Int := (0 : Int)
   let mut b : Int := (1 : Int)
   while (c_prime < n) do
-    let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ c_prime))
-    let _ := Libraries.passta.pyPassInvariant (decide (c_prime < n))
-    let _ := Libraries.passta.pyPassInvariant (decide ((0 : Int) ≤ a))
-    let _ := Libraries.passta.pyPassInvariant (decide (a ≤ b))
-    -- Cassini's identity. It is exactly the statement "a and b are consecutive Fibonacci
-    -- numbers": it holds at (0, 1) and the step (a, b) -> (b, a + b) flips its sign,
-    -- since (a+b)^2 - b(a+b) - b^2 = -(b^2 - ab - a^2). So the returned b is a Fibonacci
-    -- number, which is the half of the specification the code can actually establish.
-    let _ :=
-      Libraries.passta.pyPassInvariant
-        (b *ₚ b -ₚ a *ₚ b -ₚ a *ₚ a == (1 : Int) || b *ₚ b -ₚ a *ₚ b -ₚ a *ₚ a == -(1 : Int))
-    let _ := Libraries.passta.pyPassDecreases (n -ₚ c_prime)
-    let __unpack_value_1 := (b, a +ₚ b)
-    let __unpack_pair_1 := __unpack_value_1
-    a := Prod.fst __unpack_pair_1
-    b := Prod.snd __unpack_pair_1
-    if h_1 : PastaLean.pyTruthy (← _prime_fib'miller_rabin'rn b) then 
+    let p'_unpack_value_1 := (b, a +ₚ b)
+    let p'_unpack_pair_1 := p'_unpack_value_1
+    a := Prod.fst p'_unpack_pair_1
+    b := Prod.snd p'_unpack_pair_1
+    if h_1 : PastaLean.pyTruthy (← _prime_fib'miller_rabin b) then 
       c_prime := c_prime +ₚ (1 : Int)
     else
       let _ := ()
-  let _ :=
-    Libraries.passta.pyPassAssert (b *ₚ b -ₚ a *ₚ b -ₚ a *ₚ a == (1 : Int) || b *ₚ b -ₚ a *ₚ b -ₚ a *ₚ a == -(1 : Int))
   return b
 
 end PastaBench.humaneval.PrimeFib

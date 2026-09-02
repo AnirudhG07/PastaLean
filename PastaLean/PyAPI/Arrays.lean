@@ -76,6 +76,11 @@ instance {β : Type} [Inhabited β] : PyModifyItem (Array β) Int β where
 instance {α : Type} : PyLen (Array α) where
   pyLen xs := xs.size
 
+/-- Slicing (`a[lo:hi:step]`) via `List` — inherently O(n), so an `Array`-backed sieve var may still
+be sliced without dropping its O(1) index/write. -/
+instance {β : Type} : PySlice (Array β) where
+  slice xs lo hi step := (pyListSliceStep xs.toList lo hi step).toArray
+
 instance {α : Type} [BEq α] : PyContains (Array α) α where
   contains xs x := xs.contains x
 

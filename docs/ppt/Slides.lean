@@ -834,7 +834,7 @@ def pyNumpyNorm {α} [PyNumpyScalar α] (xs : List α) : Float :=
 
 # Achievements
 
-Transpiled, compiled, and **run** across two full benchmarks — the Lean twin's answers matched against the reference test cases.
+Transpiled, compiled, and *run* across two full benchmarks — the Lean twin's answers matched against the reference test cases.
 
 *LeetCode* — all *2,589* problems:
 
@@ -1277,7 +1277,7 @@ A nested `def` reads its parent's locals — you can't just move it to the top l
 
 :::class "steps"
 * *Problem* — `def score(x): return x*w` inside `outer` closes over `w`; `w` _feels_ global to `score` but belongs to `outer`. Lift the `def` naïvely and `w` is lost.
-* *We do* — **lambda lifting**: every captured variable (`reads ∩ outer's binders`) becomes an _extra parameter_, passed at each call site. Genuine globals/builtins fall outside the intersection, untouched.
+* *We do* — *lambda lifting*: every captured variable (`reads ∩ outer's binders`) becomes an _extra parameter_, passed at each call site. Genuine globals/builtins fall outside the intersection, untouched.
 * *Why* — the helper lifts to a sibling `private partial def`, so `outer` stays a plain _provable_ `def` (not `partial`). Mutated captures (`nonlocal`) are _threaded_: parameter in, value out.
 :::
 

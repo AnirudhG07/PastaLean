@@ -227,15 +227,15 @@ def grid_inf_dp := fun (houses : List Int) ↦
       -- otherwise `inf` defaults to ℚ while the run twin's values are `Float` (a `PySetItem (List ℚ) ℤ
       -- Float` clash). Mirrors the allocate-mailboxes shape.
       let mut n : Int := PastaLean.pyLen houses
-      let mut f : List (List Int) := (PastaLean.pyRange n).map fun _ => PastaLean.pyListRepeat [inf] (n +ₚ (1 : Int))
+      let mut f : List (List Int) :=
+        (PastaLean.pyRange n).map fun (_ : Int) => PastaLean.pyListRepeat [inf] (n +ₚ (1 : Int))
       for i in (PastaLean.pyRange n)do
-        f := PastaLean.pyModifyItem f i (fun p'_row_1 => PastaLean.pySetItem p'_row_1 (1 : Int) houses⦋i⦌)
+        let p'_setval_1 := houses⦋i⦌
+        f := PastaLean.pyModifyItem f i (fun p'_row_1 => PastaLean.pySetItem p'_row_1 (1 : Int) p'_setval_1)
         for j in (PastaLean.pyRange (i +ₚ (2 : Int)) (2 : Int))do
           for p in (PastaLean.pyRange i)do
-            f :=
-              PastaLean.pyModifyItem f i
-                (fun p'_row_2 =>
-                  PastaLean.pySetItem p'_row_2 j (PastaLean.pyMin [f⦋i⦌⦋j⦌, f⦋p⦌⦋j -ₚ (1 : Int)⦌ +ₚ houses⦋i⦌]))
+            let p'_setval_2 := PastaLean.pyMin [f⦋i⦌⦋j⦌, f⦋p⦌⦋j -ₚ (1 : Int)⦌ +ₚ houses⦋i⦌]
+            f := PastaLean.pyModifyItem f i (fun p'_row_2 => PastaLean.pySetItem p'_row_2 j p'_setval_2)
       let p'_ret_1 := f⦋n -ₚ (1 : Int)⦌⦋n⦌
       return p'_ret_1)
 
@@ -250,15 +250,14 @@ def grid_inf_dp'rn := fun (houses : List Int) ↦
       -- Float` clash). Mirrors the allocate-mailboxes shape.
       let mut n : Int := PastaLean.pyLen houses
       let mut f : Array (Array Int) :=
-        ((PastaLean.pyRange n).map fun _ => PastaLean.pyArrayRepeat #[inf] (n +ₚ (1 : Int))) |>.toArray
+        ((PastaLean.pyRange n).map fun (_ : Int) => PastaLean.pyArrayRepeat #[inf] (n +ₚ (1 : Int))) |>.toArray
       for i in (PastaLean.pyRange n)do
-        f := PastaLean.pyModifyItem f i (fun p'_row_1 => PastaLean.pySetItem p'_row_1 (1 : Int) houses⦋i⦌)
+        let p'_setval_1 := houses⦋i⦌
+        f := PastaLean.pyModifyItem f i (fun p'_row_1 => PastaLean.pySetItem p'_row_1 (1 : Int) p'_setval_1)
         for j in (PastaLean.pyRange (i +ₚ (2 : Int)) (2 : Int))do
           for p in (PastaLean.pyRange i)do
-            f :=
-              PastaLean.pyModifyItem f i
-                (fun p'_row_2 =>
-                  PastaLean.pySetItem p'_row_2 j (PastaLean.pyMin [f⦋i⦌⦋j⦌, f⦋p⦌⦋j -ₚ (1 : Int)⦌ +ₚ houses⦋i⦌]))
+            let p'_setval_2 := PastaLean.pyMin [f⦋i⦌⦋j⦌, f⦋p⦌⦋j -ₚ (1 : Int)⦌ +ₚ houses⦋i⦌]
+            f := PastaLean.pyModifyItem f i (fun p'_row_2 => PastaLean.pySetItem p'_row_2 j p'_setval_2)
       let p'_ret_1 := f⦋n -ₚ (1 : Int)⦌⦋n⦌
       return p'_ret_1)
 
@@ -332,36 +331,36 @@ def untyped_param_arithmetic'rn := fun (nums : List Int) ↦
         total := total +ₚ x *ₚ (2 : Int)
       return total)
 
-def untyped_param_compare_and_div := fun (nums : PyAny) ↦
-  (show PastaLean.PyAny from
+def untyped_param_compare_and_div := fun (nums : List Int) ↦
+  (show Rat from
     Id.run
       (do
         -- Comparison, `%` and `/` on boxed (`PyAny`) values; `best` is a `let mut PyAny` slot reassigned
         -- across the loop (not shadowed).
-        let mut best : PyAny := (0 : Int)
+        let mut best : Int := (0 : Int)
         for x in (PastaLean.pyIter nums)do
           if h_1 : x > best then 
             best := x +ₚ x %ₚ (3 : Int)
           else
             let _ := ()
-        let p'_ret_1 := (best /ₚ (2 : Int) : PastaLean.PyAny)
+        let p'_ret_1 := best /ₚ (2 : Int)
         return p'_ret_1))
 
-attribute [simp] untyped_param_compare_and_div
+attribute [simp, taste_ingr] untyped_param_compare_and_div
 
-def untyped_param_compare_and_div'rn := fun (nums : PyAny) ↦
-  (show PastaLean.PyAny from
+def untyped_param_compare_and_div'rn := fun (nums : List Int) ↦
+  (show Float from
     Id.run
       (do
         -- Comparison, `%` and `/` on boxed (`PyAny`) values; `best` is a `let mut PyAny` slot reassigned
         -- across the loop (not shadowed).
-        let mut best : PyAny := (0 : Int)
+        let mut best : Int := (0 : Int)
         for x in (PastaLean.pyIter nums)do
           if h_1 : x > best then 
             best := x +ₚ x %ₚ (3 : Int)
           else
             let _ := ()
-        let p'_ret_1 := (PastaLean.pyFloat best /ₚ (2 : Int) : PastaLean.PyAny)
+        let p'_ret_1 := PastaLean.pyFloat best /ₚ (2 : Int)
         return p'_ret_1))
 
 def untyped_param_bitwise := fun (nums : List Int) ↦
@@ -392,14 +391,15 @@ def grid_float_dp := fun (m : Int) ↦ fun (n : Int) ↦
       (do
         -- 2D grid DP initialised int (`[[0]*n ...]`) that becomes float via `/ 2` — the nested
         -- `f[i][j] = ...` teaches `f : list[list[float]]`, coercing the innermost `0`.
-        let mut f := ((PastaLean.pyRange m).map fun _ => PastaLean.pyListRepeat [(0 : Rat)] n : List (List Rat))
-        f := PastaLean.pyModifyItem f (0 : Int) (fun p'_row_1 => PastaLean.pySetItem p'_row_1 (0 : Int) (1 : Rat))
+        let mut f :=
+          ((PastaLean.pyRange m).map fun (_ : Int) => PastaLean.pyListRepeat [(0 : Rat)] n : List (List Rat))
+        let p'_setval_1 := (1 : Rat)
+        f := PastaLean.pyModifyItem f (0 : Int) (fun p'_row_1 => PastaLean.pySetItem p'_row_1 (0 : Int) p'_setval_1)
         for i in (PastaLean.pyRange m)do
           for j in (PastaLean.pyRange n)do
             if h_1 : i > (0 : Int) then 
-              f :=
-                PastaLean.pyModifyItem f i
-                  (fun p'_row_2 => PastaLean.pySetItem p'_row_2 j (f⦋i⦌⦋j⦌ +ₚ f⦋i -ₚ (1 : Int)⦌⦋j⦌ /ₚ (2 : Int)))
+              let p'_setval_2 := f⦋i⦌⦋j⦌ +ₚ f⦋i -ₚ (1 : Int)⦌⦋j⦌ /ₚ (2 : Int)
+              f := PastaLean.pyModifyItem f i (fun p'_row_2 => PastaLean.pySetItem p'_row_2 j p'_setval_2)
             else
               let _ := ()
         let p'_ret_1 := f⦋m -ₚ (1 : Int)⦌⦋n -ₚ (1 : Int)⦌
@@ -414,16 +414,15 @@ def grid_float_dp'rn := fun (m : Int) ↦ fun (n : Int) ↦
         -- 2D grid DP initialised int (`[[0]*n ...]`) that becomes float via `/ 2` — the nested
         -- `f[i][j] = ...` teaches `f : list[list[float]]`, coercing the innermost `0`.
         let mut f :=
-          (((PastaLean.pyRange m).map fun _ => PastaLean.pyArrayRepeat #[(0 : Float)] n) |>.toArray :
+          (((PastaLean.pyRange m).map fun (_ : Int) => PastaLean.pyArrayRepeat #[(0 : Float)] n) |>.toArray :
             Array (Array Float))
-        f := PastaLean.pyModifyItem f (0 : Int) (fun p'_row_1 => PastaLean.pySetItem p'_row_1 (0 : Int) (1 : Float))
+        let p'_setval_1 := (1 : Float)
+        f := PastaLean.pyModifyItem f (0 : Int) (fun p'_row_1 => PastaLean.pySetItem p'_row_1 (0 : Int) p'_setval_1)
         for i in (PastaLean.pyRange m)do
           for j in (PastaLean.pyRange n)do
             if h_1 : i > (0 : Int) then 
-              f :=
-                PastaLean.pyModifyItem f i
-                  (fun p'_row_2 =>
-                    PastaLean.pySetItem p'_row_2 j (f⦋i⦌⦋j⦌ +ₚ PastaLean.pyFloat f⦋i -ₚ (1 : Int)⦌⦋j⦌ /ₚ (2 : Int)))
+              let p'_setval_2 := f⦋i⦌⦋j⦌ +ₚ PastaLean.pyFloat f⦋i -ₚ (1 : Int)⦌⦋j⦌ /ₚ (2 : Int)
+              f := PastaLean.pyModifyItem f i (fun p'_row_2 => PastaLean.pySetItem p'_row_2 j p'_setval_2)
             else
               let _ := ()
         let p'_ret_1 := f⦋m -ₚ (1 : Int)⦌⦋n -ₚ (1 : Int)⦌
