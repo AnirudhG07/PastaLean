@@ -31,7 +31,7 @@ private partial def _ways'dfs : Int → Int → String → Int → Int := fun (i
         return (0 : Int)
       else
         let _ := ()
-      let mut ans := _ways'dfs (i +ₚ (1 : Int)) k corridor n
+      let mut ans : Int := _ways'dfs (i +ₚ (1 : Int)) k corridor n
       if h_3 : k = (2 : Int) then 
         ans := ans +ₚ _ways'dfs (i +ₚ (1 : Int)) (0 : Int) corridor n
       else
@@ -63,7 +63,7 @@ partial def _ways'dfs'memo'rn : Int → Int → String → Int → StateM (Std.H
               return (0 : Int)
             else
               let _ := ()
-            let mut ans := (← _ways'dfs'memo'rn (i +ₚ (1 : Int)) k corridor n)
+            let mut ans : Int := (← _ways'dfs'memo'rn (i +ₚ (1 : Int)) k corridor n)
             if h_3 : k == (2 : Int) then 
               ans := ans +ₚ (← _ways'dfs'memo'rn (i +ₚ (1 : Int)) (0 : Int) corridor n)
             else

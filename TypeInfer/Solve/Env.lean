@@ -20,6 +20,18 @@ partial def subscriptBaseDepth (target : Json) : Option (String × Nat) :=
     | none => none
   else none
 
+/-- For a nested subscript `base[k0][i]…`, the FIRST index `k0` (the slice of the innermost subscript
+whose value is the base `Name`). When `base` is a dict, this is the dict KEY — `cnt[c][i] += 1` reads
+`cnt`'s value (a list) at key `c`, not a nested list grid. -/
+partial def innermostSubscriptKey? (target : Json) : Option Json :=
+  if nodeTypeOf target == some "Subscript" then
+    match getField target "value" with
+    | some v => match nameId? v with
+        | some _ => getField target "slice"
+        | none => innermostSubscriptKey? v
+    | none => none
+  else none
+
 /-- The statement lists nested directly in `s` (`if`/`for`/`while`/`with`/`try` blocks), not
 descending into a nested `def`/`class` (those have their own scope). -/
 def childBlocks (s : Json) : List (List Json) := Id.run do
@@ -154,7 +166,20 @@ def applyStmt (sigs : Sigs) (env : Env) (s : Json) : Env :=
                 -- Nested `f[h][i][j] = v` teaches `f : list[list[list[<v>]]]` (grid/tensor DP).
                 | none => match subscriptBaseDepth target with
                     | some (base, depth) =>
-                        learn env base ((List.range depth).foldl (fun t _ => PyType.list t) (typeOfExpr sigs env value))
+                        let vt := typeOfExpr sigs env value
+                        match env.get? base |>.getD .unknown with
+                        -- The base is already a dict (`g = defaultdict(list)`): `g[k][i] = v` indexes the
+                        -- dict's VALUE (a list) at key `k`, NOT a nested list grid — learn the key from the
+                        -- innermost index and the value as `list^(depth-1) vt`, so the dict isn't clobbered
+                        -- into `list[list]` (which would `join` to `.any`).
+                        | .dict k v =>
+                            let kt := (innermostSubscriptKey? target).elim .unknown (typeOfExpr sigs env)
+                            let valTy := (List.range (depth - 1)).foldl (fun t _ => PyType.list t) vt
+                            -- Only widen a list-shaped (or still-unknown) value; a dict-valued dict
+                            -- (`defaultdict(dict)`) keeps its value — the nested index is a further key.
+                            let newV := match v with | .unknown | .list _ => v.join valTy | _ => v
+                            learn env base (.dict (k.join kt) newV)
+                        | _ => learn env base ((List.range depth).foldl (fun t _ => PyType.list t) vt)
                     | none => env
               else env
       | _, _ => env
@@ -183,7 +208,18 @@ def applyStmt (sigs : Sigs) (env : Env) (s : Json) : Env :=
                 -- Nested `f[h][i][j] += v` widens the deep element (`join` at that depth).
                 | none => match subscriptBaseDepth target with
                     | some (base, depth) =>
-                        learn env base ((List.range depth).foldl (fun t _ => PyType.list t) (typeOfExpr sigs env value))
+                        let vt := typeOfExpr sigs env value
+                        match env.get? base |>.getD .unknown with
+                        -- Dict-of-containers `cnt[c][i] += 1`: learn the key from the innermost index and
+                        -- the value as `list^(depth-1) vt` — never clobber the dict into a nested list.
+                        | .dict k v =>
+                            let kt := (innermostSubscriptKey? target).elim .unknown (typeOfExpr sigs env)
+                            let valTy := (List.range (depth - 1)).foldl (fun t _ => PyType.list t) vt
+                            -- Only widen a list-shaped (or still-unknown) value; a dict-valued dict
+                            -- (`defaultdict(dict)`) keeps its value — the nested index is a further key.
+                            let newV := match v with | .unknown | .list _ => v.join valTy | _ => v
+                            learn env base (.dict (k.join kt) newV)
+                        | _ => learn env base ((List.range depth).foldl (fun t _ => PyType.list t) vt)
                     | none => env
               else env
       | _, _ => env

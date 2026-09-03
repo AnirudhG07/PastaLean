@@ -1951,6 +1951,72 @@ def translate_to_lean(source_code, target="term", filepath = None, imports_add =
             mutual_groups = _mutual_recursion_groups(body)
             emitted_funcs = set()
             backend_unsup = 0
+            func_by_name = {
+                s.get("name"): s for s in body
+                if isinstance(s, dict) and s.get("node_type") == "FunctionDef"
+                and isinstance(s.get("name"), str)
+            }
+
+            def emit_function_group(name):
+                """Emit `name`'s function — or its whole mutual group as one `Module` (→ a Lean
+                `mutual … end`) — but first emit any callee functions it references that are not yet
+                emitted. Python binds top-level `def`s lazily, so a function may call one defined
+                later in the file; Lean needs the callee to precede the caller, so callees are pulled
+                forward here (depth-first over the call DAG). Returns an error dict on a hard
+                (non-best-effort) backend failure, else None."""
+                nonlocal backend_unsup
+                if name in emitted_funcs:
+                    return None
+                group = mutual_groups.get(name, frozenset([name]))
+                callees = set()
+                for m in group:
+                    fn = func_by_name.get(m)
+                    if fn is not None:
+                        callees |= _body_calls_known_functions(fn.get("body", []), func_by_name.keys())
+                for c in sorted(callees):
+                    if c not in group and c not in emitted_funcs:
+                        err = emit_function_group(c)
+                        if err is not None:
+                            return err
+                if name in emitted_funcs:
+                    return None
+                stmt = func_by_name[name]
+                if len(group) >= 2:
+                    members = [
+                        s for s in body
+                        if isinstance(s, dict) and s.get("node_type") == "FunctionDef"
+                        and s.get("name") in group
+                    ]
+                    module_node = {"node_type": "Module", "body": members}
+                    codes = send_node(module_node)
+                    if codes is None:
+                        if best_effort:
+                            logger.warning("best-effort: backend could not translate %s; replaced with pyUnsupported placeholder", name)
+                            code_parts.append((False, backend_placeholders(stmt)))
+                            backend_unsup += 1
+                            emitted_funcs.update(group)
+                            return None
+                        detail = last_backend_error["msg"]
+                        return {"result": False, "error": f"backend could not translate {name}" + (f": {detail}" if detail else "")}
+                    for c in codes:
+                        code_parts.append((False, c))
+                    emitted_funcs.update(group)
+                    return None
+                codes = send_node(stmt)
+                if codes is None:
+                    if best_effort:
+                        logger.warning("best-effort: backend could not translate a %s; replaced with pyUnsupported placeholder", stmt.get("node_type"))
+                        code_parts.append((False, backend_placeholders(stmt)))
+                        backend_unsup += 1
+                        emitted_funcs.add(name)
+                        return None
+                    detail = last_backend_error["msg"]
+                    return {"result": False, "error": f"backend could not translate {stmt.get('node_type')}" + (f": {detail}" if detail else "")}
+                for c in codes:
+                    code_parts.append((False, _inject_comments_into_lean(stmt, c)))
+                emitted_funcs.add(name)
+                return None
+
             for stmt in body:
                 # A top-level Python `pass` is a true no-op, so there is no Lean command to emit.
                 if stmt.get("node_type") in {"Pass", "Import", "ImportFrom"}:
@@ -1958,34 +2024,13 @@ def translate_to_lean(source_code, target="term", filepath = None, imports_add =
                 if stmt.get("node_type") in {"Comment", "DocString"}:
                     code_parts.append((True, _direct_comment_code(stmt)))
                     continue
-                # Mutually-recursive functions can't be separate `def`s — send the whole group as a
-                # single `Module` so the backend emits one `mutual … end` block.
-                if stmt.get("node_type") == "FunctionDef":
-                    name = stmt.get("name")
-                    if name in emitted_funcs:
+                if stmt.get("node_type") == "FunctionDef" and stmt.get("name") in func_by_name:
+                    if stmt.get("name") in emitted_funcs:
                         continue
-                    group = mutual_groups.get(name, frozenset([name]))
-                    if len(group) >= 2:
-                        members = [
-                            s for s in body
-                            if isinstance(s, dict) and s.get("node_type") == "FunctionDef"
-                            and s.get("name") in group
-                        ]
-                        module_node = {"node_type": "Module", "body": members}
-                        codes = send_node(module_node)
-                        if codes is None:
-                            if best_effort:
-                                logger.warning("best-effort: backend could not translate %s; replaced with pyUnsupported placeholder", name)
-                                code_parts.append((False, backend_placeholders(stmt)))
-                                backend_unsup += 1
-                                emitted_funcs.update(group)
-                                continue
-                            detail = last_backend_error["msg"]
-                            return {"result": False, "error": f"backend could not translate {name}" + (f": {detail}" if detail else "")}
-                        for c in codes:
-                            code_parts.append((False, c))
-                        emitted_funcs.update(group)
-                        continue
+                    err = emit_function_group(stmt.get("name"))
+                    if err is not None:
+                        return err
+                    continue
                 codes = send_node(stmt)
                 if codes is None:
                     if best_effort:

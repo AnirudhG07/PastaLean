@@ -50,10 +50,10 @@ def euclidean_distance'rn : List Int → List Int → PastaLean.PyExcept Float :
   let _ := Libraries.passta.pyPassAssert (PastaLean.pyLen p1 == PastaLean.pyLen p2)
   -- Using zip, a list comprehension, and math.pow
   let mut sq_diffs :=
-    (PastaLean.pyIter (PastaLean.pyZip p1 p2)).map fun (p'_pair_1 : Int × Int) =>
-      let a := Prod.fst p'_pair_1;
-      let b := Prod.snd p'_pair_1;
-      Libraries.math.pyMathPow (a -ₚ b) (2 : Int)
+    ((PastaLean.pyIter (PastaLean.pyZip p1 p2)).map fun (p'_pair_1 : Int × Int) =>
+        let a := Prod.fst p'_pair_1;
+        let b := Prod.snd p'_pair_1;
+        Libraries.math.pyMathPow (a -ₚ b) (2 : Int)) |>.toArray
   let p'_ret_1 := Libraries.math.pyMathSqrt (PastaLean.pySum sq_diffs)
   return p'_ret_1
 

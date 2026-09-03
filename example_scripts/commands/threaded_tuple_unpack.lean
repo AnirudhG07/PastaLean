@@ -30,8 +30,8 @@ private partial def _count_components'dfs := fun (i : Int) ↦ fun (adj : List (
           let p'_unpack_pair_1 := p'_unpack_value_1
           vis := Prod.snd p'_unpack_pair_1
           let p'_unpack_nested_1 := Prod.fst p'_unpack_pair_1
-          let mut a := Prod.fst p'_unpack_nested_1
-          let mut b := Prod.snd p'_unpack_nested_1
+          let mut a : Int := Prod.fst p'_unpack_nested_1
+          let mut b : Int := Prod.snd p'_unpack_nested_1
           nodes := nodes +ₚ a
           edges := edges +ₚ b
         else
@@ -50,8 +50,8 @@ def count_components := fun (n : Int) ↦ fun (adj : List (List Int)) ↦
           let p'_unpack_pair_1 := p'_unpack_value_1
           vis := Prod.snd p'_unpack_pair_1
           let p'_unpack_nested_1 := Prod.fst p'_unpack_pair_1
-          let mut v := Prod.fst p'_unpack_nested_1
-          let mut e := Prod.snd p'_unpack_nested_1
+          let mut v : Int := Prod.fst p'_unpack_nested_1
+          let mut e : Int := Prod.snd p'_unpack_nested_1
           if h_2 : e = v *ₚ (v -ₚ (1 : Int)) then 
             complete := complete +ₚ (1 : Int)
           else
@@ -75,8 +75,8 @@ private partial def _count_components'dfs'rn := fun (i : Int) ↦ fun (adj : Lis
           let p'_unpack_pair_1 := p'_unpack_value_1
           vis := Prod.snd p'_unpack_pair_1
           let p'_unpack_nested_1 := Prod.fst p'_unpack_pair_1
-          let mut a := Prod.fst p'_unpack_nested_1
-          let mut b := Prod.snd p'_unpack_nested_1
+          let mut a : Int := Prod.fst p'_unpack_nested_1
+          let mut b : Int := Prod.snd p'_unpack_nested_1
           nodes := nodes +ₚ a
           edges := edges +ₚ b
         else
@@ -95,8 +95,8 @@ def count_components'rn := fun (n : Int) ↦ fun (adj : List (List Int)) ↦
           let p'_unpack_pair_1 := p'_unpack_value_1
           vis := Prod.snd p'_unpack_pair_1
           let p'_unpack_nested_1 := Prod.fst p'_unpack_pair_1
-          let mut v := Prod.fst p'_unpack_nested_1
-          let mut e := Prod.snd p'_unpack_nested_1
+          let mut v : Int := Prod.fst p'_unpack_nested_1
+          let mut e : Int := Prod.snd p'_unpack_nested_1
           if h_2 : e == v *ₚ (v -ₚ (1 : Int)) then 
             complete := complete +ₚ (1 : Int)
           else

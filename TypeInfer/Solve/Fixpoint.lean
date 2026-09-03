@@ -369,6 +369,11 @@ partial def inferFunction (sigs : Sigs) (outer hints : Env) (fn : Json) : Env :=
     | .list a, .list u => .list (pick a u)
     | .set a, .set u => .set (pick a u)
     | .dict ak av, .dict uk uv => .dict (pick ak uk) (pick av uv)
+    -- The nullable recursive-node pattern for an ANNOTATED param: `def dfs(node: TreeNode)` whose body
+    -- feeds it `.left`/`.right`/`None` (so usage widened it to `Optional[TreeNode]`) is really nullable.
+    -- Keep the widened `.opt (.cls c)` rather than letting the bare `.cls c` annotation clobber it —
+    -- `stampParams` then chooses `_mut_opt` (reassigned) or an `Optional c` param `_ty` (read+recursed).
+    | .cls c, .opt (.cls c') => if c == c' then .opt (.cls c) else ann
     | _, _ => ann
   let mergeRefining (src : Env) (env : Env) : Env :=
     src.fold (fun m k v => m.insert k (refineElem v (m.get? k |>.getD .unknown))) env

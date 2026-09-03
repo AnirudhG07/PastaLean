@@ -92,3 +92,12 @@ info: 9
 /-- info: "0.0" -/
 #guard_msgs in
 #eval pyFloatRepr (0.0 : Float)
+
+-- Large-float `:.2f` must not overflow `UInt64` (regression: `bignum*0.5` printed `UInt64.max/100`).
+/-- info: "6172839450617283584.00" -/
+#guard_msgs in
+#eval pyFormatSpec (6172839450617283584.0 : Float) ".2f"
+
+/-- info: "49382716054938271744.00" -/
+#guard_msgs in
+#eval pyFormatSpec (49382716054938271744.0 : Float) ".2f"

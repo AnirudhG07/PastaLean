@@ -264,6 +264,17 @@ def extract_function(completion_src, method_name):
             return None
     target.args.args = [a for a in target.args.args if a.arg != "self"]
     target.decorator_list = []
+    # The class is flattened to top-level defs, so a `Solution().m(...)` self-call (a common
+    # LeetCode recursion idiom) becomes a plain `m(...)` call.
+    class _DropSolutionSelf(ast.NodeTransformer):
+        def visit_Call(self, node):  # noqa: N802
+            self.generic_visit(node)
+            f = node.func
+            if isinstance(f, ast.Attribute) and isinstance(f.value, ast.Call) \
+                    and isinstance(f.value.func, ast.Name) and f.value.func.id == "Solution":
+                node.func = ast.Name(id=f.attr, ctx=ast.Load())
+            return node
+    target = ast.fix_missing_locations(_DropSolutionSelf().visit(target))
     try:
         return ast.unparse(target)
     except Exception:  # noqa: BLE001
@@ -370,6 +381,159 @@ def param_names(fn_src):
     tree = ast.parse(fn_src)
     fn = next(n for n in tree.body if isinstance(n, ast.FunctionDef))
     return [a.arg for a in fn.args.args]
+
+
+#: A generous preamble for LiveCodeBench `execution` snippets, whose ground-truth `code` uses
+#: `List`/`Optional`/`Counter`/`inf` etc. freely without importing them (the benchmark runs them in a
+#: namespace that already has these bound). Mirrors the LeetCode prompt preamble.
+LCB_PREAMBLE = (
+    "from typing import *\n"
+    "from collections import *\n"
+    "from math import *\n"
+    "from functools import *\n"
+    "from itertools import *\n"
+    "import heapq\n"
+    "from heapq import *\n"
+    "import bisect\n"
+    "from bisect import *\n"
+    "inf = float('inf')\n"
+)
+
+
+def _gen_random_like(v, rng, depth=0):
+    """A fresh random value with the SAME shape as `v` (its type, and for containers the element
+    shape of its first element). Used to synthesize extra test inputs for a problem that ships only
+    one, so we can differential-test the Lean twin against the reference Python on many inputs."""
+    import string
+    if depth > 4:
+        return v
+    if isinstance(v, bool):
+        return rng.choice([True, False])
+    if isinstance(v, int):
+        hi = max(10, abs(v) * 2 + 5)
+        return rng.randint(-hi, hi)
+    if isinstance(v, float):
+        return round(rng.uniform(-abs(v) * 2 - 10, abs(v) * 2 + 10), 4)
+    if isinstance(v, str):
+        chars = sorted(set(v)) or list(string.ascii_lowercase)
+        return "".join(rng.choice(chars) for _ in range(rng.randint(0, max(1, len(v) + 2))))
+    if isinstance(v, list):
+        elem = v[0] if v else 0
+        n = rng.randint(0, max(1, len(v) + 3))
+        return [_gen_random_like(elem, rng, depth + 1) for _ in range(n)]
+    if isinstance(v, tuple):
+        return tuple(_gen_random_like(x, rng, depth + 1) for x in v)
+    if isinstance(v, dict):
+        items = list(v.items())
+        if not items:
+            return {}
+        k0, val0 = items[0]
+        n = rng.randint(1, max(1, len(items) + 2))
+        return {_gen_random_like(k0, rng, depth + 1): _gen_random_like(val0, rng, depth + 1)
+                for _ in range(n)}
+    return v
+
+
+#: Worker that generates differential tests IN A CHILD PROCESS with a hard memory cap, so a reference
+#: that blows up on an out-of-domain random input (e.g. `2**bignum`) is killed with MemoryError instead
+#: of OOM-killing the whole fetch. Prints JSON `[[input_str, output_repr], ...]` on stdout.
+_LCB_WORKER = r'''
+import sys, json, random, copy, signal, ast, resource
+data = json.load(open(sys.argv[1]))
+mem = data["mem_mb"] * 1024 * 1024
+try:
+    resource.setrlimit(resource.RLIMIT_AS, (mem, mem))
+except Exception:
+    pass
+
+def gen(v, rng, depth=0):
+    import string
+    if depth > 4: return v
+    if isinstance(v, bool): return rng.choice([True, False])
+    if isinstance(v, int):
+        hi = min(200, max(10, abs(v) * 2 + 5))
+        return rng.randint(-hi, hi)
+    if isinstance(v, float): return round(rng.uniform(-abs(v) * 2 - 10, abs(v) * 2 + 10), 4)
+    if isinstance(v, str):
+        chars = sorted(set(v)) or list(string.ascii_lowercase)
+        return "".join(rng.choice(chars) for _ in range(rng.randint(0, min(60, max(1, len(v) + 2)))))
+    if isinstance(v, list):
+        elem = v[0] if v else 0
+        n = rng.randint(0, min(60, max(1, len(v) + 3)))
+        return [gen(elem, rng, depth + 1) for _ in range(n)]
+    if isinstance(v, tuple): return tuple(gen(x, rng, depth + 1) for x in v)
+    if isinstance(v, dict):
+        items = list(v.items())
+        if not items: return {}
+        k0, val0 = items[0]
+        n = rng.randint(1, min(30, max(1, len(items) + 2)))
+        return {gen(k0, rng, depth + 1): gen(val0, rng, depth + 1) for _ in range(n)}
+    return v
+
+class _TO(Exception): pass
+signal.signal(signal.SIGALRM, lambda *_: (_ for _ in ()).throw(_TO()))
+out, seen = [], set()
+try:
+    ns = {}
+    exec(data["code"], ns)
+    fn = ns[data["method"]]
+    params = data["params"]; rng = random.Random(0)
+    for _ in range(data["k"] * 3):
+        if len(out) >= data["k"]: break
+        args = [gen(a, rng) for a in data["base_args"]]
+        key = repr(args)
+        if len(key) > 3000 or key in seen: continue
+        seen.add(key)
+        signal.setitimer(signal.ITIMER_REAL, 1.0)
+        try:
+            res = fn(*copy.deepcopy(args))
+        except BaseException:
+            continue
+        finally:
+            signal.setitimer(signal.ITIMER_REAL, 0)
+        try:
+            r = repr(res)
+            if len(r) > 3000: continue
+            ast.literal_eval(r); ast.literal_eval(key)
+            inp = ", ".join("%s = %r" % (params[i], args[i]) for i in range(len(params)))
+        except Exception:
+            continue
+        out.append([inp, r])
+except BaseException:
+    pass
+print(json.dumps(out))
+'''
+
+
+def expand_lcb_tests(code_src, method, params, base_args, k=24, mem_mb=768, timeout=25):
+    """Return `[(input_str, output_repr), ...]` — extra differential tests generated by running the
+    ground-truth `code` on random inputs shaped like `base_args`, in a memory-capped subprocess so a
+    runaway reference can't take down the fetch. On any failure returns []."""
+    import subprocess, tempfile, json as _json
+    try:
+        with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as fh:
+            _json.dump({"code": code_src, "method": method, "params": params,
+                        "base_args": base_args, "k": k, "mem_mb": mem_mb}, fh)
+            path = fh.name
+        proc = subprocess.run([sys.executable, "-c", _LCB_WORKER, path],
+                              capture_output=True, text=True, timeout=timeout)
+        os.unlink(path)
+        rows = _json.loads(proc.stdout or "[]")
+        return [(r[0], r[1]) for r in rows if isinstance(r, list) and len(r) == 2]
+    except Exception:
+        return []
+
+
+def lcb_args_only(input_str):
+    """LiveCodeBench `input` is a full call `fn(a = [1,2], b = 3)`; `parse_test_input` wants the
+    ARGUMENTS ONLY (`a = [1,2], b = 3`). Strip the outer `fn( … )` via the AST so nested parens and
+    commas inside literals are preserved."""
+    call = ast.parse(input_str.strip(), mode="eval").body
+    if not isinstance(call, ast.Call):
+        raise ValueError("LiveCodeBench input is not a function call")
+    parts = [ast.unparse(a) for a in call.args] + \
+            [f"{k.arg} = {ast.unparse(k.value)}" for k in call.keywords]
+    return ", ".join(parts)
 
 
 def parse_test_input(input_str, order):
@@ -1086,10 +1250,92 @@ class CPastaEval:
         stream = self._stream("newfacade/LeetCodeDataset", "train")
         return self._fetch_loop(stream, self._save_leetcode_problem, num, excluded, 100)
 
+    def fetch_livecodebench(self, num):
+        """`livecodebench/execution-v2` (the latest LiveCodeBench execution/groundtruth set — its
+        cumulative problem window is the v6 release): ground-truth `code` + a `fn(args)` call +
+        expected `output`. Model: function. Rows sharing the same `code` (one function, many inputs)
+        are grouped into one problem with many tests, so each function is transpiled once. Converted
+        files are NOT persisted beyond the dataset dir (same as any other source)."""
+        excluded = self.load_excluded()
+        print("[*] Streaming livecodebench/execution-v2 (test split)...")
+        stream = self._stream("livecodebench/execution-v2", "test")
+        groups = {}   # code -> {"function_name", "id", "difficulty", "contest_date", "tests": [...]}
+        for item in stream:
+            code = (item.get("code") or "").strip()
+            fn = item.get("function_name") or ""
+            if not code or not fn:
+                continue
+            g = groups.setdefault(code, {"function_name": fn, "id": item.get("id") or "",
+                                         "difficulty": item.get("difficulty"),
+                                         "contest_date": str(item.get("contest_date") or ""),
+                                         "tests": []})
+            g["tests"].append((item.get("input") or "", str(item.get("output")) if item.get("output") is not None else ""))
+        kept = 0
+        for code, g in groups.items():
+            if num and num > 0 and kept >= num:
+                break
+            if self._save_livecodebench_problem(code, g, excluded):
+                kept += 1
+        print(f"[*] LiveCodeBench: {kept} problem(s) from {len(groups)} unique function(s).")
+        return kept
+
+    def _save_livecodebench_problem(self, code, g, excluded):
+        method = g["function_name"]
+        # Disambiguate same-named functions with different bodies by a short content hash.
+        import hashlib
+        task_id = f"{method}_{hashlib.sha1(code.encode()).hexdigest()[:6]}"
+        if self.problem_names and task_id not in self.problem_names and method not in self.problem_names:
+            return False
+        prob_name = sanitize_problem_name(task_id)
+        if prob_name in excluded:
+            return False
+        try:
+            params = param_names(code)
+        except (SyntaxError, StopIteration):
+            return False
+        cases = []
+        for (inp, out) in g["tests"]:
+            try:
+                cases.append({"input": lcb_args_only(inp), "output": out})
+            except (SyntaxError, ValueError):
+                continue
+        if not cases:
+            return False
+
+        # A LiveCodeBench execution row ships only ONE input/output, which is weak evidence of
+        # correctness. Since we have the ground-truth `code`, synthesize many more inputs of the same
+        # shape and take the reference's own outputs as expected — a differential test.
+        if not self.problem_names:  # skip the costly expansion when targeting specific problems
+            try:
+                base_args = parse_test_input(cases[0]["input"], params)
+            except (SyntaxError, ValueError):
+                base_args = None
+            if base_args is not None:
+                for (inp, out_repr) in expand_lcb_tests(LCB_PREAMBLE + "\n" + code, method, params, base_args):
+                    cases.append({"input": inp, "output": out_repr})
+
+        prob_dir = self.dataset / prob_name
+        prob_dir.mkdir(parents=True, exist_ok=True)
+        (prob_dir / KIND_FILE).write_text(KIND_FUNCTION)
+        (prob_dir / "problem.txt").write_text(f"LiveCodeBench execution: {method}")
+        (prob_dir / "meta.json").write_text(json.dumps(
+            {"task_id": task_id, "method": method, "params": params,
+             "difficulty": g.get("difficulty"), "contest_date": g.get("contest_date"),
+             "source": "livecodebench", "lcb_id": g["id"]}, indent=2))
+        sols_dir = prob_dir / "solutions"
+        sols_dir.mkdir(exist_ok=True)
+        (sols_dir / "sol_0.py").write_text(LCB_PREAMBLE + "\n\n" + code + "\n")
+        tests_dir = prob_dir / "tests"
+        tests_dir.mkdir(exist_ok=True)
+        (tests_dir / "tests.json").write_text(json.dumps(cases, indent=2))
+        print(f"[+] {task_id}: fn `{method}({', '.join(params)})`, {len(cases)} test(s)")
+        return True
+
     #: Source adapters. Each writes the normalized layout and tags every problem with its `kind`.
     SOURCES = {
-        "codecontests": fetch_codecontests,   # stdio model
-        "leetcode": fetch_leetcode,           # function model
+        "codecontests": fetch_codecontests,     # stdio model
+        "leetcode": fetch_leetcode,             # function model
+        "livecodebench": fetch_livecodebench,   # function model (execution scenario, ground-truth code)
     }
 
     def _save_codecontests_problem(self, item, excluded):

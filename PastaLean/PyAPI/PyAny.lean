@@ -370,6 +370,11 @@ instance : PyIterable PyAny PyAny where
     | _ => []
 
 instance : PyPrintable PyAny where pyStringify := PyAny.toStr false
+/-- `"".join(xs)` where `xs`'s elements are boxed (an un-inferred `str`/`list[str]` param filtered to
+`List PyAny`): a boxed `str` joins as itself, anything else stringifies (Python would `TypeError`, but
+the faithful case only ever holds boxed `str`s). -/
+instance : PyStringJoin PyAny where
+  toJoinString | .str s => s | v => PyAny.toStr false v
 /-- A `PyAny` is `None` exactly when it carries the `none` tag. -/
 instance : PyIsNone PyAny where isNoneVal | .none => true | _ => false
 instance : PyTruthy PyAny where

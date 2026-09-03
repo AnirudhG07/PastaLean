@@ -22,6 +22,8 @@ def pythonNumpyMemberMap? (member : String) : Option Lean.Name :=
   match member with
   | "array" => some ``pyNumpyArray
   | "asarray" => some ``pyNumpyArray
+  -- `np.copy(x)` is a shallow copy; our containers are immutable values, so it is the identity.
+  | "copy" => some ``pyNumpyCopy
   | "shape" => some ``pyNumpyShape
   | "empty" => some ``pyNumpyEmpty
   | "full" => some ``pyNumpyFull

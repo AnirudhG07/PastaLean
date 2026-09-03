@@ -986,12 +986,29 @@ ternary `IfExp`, a short-circuit `BoolOp`, a `Lambda`, or a comprehension? There
 out of a conditional would change *when* it runs), so such a function can't be memoized as-is. -/
 partial def selfCallUnderExpr (name : String) (json : Json) : Bool :=
   match jsonNodeType? json with
-  -- `IfExp` is memoizable: the codegen lowers a ternary branch's self-call to an awaited monadic
-  -- `if` (`(← if … then (do return …) else …)`), keeping it lazy. `BoolOp`/`Lambda`/comprehensions
-  -- have no such lowering yet, so a self-call under them still forces the unmemoized fallback.
-  | some "BoolOp" | some "Lambda"
-  | some "ListComp" | some "SetComp" | some "DictComp" | some "GeneratorExp" =>
+  -- `IfExp` and single-generator `ListComp`/`GeneratorExp` are memoizable: the codegen lowers their
+  -- self-calls to awaited monadic forms (`(← if …)`, `(← xs.mapM …)`), keeping evaluation lazy/scoped.
+  -- `Lambda`/`SetComp`/`DictComp` have no such lowering yet, so a self-call under them still forces
+  -- the unmemoized fallback.
+  | some "Lambda"
+  | some "SetComp" | some "DictComp" =>
       containsCallTo name json
+  -- `a or b`/`a and b`: the FIRST operand is always evaluated, so a self-call there is memoizable
+  -- (boolOpValueTerm's monadic `do let bopGuard := …` form binds it); a LATER, short-circuited operand
+  -- is conditional, so a self-call there still forces the fallback. (`max([… dfs …] or [0])`.)
+  | some "BoolOp" =>
+      match (json.getObjValAs? (Array Json) "values").toOption.getD #[] |>.toList with
+      | first :: rest => selfCallUnderExpr name first || rest.any (containsCallTo name)
+      | [] => false
+  -- Only `[… self-call … for x in iter]` — one generator, the recursion in the element, a clean
+  -- iterable/filter — lowers via `mapM`. Anything else (multi-generator `flatMap`, a self-call in the
+  -- `iter`/`ifs`) has no monadic lowering, so it must force the unmemoized fallback.
+  | some "ListComp" | some "GeneratorExp" =>
+      let gens := (json.getObjValAs? (Array Json) "generators").toOption.getD #[]
+      let elt := (json.getObjVal? "elt").toOption.getD Json.null
+      if gens.size == 1 && !(gens.any (containsCallTo name)) then
+        selfCallUnderExpr name elt
+      else containsCallTo name json
   | _ => match json with
     | .arr xs => xs.any (selfCallUnderExpr name)
     | .obj fs => fs.toList.any (fun (_, v) => selfCallUnderExpr name v)

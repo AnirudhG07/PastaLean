@@ -215,10 +215,24 @@ def nonFiniteFloatTerm? (funcJson : Json) (argsArray : Array Json) :
   let nonFiniteIdent := mkIdent ``PastaLean.pyNonFinite
   return some (← `($nonFiniteIdent $(Syntax.mkStrLit raw)))
 
+/-- `math.inf`/`math.nan`/`math.infinity` as a VALUE lowers to the polymorphic `pyNonFinite` (the same
+sentinel `float('inf')` uses), so it takes the numeric type of its context (`ℚ`/`ℤ`/`Float`) instead of
+a concrete `Float` that clashes with an `Int`/`ℚ` DP accumulator. -/
+def libraryNonFiniteTerm? (json : Json) : PygenM (Option (TSyntax `term)) := do
+  match json.getObjValAs? String "library_module", json.getObjValAs? String "library_member" with
+  | .ok "math", .ok mem =>
+      if mem == "inf" || mem == "infinity" then
+        return some (← `($(mkIdent ``PastaLean.pyNonFinite) "inf"))
+      else if mem == "nan" then
+        return some (← `($(mkIdent ``PastaLean.pyNonFinite) "nan"))
+      else return none
+  | _, _ => return none
+
 @[pygen "Name"]
 def nameSyntax : (kind : SyntaxNodeKind) → Json →
     PygenM (TSyntax kind)
   | `term, json => do
+    if let some t ← libraryNonFiniteTerm? json then return t
     match ← jsonLibraryMappedName? json with
     | some leanName => pure (mkIdent leanName)
     | none =>
@@ -567,12 +581,12 @@ def compareApplyTerm (op : String) (leftJson : Json) (leftCode rightCode : TSynt
   | "le" => if prop then `($leftCode <= $rightCode) else `(decide ($leftCode <= $rightCode))
   | "ge" => if prop then `($leftCode >= $rightCode) else `(decide ($leftCode >= $rightCode))
   | "in" =>
-      if isStringyJson leftJson then
+      if isStringyJson leftJson && !(← rightIsSetExpr rightJson) then
         `($(mkIdent ``PastaLean.pyStrContainsSubstr) $rightCode $leftCode)
       else
         `($(mkIdent ``pyContains) $rightCode $leftCode)
   | "notin" =>
-      if isStringyJson leftJson then
+      if isStringyJson leftJson && !(← rightIsSetExpr rightJson) then
         `(! ($(mkIdent ``PastaLean.pyStrContainsSubstr) $rightCode $leftCode))
       else
         `(! ($(mkIdent ``pyContains) $rightCode $leftCode))
@@ -589,8 +603,11 @@ def binOpSyntax : (kind : SyntaxNodeKind) → Json →
       s!"BinOp node does not have a 'left' field or it is not a JSON value: {json}"
     let .ok rightJson := json.getObjValAs? Json "right" | throwError
       s!"BinOp node does not have a 'right' field or it is not a JSON value: {json}"
-    let leftCode ←  getCode leftJson `term
-    let rightCode ← getCode rightJson `term
+    -- Arithmetic operates on VALUES: a comparison operand (`cnt + (a == b)`, Python's bool-as-int) is a
+    -- `Bool`, never a `Prop`, even when the whole BinOp sits inside an `if`/`while` test (which set the
+    -- prop context). Lower operands in value context so the comparison becomes `Bool`, not `a = b`.
+    let leftCode ←  withPropCondition false (getCode leftJson `term)
+    let rightCode ← withPropCondition false (getCode rightJson `term)
     -- `[x] * n`: `pyListRepeat` (or `pyArrayRepeat` when the slot is array-backed, so a sieve/DP-table
     -- `[0]*n` gets O(1) `a[i]=v`) fixes the result type immediately. The `[x]` operand is emitted as an
     -- `Array` (`#[x]`) via its own `_seq` stamp, so `pyArrayRepeat` receives an `Array`.

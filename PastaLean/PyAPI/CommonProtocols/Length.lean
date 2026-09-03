@@ -30,4 +30,11 @@ instance : PyLen String where
 instance [BEq α] [Hashable α] : PyLen (Std.HashMap α β) where
   pyLen m := m.size
 
+/-- `len` of a nullable value: unwrap and measure, or raise as Python's `len(None)` does. Fires when a
+`None`-initialised variable later holds a sized value and `len` is called in a truth-guarded branch. -/
+instance {α : Type} [PyLen α] : PyLen (Option α) where
+  pyLen
+    | some x => pyLen x
+    | none   => panic! "TypeError: object of type 'NoneType' has no len()"
+
 end PastaLean

@@ -1,15 +1,15 @@
 HumanEval compile report — 164 problems
-  ok=153  degraded=0  compile_fail=11  convert_fail=0
+  ok=154  degraded=0  compile_fail=10  convert_fail=0
 
 == failure clusters (by first error line) ==
-[5] typeclass instance problem is stuck
-      HexKey, RemoveVowels, ReverseDelete, SortedListSum, UniqueDigits
+[5] failed to synthesize instance of type class
+      CountUpper, HexKey, RemoveVowels, SortedListSum, StrongestExtension
 [3] Application type mismatch: The argument
       DoAlgebra, Encode, Solve161
-[2] failed to synthesize instance of type class
-      CountUpper, StrongestExtension
 [1] invalid reassignment, value has type
       FindZero
+[1] typeclass instance problem is stuck
+      ReverseDelete
 
 == per-problem (full errors) ==
 ----- CountUpper  [compile_fail] -----
@@ -85,24 +85,20 @@ but is expected to have type
   Float
 
 ----- HexKey  [compile_fail] -----
-/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/HexKey.lean:36:37: error: typeclass instance problem is stuck
-  PyIterable ?m.16 String
+/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/HexKey.lean:36:37: error(lean.synthInstanceFailed): failed to synthesize instance of type class
+  PyIterable PyAny String
 
-Note: Lean will not try to resolve this typeclass instance problem because the first type argument to `PyIterable` is a metavariable. This argument must be fully determined before Lean will try to resolve the typeclass.
-
-Hint: Adding type annotations and supplying implicit arguments to functions can give Lean more information for typeclass resolution. For example, if you have a variable `x` that you intend to be a `Nat`, but Lean reports it as having an unresolved type like `?m`, replacing `x` with `(x : Nat)` can get typeclass resolution un-stuck.
+Hint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.
 
 ----- RemoveVowels  [compile_fail] -----
-/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/RemoveVowels.lean:37:23: error: typeclass instance problem is stuck
-  PyIterable ?m.18 String
+/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/RemoveVowels.lean:37:23: error(lean.synthInstanceFailed): failed to synthesize instance of type class
+  PyIterable PyAny String
 
-Note: Lean will not try to resolve this typeclass instance problem because the first type argument to `PyIterable` is a metavariable. This argument must be fully determined before Lean will try to resolve the typeclass.
-
-Hint: Adding type annotations and supplying implicit arguments to functions can give Lean more information for typeclass resolution. For example, if you have a variable `x` that you intend to be a `Nat`, but Lean reports it as having an unresolved type like `?m`, replacing `x` with `(x : Nat)` can get typeclass resolution un-stuck.
+Hint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.
 
 ----- ReverseDelete  [compile_fail] -----
 /home/anirudhgupta/PyAstLean/PastaBench/_report_gen/ReverseDelete.lean:29:71: error: typeclass instance problem is stuck
-  PyContains (?m.40 s) (?m.35 s c)
+  PyContains (?m.32 s) PyAny
 
 Note: Lean will not try to resolve this typeclass instance problem because the first type argument to `PyContains` contains metavariables. This argument must be fully determined before Lean will try to resolve the typeclass.
 
@@ -127,12 +123,10 @@ in the application
   pyStringSwapcase ch
 
 ----- SortedListSum  [compile_fail] -----
-/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/SortedListSum.lean:38:23: error: typeclass instance problem is stuck
-  PyIterable ?m.28 String
+/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/SortedListSum.lean:37:2: error(lean.synthInstanceFailed): failed to synthesize instance of type class
+  PyIterable (List PyAny) String
 
-Note: Lean will not try to resolve this typeclass instance problem because the first type argument to `PyIterable` is a metavariable. This argument must be fully determined before Lean will try to resolve the typeclass.
-
-Hint: Adding type annotations and supplying implicit arguments to functions can give Lean more information for typeclass resolution. For example, if you have a variable `x` that you intend to be a `Nat`, but Lean reports it as having an unresolved type like `?m`, replacing `x` with `(x : Nat)` can get typeclass resolution un-stuck.
+Hint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.
 
 ----- StrongestExtension  [compile_fail] -----
 /home/anirudhgupta/PyAstLean/PastaBench/_report_gen/StrongestExtension.lean:55:49: error(lean.synthInstanceFailed): failed to synthesize instance of type class
@@ -147,11 +141,3 @@ but is expected to have type
   String
 in the application
   _Strongest_Extension'strength e
-
------ UniqueDigits  [compile_fail] -----
-/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/UniqueDigits.lean:40:38: error: typeclass instance problem is stuck
-  PyIterable ?m.13 PyAny
-
-Note: Lean will not try to resolve this typeclass instance problem because the first type argument to `PyIterable` is a metavariable. This argument must be fully determined before Lean will try to resolve the typeclass.
-
-Hint: Adding type annotations and supplying implicit arguments to functions can give Lean more information for typeclass resolution. For example, if you have a variable `x` that you intend to be a `Nat`, but Lean reports it as having an unresolved type like `?m`, replacing `x` with `(x : Nat)` can get typeclass resolution un-stuck.

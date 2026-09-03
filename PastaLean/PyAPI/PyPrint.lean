@@ -222,20 +222,53 @@ instance : PyFmtNum Rat := ⟨Rat.toFloat⟩
 -- Never rendered (only `pyPrintNoop` consumes it, discarding), so the `0.0` stand-in is irrelevant.
 instance : PyFmtNum ℝ := ⟨fun _ => 0.0⟩
 
-/-- Format a `Float` with exactly `prec` digits after the decimal point (Python `:.Nf`). -/
+/-- The exact truncated integer of a non-negative `Float`, via IEEE-754 bit decode, so a value beyond
+`UInt64`'s range (`toUInt64` saturates there) still converts faithfully. A `Float` ≥ 2^52 is already an
+integer, so this is exact for the large magnitudes where `pyFixedFloat`'s scaled `toUInt64` overflows. -/
+def floatToExactNat (x : Float) : Nat :=
+  let bits := x.toBits
+  let exp := ((bits >>> 52) &&& 0x7FF).toNat
+  let mant := (bits &&& 0xFFFFFFFFFFFFF).toNat
+  if exp == 0 then 0                        -- zero / subnormal (|x| < 1)
+  else
+    let m := mant + 0x10000000000000        -- restore the implicit leading 1 (2^52)
+    let e : Int := (exp : Int) - 1023 - 52
+    if e ≥ 0 then m * 2 ^ e.toNat else m / 2 ^ (-e).toNat
+
+/-- Format a `Float` with exactly `prec` digits after the decimal point (Python `:.Nf`). Rounds the
+`Float`'s exact IEEE-754 value with round-half-to-even, matching CPython: `2.675` (stored as
+`2.6749999…`) → `2.67`, exact ties like `0.125`/`2.5` → even. Sign follows the sign bit, so a negative
+value rounding to zero still prints `-0` as Python does. -/
 def pyFixedFloat (x : Float) (prec : Nat) : String :=
-  let neg := x < 0.0
+  let neg := (x.toBits >>> 63) == 1
+  let bits := x.toBits
+  let exp := ((bits >>> 52) &&& 0x7FF).toNat
+  let mant := (bits &&& 0xFFFFFFFFFFFFF).toNat
   let pow := 10 ^ prec
-  let scaledNat := (Float.floor (Float.abs x * Float.ofNat pow + 0.5)).toUInt64.toNat
-  let intPart := scaledNat / pow
-  let fracPart := scaledNat % pow
+  -- `|x| = m * 2^e`, exactly (subnormal ⇒ no implicit leading 1). `e = exp - 1023 - 52`.
+  let (m, e) :=
+    if exp == 0 then (mant, (-1074 : Int))
+    else (mant + 0x10000000000000, (exp : Int) - 1075)
+  -- Exact round-half-to-even of `|x| * 10^prec`.
+  let r : Nat :=
+    if e ≥ 0 then m * pow * 2 ^ e.toNat
+    else
+      let den := 2 ^ (-e).toNat
+      let num := m * pow
+      let q := num / den
+      let rem := num % den
+      if 2 * rem < den then q
+      else if 2 * rem > den then q + 1
+      else if q % 2 == 0 then q else q + 1
+  let intPart := r / pow
+  let fracPart := r % pow
   let body :=
     if prec == 0 then toString intPart
     else
       let fracStr := toString fracPart
       let pad := String.ofList (List.replicate (prec - fracStr.length) '0')
       s!"{intPart}.{pad}{fracStr}"
-  if neg && scaledNat != 0 then "-" ++ body else body
+  if neg then "-" ++ body else body
 
 /-- The precision (digits after `.`) requested by a format spec, defaulting to Python's 6. -/
 private def pyFmtPrecision (spec : String) : Nat :=

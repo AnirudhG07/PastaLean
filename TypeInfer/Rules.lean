@@ -278,7 +278,11 @@ partial def builtinReturn (sigs : Sigs) (env : Env) (name : String) (args : List
         | some "set" => .set .unknown
         | some "dict" => .dict .unknown .unknown
         | some "int" | some "float" => .int
-        | _ => .unknown
+        -- A callable factory that is not a bare type name (`defaultdict(lambda: [0]*m)`): its RETURN
+        -- type is the value type (`list[int]` here), so the empty defaultdict's value is pinned.
+        | _ => match args.head?.map (typeOfExpr sigs env) with
+               | some (.fn _ r) => r
+               | _ => .unknown
       .dict .unknown vt
     -- `map(f, xs)` yields a list of `f`'s RESULTS, so its element is `f`'s return type — read from a
     -- named callback (`int`→int cast, or a user fn's inferred return). Lets `list(map(int, l))` type
@@ -287,6 +291,14 @@ partial def builtinReturn (sigs : Sigs) (env : Env) (name : String) (args : List
       match args.head?.bind (·.getObjValAs? String "id" |>.toOption) with
       | some f => .list ((constReturnBuiltins.lookup f).getD ((sigs.get? f).getD .unknown))
       | none => .list .unknown
+    -- `product`/`combinations`/`permutations` back each result COMBINATION with a Lean `List` (no
+    -- variadic tuple type), so their element is `list[E]`, not a `Prod` — the for-target unpack must
+    -- index, not `Prod.fst`. Element `E` = join of the inputs' element types (product) / the single
+    -- iterable's element type (combinations/permutations).
+    else if name == "product" then
+      .list (.list (PyType.joinAll (args.map (fun a => (typeOfExpr sigs env a).elemType))))
+    else if name == "combinations" || name == "permutations" then
+      .list (.list (args.head?.elim .unknown (fun a => (typeOfExpr sigs env a).elemType)))
     -- Every other arg-dependent builtin / star-imported member declares its return SHAPE in
     -- `Libraries.bareBehaviour?`, so this engine no longer hardcodes any member's name (§27).
     else match Libraries.bareBehaviour? name with

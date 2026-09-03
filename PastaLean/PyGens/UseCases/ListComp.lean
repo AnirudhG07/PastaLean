@@ -187,6 +187,23 @@ def lowerComprehensionClauses (eltJson : Json) (generators : List Json) :
         s!"comprehension node does not have an 'iter' field: {compJson}"
       if rest.isEmpty then
         let eltCode ← getCode eltJson `term
+        -- Inside a memoized `@cache` body, an element with a recursive self-call lowers to
+        -- `(← worker …)`; wrap the element in `do return …` so that `←` scopes to the mapper lambda,
+        -- run the comprehension with `mapM`, and await the whole list — memoizing DP like
+        -- `max([… + dfs(j) for j in …])`.
+        let memoComp ← match ← getMemoizeSelf with
+          | some (memoName, _) => pure (jsonCallsName memoName eltJson)
+          | none => pure false
+        if memoComp then
+          let mapper ← listCompTargetLambda targetJson (← `((do return $eltCode)))
+          let baseIter ←
+            match ← heapContainerDeref? iterJson with
+            | some deref => pure deref
+            | none =>
+              if jsonUsesIOEffect iterJson then inlineEffectfulTerm iterJson
+              else getCode iterJson `term
+          let filtered ← comprehensionFilterOver compJson baseIter
+          return ← `((← ($filtered).mapM $mapper))
         let mapper ← listCompTargetLambda targetJson eltCode
         let mapMethod := if jsonUsesMonadicEffect eltJson then mkIdent `mapM else mkIdent `map
         -- `[f(x) for x in input().split()]`: the iterable is IO. Lower it with an inline `←`

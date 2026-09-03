@@ -73,9 +73,10 @@ partial def usedInPyAnyPosition (name : String) (json : Json) : Bool :=
           let fn := ((getField json "func").bind nameId?).getD ""
           let nameIsArg :=
             ((json.getObjValAs? (Array Json) "args").toOption.getD #[]).any (fun a => nameId? a == some name)
-          -- Only the builtins whose lambda/context does NOT pin the element type: `filter`/`any`/`all`
-          -- take a predicate that usually FIXES the element (`ch not in "aeiou"` ⇒ `String`), so boxing
-          -- would clobber a type Lean could infer — exclude them.
+          -- These fire only inside `boxIfStuck`, i.e. AFTER inference already failed to pin the
+          -- element (`filter(lambda x: x in "2357BD", num)` — the ambiguous str-vs-list[str] predicate
+          -- leaves the element `unknown`). Boxing `num` to `PyAny` (iterable/lengthable) is then the
+          -- only way it compiles at all; leaving it bare yields a stuck `PyIterable ?m`.
           -- `type(x)` / `isinstance(x, …)` inspect the runtime tag, so an un-inferred `x` must be `PyAny`
           -- (`PyTyped ?m` is otherwise stuck). For `isinstance` only the FIRST arg is the value.
           let isTypeIntrospect :=
@@ -87,7 +88,8 @@ partial def usedInPyAnyPosition (name : String) (json : Json) : Bool :=
           -- other signal typed `x`, so it never clobbers an inferred int/str param.
           let isStringify := nameIsArg && ["str", "repr", "print", "ascii"].contains fn
           isTypeIntrospect || isStringify ||
-            (nameIsArg && ["len", "sum", "sorted", "map", "reversed", "enumerate"].contains fn)
+            (nameIsArg && ["len", "sum", "sorted", "map", "filter", "reversed", "enumerate",
+                           "any", "all", "list", "set", "tuple", "min", "max"].contains fn)
       -- `x is None` / `x is not None` on an otherwise-unknown `x`: box it so `pyIsNone x` resolves
       -- (`PyIsNone PyAny`) instead of leaving `x` an untyped binder that forces `Option _`.
       | some "Compare" =>
@@ -225,11 +227,13 @@ partial def markTuples (sigs : Sigs) (env : Env) (json : Json) : Json :=
       if nodeTypeOf json == some "Subscript" then
         match getField json "value" with
         | some v =>
-            match (nameId? v).bind (env.get? ·) with
-            | some (.tuple es) =>
+            -- Type the base expression (not just a bare name): `most_common(1)[0][1]` indexes the
+            -- inner subscript's tuple result, so the arity must be stamped on any tuple-typed base.
+            match typeOfExpr sigs env v with
+            | .tuple es =>
                 json.setObjVal! "value"
                   (v.setObjVal! "_PastaLean_tuple_arity" (Json.num (JsonNumber.mk (Int.ofNat es.length) 0)))
-            | some (.dict _ _) =>
+            | .dict _ _ =>
                 -- `d[i, j]` on a dict is a single tuple-KEY access (`d[(i, j)]`), NOT numpy-style
                 -- multi-index (`d[i][j]`). Mark the slice so codegen forms the tuple key.
                 match getField json "slice" with
@@ -258,14 +262,14 @@ partial def markOptAttrs (sigs : Sigs) (env : Env) (json : Json) : Json :=
         match (getField json "value").map (typeOfExpr sigs env) with
         | some (.opt _) => json.setObjVal! "_unwrap_opt" (Json.bool true)
         | _ => json
-      -- `root1 == root2` / `root1 is root2` between two user-class (node) values: mark `_class_cmp`
-      -- so codegen compares through `BEq` (`==`) even in the exact twin — nodes have no `DecidableEq`
-      -- for a propositional `=`.
+      -- `root1 == root2` between two user-class (node) values, OR `cnt1 != cnt2` between two dicts
+      -- (`Counter`/`defaultdict`/`dict`): mark `_class_cmp` so codegen compares through `BEq` (`==`)
+      -- even in the exact twin — neither nodes nor `Std.HashMap` have a `DecidableEq` for propositional `=`.
       else if nodeTypeOf json == some "Compare" then
-        let isClassish := fun (side : String) => match (getField json side).map (typeOfExpr sigs env) with
-          | some (.cls _) | some (.opt (.cls _)) => true
+        let isBEqOnly := fun (side : String) => match (getField json side).map (typeOfExpr sigs env) with
+          | some (.cls _) | some (.opt (.cls _)) | some (.dict _ _) => true
           | _ => false
-        if isClassish "left" || isClassish "right" then json.setObjVal! "_class_cmp" (Json.bool true) else json
+        if isBEqOnly "left" || isBEqOnly "right" then json.setObjVal! "_class_cmp" (Json.bool true) else json
       -- `X if c else None` (or `None if c else X`) whose value branch is ALREADY `Option`-typed
       -- (`l1 = l1.next if l1 else None`, `.next` an `Option` field): mark `_branch_opt` so codegen
       -- does not re-wrap it in `some`, which would nest to `Option (Option _)`.
@@ -407,17 +411,25 @@ partial def listUsePorted (v : String) (allowAppend : Bool) (json : Json) : Bool
       let func := (getField json "func").getD Json.null
       let args := (json.getObjValAs? (Array Json) "args").toOption.getD #[]
       let kws := (json.getObjValAs? (Array Json) "keywords").toOption.getD #[]
-      -- an `.append(...)` whose receiver mentions v (covers `v.append` and `v[i].append`)
-      let appendRecvV := nodeTypeOf func == some "Attribute"
-        && (func.getObjValAs? String "attr" == .ok "append")
-        && ((getField func "value").any (refsListName v))
-      let isLen := nameId? func == some "len"
-      if appendRecvV then
-        -- only a bare `v.append(x)` on an append-allowed (flat scalar) list is ported
-        if allowAppend && ((getField func "value").any (fun r => nameId? r == some v)) then
+      let attr := (func.getObjValAs? String "attr").toOption
+      -- `Array`-ported methods called as `v.m(...)` on the bare receiver `v`. Mutators
+      -- (append/extend/reverse/insert/pop/popleft/clear/sort) need a flat, append-eligible list
+      -- (`allowAppend`); pure queries (count/index) are fine on any level.
+      let recvBareV := nodeTypeOf func == some "Attribute"
+        && ((getField func "value").any (fun r => nameId? r == some v))
+      let mutMethods := #["append", "extend", "reverse", "insert", "pop", "popleft", "clear"]
+      let queryMethods := #["count", "index"]
+      -- Builtins that only *iterate* their argument and return a scalar (`PyIterable`-generic, so an
+      -- `Array` works): a bare `v` argument is fine, like `len(v)`.
+      let isIterConsumer := (nameId? func).any (#["len", "sum", "min", "max"].contains) && args.size == 1
+      if recvBareV then
+        if (attr.any mutMethods.contains && allowAppend) || attr.any queryMethods.contains then
           args.all (listUsePorted v allowAppend) && kws.all (listUsePorted v allowAppend)
         else false
-      else if isLen then
+      -- a method whose receiver *mentions* but is not exactly `v` (`v[i].append`) can't be ported.
+      else if nodeTypeOf func == some "Attribute" && ((getField func "value").any (refsListName v)) then
+        false
+      else if isIterConsumer then
         args.all (fun a => nameId? a == some v || listUsePorted v allowAppend a)
           && kws.all (listUsePorted v allowAppend)
       else listUsePorted v allowAppend func && args.all (listUsePorted v allowAppend)
@@ -429,6 +441,14 @@ partial def listUsePorted (v : String) (allowAppend : Bool) (json : Json) : Bool
       let orelse := (json.getObjValAs? (Array Json) "orelse").toOption.getD #[]
       if refsListName v target then false
       else (nameId? iter == some v || listUsePorted v allowAppend iter)
+        && body.all (listUsePorted v allowAppend) && orelse.all (listUsePorted v allowAppend)
+  -- `while v:` / `if v:` — a bare `v` in a truthy test is fine (`PyTruthy`/`PyBool (Array)` exist),
+  -- the dominant stack/queue idiom (`while stack:`).
+  | some "While" | some "If" =>
+      let test := (getField json "test").getD Json.null
+      let body := (json.getObjValAs? (Array Json) "body").toOption.getD #[]
+      let orelse := (json.getObjValAs? (Array Json) "orelse").toOption.getD #[]
+      (nameId? test == some v || listUsePorted v allowAppend test)
         && body.all (listUsePorted v allowAppend) && orelse.all (listUsePorted v allowAppend)
   | some "Assign" | some "AnnAssign" | some "AugAssign" =>
       let value := (getField json "value").getD Json.null
@@ -567,13 +587,16 @@ def markHoistTypeMaps (eligible : Std.HashSet String) (json : Json) : Json := Id
       j := j.setObjVal! key newMap
   return j
 
-/-- Stamp `_seq: "array"` on a `v.append(x)` / `v.extend(x)` call whose receiver `v` is `array_ok`, so
-codegen emits the O(1) `pyArrayAppend`/`pyArrayExtend` instead of the `List` `pyAppend`/`pyExtend`. -/
+/-- Stamp `_seq: "array"` on a monomorphic mutator call (`v.append/extend/reverse/insert/pop/popleft`)
+whose receiver `v` is `array_ok`, so codegen emits the O(1) `Array` variant instead of the `List` one.
+(Typeclass-dispatched methods — `count`/`index`/`clear`/`sort` — resolve by the receiver's `Array`
+type and need no stamp.) -/
 def markAppendCall (eligible : Std.HashSet String) (json : Json) : Json :=
   match getField json "func" with
   | some func =>
       let attr := (func.getObjValAs? String "attr").toOption
-      if nodeTypeOf func == some "Attribute" && (attr == some "append" || attr == some "extend")
+      let seqMethods := #["append", "extend", "reverse", "insert", "pop", "popleft"]
+      if nodeTypeOf func == some "Attribute" && (attr.any seqMethods.contains)
          && ((getField func "value").any (fun r => (nameId? r).any eligible.contains)) then
         json.setObjVal! "_seq" (Json.str "array")
       else json
@@ -643,6 +666,32 @@ partial def stampFunction (sigs : Sigs) (outer hints : Env) (fn : Json) : Json :
     if (env1.get? name).getD .unknown == .unknown && body.any (usedInPyAnyPosition name)
     then m.insert name .any else m) hints
   let env := if pyAnySeed.size == hints.size then env1 else inferFunction sigs outer pyAnySeed fn
+  -- Nested defs are absent from the interprocedural `sigs` (`collectSigs` walks only top-level
+  -- functions/methods). Add each direct nested def's inferred return type — using THIS body's `env`
+  -- and call sites for its param hints — so, throughout the rest of this pass, a call to a nested
+  -- helper resolves to a concrete type: its recursive `x, y = dfs(…)` unpacks with the right shape
+  -- (`_list_unpack`/`_tuple_unpack`, else the fallback forces `Prod` on a `list` return), and the
+  -- nested def gets its own `_ret_ty` codomain ascription — which pins a polymorphic `inf` sentinel in
+  -- a `tuple[int,…]` return to the int element instead of defaulting to `ℚ`. Return-type computation
+  -- never calls a nested def by name, so seeding without the def itself is sound.
+  let sigs : Sigs := body.foldl (fun sg nf => Id.run do
+    if nodeTypeOf nf != some "FunctionDef" then return sg
+    let .ok nm := nf.getObjValAs? String "name" | return sg
+    let nh := nestedParamHints sg env nf #[Json.arr body]
+    let nh := (keyCallbackHints sg env nf #[Json.arr body]).fold
+      (fun m k v => m.insert k (((m.get? k).getD .unknown).join v)) nh
+    -- Fixpoint on the def's own return type: a recursive nested def needs its (climbing) return type
+    -- seeded to type the locals bound from its recursive calls (`la, lb, lc = dfs(node.left)`), so a
+    -- tuple return whose element is pinned only through that recursion converges (`tuple[int,int,int]`)
+    -- instead of leaving a slot `unknown`. The join only climbs, so a small cap is a sound floor.
+    let mut sgn := sg
+    let mut rt : PyType := .unknown
+    for _ in [0:4] do
+      let rt' := returnTypeOf sgn nh nf
+      if rt' == rt then break
+      rt := rt'
+      sgn := sgn.insert nm rt'
+    return match rt with | .unknown => sg | t => sg.insert nm t) sigs
   let fn := stampParams env fn
   let fn := match fn.getObjValAs? String "name" with
     | .ok name =>
@@ -972,12 +1021,33 @@ partial def stampStmt (sigs : Sigs) (env : Env) (roots : Array Json) (s : Json) 
     match nodeTypeOf s with
     | some "Assign" | some "AnnAssign" | some "AugAssign" | some "For" =>
         if let some t := getField s "target" then
+          -- `x = c.copy()` lowers to the type-preserving `pyCopy c`, so the RHS fully determines `x`
+          -- (a `PyDefaultDict` copy stays a `PyDefaultDict`); ascribing a plain-dict type here would
+          -- fight that. Leave it to Lean, like any other determined RHS.
+          let valueIsCopy := match getField s "value" with
+            | some v => nodeTypeOf v == some "Call"
+                && ((getField v "func").bind (·.getObjValAs? String "attr" |>.toOption)) == some "copy"
+            | none => false
+          -- `xs = [Counter() for …]` / `[defaultdict(int) for …]`: the elements are `PyDefaultDict`-
+          -- backed, but a plain `List (dict …)`/`List PyAny` ascription would clash with them. The
+          -- comprehension + usage pin the element type, so leave it unascribed for Lean to infer.
+          let isDefaultDictCall := fun (c : Json) =>
+            nodeTypeOf c == some "Call" &&
+              (match getField c "func" with
+               | some f => ((nameId? f).orElse (fun _ => (f.getObjValAs? String "attr").toOption))
+                             |>.any (fun n => n == "Counter" || n == "defaultdict")
+               | none => false)
+          let valueIsDefaultdictComp := match getField s "value" with
+            | some v => (nodeTypeOf v == some "ListComp" || nodeTypeOf v == some "SetComp")
+                && ((getField v "elt").any isDefaultDictCall)
+            | none => false
           let allowDict := match getField s "value" with
             | some v =>
                 nodeTypeOf v != some "Call"
                 || ((getField v "func").bind (·.getObjValAs? String "library_module" |>.toOption)).isNone
             | none => true
-          s := s.setObjVal! "target" (stampTarget env t allowDict)
+          unless valueIsCopy || valueIsDefaultdictComp do
+            s := s.setObjVal! "target" (stampTarget env t allowDict)
     | _ => pure ()
     -- `c[i] = v` into a float-element container: stamp the *value* so codegen ascribes it to the
     -- element type. An un-ascribed `Int` value otherwise pins `PySetItem`'s value `outParam` to `ℤ`,

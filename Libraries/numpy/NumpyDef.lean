@@ -127,6 +127,9 @@ def pyNumpySameShape? {α β} (lhs : List (List α)) (rhs : List (List β)) : Bo
 def pyNumpyArray {α} [PyNumpyScalar α] (matrix : List (List α)) : List (List Float) :=
   matrix.map (List.map toFloat)
 
+/-- `np.copy(x)`: a shallow copy. Our containers are immutable values, so it is the identity. -/
+def pyNumpyCopy {α : Type} (x : α) : α := x
+
 /-- Normalize a matrix into its compute field `γ` (`ℚ` stays `ℚ`, `Float` stays `Float`), so an
 algebraic numpy op returns a value in the SAME field as the surrounding code instead of always
 collapsing to `Float`. -/

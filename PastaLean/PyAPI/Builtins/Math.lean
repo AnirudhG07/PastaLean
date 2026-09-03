@@ -89,14 +89,31 @@ def pyRoundDigitsFloat (x : Float) (ndigits : Int) : Float :=
   -- round-half-to-even on the scaled value, then unscale
   (Float.ofInt (pyRound scaled)) / p
 
+/-- Round `x` to the nearest integer, ties to even (Python's `round`). Mathlib's `round` is
+half-*up*, so ties like `round(0.5)`/`round(2.5)` diverge from Python; this reproduces the
+banker's rounding CPython uses for both `round(x)` and `round(x, n)`. -/
+def ratRoundHalfEven (x : ℚ) : ℤ :=
+  let fl := ⌊x⌋
+  let diff := x - (fl : ℚ)
+  if diff < 1/2 then fl
+  else if diff > 1/2 then fl + 1
+  else if fl % 2 == 0 then fl else fl + 1
+
+noncomputable def realRoundHalfEven (x : ℝ) : ℤ :=
+  let fl := ⌊x⌋
+  let diff := x - (fl : ℝ)
+  if diff < 1/2 then fl
+  else if diff > 1/2 then fl + 1
+  else if fl % 2 == 0 then fl else fl + 1
+
 noncomputable def pyRoundDigitsReal (x : ℝ) (ndigits : Int) : ℝ :=
   let p : ℝ := (10 : ℝ) ^ ndigits
-  ((round (x * p) : ℤ) : ℝ) / p
+  ((realRoundHalfEven (x * p) : ℤ) : ℝ) / p
 
 /-- Exact-mode `round(x, n)` on a `ℚ` (`round(sum(t)/len(t), 5)` — `sum/len` is `ℚ`). Computable. -/
 def pyRoundDigitsRat (x : ℚ) (ndigits : Int) : ℚ :=
   let p : ℚ := (10 : ℚ) ^ ndigits
-  ((round (x * p) : ℤ) : ℚ) / p
+  ((ratRoundHalfEven (x * p) : ℤ) : ℚ) / p
 
 instance : PyRoundDigitsC Float := ⟨pyRoundDigitsFloat⟩
 instance : PyRoundDigitsC ℚ := ⟨pyRoundDigitsRat⟩

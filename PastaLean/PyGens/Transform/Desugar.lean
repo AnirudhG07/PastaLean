@@ -195,6 +195,9 @@ private def hoistableField (stmt : Json) : Option String :=
   | some "If" | some "Assert" => some "test"
   | some "Return" | some "Assign" | some "AugAssign" | some "AnnAssign" | some "Expr" => some "value"
   | some "For" => some "iter"
+  -- A `match <subject>:` evaluates the subject exactly once before matching, so a value+mutate call
+  -- there (`match stk.pop():`) is safe to hoist to a temp.
+  | some "Match" => some "subject"
   | _ => none
 
 /-- Hoist every walrus out of a statement list. -/
@@ -443,6 +446,59 @@ def hoistShortCircuitMutator (stmts : Array Json) : DesugarM (Array Json) := do
           out := out.push (assignStmt (nameLoad scName) seed)
           out := out.push (ifStmt guardTest #[assignStmt (nameLoad scName) values.back!])
           out := out.push (stmt.setObjVal! field (nameLoad scName))
+  return out
+
+/-! ### Conditionally-evaluated value+mutate in a ternary -/
+
+private def ifElseStmt (test : Json) (body orelse : Array Json) : Json :=
+  Json.mkObj [("node_type", Json.str "If"), ("test", test),
+    ("body", Json.arr body), ("orelse", Json.arr orelse)]
+
+/-- Rewrite each ternary `<body> if <test> else <orelse>` whose `body`/`orelse` contains a value+mutate
+call (`0 if not s1 else s1.pop()`) into a temp assigned by an explicit `if` — so the mutation runs only
+on the branch Python takes: `if test: t = body else: t = orelse`, and the ternary becomes `t`. Hoists
+from unconditionally-evaluated positions only (arithmetic operands, the field expr); a ternary nested
+under a `BoolOp`/`Lambda`/comprehension is left alone. Nested ternaries each get their own temp. -/
+private partial def hoistCondMutExpr (expr : Json) : DesugarM (Json × Array Json) := do
+  match expr with
+  | .arr elems =>
+      let mut out := #[]; let mut pre := #[]
+      for e in elems do
+        let (e', p) ← hoistCondMutExpr e; out := out.push e'; pre := pre ++ p
+      return (Json.arr out, pre)
+  | .obj _ =>
+      let nt := jsonNodeType? expr |>.getD ""
+      let body := (expr.getObjVal? "body").toOption.getD Json.null
+      let orelse := (expr.getObjVal? "orelse").toOption.getD Json.null
+      if nt == "IfExp" && (hasValueMutate body || hasValueMutate orelse) then
+        let test := (expr.getObjVal? "test").toOption.getD Json.null
+        -- the test is evaluated unconditionally: hoist any ternary-mutators inside it first
+        let (test', testPre) ← hoistCondMutExpr test
+        let tmp ← freshVar "__cmv_"
+        let ifS := ifElseStmt test' #[assignStmt (nameLoad tmp) body] #[assignStmt (nameLoad tmp) orelse]
+        return (nameLoad tmp, testPre.push ifS)
+      else if conditionalContexts.contains nt then
+        return (expr, #[])   -- BoolOp/Lambda/comprehension: their own passes (or codegen) handle these
+      else
+        let mut fields : List (String × Json) := []; let mut pre := #[]
+        for (k, v) in (match expr with | .obj fs => fs.toList | _ => []) do
+          let (v', p) ← hoistCondMutExpr v; pre := pre ++ p; fields := fields ++ [(k, v')]
+        return (Json.mkObj fields, pre)
+  | _ => return (expr, #[])
+
+/-- Hoist ternary value+mutate calls out of each statement's hoistable field. -/
+def hoistConditionalMutator (stmts : Array Json) : DesugarM (Array Json) := do
+  let mut out := #[]
+  for stmt in stmts do
+    let mut stmt := stmt
+    if let some field := hoistableField stmt then
+      if let .ok expr := stmt.getObjVal? field then
+        if hasValueMutate expr then
+          let (expr', prelude) ← hoistCondMutExpr expr
+          if !prelude.isEmpty then
+            out := out ++ prelude
+            stmt := stmt.setObjVal! field expr'
+    out := out.push stmt
   return out
 
 /-! ### Unbounded iterators -/
@@ -721,9 +777,72 @@ partial def rewriteZipCount (json : Json) : Json :=
     | none => json
   else json
 
+/-! ### Inlining a nullary constant-returning `def` used as a `defaultdict` factory
+
+`defaultdict(f)` where `f` is a local `def f(): return <e>` is equivalent to `defaultdict(lambda: <e>)`
+(both read a missing key as `<e>`), which the lowering already handles. Rewrite the named form to the
+lambda form so it need not be a separate factory case. -/
+
+/-- `(name, return-expr)` if `json` is a nullary `def name(): return <e>`. -/
+private def constFactory? (json : Json) : Option (String × Json) := do
+  guard (jsonNodeType? json == some "FunctionDef")
+  let name ← (json.getObjValAs? String "name").toOption
+  let params := ((json.getObjVal? "args").toOption.bind
+                  (fun a => (a.getObjValAs? (Array Json) "args").toOption)).getD #[]
+  guard params.isEmpty
+  let body := (json.getObjValAs? (Array Json) "body").toOption.getD #[]
+  guard (body.size == 1)
+  let ret := body[0]!
+  guard (jsonNodeType? ret == some "Return")
+  let val ← (ret.getObjVal? "value").toOption
+  guard (val != Json.null)
+  pure (name, val)
+
+private partial def collectConstFactories : Json → List (String × Json)
+  | j =>
+    (constFactory? j).toList ++
+      (match j with
+       | .obj fs => fs.toList.flatMap (fun (_, v) => collectConstFactories v)
+       | .arr xs => xs.toList.flatMap collectConstFactories
+       | _ => [])
+
+private def isDefaultdictCall (json : Json) : Bool :=
+  jsonNodeType? json == some "Call" &&
+    (match (json.getObjVal? "func").toOption with
+     | some f =>
+         (jsonNodeType? f == some "Name" && f.getObjValAs? String "id" == .ok "defaultdict") ||
+         (jsonNodeType? f == some "Attribute" && f.getObjValAs? String "attr" == .ok "defaultdict")
+     | none => false)
+
+private def lambdaOf (body : Json) : Json :=
+  Json.mkObj [("node_type", Json.str "Lambda"),
+    ("args", Json.mkObj [("args", Json.arr #[])]), ("body", body)]
+
+private partial def rewriteDefaultFactory (facts : List (String × Json)) : Json → Json
+  | j =>
+    let j := match j with
+      | .obj fs => Json.mkObj (fs.toList.map (fun (k, v) => (k, rewriteDefaultFactory facts v)))
+      | .arr xs => Json.arr (xs.map (rewriteDefaultFactory facts))
+      | _ => j
+    if isDefaultdictCall j then
+      match (j.getObjValAs? (Array Json) "args").toOption with
+      | some args =>
+          match args[0]? with
+          | some arg =>
+              match (do guard (jsonNodeType? arg == some "Name")
+                        let id ← (arg.getObjValAs? String "id").toOption
+                        facts.lookup id) with
+              | some body => j.setObjVal! "args" (Json.arr (args.set! 0 (lambdaOf body)))
+              | none => j
+          | none => j
+      | none => j
+    else j
+
 /-- Run every desugaring over one translation request's AST. -/
 def desugarAst (json : Json) : Except String Json := do
   let json := rewriteZipCount json
+  let facts := collectConstFactories json
+  let json := if facts.isEmpty then json else rewriteDefaultFactory facts json
   let pass : DesugarM Json := do
     let json ← rewriteStatementLists rewriteFullSliceAssign json
     let json ← rewriteStatementLists splitChainedAssign json
@@ -734,6 +853,7 @@ def desugarAst (json : Json) : Except String Json := do
     let json ← rewriteStatementLists hoistWalrus json
     let json ← rewriteStatementLists unfoldMutatingComprehension json
     let json ← rewriteStatementLists hoistShortCircuitMutator json
+    let json ← rewriteStatementLists hoistConditionalMutator json
     rewriteStatementLists hoistMutatingCalls json
   return (← pass.run 0).1
 

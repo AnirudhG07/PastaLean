@@ -25,6 +25,11 @@ def PyDefaultDict.empty (dflt : ν) : PyDefaultDict κ ν := ⟨∅, [], dflt⟩
 resolve — the block later rebinds it to the real `Counter(...)`. -/
 instance [Inhabited ν] : Inhabited (PyDefaultDict κ ν) := ⟨PyDefaultDict.empty default⟩
 
+/-- Python dict/`Counter` equality is by content — same key→value pairs, ignoring insertion order
+and the missing-key default. -/
+instance [BEq ν] : BEq (PyDefaultDict κ ν) where
+  beq a b := a.map.size == b.map.size && a.map.toList.all (fun (k, v) => b.map.get? k == some v)
+
 /-- Set `k` to `v`, recording `k` at the end of `order` when it is new. -/
 def PyDefaultDict.insert (d : PyDefaultDict κ ν) (k : κ) (v : ν) : PyDefaultDict κ ν :=
   { d with

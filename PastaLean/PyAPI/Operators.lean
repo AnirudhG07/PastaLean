@@ -49,6 +49,13 @@ Mathlib's *pointwise* `Add (List α)` (`[1,2]+[3,4] = [4,6]`) — silently wrong
 instance (priority := high) {α : Type} : PyHAdd (List α) (List α) (List α) where
   hAdd := (· ++ ·)
 
+/-! Mixed-numeric list concatenation: `[0] + [inf]*n` puts an `int` list beside a `float`/`ℚ` list;
+Python makes one list of the widened element, so we coerce the `int` side and concatenate. -/
+instance (priority := high) : PyHAdd (List Int) (List Rat)   (List Rat)   where hAdd xs ys := xs.map (Int.cast) ++ ys
+instance (priority := high) : PyHAdd (List Rat) (List Int)   (List Rat)   where hAdd xs ys := xs ++ ys.map (Int.cast)
+instance (priority := high) : PyHAdd (List Int) (List Float) (List Float) where hAdd xs ys := xs.map Float.ofInt ++ ys
+instance (priority := high) : PyHAdd (List Float) (List Int) (List Float) where hAdd xs ys := xs ++ ys.map Float.ofInt
+
 /-! Mixed numeric `+`. Lean has no heterogeneous `HAdd Nat Int` / `HAdd Rat Int`, so the
 generic `[HAdd α β γ]` instance does not cover these mixed-type sums that arise when one
 operand came from integer division (`Rat`) or a length/count (`Nat`). The result widens to

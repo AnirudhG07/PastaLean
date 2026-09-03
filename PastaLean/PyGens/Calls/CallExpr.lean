@@ -673,7 +673,10 @@ def callSyntaxTerm (json : Json) : PygenM (TSyntax `term) := do
             if argsArray.isEmpty then return ← `((0 : Int))
             unless argsArray.size == 1 || argsArray.size == 2 do
               throwError "int() expects one or two positional arguments."
-            return ← buildIOPureApplicationFromArgs argsArray argsCodes fun resolvedArgs => do
+            -- `int(a > b)` casts a VALUE, so its argument is `Bool`, not `Prop`, even inside an `if`
+            -- test (`if int(cmp):`) — re-lower in value context so a comparison becomes `Bool`.
+            let intArgsCodes ← withPropCondition false (argsArray.mapM (getCode · `term))
+            return ← buildIOPureApplicationFromArgs argsArray intArgsCodes fun resolvedArgs => do
               -- `int(s, base)` parses a string in the given radix; `int(x)` is the plain cast.
               if resolvedArgs.size == 2 then
                 `($(mkIdent ``pyIntBase) $(resolvedArgs[0]!) $(resolvedArgs[1]!))
@@ -1045,6 +1048,10 @@ def callSyntaxDoElem (json : Json) : PygenM (TSyntax `doElem) := do
                 pure (match attr with
                   | "append" => ``PastaLean.pyArrayAppend
                   | "extend" => ``PastaLean.pyArrayExtend
+                  | "reverse" => ``PastaLean.pyArrayReverse
+                  | "insert" => ``PastaLean.pyArrayInsert
+                  | "pop" => ``PastaLean.pyArrayPopRest
+                  | "popleft" => ``PastaLean.pyArrayPopLeftRest
                   | _ => rebuildFn)
               else pure rebuildFn
             let fnIdent := mkIdent rebuildFn
@@ -1363,6 +1370,7 @@ def callSyntax : (kind : SyntaxNodeKind) → Json → PygenM (TSyntax kind)
 def attributeSyntax : (kind : SyntaxNodeKind) → Json →
     PygenM (TSyntax kind)
   | `term, json => do
+    if let some t ← libraryNonFiniteTerm? json then return t
     match ← jsonLibraryMappedName? json with
     | some leanName =>
         pure (mkIdent leanName)

@@ -135,6 +135,13 @@ def valueAndMutateMethod? (attr : String) (argc : Nat) : Option (Lean.Name × Le
   | "setdefault" => if argc == 2 then some (``PastaLean.pyGetD, ``PastaLean.pyDictSetdefaultRest, 2) else none
   | _         => none
 
+/-- Swap the `(value, rest)` pop pair to its O(1) `Array` variant when the receiver is `array_ok`. -/
+def arrayPopFns (attr : String) (valueFn restFn : Lean.Name) : Lean.Name × Lean.Name :=
+  match attr with
+  | "pop"     => (``PastaLean.pyArrayPopValue, ``PastaLean.pyArrayPopRest)
+  | "popleft" => (``PastaLean.pyArrayPopLeftValue, ``PastaLean.pyArrayPopLeftRest)
+  | _         => (valueFn, restFn)
+
 /-- Recognize `container.<m>(args…)` for a value-and-mutate method `m` on an already-declared
 mutable variable. Returns the runtime pair, the receiver, the value-form args, and the rest-form
 args (a prefix). A freshly-seen receiver is not a mutation site, so it returns `none`. -/
@@ -155,6 +162,9 @@ def popCallParts? (value : Json) :
   let (valueFn, restFn, restArgc) ←
     if attr == "pop" && args.size == 1 && (← jsonIsDictExpr receiverJson) then
       pure (``PastaLean.pyDictKeyPopValue, ``PastaLean.pyDictKeyPopRest, 1)
+    else if (value.getObjValAs? String "_seq" == .ok "array") && (← getNumericMode) == .approx then
+      let (vf, rf) := arrayPopFns attr valueFn restFn
+      pure (vf, rf, restArgc)
     else pure (valueFn, restFn, restArgc)
   let argCodes ← args.mapM (getCode · `term)
   return some ((valueFn, restFn), receiverIdent, argCodes, argCodes.extract 0 restArgc)
@@ -229,13 +239,32 @@ def mutatingCallRhsLowering? (value : Json) :
       | some (valFn, restFn) =>
           match value.getObjValAs? (Array Json) "args" with
           | .ok args =>
-              if args.size ≥ 1 && jsonNodeType? args[0]! == some "Name" then
-                let recvIdent ← getCode args[0]! `ident
-                let argsCodes ← args.mapM (getCode · `term)
-                let valueTerm ← `($(mkIdent valFn) $argsCodes*)
-                let update ← `(doElem| $recvIdent:ident := $(mkIdent restFn) $argsCodes*)
-                return some (valueTerm, update)
-              else return none
+              if args.size == 0 then return none
+              let container := args[0]!
+              let argsCodes ← args.mapM (getCode · `term)
+              let valueTerm ← `($(mkIdent valFn) $argsCodes*)
+              match jsonNodeType? container with
+              -- `x = heapq.heappop(h)` on a plain heap variable: rebind it to the rest.
+              | some "Name" =>
+                  let recvIdent ← getCode container `ident
+                  let update ← `(doElem| $recvIdent:ident := $(mkIdent restFn) $argsCodes*)
+                  return some (valueTerm, update)
+              -- `heappop(self.small)` on an attribute heap (value semantics): rebuild the object with
+              -- the popped-rest field (`self := { self with small := pyHeappopRest self.small }`).
+              | some "Attribute" =>
+                  if ← getHeapMode then return none  -- heap object refs need a pointer-write; skip
+                  match container.getObjVal? "value", container.getObjValAs? String "attr" with
+                  | .ok recv, .ok attr =>
+                      if jsonNodeType? recv == some "Name" then
+                        let recvIdent ← getCode recv `ident
+                        let attrId := mkIdent attr.toName
+                        let restApplied ← `($(mkIdent restFn) $argsCodes*)
+                        let fields := #[← `(Lean.Parser.Term.structInstField| $attrId:ident := $restApplied)]
+                        let update ← `(doElem| $recvIdent:ident := { $recvIdent:term with $fields:structInstField,* })
+                        return some (valueTerm, update)
+                      else return none
+                  | _, _ => return none
+              | _ => return none
           | _ => return none
       | none => return none
   | some ((valueFn, restFn), receiverIdent, valueArgs, restArgs) =>

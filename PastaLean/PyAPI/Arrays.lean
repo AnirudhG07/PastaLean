@@ -6,6 +6,10 @@ import PastaLean.PyAPI.CommonProtocols.Length
 import PastaLean.PyAPI.CommonProtocols.Membership
 import PastaLean.PyAPI.CommonProtocols.Truthy
 import PastaLean.PyAPI.CommonProtocols.Bool
+import PastaLean.PyAPI.CommonProtocols.Clear
+import PastaLean.PyAPI.CommonProtocols.Count
+import PastaLean.PyAPI.CommonProtocols.Index
+import PastaLean.PyAPI.CommonProtocols.Pop
 import PastaLean.PyAPI.PyPrint
 
 /-! # Array-backed sequences for the runnable (`'rn`) twin
@@ -58,6 +62,30 @@ def pyArrayRepeat {α : Type} (xs : Array α) (n : Int) : Array α :=
 /-- `list.extend` / `a + b` concatenation. -/
 def pyArrayExtend {α : Type} (xs ys : Array α) : Array α := xs ++ ys
 
+/-- `list.reverse()` in place. -/
+def pyArrayReverse {α : Type} (xs : Array α) : Array α := xs.reverse
+
+/-- `list.insert(i, x)` — O(n) shift, so it borrows the `List` routine (mirrors `pyListInsert`). -/
+def pyArrayInsert {α : Type} (xs : Array α) (idx : Int) (elem : α) : Array α :=
+  (pyListInsert xs.toList idx elem).toArray
+
+/-- The element `list.pop(idx)` returns (default last). O(1) for the last element (`.back!`);
+a mid-list pop borrows the `List` routine so results match `pyPopValue` exactly. -/
+def pyArrayPopValue {α : Type} [Inhabited α] (xs : Array α) (idx : Int := -1) : α :=
+  if idx == -1 && xs.size > 0 then xs.back! else pyPopValue xs.toList idx
+
+/-- The array after `list.pop(idx)` removes its element. O(1) drop-last (`.pop`); mid-list borrows
+`pyPopRest`. -/
+def pyArrayPopRest {α : Type} (xs : Array α) (idx : Int := -1) : Array α :=
+  if idx == -1 && xs.size > 0 then xs.pop else (pyPopRest xs.toList idx).toArray
+
+/-- `deque.popleft()` head element. -/
+def pyArrayPopLeftValue {α : Type} [Inhabited α] (xs : Array α) : α :=
+  if xs.size > 0 then xs[0]! else default
+
+/-- `deque.popleft()` rest — O(n) head-drop (`Array` is a poor deque; correctness over speed here). -/
+def pyArrayPopLeftRest {α : Type} (xs : Array α) : Array α := xs.toList.tail.toArray
+
 instance {β : Type} [Inhabited β] : PyGetItem (Array β) Int β where
   getItem xs i := pyArrayGetItem xs i
 
@@ -92,5 +120,18 @@ instance {α : Type} : PyBool (Array α) where
 
 instance {α : Type} [PyPrintable α] : PyPrintable (Array α) where
   pyStringify xs := "[" ++ String.intercalate ", " (xs.toList.map pyStringify) ++ "]"
+
+instance {α : Type} : PyClear (Array α) where
+  pyClear _ := #[]
+
+instance {α : Type} [DecidableEq α] : PyCount (Array α) α where
+  pyCount xs elem := pyListCount xs.toList elem
+
+instance {α : Type} [DecidableEq α] : PyIndex (Array α) α where
+  pyIndex xs elem start :=
+    if start ≤ 0 then pyListIndex xs.toList elem
+    else match pyListIndex (xs.toList.drop start.toNat) elem with
+      | -1 => -1
+      | i => i + start
 
 end PastaLean

@@ -269,7 +269,7 @@
  },
  "HexKey": {
   "verdict": "compile_fail",
-  "detail": "/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/HexKey.lean:36:37: error: typeclass instance problem is stuck\n  PyIterable ?m.16 String\n\nNote: Lean will not try to resolve this typeclass instance problem because the first type argument to `PyIterable` is a metavariable. This argument must be fully determined before Lean will try to resolve the typeclass.\n\nHint: Adding type annotations and supplying implicit arguments to functions can give Lean more information for typeclass resolution. For example, if you have a variable `x` that you intend to be a `Nat`, but Lean reports it as having an unresolved type like `?m`, replacing `x` with `(x : Nat)` can get typeclass resolution un-stuck."
+  "detail": "/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/HexKey.lean:36:37: error(lean.synthInstanceFailed): failed to synthesize instance of type class\n  PyIterable PyAny String\n\nHint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command."
  },
  "Histogram": {
   "verdict": "ok",
@@ -457,7 +457,7 @@
  },
  "RemoveVowels": {
   "verdict": "compile_fail",
-  "detail": "/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/RemoveVowels.lean:37:23: error: typeclass instance problem is stuck\n  PyIterable ?m.18 String\n\nNote: Lean will not try to resolve this typeclass instance problem because the first type argument to `PyIterable` is a metavariable. This argument must be fully determined before Lean will try to resolve the typeclass.\n\nHint: Adding type annotations and supplying implicit arguments to functions can give Lean more information for typeclass resolution. For example, if you have a variable `x` that you intend to be a `Nat`, but Lean reports it as having an unresolved type like `?m`, replacing `x` with `(x : Nat)` can get typeclass resolution un-stuck."
+  "detail": "/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/RemoveVowels.lean:37:23: error(lean.synthInstanceFailed): failed to synthesize instance of type class\n  PyIterable PyAny String\n\nHint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command."
  },
  "RescaleToUnit": {
   "verdict": "ok",
@@ -465,7 +465,7 @@
  },
  "ReverseDelete": {
   "verdict": "compile_fail",
-  "detail": "/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/ReverseDelete.lean:29:71: error: typeclass instance problem is stuck\n  PyContains (?m.40 s) (?m.35 s c)\n\nNote: Lean will not try to resolve this typeclass instance problem because the first type argument to `PyContains` contains metavariables. This argument must be fully determined before Lean will try to resolve the typeclass.\n\nHint: Adding type annotations and supplying implicit arguments to functions can give Lean more information for typeclass resolution. For example, if you have a variable `x` that you intend to be a `Nat`, but Lean reports it as having an unresolved type like `?m`, replacing `x` with `(x : Nat)` can get typeclass resolution un-stuck."
+  "detail": "/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/ReverseDelete.lean:29:71: error: typeclass instance problem is stuck\n  PyContains (?m.32 s) PyAny\n\nNote: Lean will not try to resolve this typeclass instance problem because the first type argument to `PyContains` contains metavariables. This argument must be fully determined before Lean will try to resolve the typeclass.\n\nHint: Adding type annotations and supplying implicit arguments to functions can give Lean more information for typeclass resolution. For example, if you have a variable `x` that you intend to be a `Nat`, but Lean reports it as having an unresolved type like `?m`, replacing `x` with `(x : Nat)` can get typeclass resolution un-stuck."
  },
  "RightAngleTriangle": {
   "verdict": "ok",
@@ -541,7 +541,7 @@
  },
  "SortedListSum": {
   "verdict": "compile_fail",
-  "detail": "/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/SortedListSum.lean:38:23: error: typeclass instance problem is stuck\n  PyIterable ?m.28 String\n\nNote: Lean will not try to resolve this typeclass instance problem because the first type argument to `PyIterable` is a metavariable. This argument must be fully determined before Lean will try to resolve the typeclass.\n\nHint: Adding type annotations and supplying implicit arguments to functions can give Lean more information for typeclass resolution. For example, if you have a variable `x` that you intend to be a `Nat`, but Lean reports it as having an unresolved type like `?m`, replacing `x` with `(x : Nat)` can get typeclass resolution un-stuck."
+  "detail": "/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/SortedListSum.lean:37:2: error(lean.synthInstanceFailed): failed to synthesize instance of type class\n  PyIterable (List PyAny) String\n\nHint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command."
  },
  "SpecialFactorial": {
   "verdict": "ok",
@@ -628,8 +628,8 @@
   "detail": ""
  },
  "UniqueDigits": {
-  "verdict": "compile_fail",
-  "detail": "/home/anirudhgupta/PyAstLean/PastaBench/_report_gen/UniqueDigits.lean:40:38: error: typeclass instance problem is stuck\n  PyIterable ?m.13 PyAny\n\nNote: Lean will not try to resolve this typeclass instance problem because the first type argument to `PyIterable` is a metavariable. This argument must be fully determined before Lean will try to resolve the typeclass.\n\nHint: Adding type annotations and supplying implicit arguments to functions can give Lean more information for typeclass resolution. For example, if you have a variable `x` that you intend to be a `Nat`, but Lean reports it as having an unresolved type like `?m`, replacing `x` with `(x : Nat)` can get typeclass resolution un-stuck."
+  "verdict": "ok",
+  "detail": ""
  },
  "ValidDate": {
   "verdict": "ok",
