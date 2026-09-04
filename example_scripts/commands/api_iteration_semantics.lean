@@ -40,8 +40,6 @@ def topo_order_count := fun (n : Int) ↦ fun (edges : List (List Int)) ↦
           indeg := PastaLean.pySetItem indeg j (indeg⦋j⦌ -ₚ (1 : Int))
           if h_1 : indeg⦋j⦌ = (0 : Int) then 
             q := PastaLean.pyAppend q j
-          else
-            let _ := ()
       return seen)
 
 attribute [simp, taste_ingr] topo_order_count
@@ -69,8 +67,6 @@ def topo_order_count'rn := fun (n : Int) ↦ fun (edges : List (List Int)) ↦
           indeg := PastaLean.pySetItem indeg j (indeg⦋j⦌ -ₚ (1 : Int))
           if h_1 : indeg⦋j⦌ == (0 : Int) then 
             q := PastaLean.pyArrayAppend q j
-          else
-            let _ := ()
       return seen)
 
 def count_vowels := fun (s : String) ↦
@@ -114,13 +110,9 @@ def greedy_flips := fun (nums : List Int) ↦
           if h_2 : i +ₚ (2 : Int) ≥ PastaLean.pyLen nums then 
             let p'_ret_1 := -(1 : Int)
             return p'_ret_1
-          else
-            let _ := ()
           nums := PastaLean.pySetItem nums (i +ₚ (1 : Int)) (PastaLean.pyBitXor nums⦋i +ₚ (1 : Int)⦌ (1 : Int))
           nums := PastaLean.pySetItem nums (i +ₚ (2 : Int)) (PastaLean.pyBitXor nums⦋i +ₚ (2 : Int)⦌ (1 : Int))
           ops := ops +ₚ (1 : Int)
-        else
-          let _ := ()
       return ops)
 
 attribute [simp, taste_ingr] greedy_flips
@@ -142,13 +134,9 @@ def greedy_flips'rn := fun (nums : List Int) ↦
           if h_2 : i +ₚ (2 : Int) ≥ PastaLean.pyLen nums then 
             let p'_ret_1 := -(1 : Int)
             return p'_ret_1
-          else
-            let _ := ()
           nums := PastaLean.pySetItem nums (i +ₚ (1 : Int)) (PastaLean.pyBitXor nums⦋i +ₚ (1 : Int)⦌ (1 : Int))
           nums := PastaLean.pySetItem nums (i +ₚ (2 : Int)) (PastaLean.pyBitXor nums⦋i +ₚ (2 : Int)⦌ (1 : Int))
           ops := ops +ₚ (1 : Int)
-        else
-          let _ := ()
       return ops)
 
 def flip_invert := fun (image : List (List Int)) ↦

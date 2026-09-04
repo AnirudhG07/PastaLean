@@ -341,8 +341,6 @@ def untyped_param_compare_and_div := fun (nums : List Int) ↦
         for x in (PastaLean.pyIter nums)do
           if h_1 : x > best then 
             best := x +ₚ x %ₚ (3 : Int)
-          else
-            let _ := ()
         let p'_ret_1 := best /ₚ (2 : Int)
         return p'_ret_1))
 
@@ -358,8 +356,6 @@ def untyped_param_compare_and_div'rn := fun (nums : List Int) ↦
         for x in (PastaLean.pyIter nums)do
           if h_1 : x > best then 
             best := x +ₚ x %ₚ (3 : Int)
-          else
-            let _ := ()
         let p'_ret_1 := PastaLean.pyFloat best /ₚ (2 : Int)
         return p'_ret_1))
 
@@ -400,8 +396,6 @@ def grid_float_dp := fun (m : Int) ↦ fun (n : Int) ↦
             if h_1 : i > (0 : Int) then 
               let p'_setval_2 := f⦋i⦌⦋j⦌ +ₚ f⦋i -ₚ (1 : Int)⦌⦋j⦌ /ₚ (2 : Int)
               f := PastaLean.pyModifyItem f i (fun p'_row_2 => PastaLean.pySetItem p'_row_2 j p'_setval_2)
-            else
-              let _ := ()
         let p'_ret_1 := f⦋m -ₚ (1 : Int)⦌⦋n -ₚ (1 : Int)⦌
         return p'_ret_1))
 
@@ -423,8 +417,6 @@ def grid_float_dp'rn := fun (m : Int) ↦ fun (n : Int) ↦
             if h_1 : i > (0 : Int) then 
               let p'_setval_2 := f⦋i⦌⦋j⦌ +ₚ PastaLean.pyFloat f⦋i -ₚ (1 : Int)⦌⦋j⦌ /ₚ (2 : Int)
               f := PastaLean.pyModifyItem f i (fun p'_row_2 => PastaLean.pySetItem p'_row_2 j p'_setval_2)
-            else
-              let _ := ()
         let p'_ret_1 := f⦋m -ₚ (1 : Int)⦌⦋n -ₚ (1 : Int)⦌
         return p'_ret_1))
 

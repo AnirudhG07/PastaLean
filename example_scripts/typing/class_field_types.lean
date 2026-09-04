@@ -34,7 +34,7 @@ instance : PastaLean.PyTyped UnionFind where pyTypeOf _ := TypeInfer.PyType.cls 
 instance : Coe UnionFind (Option UnionFind) :=
   ⟨some⟩
 
-def UnionFind.new := fun n ↦
+def UnionFind.new : Int → UnionFind := fun (n : Int) ↦
   ({ p := PastaLean.pyList (PastaLean.pyRange n), size := PastaLean.pyListRepeat [(1 : Int)] n, count := n } :
     UnionFind)
 
@@ -46,8 +46,6 @@ partial def UnionFind.find := fun (self : UnionFind) ↦ fun (x : Int) ↦
         let _popval'rb1 := UnionFind.find self self.p⦋x⦌ |>.1
         self := UnionFind.find self self.p⦋x⦌ |>.2
         self := { self with p := PastaLean.pySetItem self.p x _popval'rb1 }
-      else
-        let _ := ()
       let p'_ret_1 := (self.p⦋x⦌, self)
       return p'_ret_1)
 
@@ -62,8 +60,6 @@ def UnionFind.union := fun (self : UnionFind) ↦ fun (a : Int) ↦ fun (b : Int
       if h_1 : ra ≠ rb then 
         self := { self with p := PastaLean.pySetItem self.p ra rb }
         self := { self with count := self.count -ₚ (1 : Int) }
-      else
-        let _ := ()
       return self)
 
 attribute [simp, taste_ingr] UnionFind.union
@@ -81,7 +77,7 @@ instance : PastaLean.PyTyped UnionFind'rn where pyTypeOf _ := TypeInfer.PyType.c
 instance : Coe UnionFind'rn (Option UnionFind'rn) :=
   ⟨some⟩
 
-def UnionFind'rn.new := fun n ↦
+def UnionFind'rn.new : Int → UnionFind'rn := fun (n : Int) ↦
   ({ p := PastaLean.pyList (PastaLean.pyRange n), size := PastaLean.pyListRepeat [(1 : Int)] n, count := n } :
     UnionFind'rn)
 
@@ -93,8 +89,6 @@ partial def UnionFind'rn.find := fun (self : UnionFind'rn) ↦ fun (x : Int) ↦
         let _popval'rb1 := UnionFind'rn.find self self.p⦋x⦌ |>.1
         self := UnionFind'rn.find self self.p⦋x⦌ |>.2
         self := { self with p := PastaLean.pySetItem self.p x _popval'rb1 }
-      else
-        let _ := ()
       let p'_ret_1 := (self.p⦋x⦌, self)
       return p'_ret_1)
 
@@ -109,8 +103,6 @@ def UnionFind'rn.union := fun (self : UnionFind'rn) ↦ fun (a : Int) ↦ fun (b
       if h_1 : ra != rb then 
         self := { self with p := PastaLean.pySetItem self.p ra rb }
         self := { self with count := self.count -ₚ (1 : Int) }
-      else
-        let _ := ()
       return self)
 
 structure Bag where

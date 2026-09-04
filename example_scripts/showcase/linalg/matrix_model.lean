@@ -259,9 +259,7 @@ def main' :=
         if h_1 : step %ₚ every = (0 : Int) then 
           let _ ←
             PastaLean.ProofMode.pyPrintProof
-                [pyPrintArg "S", pyPrintArg step, pyPrintArg x, pyPrintArg y, pyPrintArg detA]
-        else
-          let _ := ()) :
+                [pyPrintArg "S", pyPrintArg step, pyPrintArg x, pyPrintArg y, pyPrintArg detA]) :
     PastaLean.ProofMode.PyProofM _)
 
 attribute [simp] main'
@@ -284,9 +282,7 @@ def main''rn :=
         x := nx
         y := ny
         if h_1 : step %ₚ every == (0 : Int) then 
-          let _ ← pyPrintIO [pyPrintArg "S", pyPrintArg step, pyPrintArg x, pyPrintArg y, pyPrintArg detA]
-        else
-          let _ := ()) :
+          let _ ← pyPrintIO [pyPrintArg "S", pyPrintArg step, pyPrintArg x, pyPrintArg y, pyPrintArg detA]) :
     IO _)
 
 def main : IO Unit := do

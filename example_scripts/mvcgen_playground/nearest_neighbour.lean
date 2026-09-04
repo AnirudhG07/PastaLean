@@ -21,8 +21,6 @@ noncomputable def euclidean_distance := fun (p1 : List Int) ↦ fun (p2 : List I
         throw
             (PastaLean.PyException.Raise "ValueError"
               (ToString.toString "Points must have the same number of dimensions"))
-      else
-        let _ := ()
       -- Past the guard the dimensions must match (provable from the precondition).
       let _ := Libraries.passta.pyPassAssert (PastaLean.pyLen p1 == PastaLean.pyLen p2)
       -- Using zip, a list comprehension, and math.pow
@@ -44,8 +42,6 @@ def euclidean_distance'rn : List Int → List Int → PastaLean.PyExcept Float :
   if h_1 : PastaLean.pyLen p1 != PastaLean.pyLen p2 then 
     throw
         (PastaLean.PyException.Raise "ValueError" (ToString.toString "Points must have the same number of dimensions"))
-  else
-    let _ := ()
   -- Past the guard the dimensions must match (provable from the precondition).
   let _ := Libraries.passta.pyPassAssert (PastaLean.pyLen p1 == PastaLean.pyLen p2)
   -- Using zip, a list comprehension, and math.pow
@@ -78,8 +74,6 @@ noncomputable def find_nearest_neighbor := fun (target : List Int) ↦ fun (data
           if h_1 : d = min_dist then 
             min_index := i
             break
-          else
-            let _ := ()
         let p'_ret_1 := (min_dist, dataset⦋min_index⦌)
         return p'_ret_1
       catch caught =>
@@ -114,8 +108,6 @@ def find_nearest_neighbor'rn : List Int → List (List Int) → PastaLean.PyExce
       if h_1 : d == min_dist then 
         min_index := i
         break
-      else
-        let _ := ()
     let p'_ret_1 := (min_dist, dataset⦋min_index⦌)
     return p'_ret_1
   catch caught =>

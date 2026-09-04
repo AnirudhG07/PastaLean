@@ -45,7 +45,7 @@ instance : PastaLean.PyTyped Counter where pyTypeOf _ := TypeInfer.PyType.cls "C
 instance : Coe Counter (Option Counter) :=
   ⟨some⟩
 
-def Counter.new (start : _ := (0 : Int)) (step : _ := (1 : Int)) : Counter :=
+def Counter.new (start : Int := (0 : Int)) (step : Int := (1 : Int)) : Counter :=
   ({ value := start, step := step } : Counter)
 
 def Counter.bumped (self : Counter) («by» : _ := (1 : Int)) :=
@@ -65,7 +65,7 @@ instance : PastaLean.PyTyped Counter'rn where pyTypeOf _ := TypeInfer.PyType.cls
 instance : Coe Counter'rn (Option Counter'rn) :=
   ⟨some⟩
 
-def Counter'rn.new (start : _ := (0 : Int)) (step : _ := (1 : Int)) : Counter'rn :=
+def Counter'rn.new (start : Int := (0 : Int)) (step : Int := (1 : Int)) : Counter'rn :=
   ({ value := start, step := step } : Counter'rn)
 
 def Counter'rn.bumped (self : Counter'rn) («by» : _ := (1 : Int)) :=
@@ -84,7 +84,7 @@ instance : PastaLean.PyTyped TreeNode where pyTypeOf _ := TypeInfer.PyType.cls "
 instance : Coe TreeNode (Option TreeNode) :=
   ⟨some⟩
 
-def TreeNode.new (val : _ := (0 : Int)) (left : Option TreeNode := Option.none)
+def TreeNode.new (val : Int := (0 : Int)) (left : Option TreeNode := Option.none)
     (right : Option TreeNode := Option.none) : TreeNode :=
   ({ val := val, left := left, right := right } : TreeNode)
 
@@ -101,7 +101,7 @@ instance : PastaLean.PyTyped TreeNode'rn where pyTypeOf _ := TypeInfer.PyType.cl
 instance : Coe TreeNode'rn (Option TreeNode'rn) :=
   ⟨some⟩
 
-def TreeNode'rn.new (val : _ := (0 : Int)) (left : Option TreeNode'rn := Option.none)
+def TreeNode'rn.new (val : Int := (0 : Int)) (left : Option TreeNode'rn := Option.none)
     (right : Option TreeNode'rn := Option.none) : TreeNode'rn :=
   ({ val := val, left := left, right := right } : TreeNode'rn)
 

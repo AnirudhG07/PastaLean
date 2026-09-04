@@ -32,8 +32,6 @@ private partial def _count_components'dfs := fun (i : Int) ↦ fun (adj : List (
       if h_1 : PastaLean.pyContains seen i then 
         let p'_ret_1 := ((0 : Int), seen)
         return p'_ret_1
-      else
-        let _ := ()
       seen := PastaLean.pySetAdd seen i
       for j in (PastaLean.pyIter adj⦋i⦌)do
         let p'_unpack_value_1 := _count_components'dfs j adj seen
@@ -66,8 +64,6 @@ private partial def _count_components'dfs'rn := fun (i : Int) ↦ fun (adj : Lis
       if h_1 : PastaLean.pyContains seen i then 
         let p'_ret_1 := ((0 : Int), seen)
         return p'_ret_1
-      else
-        let _ := ()
       seen := PastaLean.pySetAdd seen i
       for j in (PastaLean.pyIter adj⦋i⦌)do
         let p'_unpack_value_1 := _count_components'dfs'rn j adj seen

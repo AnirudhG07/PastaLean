@@ -55,8 +55,6 @@ def cond_multi := fun (x : Int) ↦
     let mut c : Int := (1 : Int)
     if h_1 : a < b ∧ b > c then 
       x := x +ₚ (1 : Int)
-    else
-      let _ := ()
 
 attribute [simp, taste_ingr] cond_multi
 
@@ -68,8 +66,6 @@ def cond_multi'rn := fun (x : Int) ↦
     let mut c : Int := (1 : Int)
     if h_1 : decide (a < b) && decide (b > c) then 
       x := x +ₚ (1 : Int)
-    else
-      let _ := ()
 
 def cond_none := fun (x : PyAny) ↦
   Id.run
@@ -77,21 +73,13 @@ def cond_none := fun (x : PyAny) ↦
       let mut s : String := ""
       if h_1 : PastaLean.pyIsNone x then 
         s := "x is None"
-      else
-        let _ := ()
       let mut y : Int := (10 : Int)
       if h_2 : !PastaLean.pyIsNone y then 
         s := s +ₚ "y is not None"
-      else
-        let _ := ()
       if h_3 : true ∧ true then 
         s := s +ₚ "None is None"
-      else
-        let _ := ()
       if h_4 : false ∨ false then 
         s := s +ₚ "None is not None"
-      else
-        let _ := ()
       return s)
 
 attribute [simp, taste_ingr] cond_none
@@ -102,21 +90,13 @@ def cond_none'rn := fun (x : PyAny) ↦
       let mut s : String := ""
       if h_1 : PastaLean.pyIsNone x then 
         s := "x is None"
-      else
-        let _ := ()
       let mut y : Int := (10 : Int)
       if h_2 : !PastaLean.pyIsNone y then 
         s := s +ₚ "y is not None"
-      else
-        let _ := ()
       if h_3 : true && true then 
         s := s +ₚ "None is None"
-      else
-        let _ := ()
       if h_4 : false || false then 
         s := s +ₚ "None is not None"
-      else
-        let _ := ()
       return s)
 
 def value_or_default := fun (xs : List PyAny) ↦

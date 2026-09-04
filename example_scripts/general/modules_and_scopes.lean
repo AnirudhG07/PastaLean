@@ -28,8 +28,6 @@ def pass_func :=
   Id.run do
     if h_1 : Bool.true then 
       let _ := ()
-    else
-      let _ := ()
     let mut x : Int := (1 : Int)
     x := x +ₚ (1 : Int)
     let _ := ()
@@ -39,8 +37,6 @@ attribute [simp, taste_ingr] pass_func
 def pass_func'rn :=
   Id.run do
     if h_1 : Bool.true then 
-      let _ := ()
-    else
       let _ := ()
     let mut x : Int := (1 : Int)
     x := x +ₚ (1 : Int)

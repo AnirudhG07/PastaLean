@@ -16,8 +16,6 @@ namespace PastaLean.User.Root
 def fail : Int → PastaLean.ProofMode.PyProofM String := fun (x : Int) ↦ do
   if h_1 : x < (0 : Int) then 
     throw (PastaLean.PyException.Raise "ValueError" (ToString.toString "negative"))
-  else
-    let _ := ()
   let p'_ret_1 := s! "value {x}"
   return p'_ret_1
 
@@ -26,8 +24,6 @@ attribute [simp] fail
 def fail'rn : Int → PastaLean.PyExcept String := fun (x : Int) ↦ do
   if h_1 : x < (0 : Int) then 
     throw (PastaLean.PyException.Raise "ValueError" (ToString.toString "negative"))
-  else
-    let _ := ()
   let p'_ret_1 := s! "value {x}"
   return p'_ret_1
 
@@ -276,8 +272,6 @@ def catch_loop := fun num ↦
           else
             if h_2 : i = (5 : Int) then 
               throw (PastaLean.PyException.Raise "ZeroDivisionError" (ToString.toString "i cannot be 5"))
-            else
-              let _ := ()
         catch caught =>
           if (caught).OfKind == "ValueError" then 
             let e := caught
@@ -301,8 +295,6 @@ def catch_loop'rn := fun num ↦
           else
             if h_2 : i == (5 : Int) then 
               throw (PastaLean.PyException.Raise "ZeroDivisionError" (ToString.toString "i cannot be 5"))
-            else
-              let _ := ()
         catch caught =>
           if (caught).OfKind == "ValueError" then 
             let e := caught

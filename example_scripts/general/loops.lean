@@ -88,15 +88,11 @@ def breakable_loop := fun (n : Int) ↦
       for i in (PastaLean.pyRange n)do
         if h_1 : i = (5 : Int) then 
           break
-        else
-          let _ := ()
         total := total +ₚ i
       let mut j : Int := (0 : Int)
       while (j < n) do
         if h_1 : j ≤ (3 : Int) then 
           continue
-        else
-          let _ := ()
         total := total +ₚ j
         j := j +ₚ (1 : Int)
       return total)
@@ -110,15 +106,11 @@ def breakable_loop'rn := fun (n : Int) ↦
       for i in (PastaLean.pyRange n)do
         if h_1 : i == (5 : Int) then 
           break
-        else
-          let _ := ()
         total := total +ₚ i
       let mut j : Int := (0 : Int)
       while (j < n) do
         if h_1 : j ≤ (3 : Int) then 
           continue
-        else
-          let _ := ()
         total := total +ₚ j
         j := j +ₚ (1 : Int)
       return total)

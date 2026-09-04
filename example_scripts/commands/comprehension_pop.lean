@@ -51,8 +51,6 @@ def drain_if := fun (buckets : Std.HashMap Int (List Int)) ↦ fun (ks : List In
           let mut p'_popv_5 := PastaLean.pyPopValue (PastaLean.pyGetItem buckets k)
           buckets := PastaLean.pySetItem buckets k (PastaLean.pyPopRest (PastaLean.pyGetItem buckets k))
           p'_comp_2 := PastaLean.pyAppend p'_comp_2 p'_popv_5
-        else
-          let _ := ()
       return p'_comp_2)
 
 attribute [simp, taste_ingr] drain_if
@@ -67,8 +65,6 @@ def drain_if'rn := fun (buckets : Std.HashMap Int (List Int)) ↦ fun (ks : List
           let mut p'_popv_5 := PastaLean.pyPopValue (PastaLean.pyGetItem buckets k)
           buckets := PastaLean.pySetItem buckets k (PastaLean.pyPopRest (PastaLean.pyGetItem buckets k))
           p'_comp_2 := PastaLean.pyAppend p'_comp_2 p'_popv_5
-        else
-          let _ := ()
       return p'_comp_2)
 
 def join_pops := fun (groups : Std.HashMap Int (List String)) ↦

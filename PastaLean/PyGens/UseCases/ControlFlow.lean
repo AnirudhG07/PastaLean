@@ -845,11 +845,10 @@ def ifSyntax : (kind : SyntaxNodeKind) → Json →
           pure arr
         let ifStx ←
           if orelseStxArray.isEmpty then
-            let noop ← noopDoElemSyntax
+            -- No `else`: omit it entirely rather than a `let _ := ()` placeholder, which is an invalid
+            -- do-sequence terminator (`if h : c then body` in `do` has an implicit `else pure ()`).
             `(doElem| if $hName : $testStx then
                 $[$bodyStxArray:doElem]*
-              else
-                $noop:doElem
             )
           else
             `(doElem| if $hName : $testStx then

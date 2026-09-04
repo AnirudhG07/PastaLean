@@ -113,8 +113,6 @@ noncomputable def main' :=
           let _ ←
             PastaLean.ProofMode.pyPrintProof
                 [pyPrintArg s!"epoch {(epoch +ₚ (1 : Int))}: loss = {mean_squared_error xs ys w1 b1 w2 b2}"]
-        else
-          let _ := ()
       let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg "learned predictions:"]
       for i in (PastaLean.pyRange (PastaLean.pyLen xs))do
         let mut p := predict xs⦋i⦌ w1 b1 w2 b2
@@ -174,8 +172,6 @@ def main''rn :=
         if h_1 : (epoch +ₚ (1 : Int)) %ₚ (1000 : Int) == (0 : Int) then 
           let _ ←
             pyPrintIO [pyPrintArg s!"epoch {(epoch +ₚ (1 : Int))}: loss = {mean_squared_error'rn xs ys w1 b1 w2 b2}"]
-        else
-          let _ := ()
       let _ ← pyPrintIO [pyPrintArg "learned predictions:"]
       for i in (PastaLean.pyRange (PastaLean.pyLen xs))do
         let mut p := predict'rn xs⦋i⦌ w1 b1 w2 b2

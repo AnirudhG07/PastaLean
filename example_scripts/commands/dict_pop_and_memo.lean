@@ -53,8 +53,6 @@ def counter_pop_demo := fun (s : String) ↦
           let mut p'_popv_1 := PastaLean.pyDictKeyPopValue c ch
           c := PastaLean.pyDictKeyPopRest c ch
           removed := removed +ₚ p'_popv_1
-        else
-          let _ := ()
       let p'_ret_1 := removed +ₚ PastaLean.pyLen c
       return p'_ret_1)
 
@@ -70,8 +68,6 @@ def counter_pop_demo'rn := fun (s : String) ↦
           let mut p'_popv_1 := PastaLean.pyDictKeyPopValue c ch
           c := PastaLean.pyDictKeyPopRest c ch
           removed := removed +ₚ p'_popv_1
-        else
-          let _ := ()
       let p'_ret_1 := removed +ₚ PastaLean.pyLen c
       return p'_ret_1)
 
@@ -83,8 +79,6 @@ partial def collatz_steps : Int → Int := fun (x : Int) ↦
       let mut x := x
       if h_1 : x = (1 : Int) then 
         return (0 : Int)
-      else
-        let _ := ()
       if h_2 : x %ₚ (2 : Int) = (0 : Int) then 
         x := PastaLean.pyFloorDiv x (2 : Int)
       else
@@ -102,8 +96,6 @@ partial def collatz_steps'memo'rn : Int → StateM (Std.HashMap Int Int) Int := 
             let mut x := x
             if h_1 : x == (1 : Int) then 
               return (0 : Int)
-            else
-              let _ := ()
             if h_2 : x %ₚ (2 : Int) == (0 : Int) then 
               x := PastaLean.pyFloorDiv x (2 : Int)
             else

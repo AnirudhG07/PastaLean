@@ -26,8 +26,6 @@ def count_interesting := fun (nums : List Int) ↦ fun (m : Int) ↦ fun (k : In
       for i in (PastaLean.pyRange n)do
         if h_1 : nums⦋i⦌ %ₚ m = k then 
           a := PastaLean.pySetItem a (i +ₚ (1 : Int)) (1 : Int)
-        else
-          let _ := ()
       for i in (PastaLean.pyRange (n +ₚ (1 : Int)) (1 : Int))do
         a := PastaLean.pySetItem a i (a⦋i⦌ +ₚ a⦋i -ₚ (1 : Int)⦌)
       let mut cnt : Libraries.collections.PyDefaultDict Int Int := Libraries.collections.PyDefaultDict.empty (0 : Int)
@@ -50,8 +48,6 @@ def count_interesting'rn := fun (nums : List Int) ↦ fun (m : Int) ↦ fun (k :
       for i in (PastaLean.pyRange n)do
         if h_1 : nums⦋i⦌ %ₚ m == k then 
           a := PastaLean.pySetItem a (i +ₚ (1 : Int)) (1 : Int)
-        else
-          let _ := ()
       for i in (PastaLean.pyRange (n +ₚ (1 : Int)) (1 : Int))do
         a := PastaLean.pySetItem a i (a⦋i⦌ +ₚ a⦋i -ₚ (1 : Int)⦌)
       let mut cnt : Libraries.collections.PyDefaultDict Int Int := Libraries.collections.PyDefaultDict.empty (0 : Int)

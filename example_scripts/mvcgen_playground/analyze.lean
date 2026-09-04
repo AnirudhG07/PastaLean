@@ -24,8 +24,6 @@ noncomputable def analyze := fun (xs : List Int) ↦ fun (threshold : Int) ↦
       total := total +ₚ x
       if h_1 : x > threshold then 
         count := count +ₚ (1 : Int)
-      else
-        let _ := ()
     let mut ss : Int := (0 : Int)
     for x in (PastaLean.pyIter xs)do
       let _ := Libraries.passta.pyPassInvariant (decide (ss ≥ (0 : Int)))
@@ -68,8 +66,6 @@ def analyze'rn : List Int → Int → PastaLean.PyExcept Float := fun (xs : List
     total := total +ₚ x
     if h_1 : x > threshold then 
       count := count +ₚ (1 : Int)
-    else
-      let _ := ()
   -- Loop 2: sum of squares (uses exponentiation).
   let mut ss : Int := (0 : Int)
   for x in (PastaLean.pyIter xs)do

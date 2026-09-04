@@ -34,8 +34,6 @@ private partial def _count_components'dfs := fun (i : Int) ↦ fun (adj : List (
           let mut b : Int := Prod.snd p'_unpack_nested_1
           nodes := nodes +ₚ a
           edges := edges +ₚ b
-        else
-          let _ := ()
       let p'_ret_1 := ((nodes, edges), vis)
       return p'_ret_1)
 
@@ -54,10 +52,6 @@ def count_components := fun (n : Int) ↦ fun (adj : List (List Int)) ↦
           let mut e : Int := Prod.snd p'_unpack_nested_1
           if h_2 : e = v *ₚ (v -ₚ (1 : Int)) then 
             complete := complete +ₚ (1 : Int)
-          else
-            let _ := ()
-        else
-          let _ := ()
       return complete)
 
 attribute [simp, taste_ingr] count_components
@@ -79,8 +73,6 @@ private partial def _count_components'dfs'rn := fun (i : Int) ↦ fun (adj : Lis
           let mut b : Int := Prod.snd p'_unpack_nested_1
           nodes := nodes +ₚ a
           edges := edges +ₚ b
-        else
-          let _ := ()
       let p'_ret_1 := ((nodes, edges), vis)
       return p'_ret_1)
 
@@ -99,10 +91,6 @@ def count_components'rn := fun (n : Int) ↦ fun (adj : List (List Int)) ↦
           let mut e : Int := Prod.snd p'_unpack_nested_1
           if h_2 : e == v *ₚ (v -ₚ (1 : Int)) then 
             complete := complete +ₚ (1 : Int)
-          else
-            let _ := ()
-        else
-          let _ := ()
       return complete)
 
 def main' :=

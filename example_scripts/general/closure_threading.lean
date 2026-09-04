@@ -28,8 +28,6 @@ private partial def _count_components'find := fun (x : Int) ↦ fun (p : List In
         let p'_unpack_pair_1 := p'_unpack_value_1
         p := Prod.snd p'_unpack_pair_1
         p := PastaLean.pySetItem p x (Prod.fst p'_unpack_pair_1)
-      else
-        let _ := ()
       let p'_ret_1 := (p⦋x⦌, p)
       return p'_ret_1)
 
@@ -40,15 +38,13 @@ private def _count_components'union := fun (a : Int) ↦ fun (b : Int) ↦ fun (
       let p'_unpack_value_1 := _count_components'find a p
       let p'_unpack_pair_1 := p'_unpack_value_1
       p := Prod.snd p'_unpack_pair_1
-      let mut pa := Prod.fst p'_unpack_pair_1
+      let mut pa : Int := Prod.fst p'_unpack_pair_1
       let p'_unpack_value_2 := _count_components'find b p
       let p'_unpack_pair_2 := p'_unpack_value_2
       p := Prod.snd p'_unpack_pair_2
-      let mut pb := Prod.fst p'_unpack_pair_2
+      let mut pb : Int := Prod.fst p'_unpack_pair_2
       if h_1 : pa ≠ pb then 
         p := PastaLean.pySetItem p pa pb
-      else
-        let _ := ()
       return p)
 
 attribute [simp, taste_ingr] _count_components'union
@@ -83,8 +79,6 @@ private partial def _count_components'find'rn := fun (x : Int) ↦ fun (p : List
         let p'_unpack_pair_1 := p'_unpack_value_1
         p := Prod.snd p'_unpack_pair_1
         p := PastaLean.pySetItem p x (Prod.fst p'_unpack_pair_1)
-      else
-        let _ := ()
       let p'_ret_1 := (p⦋x⦌, p)
       return p'_ret_1)
 
@@ -95,15 +89,13 @@ private def _count_components'union'rn := fun (a : Int) ↦ fun (b : Int) ↦ fu
       let p'_unpack_value_1 := _count_components'find'rn a p
       let p'_unpack_pair_1 := p'_unpack_value_1
       p := Prod.snd p'_unpack_pair_1
-      let mut pa := Prod.fst p'_unpack_pair_1
+      let mut pa : Int := Prod.fst p'_unpack_pair_1
       let p'_unpack_value_2 := _count_components'find'rn b p
       let p'_unpack_pair_2 := p'_unpack_value_2
       p := Prod.snd p'_unpack_pair_2
-      let mut pb := Prod.fst p'_unpack_pair_2
+      let mut pb : Int := Prod.fst p'_unpack_pair_2
       if h_1 : pa != pb then 
         p := PastaLean.pySetItem p pa pb
-      else
-        let _ := ()
       return p)
 
 def count_components'rn := fun (n : Int) ↦ fun (edges : List (List Int)) ↦
@@ -136,8 +128,6 @@ private partial def _connect_until_joined'find := fun (x : Int) ↦ fun (p : Lis
         let p'_unpack_pair_1 := p'_unpack_value_1
         p := Prod.snd p'_unpack_pair_1
         p := PastaLean.pySetItem p x (Prod.fst p'_unpack_pair_1)
-      else
-        let _ := ()
       let p'_ret_1 := (p⦋x⦌, p)
       return p'_ret_1)
 
@@ -158,8 +148,6 @@ def connect_until_joined := fun (n : Int) ↦ fun (edges : List (List Int)) ↦
         p := Prod.snd p'_unpack_pair_2
         if h_1 : ¬(p'_thread_t1 ≠ p'_thread_t2 ∧ i < PastaLean.pyLen edges) then 
           break
-        else
-          let _ := ()
         let p'_unpack_value_3 := edges⦋i⦌
         let p'_unpack_pair_3 := p'_unpack_value_3
         let mut a : Int := PastaLean.pyListGetItem p'_unpack_pair_3 (0 : Int)
@@ -187,8 +175,6 @@ private partial def _connect_until_joined'find'rn := fun (x : Int) ↦ fun (p : 
         let p'_unpack_pair_1 := p'_unpack_value_1
         p := Prod.snd p'_unpack_pair_1
         p := PastaLean.pySetItem p x (Prod.fst p'_unpack_pair_1)
-      else
-        let _ := ()
       let p'_ret_1 := (p⦋x⦌, p)
       return p'_ret_1)
 
@@ -209,8 +195,6 @@ def connect_until_joined'rn := fun (n : Int) ↦ fun (edges : List (List Int)) �
         p := Prod.snd p'_unpack_pair_2
         if h_1 : !(p'_thread_t1 != p'_thread_t2 && decide (i < PastaLean.pyLen edges)) then 
           break
-        else
-          let _ := ()
         let p'_unpack_value_3 := edges⦋i⦌
         let p'_unpack_pair_3 := p'_unpack_value_3
         let mut a : Int := PastaLean.pyListGetItem p'_unpack_pair_3 (0 : Int)
@@ -236,8 +220,6 @@ private def _k_smallest_after_pushes'push := fun (pq : List Int) ↦ fun (x : In
       pq := Libraries.heapq.pyHeappush pq (-x)
       if h_1 : PastaLean.pyLen pq > k then 
         pq := Libraries.heapq.pyHeappopRest pq
-      else
-        let _ := ()
       return pq)
 
 attribute [simp, taste_ingr] _k_smallest_after_pushes'push
@@ -260,8 +242,6 @@ private def _k_smallest_after_pushes'push'rn := fun (pq : List Int) ↦ fun (x :
       pq := Libraries.heapq.pyHeappush pq (-x)
       if h_1 : PastaLean.pyLen pq > k then 
         pq := Libraries.heapq.pyHeappopRest pq
-      else
-        let _ := ()
       return pq)
 
 def k_smallest_after_pushes'rn := fun (nums : List Int) ↦ fun (k : Int) ↦
@@ -295,8 +275,6 @@ def selection_sort := fun (arr : List Int) ↦
         for j in (PastaLean.pyRange (PastaLean.pyLen arr) (i +ₚ (1 : Int)))do
           if h_1 : arr⦋j⦌ < arr⦋m⦌ then 
             m := j
-          else
-            let _ := ()
         arr := _selection_sort'swap arr i m
       return arr)
 
@@ -321,8 +299,6 @@ def selection_sort'rn := fun (arr : List Int) ↦
         for j in (PastaLean.pyRange (PastaLean.pyLen arr) (i +ₚ (1 : Int)))do
           if h_1 : arr⦋j⦌ < arr⦋m⦌ then 
             m := j
-          else
-            let _ := ()
         arr := _selection_sort'swap'rn arr i m
       return arr)
 
@@ -339,8 +315,6 @@ private partial def _is_bipartite'dfs := fun (i : Int) ↦ fun (c : Int) ↦ fun
         if h_1 : color⦋j⦌ = c then 
           let p'_ret_1 := (Bool.false, color)
           return p'_ret_1
-        else
-          let _ := ()
         let p'_unpack_value_1 := _is_bipartite'dfs j (-c) graph color
         let p'_unpack_pair_1 := p'_unpack_value_1
         let mut p'_thread_t1 := Prod.fst p'_unpack_pair_1
@@ -348,8 +322,6 @@ private partial def _is_bipartite'dfs := fun (i : Int) ↦ fun (c : Int) ↦ fun
         if h_2 : color⦋j⦌ = (0 : Int) ∧ ¬PastaLean.pyTruthy p'_thread_t1 = true then 
           let p'_ret_1 := (Bool.false, color)
           return p'_ret_1
-        else
-          let _ := ()
       let p'_ret_1 := (Bool.true, color)
       return p'_ret_1)
 
@@ -382,8 +354,6 @@ private partial def _is_bipartite'dfs'rn := fun (i : Int) ↦ fun (c : Int) ↦ 
         if h_1 : color⦋j⦌ == c then 
           let p'_ret_1 := (Bool.false, color)
           return p'_ret_1
-        else
-          let _ := ()
         let p'_unpack_value_1 := _is_bipartite'dfs'rn j (-c) graph color
         let p'_unpack_pair_1 := p'_unpack_value_1
         let mut p'_thread_t1 := Prod.fst p'_unpack_pair_1
@@ -391,8 +361,6 @@ private partial def _is_bipartite'dfs'rn := fun (i : Int) ↦ fun (c : Int) ↦ 
         if h_2 : color⦋j⦌ == (0 : Int) && !PastaLean.pyTruthy p'_thread_t1 then 
           let p'_ret_1 := (Bool.false, color)
           return p'_ret_1
-        else
-          let _ := ()
       let p'_ret_1 := (Bool.true, color)
       return p'_ret_1)
 
@@ -427,8 +395,6 @@ private def _any_valid_pair'outer := fun (i : Int) ↦ fun (s : String) ↦ fun 
       for j in (PastaLean.pyRange n)do
         if h_1 : PastaLean.pyTruthy (_any_valid_pair'check i j s n) then 
           total := total +ₚ (1 : Int)
-        else
-          let _ := ()
       return total)
 
 attribute [simp, taste_ingr] _any_valid_pair'outer
@@ -451,8 +417,6 @@ private def _any_valid_pair'outer'rn := fun (i : Int) ↦ fun (s : String) ↦ f
       for j in (PastaLean.pyRange n)do
         if h_1 : PastaLean.pyTruthy (_any_valid_pair'check'rn i j s n) then 
           total := total +ₚ (1 : Int)
-        else
-          let _ := ()
       return total)
 
 def any_valid_pair'rn := fun (s : String) ↦
@@ -470,8 +434,6 @@ private partial def _sort_then_union'find := fun (x : Int) ↦ fun (p : List Int
         let p'_unpack_pair_1 := p'_unpack_value_1
         p := Prod.snd p'_unpack_pair_1
         p := PastaLean.pySetItem p x (Prod.fst p'_unpack_pair_1)
-      else
-        let _ := ()
       let p'_ret_1 := (p⦋x⦌, p)
       return p'_ret_1)
 
@@ -513,8 +475,6 @@ private partial def _sort_then_union'find'rn := fun (x : Int) ↦ fun (p : List 
         let p'_unpack_pair_1 := p'_unpack_value_1
         p := Prod.snd p'_unpack_pair_1
         p := PastaLean.pySetItem p x (Prod.fst p'_unpack_pair_1)
-      else
-        let _ := ()
       let p'_ret_1 := (p⦋x⦌, p)
       return p'_ret_1)
 
@@ -555,13 +515,9 @@ private partial def _has_any_cycle'hasCycle := fun (u : Int) ↦ fun (graph : Li
       if h_1 : state⦋u⦌ = (1 : Int) then 
         let p'_ret_1 := (Bool.true, state)
         return p'_ret_1
-      else
-        let _ := ()
       if h_2 : state⦋u⦌ = (2 : Int) then 
         let p'_ret_1 := (Bool.false, state)
         return p'_ret_1
-      else
-        let _ := ()
       state := PastaLean.pySetItem state u (1 : Int)
       let mut p'_cc1 := []
       for v in (PastaLean.pyIter graph⦋u⦌)do
@@ -574,8 +530,6 @@ private partial def _has_any_cycle'hasCycle := fun (u : Int) ↦ fun (graph : Li
       if h_3 : PastaLean.pyTruthy p'_cv1 then 
         let p'_ret_1 := (Bool.true, state)
         return p'_ret_1
-      else
-        let _ := ()
       state := PastaLean.pySetItem state u (2 : Int)
       let p'_ret_1 := (Bool.false, state)
       return p'_ret_1)
@@ -592,8 +546,6 @@ def has_any_cycle := fun (n : Int) ↦ fun (graph : List (List Int)) ↦
           let mut p'_thread_t4 := Prod.fst p'_unpack_pair_1
           state := Prod.snd p'_unpack_pair_1
           p'_cc3 := PastaLean.pyAppend p'_cc3 p'_thread_t4
-        else
-          let _ := ()
       let p'_ret_1 := PastaLean.pyStdAny p'_cc3
       return p'_ret_1)
 
@@ -607,13 +559,9 @@ private partial def _has_any_cycle'hasCycle'rn := fun (u : Int) ↦ fun (graph :
       if h_1 : state⦋u⦌ == (1 : Int) then 
         let p'_ret_1 := (Bool.true, state)
         return p'_ret_1
-      else
-        let _ := ()
       if h_2 : state⦋u⦌ == (2 : Int) then 
         let p'_ret_1 := (Bool.false, state)
         return p'_ret_1
-      else
-        let _ := ()
       state := PastaLean.pySetItem state u (1 : Int)
       let mut p'_cc1 := []
       for v in (PastaLean.pyIter graph⦋u⦌)do
@@ -626,8 +574,6 @@ private partial def _has_any_cycle'hasCycle'rn := fun (u : Int) ↦ fun (graph :
       if h_3 : PastaLean.pyTruthy p'_cv1 then 
         let p'_ret_1 := (Bool.true, state)
         return p'_ret_1
-      else
-        let _ := ()
       state := PastaLean.pySetItem state u (2 : Int)
       let p'_ret_1 := (Bool.false, state)
       return p'_ret_1)
@@ -644,8 +590,6 @@ def has_any_cycle'rn := fun (n : Int) ↦ fun (graph : List (List Int)) ↦
           let mut p'_thread_t4 := Prod.fst p'_unpack_pair_1
           state := Prod.snd p'_unpack_pair_1
           p'_cc3 := PastaLean.pyAppend p'_cc3 p'_thread_t4
-        else
-          let _ := ()
       let p'_ret_1 := PastaLean.pyStdAny p'_cc3
       return p'_ret_1)
 
@@ -680,8 +624,6 @@ private partial def _query_connected'find := fun (x : Int) ↦ fun (p : List Int
         let p'_unpack_pair_1 := p'_unpack_value_1
         p := Prod.snd p'_unpack_pair_1
         p := PastaLean.pySetItem p x (Prod.fst p'_unpack_pair_1)
-      else
-        let _ := ()
       let p'_ret_1 := (p⦋x⦌, p)
       return p'_ret_1)
 
@@ -716,8 +658,6 @@ def query_connected := fun (n : Int) ↦ fun (edges : List (List Int)) ↦ fun (
           let mut p'_thread_t4 := Prod.fst p'_unpack_pair_2
           p := Prod.snd p'_unpack_pair_2
           p'_cc2cond := p'_thread_t3 != p'_thread_t4
-        else
-          let _ := ()
         p'_cc2 := PastaLean.pyAppend p'_cc2 (if PastaLean.pyTruthy p'_cc2cond then (0 : Int) else (1 : Int))
       return p'_cc2)
 
@@ -732,8 +672,6 @@ private partial def _query_connected'find'rn := fun (x : Int) ↦ fun (p : List 
         let p'_unpack_pair_1 := p'_unpack_value_1
         p := Prod.snd p'_unpack_pair_1
         p := PastaLean.pySetItem p x (Prod.fst p'_unpack_pair_1)
-      else
-        let _ := ()
       let p'_ret_1 := (p⦋x⦌, p)
       return p'_ret_1)
 
@@ -768,8 +706,6 @@ def query_connected'rn := fun (n : Int) ↦ fun (edges : List (List Int)) ↦ fu
           let mut p'_thread_t4 := Prod.fst p'_unpack_pair_2
           p := Prod.snd p'_unpack_pair_2
           p'_cc2cond := p'_thread_t3 != p'_thread_t4
-        else
-          let _ := ()
         p'_cc2 := PastaLean.pyAppend p'_cc2 (if PastaLean.pyTruthy p'_cc2cond then (0 : Int) else (1 : Int))
       return p'_cc2)
 

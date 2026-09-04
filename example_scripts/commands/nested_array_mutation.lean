@@ -27,13 +27,9 @@ def grid_dp := fun (n : Int) ↦ fun (m : Int) ↦
           if h_1 : i > (0 : Int) then 
             let p'_setval_2 := f⦋i⦌⦋j⦌ +ₚ f⦋i -ₚ (1 : Int)⦌⦋j⦌
             f := PastaLean.pyModifyItem f i (fun p'_row_2 => PastaLean.pySetItem p'_row_2 j p'_setval_2)
-          else
-            let _ := ()
           if h_2 : j > (0 : Int) then 
             let p'_setval_2 := f⦋i⦌⦋j⦌ +ₚ f⦋i⦌⦋j -ₚ (1 : Int)⦌
             f := PastaLean.pyModifyItem f i (fun p'_row_2 => PastaLean.pySetItem p'_row_2 j p'_setval_2)
-          else
-            let _ := ()
       let p'_ret_1 := f⦋n⦌⦋m⦌
       return p'_ret_1)
 
@@ -52,13 +48,9 @@ def grid_dp'rn := fun (n : Int) ↦ fun (m : Int) ↦
           if h_1 : i > (0 : Int) then 
             let p'_setval_2 := f⦋i⦌⦋j⦌ +ₚ f⦋i -ₚ (1 : Int)⦌⦋j⦌
             f := PastaLean.pyModifyItem f i (fun p'_row_2 => PastaLean.pySetItem p'_row_2 j p'_setval_2)
-          else
-            let _ := ()
           if h_2 : j > (0 : Int) then 
             let p'_setval_2 := f⦋i⦌⦋j⦌ +ₚ f⦋i⦌⦋j -ₚ (1 : Int)⦌
             f := PastaLean.pyModifyItem f i (fun p'_row_2 => PastaLean.pySetItem p'_row_2 j p'_setval_2)
-          else
-            let _ := ()
       let p'_ret_1 := f⦋n⦌⦋m⦌
       return p'_ret_1)
 
@@ -125,8 +117,6 @@ def coin_change := fun (coins : List Int) ↦ fun (amount : Int) ↦
           if h_1 : j ≥ x then 
             let p'_setval_3 := PastaLean.pyMin [f⦋i⦌⦋j⦌, f⦋i⦌⦋j -ₚ x⦌ +ₚ (1 : Int)]
             f := PastaLean.pyModifyItem f i (fun p'_row_3 => PastaLean.pySetItem p'_row_3 j p'_setval_3)
-          else
-            let _ := ()
       let p'_ret_1 := if f⦋m⦌⦋n⦌ ≥ inf then -(1 : Int) else f⦋m⦌⦋n⦌
       return p'_ret_1)
 
@@ -152,8 +142,6 @@ def coin_change'rn := fun (coins : List Int) ↦ fun (amount : Int) ↦
           if h_1 : j ≥ x then 
             let p'_setval_3 := PastaLean.pyMin [f⦋i⦌⦋j⦌, f⦋i⦌⦋j -ₚ x⦌ +ₚ (1 : Int)]
             f := PastaLean.pyModifyItem f i (fun p'_row_3 => PastaLean.pySetItem p'_row_3 j p'_setval_3)
-          else
-            let _ := ()
       let p'_ret_1 := if f⦋m⦌⦋n⦌ ≥ inf then -(1 : Int) else f⦋m⦌⦋n⦌
       return p'_ret_1)
 

@@ -210,10 +210,6 @@ noncomputable def main' :=
           if h_2 : dose_num < ndoses then 
             depot := depot +ₚ dose
             dose_num := dose_num +ₚ (1 : Int)
-          else
-            let _ := ()
-        else
-          let _ := ()
         -- One forward-Euler step using the rate functions.
         let mut d_depot := depot_rate ka depot
         let mut d_central := central_rate ka ke k12 k21 depot central periph
@@ -226,9 +222,8 @@ noncomputable def main' :=
           let _ ←
             PastaLean.ProofMode.pyPrintProof
                 [pyPrintArg "S", pyPrintArg step, pyPrintArg t, pyPrintArg (concentration central vol),
-                  pyPrintArg (concentration periph vol), pyPrintArg depot, pyPrintArg (body_load depot central periph)]
-        else
-          let _ := ()) :
+                  pyPrintArg (concentration periph vol), pyPrintArg depot,
+                  pyPrintArg (body_load depot central periph)]) :
     PastaLean.ProofMode.PyProofM _)
 
 attribute [simp] main'
@@ -257,10 +252,6 @@ def main''rn :=
           if h_2 : dose_num < ndoses then 
             depot := depot +ₚ dose
             dose_num := dose_num +ₚ (1 : Int)
-          else
-            let _ := ()
-        else
-          let _ := ()
         -- One forward-Euler step using the rate functions.
         let mut d_depot := depot_rate'rn ka depot
         let mut d_central := central_rate'rn ka ke k12 k21 depot central periph
@@ -274,9 +265,7 @@ def main''rn :=
             pyPrintIO
                 [pyPrintArg "S", pyPrintArg step, pyPrintArg t, pyPrintArg (concentration'rn central vol),
                   pyPrintArg (concentration'rn periph vol), pyPrintArg depot,
-                  pyPrintArg (body_load'rn depot central periph)]
-        else
-          let _ := ()) :
+                  pyPrintArg (body_load'rn depot central periph)]) :
     IO _)
 
 noncomputable def main : IO Unit := do

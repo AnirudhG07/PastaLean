@@ -32,8 +32,6 @@ def count_pairs := fun (coordinates : List (List Int)) ↦ fun (k : Int) ↦
           tmp := PastaLean.pySetItem tmp (x, y) (tmp⦋(x, y)⦌ -ₚ (1 : Int))
           if h_1 : PastaLean.pyContains tmp (PastaLean.pyBitXor a x, PastaLean.pyBitXor b y) then 
             res := res +ₚ tmp⦋(PastaLean.pyBitXor a x, PastaLean.pyBitXor b y)⦌
-          else
-            let _ := ()
       return res)
 
 attribute [simp, taste_ingr] count_pairs
@@ -57,8 +55,6 @@ def count_pairs'rn := fun (coordinates : List (List Int)) ↦ fun (k : Int) ↦
           tmp := PastaLean.pySetItem tmp (x, y) (tmp⦋(x, y)⦌ -ₚ (1 : Int))
           if h_1 : PastaLean.pyContains tmp (PastaLean.pyBitXor a x, PastaLean.pyBitXor b y) then 
             res := res +ₚ tmp⦋(PastaLean.pyBitXor a x, PastaLean.pyBitXor b y)⦌
-          else
-            let _ := ()
       return res)
 
 def main' :=

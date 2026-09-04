@@ -25,10 +25,6 @@ def scan := fun (d : Std.HashMap PyAny Int) ↦ fun (xs : List PyAny) ↦
           let mut k : Int := d⦋t⦌
           if h_2 : k < (100 : Int) then 
             total := total +ₚ k
-          else
-            let _ := ()
-        else
-          let _ := ()
       return total)
 
 attribute [simp, taste_ingr] scan
@@ -42,10 +38,6 @@ def scan'rn := fun (d : Std.HashMap PyAny Int) ↦ fun (xs : List PyAny) ↦
           let mut k : Int := d⦋t⦌
           if h_2 : k < (100 : Int) then 
             total := total +ₚ k
-          else
-            let _ := ()
-        else
-          let _ := ()
       return total)
 
 def window := fun (s : List Int) ↦ fun (limit : Int) ↦
@@ -56,13 +48,9 @@ def window := fun (s : List Int) ↦ fun (limit : Int) ↦
       while (Bool.true) do
         if h_1 : ¬i < PastaLean.pyLen s then 
           break
-        else
-          let _ := ()
         let mut m : Int := s⦋i⦌ *ₚ (2 : Int)
         if h_2 : ¬m ≤ limit then 
           break
-        else
-          let _ := ()
         best := PastaLean.pyMax [best, m]
         i := i +ₚ (1 : Int)
       return best)
@@ -77,13 +65,9 @@ def window'rn := fun (s : List Int) ↦ fun (limit : Int) ↦
       while (Bool.true) do
         if h_1 : !decide (i < PastaLean.pyLen s) then 
           break
-        else
-          let _ := ()
         let mut m : Int := s⦋i⦌ *ₚ (2 : Int)
         if h_2 : !decide (m ≤ limit) then 
           break
-        else
-          let _ := ()
         best := PastaLean.pyMax [best, m]
         i := i +ₚ (1 : Int)
       return best)

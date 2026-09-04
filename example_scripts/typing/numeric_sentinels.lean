@@ -128,8 +128,6 @@ def shortest_gap := fun (nums : List Int) ↦
           let mut p'_popv_1 := PastaLean.pyPopLeftValue q
           q := PastaLean.pyPopLeftRest q
           ans := PastaLean.pyMin [ans, i -ₚ p'_popv_1]
-        else
-          let _ := ()
         q := PastaLean.pyAppend q i
       let p'_ret_1 := if ans = inf then -(1 : Int) else ans
       return p'_ret_1)
@@ -146,8 +144,6 @@ def shortest_gap'rn := fun (nums : List Int) ↦
           let mut p'_popv_1 := PastaLean.pyPopLeftValue q
           q := PastaLean.pyPopLeftRest q
           ans := PastaLean.pyMin [ans, i -ₚ p'_popv_1]
-        else
-          let _ := ()
         q := PastaLean.pyAppend q i
       let p'_ret_1 := if ans == inf then -(1 : Int) else ans
       return p'_ret_1)

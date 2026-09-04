@@ -527,10 +527,16 @@ def isStringyJson (json : Json) : Bool :=
       | _ => false
   | _ => false
 
+/-- Whether the container operand of `in`/`not in` is statically a set. A `str` literal on the LEFT
+routes to substring containment, but only when the container is NOT a set: `'0' in set(s)` is set
+membership (over `str` elements), not a substring test. -/
+private def rightIsSetExpr (rightJson : Option Json) : PygenM Bool :=
+  (rightJson.mapM jsonIsSetExpr).map (·.getD false)
+
 /-- Apply a Python comparison operator to already-lowered terms. `leftJson` only affects
 membership lowering: a string literal on the left of `in`/`not in` means substring containment
-(`pyStrContainsSubstr`); otherwise membership uses `pyContains`, whose `outParam` element type
-pins the element from the container. -/
+(`pyStrContainsSubstr`) — unless the container is a set — otherwise membership uses `pyContains`,
+whose `outParam` element type pins the element from the container. -/
 def compareApplyTerm (op : String) (leftJson : Json) (leftCode rightCode : TSyntax `term)
     (rightJson : Option Json := none) (classCmp : Bool := false) : PygenM (TSyntax `term) := do
   -- Set comparisons are order-independent (subset / set-equality), unlike the list-backed `==`/`≤`

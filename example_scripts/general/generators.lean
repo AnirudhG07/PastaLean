@@ -45,8 +45,6 @@ def evens_with_tag := fun (xs : List Int) ↦
       for x in (PastaLean.pyIter xs)do
         if h_1 : x %ₚ (2 : Int) = (0 : Int) then 
           __gen'acc := PastaLean.pyAppend __gen'acc x
-        else
-          let _ := ()
       __gen'acc := PastaLean.pyAppend __gen'acc (-(1 : Int))
       return __gen'acc)
 
@@ -60,8 +58,6 @@ def evens_with_tag'rn := fun (xs : List Int) ↦
       for x in (PastaLean.pyIter xs)do
         if h_1 : x %ₚ (2 : Int) == (0 : Int) then 
           __gen'acc := PastaLean.pyAppend __gen'acc x
-        else
-          let _ := ()
       __gen'acc := PastaLean.pyAppend __gen'acc (-(1 : Int))
       return __gen'acc)
 
@@ -98,8 +94,6 @@ def first_three := fun (n : Int) ↦
         i := i +ₚ (1 : Int)
         if h_1 : i = (3 : Int) then 
           return __gen'acc
-        else
-          let _ := ()
       return __gen'acc)
 
 attribute [simp, taste_ingr] first_three
@@ -115,8 +109,6 @@ def first_three'rn := fun (n : Int) ↦
         i := i +ₚ (1 : Int)
         if h_1 : i == (3 : Int) then 
           return __gen'acc
-        else
-          let _ := ()
       return __gen'acc)
 
 partial def subsets : List Int → Int → List (List Int) := fun (nums : List Int) ↦ fun (start : Int) ↦
@@ -152,8 +144,6 @@ def evens := fun (xs : List Int) ↦
       for x in (PastaLean.pyIter xs)do
         if h_1 : x %ₚ (2 : Int) = (0 : Int) then 
           __gen'acc := PastaLean.pyAppend __gen'acc x
-        else
-          let _ := ()
       return __gen'acc)
 
 attribute [simp, taste_ingr] evens
@@ -165,8 +155,6 @@ def evens'rn := fun (xs : List Int) ↦
       for x in (PastaLean.pyIter xs)do
         if h_1 : x %ₚ (2 : Int) == (0 : Int) then 
           __gen'acc := PastaLean.pyAppend __gen'acc x
-        else
-          let _ := ()
       return __gen'acc)
 
 def doubled := fun (xs : List Int) ↦

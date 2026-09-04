@@ -39,8 +39,6 @@ partial def _max_score'dfs'memo'rn : Int → List Int → Int → StateM (Std.Ha
       ((do
             if h_1 : i ≥ n -ₚ (1 : Int) then 
               return (0 : Int)
-            else
-              let _ := ()
             let p'_ret_1 :=
               PastaLean.pyMax
                 ((←

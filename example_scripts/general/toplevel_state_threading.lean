@@ -64,8 +64,6 @@ def p'_if_1cfc86 :=
         let p'_unpack_pair_1 := p'_unpack_value_1
         AX := Prod.fst p'_unpack_pair_1
         BX := Prod.snd p'_unpack_pair_1
-      else
-        let _ := ()
       return (AX, BX))
 
 def AX :=

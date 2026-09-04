@@ -59,8 +59,6 @@ def describe : Int → PastaLean.ProofMode.PyProofM PastaLean.PyAny := fun (x : 
   try
     if h_1 : x < (0 : Int) then 
       throw (PastaLean.PyException.Raise "ValueError" "")
-    else
-      let _ := ()
     return (x : PastaLean.PyAny)
   catch caught =>
     if (caught).OfKind == "ValueError" then 
@@ -74,8 +72,6 @@ def describe'rn : Int → PastaLean.PyExcept PastaLean.PyAny := fun (x : Int) �
   try
     if h_1 : x < (0 : Int) then 
       throw (PastaLean.PyException.Raise "ValueError" "")
-    else
-      let _ := ()
     return (x : PastaLean.PyAny)
   catch caught =>
     if (caught).OfKind == "ValueError" then 
