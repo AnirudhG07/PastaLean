@@ -1,0 +1,28 @@
+[*] 5453 snippets under /tmp/TypeEvalPy/autogen_typeevalpy_benchmark/python_features
+
+=== Per dimension ===
+  return  match 15829/17998 (87.9%)  cover 15985/17998 (88.8%)  TypeSim 0.881
+  param   match 283/896 (31.6%)  cover 325/896 (36.3%)  TypeSim 0.327
+  var     match 34967/58374 (59.9%)  cover 36329/58374 (62.2%)  TypeSim 0.602
+  ALL     match 51079/77268 (66.1%)  cover 52639/77268 (68.1%)  TypeSim 0.664
+
+=== Per category (all dimensions) ===
+  args             match 210/332 (63.3%)  cover 225/332 (67.8%)  TypeSim 0.639
+  assignments      match 30413/33673 (90.3%)  cover 30414/33673 (90.3%)  TypeSim 0.903
+  builtins         match 179/1984 (9.0%)  cover 248/1984 (12.5%)  TypeSim 0.104
+  classes          match 2143/5600 (38.3%)  cover 2831/5600 (50.6%)  TypeSim 0.383
+  decorators       match 578/1511 (38.3%)  cover 873/1511 (57.8%)  TypeSim 0.415
+  dicts            match 1443/3469 (41.6%)  cover 1563/3469 (45.1%)  TypeSim 0.428
+  direct_calls     match 66/161 (41.0%)  cover 66/161 (41.0%)  TypeSim 0.410
+  dynamic          match 21/108 (19.4%)  cover 21/108 (19.4%)  TypeSim 0.194
+  functions        match 177/491 (36.0%)  cover 191/491 (38.9%)  TypeSim 0.368
+  generators       match 100/259 (38.6%)  cover 110/259 (42.5%)  TypeSim 0.399
+  imports          match 2006/3024 (66.3%)  cover 2297/3024 (76.0%)  TypeSim 0.682
+  kwargs           match 72/161 (44.7%)  cover 72/161 (44.7%)  TypeSim 0.447
+  lambdas          match 201/441 (45.6%)  cover 204/441 (46.3%)  TypeSim 0.456
+  lists            match 9891/19961 (49.6%)  cover 9909/19961 (49.6%)  TypeSim 0.496
+  mro              match 797/2640 (30.2%)  cover 833/2640 (31.6%)  TypeSim 0.305
+  returns          match 2782/3453 (80.6%)  cover 2782/3453 (80.6%)  TypeSim 0.806
+
+[*] snippets with a backend/convert error: 0
+[*] summary -> typeinfer_bench/autogen_summary.json

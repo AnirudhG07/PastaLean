@@ -1361,6 +1361,148 @@ def _sanitize_hole_identifiers(ast_tree):
             n.arg = safe
 
 
+def _local_module_file(root, dotted):
+    """Resolve a dotted module name to a local file within `root`: a plain `.py`, a package
+    `__init__.py`, or the longest prefix that is a module (the tail being a member). Returns the
+    `Path` or None."""
+    parts = dotted.split(".")
+    p = root.joinpath(*parts)
+    if p.with_suffix(".py").is_file():
+        return p.with_suffix(".py")
+    if (p / "__init__.py").is_file():
+        return p / "__init__.py"
+    for k in range(len(parts) - 1, 0, -1):
+        q = root.joinpath(*parts[:k])
+        if q.with_suffix(".py").is_file():
+            return q.with_suffix(".py")
+        if (q / "__init__.py").is_file():
+            return q / "__init__.py"
+    return None
+
+
+def resolve_local_imports(source_code, module_dir):
+    """Inline a program's LOCAL imports so single-module inference sees the whole reachable program.
+
+    PastaLean translates each file to its own Lean module, but the `TypeInfer` pass runs per-module,
+    so a call to an imported function (`from helper import f; x = f()`) leaves `x` untyped. When the
+    imported module is a LOCAL sibling `.py`/package (submodule, `__init__.py`, alias, dotted call —
+    all present on disk next to the file), we resolve it here: every reachable module's top-level
+    defs are inlined under mangled names and qualified accesses (`mod.f()`, `pkg.sub.f()`, `alias.f()`)
+    are rewritten to them, producing one flat self-contained program. Library/foreign imports (numpy,
+    random, …) are left untouched. Returns the rewritten source, or None when nothing local resolves.
+    """
+    if not module_dir:
+        return None
+    root = Path(module_dir)
+    try:
+        main_tree = ast.parse(source_code)
+    except SyntaxError:
+        return None
+
+    prepended, module_defs, loading = [], {}, set()
+
+    def mangle(dotted, name):
+        return "m_" + dotted.replace(".", "_") + "_" + name
+
+    def resolve_binds(tree, cur_dotted, loader):
+        binds = {}
+        pkg = cur_dotted.rsplit(".", 1)[0] if "." in cur_dotted else ""
+        for node in tree.body:
+            if isinstance(node, ast.Import):
+                for a in node.names:
+                    if _local_module_file(root, a.name):
+                        loader(a.name)
+                        binds[a.asname or a.name.split(".")[0]] = ("mod", a.name if a.asname else a.name.split(".")[0])
+            elif isinstance(node, ast.ImportFrom):
+                mod = node.module or ""
+                if node.level and pkg:
+                    mod = pkg + ("." + mod if mod else "")
+                mod_file = _local_module_file(root, mod) if mod else None
+                members = loader(mod) if mod_file else {}
+                for a in node.names:
+                    tgt = members.get(a.name)
+                    sub = (mod + "." + a.name) if mod else a.name
+                    sub_file = _local_module_file(root, sub)
+                    if tgt:
+                        binds[a.asname or a.name] = ("name", tgt)
+                    # `from pkg import submodule` — only when `pkg.submodule` is a DISTINCT file (not
+                    # the same module reached via the prefix fallback, i.e. `name` is a member/const).
+                    elif sub_file is not None and sub_file != mod_file:
+                        loader(sub)
+                        binds[a.asname or a.name] = ("mod", sub)
+        return binds
+
+    def load_module(dotted):
+        if dotted in module_defs:
+            return module_defs[dotted]
+        if dotted in loading:
+            return {}
+        loading.add(dotted)
+        f = _local_module_file(root, dotted)
+        members = {}
+        module_defs[dotted] = members
+        if f is None:
+            return members
+        try:
+            tree = ast.parse(f.read_text())
+        except SyntaxError:
+            return members
+        binds = resolve_binds(tree, dotted, load_module)
+        for node in tree.body:
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                new = mangle(dotted, node.name)
+                members[node.name] = new
+                node = _rewrite(node, binds)
+                node.name = new
+                prepended.append(node)
+            elif not isinstance(node, (ast.Import, ast.ImportFrom)):
+                prepended.append(_rewrite(node, binds))
+        return members
+
+    class _Rewriter(ast.NodeTransformer):
+        def __init__(self, binds):
+            self.binds = binds
+
+        def _chain(self, node):
+            parts = []
+            while isinstance(node, ast.Attribute):
+                parts.append(node.attr); node = node.value
+            if isinstance(node, ast.Name):
+                parts.append(node.id); return list(reversed(parts))
+            return None
+
+        def visit_Attribute(self, node):
+            self.generic_visit(node)
+            chain = self._chain(node)
+            if not chain:
+                return node
+            head = self.binds.get(chain[0])
+            if head is None or head[0] != "mod":
+                return node
+            modname = head[1]
+            for seg in chain[1:-1]:
+                modname = modname + "." + seg
+            m = load_module(modname).get(chain[-1])
+            return ast.copy_location(ast.Name(id=m, ctx=node.ctx), node) if m else node
+
+        def visit_Name(self, node):
+            b = self.binds.get(node.id)
+            return ast.copy_location(ast.Name(id=b[1], ctx=node.ctx), node) if b and b[0] == "name" else node
+
+    def _rewrite(node, binds):
+        return _Rewriter(binds).visit(node)
+
+    main_binds = resolve_binds(main_tree, "__main__", load_module)
+    if not main_binds:
+        return None
+    kept = [_rewrite(n, main_binds) for n in main_tree.body
+            if not isinstance(n, (ast.Import, ast.ImportFrom))]
+    main_tree.body = prepended + kept
+    try:
+        return ast.unparse(ast.fix_missing_locations(main_tree))
+    except Exception:  # noqa: BLE001
+        return None
+
 
 
 def translate_to_json(source_code, filepath=None, best_effort=False):
@@ -1376,6 +1518,12 @@ def translate_to_json(source_code, filepath=None, best_effort=False):
     # Type annotation is no longer a Python pre-pass: the Lean `TypeInfer` engine infers and stamps
     # types on the IR (`inferTypes` task), so the source is parsed as-is. `filepath` is kept only to
     # resolve cross-file imports (`module_dir` below).
+    # Inline LOCAL sibling imports so per-module inference sees the whole reachable program
+    # (`from helper import f; x = f()` → `x` typed). Library/foreign imports are left untouched.
+    if filepath:
+        _resolved = resolve_local_imports(source_code, str(Path(filepath).resolve().parent))
+        if _resolved is not None:
+            source_code = _resolved
     logger.debug("Source passed to Python AST parser:\n%s", source_code)
     ast_tree = ast.parse(source_code)
     _sanitize_hole_identifiers(ast_tree)
