@@ -34,6 +34,12 @@ def methodsOf (classDef : Json) : Array Json :=
 def classNamesOf (module : Json) : Std.HashSet String :=
   (classDefsOf module).foldl (fun s c => (c.getObjValAs? String "name").toOption.elim s s.insert) {}
 
+/-- Direct base-class names of a `ClassDef` (`class C(A, B)` → `["A", "B"]`), keeping only plain-name
+bases (`object`, a dotted/generic base, etc. are dropped — nothing to inherit locally). -/
+def baseNamesOf (classDef : Json) : Array String :=
+  ((classDef.getObjValAs? (Array Json) "bases").toOption.getD #[]).filterMap fun b =>
+    (nameId? b).filter (· != "object")
+
 /-- True when `fn`'s first parameter is `self` — an instance method, as opposed to a `@staticmethod`. -/
 def isInstanceMethod (fn : Json) : Bool := (paramNames fn)[0]? == some "self"
 
@@ -258,11 +264,31 @@ partial def collectSigs (module : Json) : Sigs × ParamSigs := Id.run do
   let methodHints (params : ParamSigs) (cls key : String) (m : Json) : Env :=
     let h := hintsForKey params m key
     if isInstanceMethod m then h.insert "self" (.cls cls) else h
+  -- Each class's direct base names, for MRO member propagation inside the fixpoint below.
+  let baseMap : Array (String × Array String) := (classDefsOf module).filterMap fun cd =>
+    (cd.getObjValAs? String "name").toOption.map (fun c => (c, baseNamesOf cd))
   for _ in [0:6] do
     -- Refresh class field types from the current (refined) `__init__` params so a field on an
     -- unannotated ctor param (`self.width = width`, `width` learned as `int` from `Rectangle(5,10)`)
     -- gets a concrete type — which then types `self.width * self.height` in a method's return.
     sigs := (classFieldSigs module params).fold (fun acc k v => acc.insert k v) sigs
+    -- Inheritance / MRO (SOUND, static single/linear inheritance): copy each base's members
+    -- (`Base.field`/`Base.method` return in `sigs`, method-param types in `params`) to the subclass
+    -- key `Sub.member` when the subclass does not override — so an inherited FIELD accessed in a
+    -- method (`B(A)` whose `func` returns `self.a`, `a` set by `A.__init__`) and an inherited METHOD
+    -- call (`b.func()`) both resolve. Inside the loop + iterated so `self.a` is known BEFORE the
+    -- method's return is computed, and multi-level chains (C→B→A) close.
+    for _ in [0:baseMap.size] do
+      for (cls, bases) in baseMap do
+        for base in bases do
+          for (k, v) in sigs.toList do
+            if k.startsWith s!"{base}." then
+              let subKey := s!"{cls}." ++ k.drop (base.length + 1)
+              unless sigs.contains subKey do sigs := sigs.insert subKey v
+          for (k, v) in params.toList do
+            if k.startsWith s!"{base}." then
+              let subKey := s!"{cls}." ++ k.drop (base.length + 1)
+              unless params.contains subKey do params := params.insert subKey v
     let mut nextSigs := sigs
     let mut nextParams := params
     let refineFrom (nextParams : ParamSigs) (calls : Array (String × Array PyType)) : ParamSigs :=
@@ -293,10 +319,14 @@ partial def collectSigs (module : Json) : Sigs × ParamSigs := Id.run do
       let env := inferFunction sigs fnEnv hints m
       nextParams := refineFrom nextParams (collectCalls sigs env m)
       nextParams := refineFrom nextParams (collectMethodCalls sigs env classNames methodSelf m)
-    -- Module top-level call sites (outside any def), typed under `fnEnv` (see above).
+    -- Module top-level call sites (outside any def), typed under `fnEnv` PLUS the module-level
+    -- variable types (`a = A()` ⇒ `a : A`), so a constructor arg that is a class instance refines the
+    -- callee's param: `b = B(a)` teaches `B.__init__`'s `a : A`, hence `self.a : A`, hence
+    -- `self.a.func()` resolves the cross-class method.
+    let moduleEnv := (topLevelStmts module).foldl (applyStmt sigs) fnEnv
     for stmt in topLevelStmts module do
-      nextParams := refineFrom nextParams (collectCalls sigs fnEnv stmt)
-      nextParams := refineFrom nextParams (collectMethodCalls sigs fnEnv classNames methodSelf stmt)
+      nextParams := refineFrom nextParams (collectCalls sigs moduleEnv stmt)
+      nextParams := refineFrom nextParams (collectMethodCalls sigs moduleEnv classNames methodSelf stmt)
     -- Decorator unification: `@d def g` is `g = d(g_raw)`, so g's type and d's wrapped-parameter
     -- type are the same. Flow each into the other: g's `.fn` type refines d's parameter 0 (so a
     -- decorator's `f` is learned from the function it wraps), and d's parameter 0 — if a function

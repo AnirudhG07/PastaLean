@@ -522,11 +522,19 @@ def callSyntaxTerm (json : Json) : PygenM (TSyntax `term) := do
             throwError s!"Mutating method '{attr}' cannot be used as an expression under value \
               semantics; call it as a statement on its own line."
           let valCode ← getCode valueJson `term
+          let attrId := mkIdent attr.toName
+          -- Non-heap: dispatch via Lean DOT-NOTATION `recv.attr args` (not `Cls.attr recv args`), which
+          -- resolves `attr` in the receiver's structure namespace and WALKS `extends`, so an inherited
+          -- method (`class B(A); b.func()` where `func` lives in `A`) resolves to `A.func`, and the `'rn`
+          -- twin is picked from the receiver value's type. Heap keeps the qualified `Cls.attr recv` form:
+          -- there the receiver is a `Ref C`, so dot-notation would look `attr` up on `Ref`, not `C`.
           let methodIdent : TSyntax `term := mkIdent (Name.mkStr (← suffixIfUserName cls).toName attr)
           let allJsons := #[valueJson] ++ argsArray
           let allCodes := #[valCode] ++ argsCodes
           let build : Array (TSyntax `term) → PygenM (TSyntax `term) := fun resolved => do
-            let mut t ← `($methodIdent $resolved*)
+            let recv := resolved[0]!
+            let args := resolved.extract 1 resolved.size
+            let mut t ← `($recv.$attrId $args*)
             for (kwName, kwValueJson) in keyWordsMap.toList do
               let kwValueCode ← getCode kwValueJson `term
               t ← `($t ($(mkIdent kwName.toName):ident := $kwValueCode))
