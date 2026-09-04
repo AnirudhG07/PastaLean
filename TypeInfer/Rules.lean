@@ -89,7 +89,10 @@ def arith : PyType → PyType → PyType
 private def constReturnBuiltins : List (String × PyType) :=
   [ ("len", .int), ("ord", .int), ("int", .int), ("str", .str), ("input", .str),
     ("bool", .bool), ("float", .float), ("chr", .str), ("hash", .int),
-    ("bin", .str), ("hex", .str), ("oct", .str) ]
+    ("bin", .str), ("hex", .str), ("oct", .str),
+    -- Predicates and identity/representation builtins whose result type is fixed (independent of args).
+    ("any", .bool), ("all", .bool), ("isinstance", .bool), ("issubclass", .bool),
+    ("callable", .bool), ("id", .int), ("repr", .str), ("ascii", .str), ("format", .str) ]
 
 mutual
 
@@ -104,8 +107,16 @@ partial def typeOfExpr (sigs : Sigs) (env : Env) (e : Json) : PyType :=
   | some "Tuple" => .tuple ((eltsOf e).map (typeOfExpr sigs env))
   | some "Dict" =>
       let entries := ((e.getObjValAs? (Array Json) "entries").toOption.getD #[]).toList
-      let part (k : String) := entries.map fun en => (field en k).elim .unknown (typeOfExpr sigs env)
-      .dict (PyType.joinAll (part "key")) (PyType.joinAll (part "value"))
+      -- Each entry is a `k: v` pair, or a `**d` spread (contributing `d`'s own key/value types), so
+      -- `merged = {**d1, **d2}` types as the join of `d1`/`d2` rather than dropping out.
+      let contrib := entries.map fun en =>
+        match field en "spread" with
+        | some sp => match typeOfExpr sigs env sp with
+                     | .dict sk sv => (sk, sv)
+                     | _ => (.unknown, .unknown)
+        | none => ((field en "key").elim .unknown (typeOfExpr sigs env),
+                   (field en "value").elim .unknown (typeOfExpr sigs env))
+      .dict (PyType.joinAll (contrib.map (·.1))) (PyType.joinAll (contrib.map (·.2)))
   | some "Range" => .list .int
   | some "BinOp" =>
       match field e "left", field e "right" with
@@ -230,7 +241,13 @@ partial def typeOfCall (sigs : Sigs) (env : Env) (e : Json) : PyType :=
           -- A builtin's return type wins; otherwise a user function's inferred return type.
           | some name =>
               match builtinReturn sigs env name args with
-              | .unknown => (sigs.get? name).getD .unknown
+              | .unknown =>
+                  match (sigs.get? name).getD .unknown with
+                  -- A call to a function-VALUED variable (`b = some_func; b()`) uses the `.fn` return.
+                  | .unknown => match env.get? name with
+                                | some (.fn _ ret) => ret
+                                | _ => .unknown
+                  | t => t
               | t => t
           | none => .unknown
       | some "Attribute" =>
@@ -310,7 +327,14 @@ effective argument 0 (so `d.get(k, default)` reads the receiver and the default 
 The engine names no method. -/
 partial def methodReturn (sigs : Sigs) (env : Env) (attr : String) (recv : Option Json) (args : List Json) : PyType :=
   let recvT := recv.elim .unknown (typeOfExpr sigs env)
-  ((Libraries.methodBehaviour? attr).map (·.returns (recvT :: args.map (typeOfExpr sigs env)))).getD .unknown
+  -- A user method call `obj.attr(...)` on a class instance resolves to `Class.attr`'s inferred return.
+  let userMethod : PyType := match recvT with
+    | .cls c => (sigs.get? s!"{c}.{attr}").getD .unknown
+    | .opt (.cls c) => (sigs.get? s!"{c}.{attr}").getD .unknown
+    | _ => .unknown
+  match userMethod with
+  | .unknown => ((Libraries.methodBehaviour? attr).map (·.returns (recvT :: args.map (typeOfExpr sigs env)))).getD .unknown
+  | t => t
 
 end
 

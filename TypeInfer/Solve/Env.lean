@@ -108,6 +108,26 @@ partial def bindTargetType (env : Env) (target : Json) (t : PyType) : Env :=
       | none => env
   | some "Tuple" | some "List" =>
       let elts := (target.getObjValAs? (Array Json) "elts").toOption.getD #[]
+      -- A starred target (`a, *b, c = …`) binds the star to a LIST of the middle elements and the
+      -- fixed targets around it to the corresponding element types.
+      match elts.findIdx? (nodeTypeOf · == some "Starred") with
+      | some k =>
+          let after := elts.size - k - 1
+          let elemAt (i : Nat) : PyType := match t with
+            | .tuple es => es[i]?.getD .unknown
+            | _ => t.elemType
+          Id.run do
+            let mut e := env
+            for i in [0:k] do e := bindTargetType e elts[i]! (elemAt i)
+            -- The star collects the middle span as a list of the joined middle element type.
+            let midCount := (match t with | .tuple es => es.length | _ => 0)
+            let midTypes := (List.range (max 0 (midCount - k - after))).map (fun j => elemAt (k + j))
+            if let some starTgt := (elts[k]!.getObjVal? "value").toOption then
+              e := bindTargetType e starTgt (.list (PyType.joinAll midTypes))
+            for j in [0:after] do
+              e := bindTargetType e elts[k + 1 + j]! (elemAt (midCount - after + j))
+            return e
+      | none =>
       match t with
       | .tuple es => (Array.range elts.size).foldl (fun e i => bindTargetType e elts[i]! (es[i]?.getD .unknown)) env
       | _ => elts.foldl (fun e elt => bindTargetType e elt t.elemType) env

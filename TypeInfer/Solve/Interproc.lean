@@ -48,7 +48,15 @@ partial def collectMethodCalls (sigs : Sigs) (env : Env) (classNames : Std.HashS
   let here : Array (String × Array PyType) :=
     match nodeTypeOf json, getField json "func" with
     | some "Call", some func =>
-        if nodeTypeOf func != some "Attribute" then #[] else
+        -- A constructor call `C(args)` (func is the class NAME) refines `C.__init__`'s params, with a
+        -- leading `self : .cls C` — so `Rectangle(5, 10)` types `__init__(self, width, height)`.
+        if nodeTypeOf func == some "Name" then
+          match (nameId? func).filter classNames.contains with
+          | some cname =>
+              let args := ((json.getObjValAs? (Array Json) "args").toOption.getD #[]).map (typeOfExpr sigs env)
+              #[(s!"{cname}.__init__", #[PyType.cls cname] ++ args)]
+          | none => #[]
+        else if nodeTypeOf func != some "Attribute" then #[] else
         match (func.getObjValAs? String "attr").toOption, getField func "value" with
         | some attr, some recv =>
             let args := ((json.getObjValAs? (Array Json) "args").toOption.getD #[]).map (typeOfExpr sigs env)
@@ -127,7 +135,7 @@ def refineParams (params : ParamSigs) (name : String) (arity : Nat) (argTypes : 
 access. Mirrors the struct codegen: an explicit annotation wins; otherwise an `__init__` param
 defaulting to `None` types the field `Option Class` (the recursive `TreeNode.left`/`ListNode.next`
 pattern); otherwise the initialising param's annotation or the type of its default. -/
-def classFieldSigs (module : Json) : Sigs := Id.run do
+def classFieldSigs (module : Json) (params : ParamSigs := {}) : Sigs := Id.run do
   let mut out : Sigs := {}
   for st in topLevelStmts module do
     if nodeTypeOf st != some "ClassDef" then continue
@@ -137,6 +145,13 @@ def classFieldSigs (module : Json) : Sigs := Id.run do
     let mut ptype : Env := {}
     let mut noneParams : List String := []
     if let some init := methods.find? (·.getObjValAs? String "name" == .ok "__init__") then
+      -- Seed from inferred call-site param types (`Rectangle(5, 10)` ⇒ `width, height : int`), so a
+      -- field `self.width = width` on an UNannotated param still gets a concrete type.
+      let initNames := paramNames init
+      let initInferred := (params.get? s!"{cls}.__init__").getD #[]
+      for i in [0:initNames.size] do
+        if let some t := initInferred[i]? then
+          if t != .unknown then ptype := ptype.insert initNames[i]! t
       let argsJson := (getField init "args").getD Json.null
       let argsArr := (argsJson.getObjValAs? (Array Json) "args").toOption.getD #[]
       let defaults := (argsJson.getObjValAs? (Array Json) "defaults").toOption.getD #[]
@@ -155,9 +170,14 @@ def classFieldSigs (module : Json) : Sigs := Id.run do
         let annT := match getField f "annotation" with
           | some ann => if ann.isNull then .unknown else ofAnnotation ann
           | none => .unknown
+        -- A class-level variable (`class_var = 0`) has a `default` value but no `self.x = …` init.
+        let fromDefault : PyType := match getField f "default" with
+          | some d => if d.isNull then .unknown else ofValue d
+          | none => .unknown
         let t := if annT != .unknown then annT else
           match getField f "init" with
           | some init =>
+              if init.isNull then fromDefault else
               -- `self.left = left` where `left` defaults to `None` → the recursive node pattern.
               match nameId? init with
               | some p =>
@@ -171,7 +191,7 @@ def classFieldSigs (module : Json) : Sigs := Id.run do
                   -- Otherwise type the initialiser itself, under the `__init__` params
                   -- (`self.p = list(range(n))` → `list[int]`, which `ofValue` alone cannot see).
                   else typeOfExpr {} ptype init
-          | none => .unknown
+          | none => fromDefault
         if t != .unknown then out := out.insert s!"{cls}.{fname}" t
   return out
 
@@ -239,31 +259,44 @@ partial def collectSigs (module : Json) : Sigs × ParamSigs := Id.run do
     let h := hintsForKey params m key
     if isInstanceMethod m then h.insert "self" (.cls cls) else h
   for _ in [0:6] do
+    -- Refresh class field types from the current (refined) `__init__` params so a field on an
+    -- unannotated ctor param (`self.width = width`, `width` learned as `int` from `Rectangle(5,10)`)
+    -- gets a concrete type — which then types `self.width * self.height` in a method's return.
+    sigs := (classFieldSigs module params).fold (fun acc k v => acc.insert k v) sigs
     let mut nextSigs := sigs
     let mut nextParams := params
     let refineFrom (nextParams : ParamSigs) (calls : Array (String × Array PyType)) : ParamSigs :=
       calls.foldl (fun p (callee, argTypes) =>
         if params.contains callee then refineParams p callee argTypes.size argTypes else p) nextParams
+    -- Function VALUES (`.fn` with inferred returns): a `g = some_func` / `return some_func` reads as
+    -- `callable`, a `func(param_func)` refines `func`'s callback param, and a higher-order
+    -- `def func(a): return a()` specialises its return per call.
+    let fnEnv : Env := fns.foldl (fun e fn =>
+      match fn.getObjValAs? String "name" with
+      | .ok nm => (match functionSignatureType fn with
+                   | .fn as _ => e.insert nm (.fn as ((sigs.get? nm).getD .unknown))
+                   | t => e.insert nm t)
+      | _ => e) {}
     for fn in fns do
       if let .ok name := fn.getObjValAs? String "name" then
         let hints := hintsFor params fn
-        nextSigs := nextSigs.insert name (returnTypeOf sigs hints fn)
+        nextSigs := nextSigs.insert name (returnTypeOf sigs hints fn fnEnv)
         -- refine callees' params from this function's call sites, typed under its own env.
-        let env := inferFunction sigs {} hints fn
+        let env := inferFunction sigs fnEnv hints fn
         nextParams := refineFrom nextParams (collectCalls sigs env fn)
         nextParams := refineFrom nextParams (collectMethodCalls sigs env classNames methodSelf fn)
     -- Class methods: refine callees from each method body, with `self` typed to its class.
     for (cls, mn, m) in methodEntries do
       let key := s!"{cls}.{mn}"
       let hints := methodHints params cls key m
-      nextSigs := nextSigs.insert key (returnTypeOf sigs hints m)
-      let env := inferFunction sigs {} hints m
+      nextSigs := nextSigs.insert key (returnTypeOf sigs hints m fnEnv)
+      let env := inferFunction sigs fnEnv hints m
       nextParams := refineFrom nextParams (collectCalls sigs env m)
       nextParams := refineFrom nextParams (collectMethodCalls sigs env classNames methodSelf m)
-    -- Module top-level call sites (outside any def), typed under an empty env (literal args).
+    -- Module top-level call sites (outside any def), typed under `fnEnv` (see above).
     for stmt in topLevelStmts module do
-      nextParams := refineFrom nextParams (collectCalls sigs {} stmt)
-      nextParams := refineFrom nextParams (collectMethodCalls sigs {} classNames methodSelf stmt)
+      nextParams := refineFrom nextParams (collectCalls sigs fnEnv stmt)
+      nextParams := refineFrom nextParams (collectMethodCalls sigs fnEnv classNames methodSelf stmt)
     -- Decorator unification: `@d def g` is `g = d(g_raw)`, so g's type and d's wrapped-parameter
     -- type are the same. Flow each into the other: g's `.fn` type refines d's parameter 0 (so a
     -- decorator's `f` is learned from the function it wraps), and d's parameter 0 — if a function
@@ -314,6 +347,33 @@ partial def stampUnpackShapes (sigs : Sigs) (env : Env) (s : Json) : Json :=
         s := s.setObjVal! f (Json.arr (elems.map (stampUnpackShapes sigs env)))
     return s
 
+/-- Benchmark-only: stamp `_bench_ty` on a target — a Name from its `globals` type, or a tuple/list
+target by distributing the value type `ty` over its leaves (nested unpack included). Codegen never
+reads `_bench_ty`, so this is inert for translation. -/
+partial def stampBenchTarget (globals : Env) (ty : PyType) : Json → Json
+  | t =>
+    match nodeTypeOf t with
+    | some "Name" =>
+        match ((nameId? t).bind globals.get?).bind (fun gt => toAnnotation? (containerFillAny gt)) with
+        | some ann => t.setObjVal! "_bench_ty" ann
+        | none => match toAnnotation? (containerFillAny ty) with
+                  | some ann => t.setObjVal! "_bench_ty" ann
+                  | none => t
+    | some "Starred" =>
+        match getField t "value" with
+        | some inner => t.setObjVal! "value" (stampBenchTarget globals (.list ty.elemType) inner)
+        | none => t
+    | some "Tuple" | some "List" =>
+        match t.getObjValAs? (Array Json) "elts" with
+        | .ok elts =>
+            let elemTypes : Nat → PyType := match ty with
+              | .tuple es => fun i => es[i]?.getD .unknown
+              | _ => fun _ => ty.elemType
+            t.setObjVal! "elts" (Json.arr ((Array.range elts.size).map fun i =>
+              stampBenchTarget globals (elemTypes i) elts[i]!))
+        | _ => t
+    | _ => t
+
 /-- Stamp `_ty` across one top-level node, resolving calls with `sigs` and seeding each function's
 unannotated params from `params`. The driver sends one statement per request; a `FunctionDef`, a
 `ClassDef` (each method) or a `Module` (a mutual group) is stamped, anything else is unchanged. -/
@@ -334,7 +394,14 @@ partial def stampNodeWith (sigs : Sigs) (params : ParamSigs) (globals : Env) (s 
             if nodeTypeOf m == some "FunctionDef" then
               let mn := (m.getObjValAs? String "name").toOption.getD ""
               let outer := if isInstanceMethod m then (outerFor m).insert "self" (.cls cls) else outerFor m
-              stampFunction sigs outer (hintsForKey params m s!"{cls}.{mn}") m
+              let stamped := stampFunction sigs outer (hintsForKey params m s!"{cls}.{mn}") m
+              -- Method return types live in `sigs` under the qualified `Class.method` key, which
+              -- stampFunction's bare-name lookup misses; fill `_ret_ty` here when unstamped/unboxed.
+              if (getField stamped "_ret_ty").isNone && (getField stamped "_box_return").isNone then
+                match (sigs.get? s!"{cls}.{mn}").bind (fun t => toAnnotation? (containerFillAny t)) with
+                | some ann => stamped.setObjVal! "_ret_ty" ann
+                | none => stamped
+              else stamped
             else m))
         | _ => s) s
   | some "Module" =>
@@ -355,6 +422,18 @@ partial def stampNodeWith (sigs : Sigs) (params : ParamSigs) (globals : Env) (s 
           | _ => s
         stampBlock "orelse" (stampBlock "body" s)
       else s
+  | some "Assign" | some "AnnAssign" | some "AugAssign" | some "For" =>
+      -- Benchmark-only: stamp a module-level target's inferred type as `_bench_ty` (codegen ignores
+      -- it) so the harness sees top-level variable inferences. Never writes `_ty`, so byte-identical
+      -- value-mode codegen is unperturbed. A tuple/list target distributes the value's type over its
+      -- leaves (nested unpack included), mirroring `bindTargetType`.
+      match getField s "target" with
+      | some t =>
+          -- The type a Name leaf gets: its own `globals` type (flow-insensitive final), which for a
+          -- unique unpack target is exactly what the value distributes.
+          let valTy := (getField s "value").elim .unknown (typeOfExpr sigs globals)
+          s.setObjVal! "target" (stampBenchTarget globals valTy t)
+      | none => s
   | _ => s
 
 /-- Intraprocedural stamping of a single node (no cross-function info). Used per-request as a
@@ -367,7 +446,19 @@ def inferModule (module : Json) : Json :=
   let (sigs, params) := collectSigs module
   -- Module-level globals (`inf = float('inf')`, config constants) seed every function so a body that
   -- reads a global sees its type — e.g. `f = [[inf]*k for _ in range(n)]` becomes `list[list[float]]`.
-  let globals : Env := (topLevelStmts module).foldl (applyStmt sigs) {}
+  -- Top-level function names are seeded as their `.fn` value type so a `g = some_func` reference (a
+  -- function value) reads as `callable`; `topLevelStmts` drops the defs themselves.
+  let fnSeed : Env := (topFunctions module).foldl (fun e fn =>
+    match fn.getObjValAs? String "name" with
+    | .ok nm =>
+        -- Use the INFERRED return (from `sigs`) for the function value, not just its annotation, so a
+        -- `g = some_func; g()` resolves `g()` to `some_func`'s real return type.
+        let sig := match functionSignatureType fn with
+          | .fn as _ => .fn as ((sigs.get? nm).getD .unknown)
+          | t => t
+        e.insert nm sig
+    | _ => e) {}
+  let globals : Env := (topLevelStmts module).foldl (applyStmt sigs) fnSeed
   -- Mark each statement `_inferred` so the per-request fallback pass (which lacks module context and
   -- would re-derive worse types, e.g. a global-fed `float` local mis-stamped `int`) skips it.
   let mark (s : Json) : Json := (stampNodeWith sigs params globals s).setObjVal! "_inferred" (Json.bool true)

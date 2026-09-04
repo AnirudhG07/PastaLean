@@ -402,8 +402,8 @@ partial def inferFunction (sigs : Sigs) (outer hints : Env) (fn : Json) : Env :=
 
 /-- The type `fn` returns: the join of every `return <e>` under its inferred environment. A bare
 `return` (no value) or falling off the end contributes `None`. -/
-partial def returnTypeOf (sigs : Sigs) (hints : Env) (fn : Json) : PyType := Id.run do
-  let env := inferFunction sigs {} hints fn
+partial def returnTypeOf (sigs : Sigs) (hints : Env) (fn : Json) (outer : Env := {}) : PyType := Id.run do
+  let env := inferFunction sigs outer hints fn
   let body := (fn.getObjValAs? (Array Json) "body").toOption.getD #[]
   let mut ret : PyType := .unknown
   for s in flatStmts body.toList do

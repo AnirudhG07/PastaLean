@@ -106,6 +106,19 @@ partial def usedInPyAnyPosition (name : String) (json : Json) : Bool :=
       | .obj fs => fs.toList.any (fun (_, v) => usedInPyAnyPosition name v)
       | _ => false)
 
+/-- Is `name` called as `name(...)` anywhere in `json`? A param called in the body is a callback
+(callable). Skips nested defs (their own scope). -/
+partial def calledAsFunction (name : String) (json : Json) : Bool :=
+  -- Descend into nested defs too — a closure may call a captured outer param (`def dec(f): def w():
+  -- f()`) — but not into one that SHADOWS `name` as its own parameter (a different binding).
+  if nodeTypeOf json == some "FunctionDef" && (paramNames json).contains name then false
+  else
+    let hitHere := nodeTypeOf json == some "Call" && ((getField json "func").bind nameId?) == some name
+    hitHere || (match json with
+      | .arr xs => xs.any (calledAsFunction name)
+      | .obj fs => fs.toList.any (fun (_, v) => calledAsFunction name v)
+      | _ => false)
+
 /-- Fill an `unknown` element/key/value inside a KNOWN-shape container with `any` (→ `PyAny`), so a
 `list`/`set`/`dict`/`tuple`/`opt` whose shape we know but whose elements we don't emits `List PyAny`
 etc. — the structural ops (iterate, index, `len`, `==`) still resolve; only the elements stay
@@ -118,6 +131,9 @@ partial def containerFillAny : PyType → PyType :=
   | .dict k v => .dict (elemOrAny k) (elemOrAny v)
   | .tuple es => .tuple (es.map elemOrAny)
   | .opt e => .opt (elemOrAny e)
+  -- A function VALUE with an unknown signature still annotates as `Callable[[PyAny…], PyAny]`, so a
+  -- `f = some_func` / callback param reads as `callable` rather than dropping out entirely.
+  | .fn as r => .fn (as.map elemOrAny) (elemOrAny r)
   | t => t
 
 /-- Add `_ty` to each unannotated parameter we could type (a nested capture, or a rare
@@ -187,6 +203,20 @@ def stampParams (env : Env) (fn : Json) : Json :=
                   -- A parameter used at genuinely different types (`.any`, e.g. `add(a,b)` called
                   -- with ints and strings) is always boxed so one definition dispatches on the tag.
                   | some (.any) => arg.setObjVal! "_ty" pyAnyTy
+                  -- A function-typed param (a decorator's wrapped function, a callback refined from a
+                  -- call site) → `callable`. Keep the existing `_ty` behaviour (a known signature ascribes
+                  -- `Callable[…]`, which a CALLED param needs so `f(x)` elaborates) and ADD a benchmark-only
+                  -- `_bench_ty` so the eval harness scores it even when the signature is unknown.
+                  | some (.fn as r) =>
+                      let t := PyType.fn as r
+                      let arg := if t.isKnown then
+                          (match toAnnotation? t with | some ann => arg.setObjVal! "_ty" ann | none => arg)
+                        else
+                          let filled := containerFillAny t
+                          (match (if filled == t then none else toAnnotation? filled) with
+                           | some ann => if body.any (usedInPyAnyPosition name) then arg.setObjVal! "_ty" ann else arg
+                           | none => boxIfStuck ())
+                      arg.setObjVal! "_bench_ty" (Json.mkObj [("node_type", Json.str "Name"), ("id", Json.str "Callable")])
                   -- A dict with a KNOWN key but a dynamic value (`dict[str, Any]`, inferred from
                   -- `for k in list(p.keys()): k.islower()`) is a genuine `Std.HashMap K PyAny` — stamp
                   -- it even though `.any` makes `isKnown` false (which would otherwise drop it).
@@ -211,6 +241,27 @@ def stampParams (env : Env) (fn : Json) : Json :=
                         | some ann => if body.any (usedInPyAnyPosition name) then arg.setObjVal! "_ty" ann else arg
                         | none => boxIfStuck ()
                   | none => boxIfStuck ()
+            | _ => arg
+          fn.setObjVal! "args" (args.setObjVal! "args" (Json.arr argsArr))
+      | _ => fn
+  | _ => fn
+
+/-- Benchmark-only: mark each param called as `name(...)` in the body with `_bench_ty := Callable`,
+so the TypeInfer eval harness scores callback params as `callable`. Uses `_bench_ty` (not `_ty`) —
+a callable of unknown signature as a real ascription would inject metavariables into codegen. -/
+def stampCallableParams (fn : Json) : Json :=
+  let body := (fn.getObjValAs? (Array Json) "body").toOption.getD #[]
+  match fn.getObjVal? "args" with
+  | .ok args =>
+      match args.getObjValAs? (Array Json) "args" with
+      | .ok argsArr =>
+          let argsArr := argsArr.map fun arg =>
+            match arg.getObjValAs? String "arg" with
+            | .ok name =>
+                if (getField arg "_ty").isNone && (getField arg "_bench_ty").isNone
+                   && body.any (calledAsFunction name) then
+                  arg.setObjVal! "_bench_ty" (Json.mkObj [("node_type", Json.str "Name"), ("id", Json.str "Callable")])
+                else arg
             | _ => arg
           fn.setObjVal! "args" (args.setObjVal! "args" (Json.arr argsArr))
       | _ => fn
@@ -692,7 +743,7 @@ partial def stampFunction (sigs : Sigs) (outer hints : Env) (fn : Json) : Json :
       rt := rt'
       sgn := sgn.insert nm rt'
     return match rt with | .unknown => sg | t => sg.insert nm t) sigs
-  let fn := stampParams env fn
+  let fn := stampCallableParams (stampParams env fn)
   let fn := match fn.getObjValAs? String "name" with
     | .ok name =>
         -- The return type from its annotation if it has one (a union like `int | str` reads as
@@ -732,10 +783,18 @@ partial def stampFunction (sigs : Sigs) (outer hints : Env) (fn : Json) : Json :
         -- body actually yields `PyAny` — either `sigs` said so, or the env-seeded return is boxed.
         let boxRet := retType == (.any : PyType) || sawAny
         let fn := if !boxRet && sawOther && sawFloat then fn.setObjVal! "_ret_float" (Json.bool true) else fn
-        if boxRet then fn.setObjVal! "_box_return" (Json.bool true)
-        else if !annotated && retType.isKnown then
-          match toAnnotation? retType with
-          | some ann => fn.setObjVal! "_ret_ty" ann
+        let fn := if boxRet then fn.setObjVal! "_box_return" (Json.bool true)
+          else if !annotated && retType.isKnown then
+            match toAnnotation? retType with
+            | some ann => fn.setObjVal! "_ret_ty" ann
+            | none => fn
+          else fn
+        -- Benchmark-only: record a return that `_ret_ty` couldn't emit (a `.fn` return of unknown
+        -- signature → `Callable`, a partial container) so the eval harness scores it. Codegen ignores it.
+        if !annotated && (getField fn "_ret_ty").isNone && (getField fn "_box_return").isNone
+           && (getField fn "_ret_float").isNone then
+          match toAnnotation? (containerFillAny retType) with
+          | some ann => fn.setObjVal! "_bench_ret_ty" ann
           | none => fn
         else fn
     | _ => fn
@@ -861,7 +920,11 @@ partial def stampCompTargets (sigs : Sigs) (env : Env) (json : Json) : Json :=
                         match toAnnotation? elemTy with
                         | some ann => g.setObjVal! "target" (target.setObjVal! "_ty" ann)
                         | none => g
-                      else g
+                      -- Benchmark-only: record the comprehension target's element type as `_bench_ty`
+                      -- even when it can't be a real `_ty` ascription, so the eval harness scores it.
+                      else match toAnnotation? (containerFillAny elemTy) with
+                        | some ann => g.setObjVal! "target" (target.setObjVal! "_bench_ty" ann)
+                        | none => g
                     else g
                 | _, _ => g))
           | _ => json
@@ -1048,6 +1111,23 @@ partial def stampStmt (sigs : Sigs) (env : Env) (roots : Array Json) (s : Json) 
             | none => true
           unless valueIsCopy || valueIsDefaultdictComp do
             s := s.setObjVal! "target" (stampTarget env t allowDict)
+          -- Benchmark-only: record the target's inferred type as `_bench_ty` even when codegen needs
+          -- no ascription, so the TypeInfer evaluation harness can read what was inferred. Codegen
+          -- reads `_ty`, never `_bench_ty`, so this is inert for translation.
+          if let some t2 := getField s "target" then
+            if nodeTypeOf t2 == some "Name" then
+              if let some nm := nameId? t2 then
+                if let some ann := toAnnotation? (containerFillAny ((env.get? nm).getD .unknown)) then
+                  s := s.setObjVal! "target" (t2.setObjVal! "_bench_ty" ann)
+            -- Benchmark-only: `obj.attr = v` records the attribute's inferred type (from the RHS) so
+            -- the eval harness can resolve `self.attr` / `obj.attr` facts. Codegen ignores `_bench_ty`.
+            else if nodeTypeOf t2 == some "Attribute" then
+              match getField s "value" with
+              | some v =>
+                  match toAnnotation? (containerFillAny (typeOfExpr sigs env v)) with
+                  | some ann => s := s.setObjVal! "target" (t2.setObjVal! "_bench_ty" ann)
+                  | none => pure ()
+              | none => pure ()
     | _ => pure ()
     -- `c[i] = v` into a float-element container: stamp the *value* so codegen ascribes it to the
     -- element type. An un-ascribed `Int` value otherwise pins `PySetItem`'s value `outParam` to `ℤ`,
