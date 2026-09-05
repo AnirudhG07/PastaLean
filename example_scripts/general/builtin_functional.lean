@@ -24,7 +24,7 @@ def builtin_functional :=
   let total := (PastaLean.pySum xs : Int)
   let smallest := (PastaLean.pyMin xs : Int)
   let largest := (PastaLean.pyMax xs : Int)
-  let reduced := Libraries.functools.pyReduce xs (fun (acc : Int) ↦ fun (x : Int) ↦ acc +ₚ x) (some (0 : Int))
+  let reduced := (Libraries.functools.pyReduce xs (fun (acc : Int) ↦ fun (x : Int) ↦ acc +ₚ x) (some (0 : Int)) : Int)
   (mapped, (filtered, (zipped, (enumerated, (total, (smallest, (largest, reduced)))))))
 
 attribute [simp, taste_ingr] builtin_functional
@@ -40,7 +40,7 @@ def builtin_functional'rn :=
   let total := (PastaLean.pySum xs : Int)
   let smallest := (PastaLean.pyMin xs : Int)
   let largest := (PastaLean.pyMax xs : Int)
-  let reduced := Libraries.functools.pyReduce xs (fun (acc : Int) ↦ fun (x : Int) ↦ acc +ₚ x) (some (0 : Int))
+  let reduced := (Libraries.functools.pyReduce xs (fun (acc : Int) ↦ fun (x : Int) ↦ acc +ₚ x) (some (0 : Int)) : Int)
   (mapped, (filtered, (zipped, (enumerated, (total, (smallest, (largest, reduced)))))))
 
 def functools_reduced :=

@@ -140,7 +140,28 @@ python3 PastaBench/pastabench.py status
 
 # typecheck the whole benchmark (generated code + every proof)
 lake build PastaBench
+
+# score the TypeInfer engine on the TypeEvalPy micro-benchmark (return/param/var exact match)
+python3 PastaBench/pastaeval.py typeinfer
+python3 PastaBench/pastaeval.py typeinfer -- --bench <TypeEvalPy autogen dir>   # the full ~78k-fact set
 ```
+
+### `typeinfer` — TypeInfer engine vs TypeEvalPy
+
+`pastaeval typeinfer` runs PastaLean's `inferTypes` pass over the [TypeEvalPy](https://github.com/secure-software-engineering/TypeEvalPy)
+micro-benchmark (150+ core-Python snippets, 845 ground-truth type facts) and reports exact-match
+counts in TypeEvalPy's leaderboard columns:
+
+```
+    Dimension                   Exact match
+    Function Return Type         169 / 230    (73.5%)
+    Function Parameter Type       62 / 95     (65.3%)
+    Local Variable Type          314 / 525    (59.8%)
+    Total                        545 / 850    (64.1%)
+```
+
+Inference-only (no codegen/compile), so the whole micro set finishes in seconds off one warm backend.
+The harness lives in `typeinfer_bench/`; `run_autogen.sh` there runs the full ~78k-fact autogen set.
 
 `materialize` preserves any `Proofs.lean` that already exists. `--force-proofs` overwrites them
 and is the one destructive flag here.

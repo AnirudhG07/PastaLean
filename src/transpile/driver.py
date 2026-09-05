@@ -1393,6 +1393,10 @@ def resolve_local_imports(source_code, module_dir):
     """
     if not module_dir:
         return None
+    # Fast path: a file with no `import` at all has nothing local to resolve, so skip the parse
+    # entirely (this pass otherwise parses the source a second time on top of translate_to_json).
+    if "import" not in source_code:
+        return None
     root = Path(module_dir)
     try:
         main_tree = ast.parse(source_code)

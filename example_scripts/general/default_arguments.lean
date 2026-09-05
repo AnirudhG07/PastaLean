@@ -118,10 +118,10 @@ def main : IO Unit := do
           let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg (greet "x")]
           let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg (greet "x" "yo" (1 : Int))]
           let mut c := Counter.new
-          let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg (Counter.bumped c)]
-          let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg (Counter.bumped c (5 : Int))]
+          let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg (c.bumped)]
+          let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg (c.bumped (5 : Int))]
           let mut c2 := Counter.new (10 : Int) (2 : Int)
-          let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg (Counter.bumped c2 (3 : Int))]
+          let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg (c2.bumped (3 : Int))]
           let mut leaf := TreeNode.new (2 : Int)
           let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg leaf.val]
           let mut root := TreeNode.new (1 : Int) leaf
@@ -144,10 +144,10 @@ def main'rn : IO Unit := do
   let _ ← pyPrintIO [pyPrintArg (greet'rn "x")]
   let _ ← pyPrintIO [pyPrintArg (greet'rn "x" "yo" (1 : Int))]
   let mut c := Counter'rn.new
-  let _ ← pyPrintIO [pyPrintArg (Counter'rn.bumped c)]
-  let _ ← pyPrintIO [pyPrintArg (Counter'rn.bumped c (5 : Int))]
+  let _ ← pyPrintIO [pyPrintArg (c.bumped)]
+  let _ ← pyPrintIO [pyPrintArg (c.bumped (5 : Int))]
   let mut c2 := Counter'rn.new (10 : Int) (2 : Int)
-  let _ ← pyPrintIO [pyPrintArg (Counter'rn.bumped c2 (3 : Int))]
+  let _ ← pyPrintIO [pyPrintArg (c2.bumped (3 : Int))]
   let mut leaf := TreeNode'rn.new (2 : Int)
   let _ ← pyPrintIO [pyPrintArg leaf.val]
   let mut root := TreeNode'rn.new (1 : Int) leaf

@@ -784,7 +784,9 @@ partial def stampFunction (sigs : Sigs) (outer hints : Env) (fn : Json) : Json :
         let boxRet := retType == (.any : PyType) || sawAny
         let fn := if !boxRet && sawOther && sawFloat then fn.setObjVal! "_ret_float" (Json.bool true) else fn
         let fn := if boxRet then fn.setObjVal! "_box_return" (Json.bool true)
-          else if !annotated && retType.isKnown then
+          -- A `.none` (void) return is NOT ascribed as `_ret_ty` — a void function stays IO/Unit-shaped
+          -- in codegen; only the call-result typing (via `sigs`) and the `_bench_ret_ty` below use it.
+          else if !annotated && retType.isKnown && retType != .none then
             match toAnnotation? retType with
             | some ann => fn.setObjVal! "_ret_ty" ann
             | none => fn
@@ -1117,7 +1119,17 @@ partial def stampStmt (sigs : Sigs) (env : Env) (roots : Array Json) (s : Json) 
           if let some t2 := getField s "target" then
             if nodeTypeOf t2 == some "Name" then
               if let some nm := nameId? t2 then
-                if let some ann := toAnnotation? (containerFillAny ((env.get? nm).getD .unknown)) then
+                -- `env` (module globals) only holds TOP-LEVEL names, so a body-local var (`z = y`
+                -- inside a loop, `w = x + 1` inside an `if`) is `.unknown` there. Fall back to the
+                -- RHS type — or, for a `for` target, the iterable's element type — so loop/block-local
+                -- variables are typed too. Benchmark-only stamp; codegen never reads `_bench_ty`.
+                let gt := (env.get? nm).getD .unknown
+                let t := if gt == .unknown then
+                    match nodeTypeOf s with
+                    | some "For" => (getField s "iter").elim .unknown (fun it => (typeOfExpr sigs env it).elemType)
+                    | _ => (getField s "value").elim .unknown (typeOfExpr sigs env)
+                  else gt
+                if let some ann := toAnnotation? (containerFillAny t) then
                   s := s.setObjVal! "target" (t2.setObjVal! "_bench_ty" ann)
             -- Benchmark-only: `obj.attr = v` records the attribute's inferred type (from the RHS) so
             -- the eval harness can resolve `self.attr` / `obj.attr` facts. Codegen ignores `_bench_ty`.
@@ -1186,9 +1198,15 @@ partial def stampStmt (sigs : Sigs) (env : Env) (roots : Array Json) (s : Json) 
     s := stampHoistTypes env "try_assigned_names" "try_assigned_types" s
     s := stampHoistTypes env "for_assigned_names" "for_assigned_types" s
     s := stampHoistTypes env "while_assigned_names" "while_assigned_types" s
+    -- For a `for` loop, thread the loop target's type into the body env (bound to the iterable's
+    -- element type), so a body-local var derived from it (`for y in xs: z = y`) is typed. Other
+    -- blocks reuse the enclosing env.
+    let bodyEnv := match nodeTypeOf s, getField s "target", getField s "iter" with
+      | some "For", some target, some iter => bindTargetType env target (typeOfExpr sigs env iter).elemType
+      | _, _, _ => env
     for f in #["body", "orelse", "finalbody"] do
       if let .ok elems := s.getObjValAs? (Array Json) f then
-        s := s.setObjVal! f (Json.arr (elems.map (stampStmt sigs env roots)))
+        s := s.setObjVal! f (Json.arr (elems.map (stampStmt sigs bodyEnv roots)))
     if let .ok handlers := s.getObjValAs? (Array Json) "handlers" then
       let handlers := handlers.map fun h =>
         match h.getObjValAs? (Array Json) "body" with

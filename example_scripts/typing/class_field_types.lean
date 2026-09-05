@@ -157,7 +157,7 @@ def main' :=
       uf := UnionFind.find uf (5 : Int) |>.2
       let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg (p'_popv_3 == p'_popv_4)]
       let mut b := Bag.new ["pear", "apple"]
-      let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg (Bag.first b)]
+      let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg (b.first)]
       let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg b.n]) :
     PastaLean.ProofMode.PyProofM _)
 
@@ -179,7 +179,7 @@ def main''rn :=
       uf := UnionFind'rn.find uf (5 : Int) |>.2
       let _ ← pyPrintIO [pyPrintArg (p'_popv_3 == p'_popv_4)]
       let mut b := Bag'rn.new ["pear", "apple"]
-      let _ ← pyPrintIO [pyPrintArg (Bag'rn.first b)]
+      let _ ← pyPrintIO [pyPrintArg (b.first)]
       let _ ← pyPrintIO [pyPrintArg b.n]) :
     IO _)
 

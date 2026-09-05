@@ -142,13 +142,20 @@ def _has_value_return(body):
     return False
 
 
+def _base(name):
+    """Strip TypeInfer's SSA version suffix (`y'v1` → `y`) so a name aligns with the ground truth,
+    which uses the original Python identifier. Also drops a `'rn`/other `'`-suffix the codegen adds."""
+    return name.split("'")[0] if isinstance(name, str) else name
+
+
 def _collect_target(t, cls, var_ann, field_ann, field_by_attr):
     """Record `_bench_ty`/`_ty` on an assignment target, descending tuple/list/starred targets."""
     nt = t.get("node_type")
     if nt == "Name":
         ann = t.get("_bench_ty") or t.get("_ty")
         if ann:
-            var_ann[t.get("id")] = ann
+            # SSA versions a type-changing var (`y`→`y'v1`); the ground truth names the base `y`.
+            var_ann[_base(t.get("id"))] = ann
     elif nt == "Attribute":
         ann = t.get("_bench_ty") or t.get("_ty")
         if ann:
@@ -174,23 +181,49 @@ def collect(stamped):
         if isinstance(o, dict):
             nt = o.get("node_type")
             if nt == "FunctionDef":
-                fname = (cls + "." if cls else "") + (o.get("name") or "")
+                raw = _base(o.get("name") or "")
+                fname = (cls + "." if cls else "") + raw
+                # TypeEvalPy's ground truth names a method's `function` UNQUALIFIED (`__init__`, not
+                # `MyClass.__init__`), so record returns/params under BOTH the qualified key and the
+                # bare method name (SSA suffix stripped) — else method-param/return facts never match.
+                keys = {fname, raw}
                 if o.get("_ret_float") is True:
-                    returns[fname] = {"node_type": "Name", "id": "float"}
+                    rann = {"node_type": "Name", "id": "float"}
                 elif o.get("_ret_ty") or o.get("_bench_ret_ty"):
-                    returns[fname] = o.get("_ret_ty") or o.get("_bench_ret_ty")
+                    rann = o.get("_ret_ty") or o.get("_bench_ret_ty")
                 elif not _has_value_return(o.get("body", [])):
                     # No `return <expr>` anywhere → the function returns None (Python's implicit return).
-                    returns[fname] = {"node_type": "Name", "id": "None"}
+                    rann = {"node_type": "Name", "id": "None"}
+                else:
+                    rann = None
+                if rann is not None:
+                    for k in keys:
+                        returns[k] = rann
                 for a in o.get("args", {}).get("args", []):
                     ann = a.get("_ty") or a.get("_bench_ty")
                     if ann:
-                        params[(fname, a.get("arg"))] = ann
+                        pname = _base(a.get("arg") or "")
+                        for k in keys:
+                            params[(k, pname)] = ann
                 for v in o.values():
                     walk(v, cls)
                 return
             if nt == "ClassDef":
                 inner = (cls + "." if cls else "") + (o.get("name") or "")
+                # Class-level variables live in `fields` with a typed default (`class_var = 20.44`).
+                # Record them so a `ClassName.class_var` / `obj.class_var` fact resolves.
+                for f in o.get("fields", []):
+                    if not isinstance(f, dict):
+                        continue
+                    ann = f.get("_ty") or f.get("_bench_ty")
+                    dflt = f.get("default")
+                    if ann is None and isinstance(dflt, dict) and dflt.get("node_type") == "Constant":
+                        lk = dflt.get("python_literal_kind")
+                        if lk in ("int", "float", "str", "bool"):
+                            ann = {"node_type": "Name", "id": lk}
+                    if ann and f.get("name"):
+                        field_ann[(inner, f["name"])] = ann
+                        field_by_attr.setdefault(f["name"], ann)
                 for v in o.values():
                     walk(v, inner)
                 return
@@ -252,6 +285,11 @@ def resolve(name, var_ann, field_ann, field_by_attr):
             return None
     else:
         ann = var_ann.get(base)
+        # `ClassName.attr` (a class-variable / static access): the base is a class name, not an
+        # assigned variable, so `var_ann` misses it — resolve the attribute directly as a field.
+        if ann is None and accs and accs[0][0] == "attr":
+            ann = field_ann.get((base, accs[0][1])) or field_by_attr.get(accs[0][1])
+            accs = accs[1:]
     for acc in accs:
         if ann is None:
             return None
@@ -373,6 +411,16 @@ def main():
             grand[f] += a[f]
     print(f"  {'ALL':7} {line(grand)}")
 
+    # TypeEvalPy leaderboard-style breakdown (exact-match counts per dimension).
+    print("\n=== Exact-match breakdown (TypeEvalPy leaderboard columns) ===")
+    labels = [("Function Return Type", "return"), ("Function Parameter Type", "param"),
+              ("Local Variable Type", "var")]
+    print(f"  {'Dimension':24} {'Exact match':>14}")
+    for label, kind in labels:
+        a = total[kind]
+        print(f"  {label:24} {a['matched']:>7} / {a['total']:<6}")
+    print(f"  {'Total':24} {grand['matched']:>7} / {grand['total']:<6}")
+
     print("\n=== Per category (all dimensions) ===")
     for cat in sorted(by_cat):
         a = {"total": 0, "covered": 0, "matched": 0, "sim": 0.0}
@@ -388,6 +436,12 @@ def main():
 
     print(f"\n[*] snippets with a backend/convert error: {errors}")
     args.out.write_text(json.dumps({
+        "breakdown": {
+            "Function Return Type": {"matched": total["return"]["matched"], "total": total["return"]["total"]},
+            "Function Parameter Type": {"matched": total["param"]["matched"], "total": total["param"]["total"]},
+            "Local Variable Type": {"matched": total["var"]["matched"], "total": total["var"]["total"]},
+            "Total": {"matched": grand["matched"], "total": grand["total"]},
+        },
         "overall": {k: dict(v) for k, v in total.items()},
         "grand": grand,
         "by_category": {c: {k: dict(v) for k, v in d.items()} for c, d in by_cat.items()},

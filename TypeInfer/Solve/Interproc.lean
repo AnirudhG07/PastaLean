@@ -315,7 +315,13 @@ partial def collectSigs (module : Json) : Sigs × ParamSigs := Id.run do
     for (cls, mn, m) in methodEntries do
       let key := s!"{cls}.{mn}"
       let hints := methodHints params cls key m
-      nextSigs := nextSigs.insert key (returnTypeOf sigs hints m fnEnv)
+      let ret := returnTypeOf sigs hints m fnEnv
+      nextSigs := nextSigs.insert key ret
+      -- Also store the method's FUNCTION type under a `#fn`-suffixed key (no Python name has `#`), so a
+      -- method REFERENCE `obj.method` (not a call) types as a function → `callable`, distinct from a
+      -- data field. `obj.method()` still reads the return type via `key`.
+      let methParams := ((params.get? key).getD #[]).toList.drop (if isInstanceMethod m then 1 else 0)
+      nextSigs := nextSigs.insert s!"{key}#fn" (.fn methParams ret)
       let env := inferFunction sigs fnEnv hints m
       nextParams := refineFrom nextParams (collectCalls sigs env m)
       nextParams := refineFrom nextParams (collectMethodCalls sigs env classNames methodSelf m)
@@ -404,6 +410,49 @@ partial def stampBenchTarget (globals : Env) (ty : PyType) : Json → Json
         | _ => t
     | _ => t
 
+-- Benchmark-only: stamp `_bench_ty` on the targets inside a module-level BLOCK body (a `for`/`while`/
+-- `if` at module scope), threading the env sequentially so a body-local variable (`for y in xs: z = y`)
+-- and the loop target itself are typed. Codegen never reads `_bench_ty`, so this is inert.
+mutual
+partial def stampBenchInner (sigs : Sigs) (env : Env) (s : Json) : Json :=
+  let s := match nodeTypeOf s with
+    | some "Assign" | some "AnnAssign" | some "AugAssign" | some "For" =>
+        match getField s "target" with
+        | some t =>
+            let valTy := match nodeTypeOf s with
+              | some "For" => (getField s "iter").elim .unknown (fun it => (typeOfExpr sigs env it).elemType)
+              | _ => (getField s "value").elim .unknown (typeOfExpr sigs env)
+            s.setObjVal! "target" (stampBenchTarget env valTy t)
+        | none => s
+    | _ => s
+  match nodeTypeOf s with
+  | some "For" =>
+      let bodyEnv := match getField s "target", getField s "iter" with
+        | some tg, some it => bindTargetType env tg (typeOfExpr sigs env it).elemType
+        | _, _ => env
+      let s := match s.getObjValAs? (Array Json) "body" with
+        | .ok b => s.setObjVal! "body" (Json.arr (stampBenchBody sigs bodyEnv b)) | _ => s
+      match s.getObjValAs? (Array Json) "orelse" with
+      | .ok b => s.setObjVal! "orelse" (Json.arr (stampBenchBody sigs env b)) | _ => s
+  | some "While" | some "If" =>
+      let s := match s.getObjValAs? (Array Json) "body" with
+        | .ok b => s.setObjVal! "body" (Json.arr (stampBenchBody sigs env b)) | _ => s
+      match s.getObjValAs? (Array Json) "orelse" with
+      | .ok b => s.setObjVal! "orelse" (Json.arr (stampBenchBody sigs env b)) | _ => s
+  | _ => s
+
+/-- Stamp a block's statements in order, threading the env via `applyStmt` so later statements see
+earlier assignments (and the loop/block context). -/
+partial def stampBenchBody (sigs : Sigs) (env : Env) (stmts : Array Json) : Array Json := Id.run do
+  let mut e := env
+  let mut out := #[]
+  for s in stmts do
+    let s := stampBenchInner sigs e s
+    out := out.push s
+    e := applyStmt sigs e s
+  return out
+end
+
 /-- Stamp `_ty` across one top-level node, resolving calls with `sigs` and seeding each function's
 unannotated params from `params`. The driver sends one statement per request; a `FunctionDef`, a
 `ClassDef` (each method) or a `Module` (a mutual group) is stamped, anything else is unchanged. -/
@@ -451,8 +500,10 @@ partial def stampNodeWith (sigs : Sigs) (params : ParamSigs) (globals : Env) (s 
           | .ok body => s.setObjVal! key (Json.arr (body.map (stampUnpackShapes sigs genv)))
           | _ => s
         stampBlock "orelse" (stampBlock "body" s)
-      else s
-  | some "Assign" | some "AnnAssign" | some "AugAssign" | some "For" =>
+      -- A non-guard module-level `if`: stamp body/orelse targets so a branch-local var (`if c: z=1
+      -- else: z=2`) is typed (benchmark-only).
+      else stampBenchInner sigs globals s
+  | some "Assign" | some "AnnAssign" | some "AugAssign" =>
       -- Benchmark-only: stamp a module-level target's inferred type as `_bench_ty` (codegen ignores
       -- it) so the harness sees top-level variable inferences. Never writes `_ty`, so byte-identical
       -- value-mode codegen is unperturbed. A tuple/list target distributes the value's type over its
@@ -464,11 +515,51 @@ partial def stampNodeWith (sigs : Sigs) (params : ParamSigs) (globals : Env) (s 
           let valTy := (getField s "value").elim .unknown (typeOfExpr sigs globals)
           s.setObjVal! "target" (stampBenchTarget globals valTy t)
       | none => s
+  -- A module-level `for`/`while` (non-guard `if` reaches here too): stamp the target AND recurse into
+  -- the body, threading the loop/block env so body-local variables are typed (benchmark-only).
+  | some "For" | some "While" => stampBenchInner sigs globals s
   | _ => s
 
 /-- Intraprocedural stamping of a single node (no cross-function info). Used per-request as a
 fallback; `inferModule` supersedes it when the whole module is available. -/
 partial def stampNode (s : Json) : Json := stampNodeWith {} {} {} s
+
+/-- Every plain-`Name` decorator applied anywhere in the module (`@dec`, including inside nested
+defs). A function used as a decorator receives the decorated object as its first argument. -/
+partial def collectDecoratorNames : Json → List String
+  | json =>
+    let here := if nodeTypeOf json == some "FunctionDef" || nodeTypeOf json == some "ClassDef"
+      then (decoratorNamesOf json).toList else []
+    here ++ (match json with
+      | .arr xs => xs.toList.flatMap collectDecoratorNames
+      | .obj fs => fs.toList.flatMap (fun (_, v) => collectDecoratorNames v)
+      | _ => [])
+
+/-- Benchmark-only: a function used as `@dec` takes the decorated function/class as its first
+argument, so that param is `callable` (a `_bench_ty` read-out — its precise signature is unknown, so
+it is not a real `_ty`). Stamps every FunctionDef named in `decoNames`, at any nesting depth. -/
+partial def stampDecoratorParams (decoNames : List String) : Json → Json
+  | json =>
+    let json := match json with
+      | .arr xs => Json.arr (xs.map (stampDecoratorParams decoNames))
+      | .obj fs => Json.mkObj (fs.toList.map (fun (k, v) => (k, stampDecoratorParams decoNames v)))
+      | _ => json
+    if nodeTypeOf json == some "FunctionDef"
+       && ((json.getObjValAs? String "name").toOption.any decoNames.contains) then
+      match (getField json "args").bind (·.getObjValAs? (Array Json) "args" |>.toOption) with
+      | some argsArr =>
+          match argsArr[0]? with
+          | some a0 =>
+              if (getField a0 "_ty").isNone && (getField a0 "_bench_ty").isNone
+                 && ((getField a0 "annotation").all (·.isNull)) then
+                let a0' := a0.setObjVal! "_bench_ty"
+                  (Json.mkObj [("node_type", Json.str "Name"), ("id", Json.str "Callable")])
+                json.setObjVal! "args" (((getField json "args").getD Json.null).setObjVal! "args"
+                  (Json.arr (argsArr.set! 0 a0')))
+              else json
+          | none => json
+      | none => json
+    else json
 
 /-- Whole-module inference: co-evolve return and parameter types to a fixpoint, then stamp each
 top-level node with that knowledge. This is what the `inferTypes` backend task runs. -/
@@ -491,7 +582,9 @@ def inferModule (module : Json) : Json :=
   let globals : Env := (topLevelStmts module).foldl (applyStmt sigs) fnSeed
   -- Mark each statement `_inferred` so the per-request fallback pass (which lacks module context and
   -- would re-derive worse types, e.g. a global-fed `float` local mis-stamped `int`) skips it.
-  let mark (s : Json) : Json := (stampNodeWith sigs params globals s).setObjVal! "_inferred" (Json.bool true)
+  let decoNames := collectDecoratorNames module
+  let mark (s : Json) : Json :=
+    stampDecoratorParams decoNames ((stampNodeWith sigs params globals s).setObjVal! "_inferred" (Json.bool true))
   match module.getObjValAs? (Array Json) "body" with
   | .ok body => module.setObjVal! "body" (Json.arr (body.map mark))
   | _ => mark module

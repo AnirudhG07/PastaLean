@@ -181,8 +181,20 @@ partial def typeOfExpr (sigs : Sigs) (env : Env) (e : Json) : PyType :=
   | some "Attribute" =>
       match field e "value", (e.getObjValAs? String "attr").toOption with
       | some recv, some attr =>
-          match (typeOfExpr sigs env recv).classNameOf? with
-          | some c => (sigs.get? s!"{c}.{attr}").getD .unknown
+          -- A class NAME as receiver (`MyClass.class_var`) isn't in `env`; fall back to `sigs` where a
+          -- class is `.cls Name`, so class-variable / static access resolves like an instance access.
+          let recvT := match typeOfExpr sigs env recv with
+            | .unknown =>
+                if nodeType? recv == some "Name" then
+                  ((recv.getObjValAs? String "id").toOption.bind (sigs.get? ·)).getD .unknown
+                else .unknown
+            | t => t
+          match recvT.classNameOf? with
+          -- A METHOD reference `obj.method` (not a call) is a function value → `callable`; the `#fn`
+          -- key holds its signature. A data field falls through to its declared type.
+          | some c => match sigs.get? s!"{c}.{attr}#fn" with
+                      | some fnT => fnT
+                      | none => (sigs.get? s!"{c}.{attr}").getD .unknown
           | none => .unknown
       | _, _ => .unknown
   -- Comprehensions: bind each generator target from its iterable's element type, then type the
@@ -275,7 +287,13 @@ partial def typeOfCall (sigs : Sigs) (env : Env) (e : Json) : PyType :=
               | some t => t
               | none => fallback
           | _, _ => fallback
-      | _ => .unknown
+      -- Calling any OTHER expression (`d["b"]()`, `a[0]()`, `(x if c else y)()`): if it evaluates to
+      -- a function, the call yields that function's return type. Sound — a heterogeneous container's
+      -- element joins to `.any`, whose `.fn` return is `.any` (→ no concrete claim).
+      | _ =>
+          match typeOfExpr sigs env func with
+          | .fn _ ret => ret
+          | _ => .unknown
   | none => .unknown
 
 /-- Return type of a builtin `name(args)`; `unknown` for non-builtins. -/
@@ -316,6 +334,16 @@ partial def builtinReturn (sigs : Sigs) (env : Env) (name : String) (args : List
       .list (.list (PyType.joinAll (args.map (fun a => (typeOfExpr sigs env a).elemType))))
     else if name == "combinations" || name == "permutations" then
       .list (.list (args.head?.elim .unknown (fun a => (typeOfExpr sigs env a).elemType)))
+    -- `reduce(f, iterable[, init])` folds `f` over the iterable; its result is `f`'s return type (a
+    -- binary `f : (T,T)->T` over `T` elements yields `T`). Read `f`'s return from a named callback,
+    -- falling back to the iterable's element type.
+    else if name == "reduce" then
+      let elemTy := args[1]?.elim .unknown (fun a => (typeOfExpr sigs env a).elemType)
+      match args.head?.bind (·.getObjValAs? String "id" |>.toOption) with
+      | some f =>
+          let r := (constReturnBuiltins.lookup f).getD ((sigs.get? f).getD .unknown)
+          if r == .unknown then elemTy else r
+      | none => elemTy
     -- Every other arg-dependent builtin / star-imported member declares its return SHAPE in
     -- `Libraries.bareBehaviour?`, so this engine no longer hardcodes any member's name (§27).
     else match Libraries.bareBehaviour? name with
@@ -326,7 +354,15 @@ partial def builtinReturn (sigs : Sigs) (env : Env) (name : String) (args : List
 effective argument 0 (so `d.get(k, default)` reads the receiver and the default from the arg types).
 The engine names no method. -/
 partial def methodReturn (sigs : Sigs) (env : Env) (attr : String) (recv : Option Json) (args : List Json) : PyType :=
-  let recvT := recv.elim .unknown (typeOfExpr sigs env)
+  let recvT0 := recv.elim .unknown (typeOfExpr sigs env)
+  -- A class NAME used as a receiver (`MyClass.func()` — a static/class method, or the class object)
+  -- isn't in `env` (class names aren't bound as values), so `typeOfExpr` returns unknown. Fall back to
+  -- `sigs`, where a class is registered as `.cls Name`, and resolve the method on it.
+  let recvName? := recv.bind (fun r =>
+    if nodeType? r == some "Name" then (r.getObjValAs? String "id").toOption else none)
+  let recvT := if recvT0 == .unknown then
+      (recvName?.bind (sigs.get? ·)).getD .unknown
+    else recvT0
   -- A user method call `obj.attr(...)` on a class instance resolves to `Class.attr`'s inferred return.
   let userMethod : PyType := match recvT with
     | .cls c => (sigs.get? s!"{c}.{attr}").getD .unknown

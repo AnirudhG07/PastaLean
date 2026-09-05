@@ -14,6 +14,8 @@ Usage:
   python3 PastaBench/pastaeval.py humaneval --contract    # contract source; add --prove to run taste?
   python3 PastaBench/pastaeval.py cp --source leetcode --num max   # forwards remaining args to CPastaEval
   python3 PastaBench/pastaeval.py numpy                    # just the numpy files
+  python3 PastaBench/pastaeval.py typeinfer                # TypeInfer vs TypeEvalPy micro-benchmark
+  python3 PastaBench/pastaeval.py typeinfer -- --bench <autogen dir>   # the full autogen set
 
 Do NOT run a separate `lake build` / `regen` concurrently — a warm backend + parallel `lake env lean`
 share the oleans a build would rewrite.
@@ -269,6 +271,35 @@ def run_cp(passthrough: list[str]) -> int:
     ).returncode
 
 
+def run_typeinfer(passthrough: list[str]) -> dict:
+    """Score the TypeInfer engine on the TypeEvalPy micro-benchmark (return/param/var exact match).
+    Returns the leaderboard-style breakdown read back from the summary JSON."""
+    out = ROOT / "PastaBench" / "_eval_out" / "typeinfer_summary.json"
+    out.parent.mkdir(exist_ok=True)
+    log("Dispatching to TypeInfer benchmark (TypeEvalPy)")
+    rc = subprocess.run(
+        [sys.executable, str(ROOT / "typeinfer_bench" / "typeinfer_eval.py"),
+         "--out", str(out), *passthrough],
+        cwd=ROOT,
+    ).returncode
+    breakdown = {}
+    if out.is_file():
+        breakdown = json.loads(out.read_text()).get("breakdown", {})
+    return {"returncode": rc, "breakdown": breakdown}
+
+
+def print_typeinfer_report(res: dict) -> None:
+    b = res.get("breakdown", {})
+    print("-" * 60)
+    print("  TypeInfer (TypeEvalPy micro-benchmark) — exact-match breakdown:")
+    print(f"    {'Dimension':24} {'Exact match':>14}")
+    for dim in ("Function Return Type", "Function Parameter Type", "Local Variable Type", "Total"):
+        d = b.get(dim)
+        if d:
+            pct = 100 * d["matched"] / d["total"] if d["total"] else 0.0
+            print(f"    {dim:24} {d['matched']:>7} / {d['total']:<6} ({pct:.1f}%)")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(prog="pastaeval", description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -287,6 +318,12 @@ def main() -> None:
                     help="args forwarded verbatim to cp_harness/cpasta_eval.py run")
 
     sub.add_parser("numpy", help="compile-check only the numpy library + tests")
+
+    ti = sub.add_parser("typeinfer",
+                        help="score the TypeInfer engine on the TypeEvalPy micro-benchmark (return/param/var)")
+    ti.add_argument("passthrough", nargs=argparse.REMAINDER,
+                    help="args after `--` forwarded to typeinfer_bench/typeinfer_eval.py "
+                         "(e.g. `typeinfer -- --bench <autogen dir>`)")
 
     args = ap.parse_args()
     report: dict = {}
@@ -308,6 +345,14 @@ def main() -> None:
         rc = run_cp(args.passthrough)
         report["cp_returncode"] = rc
         report["numpy"] = check_numpy()
+    elif args.cmd == "typeinfer":
+        ti_res = run_typeinfer([a for a in args.passthrough if a != "--"])
+        print_typeinfer_report(ti_res)
+        report["typeinfer"] = ti_res
+        out = ROOT / "PastaBench" / "pastaeval_report.json"
+        out.write_text(json.dumps(report, indent=2, default=str))
+        print(f"Full report: {out}")
+        return
 
     print("-" * 60)
     print("  numpy:")

@@ -406,12 +406,20 @@ partial def returnTypeOf (sigs : Sigs) (hints : Env) (fn : Json) (outer : Env :=
   let env := inferFunction sigs outer hints fn
   let body := (fn.getObjValAs? (Array Json) "body").toOption.getD #[]
   let mut ret : PyType := .unknown
+  let mut sawValueReturn := false
   for s in flatStmts body.toList do
     if nodeTypeOf s == some "Return" then
       match getField s "value" with
-      | some v => if !v.isNull then ret := ret.join (typeOfExpr sigs env v) else ret := ret.join .none
+      | some v =>
+          if !v.isNull then
+            ret := ret.join (typeOfExpr sigs env v)
+            sawValueReturn := true
+          else
+            ret := ret.join .none
       | none => ret := ret.join .none
-  return ret
+  -- A function that never returns a VALUE (`def f(): pass`, or only bare `return`) returns `None` —
+  -- so a call `y = f()` is typed `None`, not left unknown. Sound (Python's implicit `return None`).
+  return if sawValueReturn then ret else .none
 
 
 end TypeInfer
