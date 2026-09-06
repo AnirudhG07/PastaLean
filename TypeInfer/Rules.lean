@@ -100,7 +100,17 @@ mutual
 types. Total: `unknown` when unsure. -/
 partial def typeOfExpr (sigs : Sigs) (env : Env) (e : Json) : PyType :=
   match nodeType? e with
-  | some "Name" => ((e.getObjValAs? String "id").toOption.bind (env.get? ·)).getD .unknown
+  | some "Name" =>
+      match (e.getObjValAs? String "id").toOption with
+      | some id =>
+          match env.get? id with
+          | some t => t
+          -- A bare reference to a user function is a callable returning that function's inferred type,
+          -- so passing it (`f(g)`) lets a higher-order body's `g()` resolve to `g`'s return.
+          | none => match sigs.get? id with
+                    | some rt => .fn [] rt
+                    | none => .unknown
+      | none => .unknown
   | some "Constant" => ofValue e
   | some "List" => .list (PyType.joinAll ((eltsOf e).map (typeOfExpr sigs env)))
   | some "Set" => .set (PyType.joinAll ((eltsOf e).map (typeOfExpr sigs env)))
@@ -250,6 +260,9 @@ partial def typeOfCall (sigs : Sigs) (env : Env) (e : Json) : PyType :=
       match nodeType? func with
       | some "Name" =>
           match (func.getObjValAs? String "id").toOption with
+          -- `super()` inside a method: the enclosing class's base is seeded as `super#cls`, so
+          -- `super().m()` reads the base's `m` (recv typed to the base class here).
+          | some "super" => (env.get? "super#cls").getD .unknown
           -- A builtin's return type wins; otherwise a user function's inferred return type.
           | some name =>
               match builtinReturn sigs env name args with

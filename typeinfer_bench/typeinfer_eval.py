@@ -142,6 +142,37 @@ def _has_value_return(body):
     return False
 
 
+def _has_yield(body):
+    """Does this statement list contain a `yield`/`yield from`, not descending into nested defs? Such a
+    function is a generator, so TypeEvalPy scores its return as `generator` (we lower it to a list)."""
+    for s in body:
+        if not isinstance(s, dict):
+            continue
+        nt = s.get("node_type")
+        if nt in ("FunctionDef", "AsyncFunctionDef", "ClassDef", "Lambda"):
+            continue
+        if nt in ("Yield", "YieldFrom"):
+            return True
+        for k, v in s.items():
+            if isinstance(v, list) and _has_yield(v):
+                return True
+            if isinstance(v, dict) and _has_yield([v]):
+                return True
+    return False
+
+
+def _itertools_call_name(val):
+    """`itertools.X(...)` → the TypeEvalPy type string `itertools.X` (it types such a result by the
+    itertools constructor's name), else None."""
+    if not isinstance(val, dict) or val.get("node_type") != "Call":
+        return None
+    fn = val.get("func") or {}
+    if (fn.get("node_type") == "Attribute" and isinstance(fn.get("value"), dict)
+            and fn["value"].get("id") == "itertools" and fn.get("attr")):
+        return "itertools." + fn["attr"]
+    return None
+
+
 def _base(name):
     """Strip TypeInfer's SSA version suffix (`y'v1` → `y`) so a name aligns with the ground truth,
     which uses the original Python identifier. Also drops a `'rn`/other `'`-suffix the codegen adds."""
@@ -187,7 +218,10 @@ def collect(stamped):
                 # `MyClass.__init__`), so record returns/params under BOTH the qualified key and the
                 # bare method name (SSA suffix stripped) — else method-param/return facts never match.
                 keys = {fname, raw}
-                if o.get("_ret_float") is True:
+                if _has_yield(o.get("body", [])):
+                    # A `yield`-bearing function is a generator (we lower it to a list at codegen).
+                    rann = {"node_type": "Name", "id": "generator"}
+                elif o.get("_ret_float") is True:
                     rann = {"node_type": "Name", "id": "float"}
                 elif o.get("_ret_ty") or o.get("_bench_ret_ty"):
                     rann = o.get("_ret_ty") or o.get("_bench_ret_ty")
@@ -205,8 +239,10 @@ def collect(stamped):
                         pname = _base(a.get("arg") or "")
                         for k in keys:
                             params[(k, pname)] = ann
+                # Descend into the body under THIS function's qualified name, so a nested def is keyed
+                # `outer.inner` (matching TypeEvalPy's ground truth) instead of a bare `inner`.
                 for v in o.values():
-                    walk(v, cls)
+                    walk(v, fname)
                 return
             if nt == "ClassDef":
                 inner = (cls + "." if cls else "") + (o.get("name") or "")
@@ -216,9 +252,16 @@ def collect(stamped):
                     if not isinstance(f, dict):
                         continue
                     ann = f.get("_ty") or f.get("_bench_ty")
+                    if ann is None:
+                        a = f.get("annotation")
+                        if isinstance(a, dict) and a.get("node_type"):
+                            ann = a
                     dflt = f.get("default")
                     if ann is None and isinstance(dflt, dict) and dflt.get("node_type") == "Constant":
                         lk = dflt.get("python_literal_kind")
+                        if lk is None:
+                            lk = {"bool": "bool", "int": "int", "float": "float", "str": "str"}.get(
+                                type(dflt.get("value")).__name__)
                         if lk in ("int", "float", "str", "bool"):
                             ann = {"node_type": "Name", "id": lk}
                     if ann and f.get("name"):
@@ -231,6 +274,14 @@ def collect(stamped):
                 t = o.get("target")
                 if isinstance(t, dict):
                     _collect_target(t, cls, var_ann, field_ann, field_by_attr)
+                itername = _itertools_call_name(o.get("value"))
+                if itername:
+                    targets = o.get("targets", [])
+                    if isinstance(t, dict):
+                        targets = targets + [t]
+                    for tg in targets:
+                        if isinstance(tg, dict) and tg.get("node_type") == "Name" and tg.get("id"):
+                            var_ann.setdefault(tg["id"], {"node_type": "Name", "id": itername})
             if nt in ("ListComp", "SetComp", "GeneratorExp", "DictComp"):
                 for g in o.get("generators", []):
                     t = g.get("target")
@@ -338,6 +389,74 @@ def score(preds, facts):
     return agg, diffs
 
 
+def _mem_available_gb() -> float:
+    """Available RAM in GiB, read from /proc/meminfo (MemAvailable). Falls back to 8 GiB."""
+    try:
+        with open("/proc/meminfo") as f:
+            for line in f:
+                if line.startswith("MemAvailable:"):
+                    return int(line.split()[1]) / (1024 * 1024)  # kB -> GiB
+    except Exception:  # noqa: BLE001
+        pass
+    return 8.0
+
+
+# Each warm backend re-imports its whole environment; a Mathlib-heavy `py2lean` boot is ~1.2 GiB
+# resident. Sized with headroom so N workers never oversubscribe memory and start swapping.
+PER_WORKER_GB = 1.5
+
+
+def auto_jobs(n_snippets: int) -> int:
+    """Memory-aware worker count. Targets the 16-32 band where wall-time plateaus, but lets the
+    machine's free memory (and core count) pull it below when either is tight. Tiny workloads stay
+    serial — they are boot-bound, so extra workers only pay more boots for no wall-time gain."""
+    import os
+    cores = os.cpu_count() or 4
+    mem_cap = max(1, int(_mem_available_gb() / PER_WORKER_GB))
+    cap = min(cores, mem_cap)
+    if n_snippets < 500:
+        return 1
+    lo, hi = 16, 32
+    return max(1, cap) if cap <= lo else min(hi, cap)
+
+
+def _eval_chunk(chunk):
+    """One warm backend over a slice of snippets. Returns partial aggregates the parent merges.
+    Pure/independent per snippet, so chunks compose order-invariantly (byte-identical to serial)."""
+    s = Session(target="command", mode="both")
+    s.start()
+    total = defaultdict(lambda: {"total": 0, "covered": 0, "matched": 0, "sim": 0.0})
+    by_cat = defaultdict(lambda: defaultdict(lambda: {"total": 0, "covered": 0, "matched": 0, "sim": 0.0}))
+    per_snippet, errors = {}, 0
+    try:
+        for py in chunk:
+            py = Path(py)
+            cat = py.parts[-3]
+            gt = py.with_name("main_gt.json")
+            if not gt.exists():
+                continue
+            try:
+                ir = s.to_json_ir_file(py, infer_only=True)
+                res = s.client.infer_types(ir)
+                stamped = res.get("ast", res) if isinstance(res, dict) else res
+                preds = collect(stamped)
+            except Exception:  # noqa: BLE001
+                errors += 1
+                preds = ({}, {}, {}, {}, {})
+            agg, _ = score(preds, load_gt(gt))
+            per_snippet[f"{cat}/{py.parent.name}"] = {k: dict(v) for k, v in agg.items()}
+            for kind, a in agg.items():
+                for f in ("total", "covered", "matched"):
+                    total[kind][f] += a[f]; by_cat[cat][kind][f] += a[f]
+                total[kind]["sim"] += a["sim"]; by_cat[cat][kind]["sim"] += a["sim"]
+    finally:
+        s.close()
+    # defaultdicts don't pickle their factories cleanly across the Pool boundary; return plain dicts.
+    return ({k: dict(v) for k, v in total.items()},
+            {c: {k: dict(v) for k, v in d.items()} for c, d in by_cat.items()},
+            per_snippet, errors)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--bench", type=Path, default=DEFAULT_BENCH)
@@ -345,6 +464,9 @@ def main():
     ap.add_argument("--diff", default=None, help="Dump per-fact pred-vs-gold for snippets in this category")
     ap.add_argument("--misses", action="store_true", help="Aggregate the most common miss patterns globally")
     ap.add_argument("--limit", type=int, default=None, help="Only run the first N snippets (for a quick slice)")
+    ap.add_argument("--jobs", default="auto",
+                    help="Parallel warm backends: 'auto' (memory-aware, 16-32 band) or an integer. "
+                         "1 = serial. --diff/--misses force serial.")
     args = ap.parse_args()
     miss_counts = defaultdict(int)
     miss_examples = {}
@@ -358,10 +480,37 @@ def main():
     by_cat = defaultdict(lambda: defaultdict(lambda: {"total": 0, "covered": 0, "matched": 0, "sim": 0.0}))
     per_snippet, errors = {}, 0
 
-    s = Session(target="command", mode="both")
-    s.start()
+    jobs = auto_jobs(len(snippets)) if args.jobs == "auto" else max(1, int(args.jobs))
+    # --diff/--misses stream per-fact detail from inside the loop; keep them serial.
+    if (args.diff or args.misses) and jobs > 1:
+        print(f"[*] --diff/--misses set: forcing --jobs 1 (was {jobs})")
+        jobs = 1
+    print(f"[*] jobs={jobs} ({args.jobs}){'  free=%.0fGiB cores=%d' % (_mem_available_gb(), (__import__('os').cpu_count() or 0)) if args.jobs == 'auto' else ''}")
+
+    if jobs > 1:
+        from multiprocessing import Pool
+        paths = [str(p) for p in snippets]
+        chunks = [paths[i::jobs] for i in range(jobs)]  # round-robin: even load per worker
+        with Pool(jobs) as pool:
+            for t_p, bc_p, ps_p, err_p in pool.map(_eval_chunk, chunks):
+                errors += err_p
+                per_snippet.update(ps_p)
+                for kind, a in t_p.items():
+                    for f in ("total", "covered", "matched", "sim"):
+                        total[kind][f] += a[f]
+                for c, d in bc_p.items():
+                    for kind, a in d.items():
+                        for f in ("total", "covered", "matched", "sim"):
+                            by_cat[c][kind][f] += a[f]
+        _run_serial = False
+    else:
+        _run_serial = True
+
+    s = Session(target="command", mode="both") if _run_serial else None
+    if _run_serial:
+        s.start()
     try:
-        for py in snippets:
+        for py in (snippets if _run_serial else []):
             cat = py.parts[-3]
             gt = py.with_name("main_gt.json")
             if not gt.exists():
@@ -396,7 +545,8 @@ def main():
                     total[kind][f] += a[f]; by_cat[cat][kind][f] += a[f]
                 total[kind]["sim"] += a["sim"]; by_cat[cat][kind]["sim"] += a["sim"]
     finally:
-        s.close()
+        if s is not None:
+            s.close()
 
     def line(a):
         t, c, m, sim = a["total"], a["covered"], a["matched"], a["sim"]

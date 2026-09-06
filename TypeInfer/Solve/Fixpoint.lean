@@ -350,6 +350,25 @@ def learnFromDictMethods (sigs : Sigs) (env : Env) (json : Json) : Env :=
                                          (if vt == .unknown then v else v.join vt))
     | _ => e) env
 
+/-- Seed a parameter whose DEFAULT is a known function as a callable returning that function's type:
+`def f(a=g): return a()` makes `a` a `Callable[…, g's return]`, so `a()` resolves to `g`'s return
+(and any variable bound to it follows). `sigs g` is g's inferred return type. -/
+def defaultCallableSeed (sigs : Sigs) (fn : Json) : Env := Id.run do
+  let mut m : Env := {}
+  let some argsNode := (fn.getObjVal? "args").toOption | return m
+  let params := (argsNode.getObjValAs? (Array Json) "args").toOption.getD #[]
+  let defaults := (argsNode.getObjValAs? (Array Json) "defaults").toOption.getD #[]
+  if defaults.isEmpty then return m
+  let firstDefault := params.size - defaults.size
+  for i in [0:params.size] do
+    if i ≥ firstDefault then
+      if let some g := nameId? defaults[i - firstDefault]! then
+        if let some rt := sigs.get? g then
+          if rt != .unknown then
+            if let .ok pn := params[i]!.getObjValAs? String "arg" then
+              m := m.insert pn (.fn [] rt)
+  return m
+
 /-- Infer a type for every local in `fn`, reflowing to a fixpoint. `outer` seeds the environment
 with the enclosing scope so a nested def's captures start typed; `hints` seeds unannotated
 parameters with types learned from call sites; `sigs` resolves calls to user functions. Precedence:
@@ -381,6 +400,7 @@ partial def inferFunction (sigs : Sigs) (outer hints : Env) (fn : Json) : Env :=
   env := mergeRefining outer env
   env := mergeRefining hints env
   env := mergeRefining (paramSeed fn) env
+  env := mergeRefining (defaultCallableSeed sigs fn) env
   let bodyJson := Json.arr body
   -- Reflow until stable. The lattice climbs, so a small cap is a sound floor, not a correctness risk.
   for _ in [0:8] do

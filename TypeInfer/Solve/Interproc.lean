@@ -315,6 +315,11 @@ partial def collectSigs (module : Json) : Sigs × ParamSigs := Id.run do
     for (cls, mn, m) in methodEntries do
       let key := s!"{cls}.{mn}"
       let hints := methodHints params cls key m
+      -- Seed the enclosing class's first base as `super#cls` so `super().method()` in the body reads
+      -- the base's method return (`class B(A): def func(self): return super().func()` → `A.func`).
+      let hints := match (baseMap.find? (·.1 == cls)).bind (·.2[0]?) with
+        | some b => hints.insert "super#cls" (.cls b)
+        | none => hints
       let ret := returnTypeOf sigs hints m fnEnv
       nextSigs := nextSigs.insert key ret
       -- Also store the method's FUNCTION type under a `#fn`-suffixed key (no Python name has `#`), so a
@@ -415,6 +420,9 @@ partial def stampBenchTarget (globals : Env) (ty : PyType) : Json → Json
 -- and the loop target itself are typed. Codegen never reads `_bench_ty`, so this is inert.
 mutual
 partial def stampBenchInner (sigs : Sigs) (env : Env) (s : Json) : Json :=
+  -- Stamp comprehension targets in a top-level comprehension (`ls = [f(a) for a in range(10)]` binds
+  -- `a : int`); function-body comprehensions get this in `stampFunction`, module-level ones need it here.
+  let s := stampCompTargets sigs env s
   let s := match nodeTypeOf s with
     | some "Assign" | some "AnnAssign" | some "AugAssign" | some "For" =>
         match getField s "target" with

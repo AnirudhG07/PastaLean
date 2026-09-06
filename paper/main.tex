@@ -31,6 +31,7 @@
 \usepackage{xcolor}         % colors
 \usepackage{listings}      % for code listings
 \usepackage{graphicx}
+\usepackage{placeins}
 
 
 \lstset{
@@ -197,6 +198,8 @@ We sketch below the main issues in transpiling Python to Lean, and how we addres
 
 \subsubsection{Arithmetic Operations}\label{sec:arith}
 
+\suggest{COMPLETED}
+
 \suggest{
 Python's arithmetic operators are polymorphic, meaning the same operator can work with different data types depending on the operands. For example, \code{+} performs numeric addition for integers and concatenation for strings, while Boolean values behave like integers (True + True = 2, False + 3 = 4). We model each as a typeclass whose \emph{result} type is an \code{outParam}: e.g. \code{PyHAdd α β (outParam γ)}(with a shorthand notation $+_p$ ) and analogously \code{PyHSub}($+_p$), \code{PyHMul}($*_p$), \code{PyHDiv}($/_p$), \code{PyModulo}($\%_p$), etc. \\
 Operations follow the numeric widening hierarchy (Section \ref{numeric-widening}), with the result taking the wider operand's type. To model this in Lean, we create Typeclasses for each operation with instances created for different operand types to support internally the polymorphic behavior of Python Operators. We implement this widening with a single class \code{PyNumJoin} \ref{app:arith}, which records how any two numeric types convert into a common one, so that each operator needs only one generic instance rather than one per pair of types.}
@@ -239,6 +242,8 @@ Alternatively, we can use the \code{IO} monad, which supports state and exceptio
 \todo{talk about how we manually implement these}
 
 \subsubsection{Polymorphic Functions}\label{sec:poly}
+\suggest{COMPLETED}
+
 
 \suggest{A polymorphic function accepts arguments of several types, and Python has two different sources of it (Listing \ref{lst:polyeg}). Library functions such as \code{len}, \code{min} and \code{max} support a fixed, known set of types, and for these Lean's own type classes are exactly the right tool: each operation is a protocol class with one instance per supporting type (\code{PyLen} for \code{len}, \code{PyGetItem} for subscripting, \code{PyIterable} for iteration), the operand's type selects the instance during elaboration, nothing is boxed, and the result is as provable as any monomorphic definition. A user-written \code{add} declares no types at all, so there is no fixed set of types to write instances for and type inference has to decide instead.}
 
@@ -264,6 +269,8 @@ add("pasta", "lean")  # "pastalean"
 }
 
 \subsubsection{Nested Definitions and Closures}
+\suggest{COMPLETED}
+
 
 \suggest{Lean does not support nested functions similar to Python. Hence, we take a nested \code{def} and lift it to a sibling \code{private partial def} whose extra parameters are exactly the captured names (the inner reads intersected with the outer binds). This is the standard \emph{lambda lifting} transformation~\cite{johnsson1985lambdalifting}. }
 
@@ -289,6 +296,8 @@ def make_adder := fun (n : Int) ↦ fun (x : Int) ↦ _make_adder'add x n
 \suggest{We use sibling \code{partial def}s rather than \code{where} or \code{let rec}, since either would force the \emph{enclosing} \code{def} to be \code{partial} and cost it its unfolding and its provability(see Section \ref{app:lifting}). The lifted function needs correct set of parameters which it would have if we had used say \code{let rec}. We pass the helper exactly those variable names it reads that belong to the enclosing function, since those are the ones lifting would put out of scope. Globals and builtins need no parameter, because a sibling definition still sees them. A closure is the same lifting seen from the caller's side: a helper that escapes, by being returned or stored, becomes a partial application of the lifted definition to its captured values. One that also writes to what it captured needs a shared cell instead, since two calls to the escaped function must see each other's writes. Appendix \ref{app:lifting} gives the algorithm, the alternatives it rules out, and both closure forms. We machine-check its provable core: the free-set computation is formalised in Lean and proved scope-preserving, so lifting never puts a name out of scope that the source kept in (Appendix \ref{app:lifting}).}
 
 \subsubsection{Multiple Returns}
+\suggest{COMPLETED}
+
 
 \suggest{Lean requires a single return type where Python requires possibly none. We take the return type to be the join of the branch types over the lattice(Section \ref{sec:typeinfer}), so most disagreements resolve based on numeric widening principe \ref{numeric-widening}. Branches mixing \code{int} and \code{float} widen to the \code{float} type, and a branch returning \code{None} makes the result \code{Option T} rather than anything dynamic. Genuine lattice conflicts such as a \code{str} on one path and an \code{int} on another, reaches the top of the lattice, and the result is then boxed as \code{PyAny} and dispatched on its runtime tag (Section \ref{sec:pyany}). Another route is to return a proper union type, or to make the return type itself computed, giving the function a type-valued signature so that each call's return type follows from its arguments. Both are future work.}
 
@@ -338,6 +347,8 @@ with automatic framing, so an object the callee does not touch is carried across
 \todo{Set up appendix with more examples and explanations}
 
 \subsubsection{Libraries}
+\suggest{COMPLETED}
+
 
 \suggest{Every programming language including Python heavily depends on its libraries for complex tasks, and a transpiler that handles only the core language handles very little useful code. To keep PastaLean computable, verifiable and correct, we do not use instead FFI constructs to connect Python functions within Lean since it will compromise on verifiability. We take an approach where we manually rewrite python library functions(mostly common ones) into Lean using it's standard libraries and Mathlib. It not only gives us power to verify those Libraries, but also ability to compute and verify complex codes calling those functions.}
 
@@ -359,17 +370,9 @@ strings printed up to any point in the execution of the program.
 \subsection{Dynamic Typing and Type Inference}
 \label{sec:typeinfer}
 
-Python is known for it's easy-to-use dynamic typing for users, yet a nightmare for Software Verifiers. Python supports type mutations of a variable, multiple return types of a function, it's power in Object Oriented programming, flexibility of function arguments and return types i.e. no error will be thrown if function supposed to return \code{str} returns an \code{int} type, etc. While types are dynamic, Python is strongly typed meaning it strictly enforces type rules at runtime and will raise a \code{TypeError} if incompatible types are operated on without explicit conversion. To be able to verify Python from a statically typed language like Lean, we must try to pin down the correct Type of the variable/function based it's utility if type is previously not mentioned within source code.
+\suggest{Python does not make you write types and Lean insists on them, so something has to work out a Lean type for every Python value. When PastaLean cannot, it leaves the binder untyped and hopes Lean's unifier solves it, which often fails: a top-level \code{def} fixes its parameter types before it looks at the body, so an unannotated parameter used only as a container leaves instance resolution stuck. \code{TypeInfer} is a small Lean library that fills those slots. It depends on nothing else in PastaLean, and its output is written back onto the IR as ordinary type annotations, so code generation reads an inferred type in the same place it reads one the user wrote.}
 
-We propose a Type inference engine (\code{TypeInfer}) which tries to resolve Type from a given AST. The key idea is to assign to every IR node a \code{PyType} drawn from a small lattice which resolves into a Python's numeric tower into Mathlib types, and falls back to a dynamic type only when it must.
-
-\subsubsection{The PyType Lattice}
-\code{PyType} (Listing~\ref{lst:pytype_lattice}) is a finite inductive type, include a bottom \code{unknown} (``nothing known yet''), a top \code{Any} (which we call
-\code{PyAny}), scalars \code{int}/\code{bool}/\code{str}/\code{float}/\code{none}, covariant
-containers \code{list}/\code{set}/\code{tuple}/\code{dict}, a nullable \code{opt}, user classes
-\code{cls}, and function types \code{fn}. The order has $\bot$ at \code{unknown} and
-$\top$ at \code{any}, with the crucial refinement that the numeric scalars are \emph{not} flat:
-they form Python's tower.
+\suggest{Every value gets a \code{PyType} (Listing \ref{lst:pytype_lattice}). Two constructors carry the analysis: \code{unknown} is the bottom, meaning nothing is known \emph{yet}, and \code{any} is the top, meaning we found out the value is more than one thing. The single operation is \code{join}, the least upper bound: start every slot at \code{unknown} and join in what the program says until nothing changes. Because \code{join} only ever climbs, the analysis is a monotone dataflow fixpoint~\cite{cousot1977abstract} and is guaranteed to settle.}
 
 \begin{lstlisting}[caption={The \texttt{PyType} lattice.},label={lst:pytype_lattice}, mathescape=true]
 inductive PyType where
@@ -383,51 +386,11 @@ inductive PyType where
   | fn    (args : List PyType) (ret : PyType)
 \end{lstlisting}
 
-These constructors capture the majority of types encountered in Python, ranging from primitive types to user-defined class types. Python's standard \code{typing} library provides generic type annotations such as \code{List} and \code{Dict}. However, these are normalized into the corresponding \code{PyType} constructors (e.g., \code{Dict} is represented as \code{.dict}). Each \code{PyType} constructor is internally associated with an appropriate Lean type, and operations over \code{PyType} are correspondingly mapped to their counterparts in Lean's type system.
+\suggest{The scalars are deliberately not flat. Python promotes silently, so \code{True + 1} is \code{2} and a list holding both \code{5} and \code{float('inf')} is a list of floats. Making \code{join} widen along Python's tower, $\mathtt{bool} < \mathtt{int} < \mathtt{float}$, means a mixed container keeps a concrete element type and the smaller operand is coerced up, where a flat domain would send \code{join(int, float)} to the top and box the whole container. Types also cross function boundaries in both directions: return types flow out to call sites, and the argument types at every call site are joined into the callee's parameters.}
 
-\subsubsection{The numeric widening tower}\label{numeric-widening}
-Python promotes silently: \code{True + 1} is \code{2}, \code{3 / 2} is \code{1.5}, and a list
-written with both \code{5} and \code{float('inf')} is a \code{list[float]}. A naive
-least-upper-bound over a flat scalar set would send \code{join(int, float)} to \code{any},
-boxing the whole container and destroying provability. Instead we use the join operation which \emph{widens} along the tower. See \ref{lst:join} for the Join function used.
+\suggest{Two cases need more than a join. A rebinding can change a variable's type, as in \code{x = "5"} followed by \code{x = int(x)}, and one Lean binder cannot hold both; an SSA pass versions the variable at exactly those points~\cite{cytron1991ssa}. And when a value genuinely has no single type the join reaches the top, and the value is boxed as \code{PyAny}, the dynamic type of gradual typing~\cite{siek2006gradual}. Boxing is what makes the transpiler total, at the cost of provability, so it is a last resort.}
 
-\[
-\mathtt{bool} \;<\; \mathtt{int} \;<\; \{\mathtt{float},\ \mathbb{Q}\} \;<\; \mathbb{R},
-\]
-
-Hence \code{join(int, bool) = int} and \code{join(int, float) = float}
-(Listing~\ref{lst:join}). At code-generation time the ``smaller'' operand is coerced up the
-tower (\code{Int}$\to\mathbb{Q}$, and we insert the missing \code{bool} coercion rungs), rather
-than the container's element type collapsing to dynamic. Containers join covariantly; tuples and
-function types join pointwise when arities match and drop to \code{any} otherwise.
-
-Type inference for a variable is performed as a monotone data-flow analysis, which can be viewed as an instance of abstract interpretation~\cite{cousot1977abstract}. Each variable initially has type \code{unknown}, and its type is gradually refined using three sources of information: (1) explicit annotations, (2) forward propagation from literals, operators, assignments, and built-ins, and (3) back-inference from how a value is used.
-
-For example, \code{p.split()} infers \code{p : str}, while \code{x + 4} infers \code{x : int}. Similarly, \code{d[k]} provides information about the key and value types of \code{d}, and arithmetic propagates types through expressions:
-\begin{lstlisting}
-def f(p):
-x = p.split() # p : str, x : List[str]
-return x[0] # return : str
-\end{lstlisting}
-
-The analysis repeatedly propagates these constraints until no type changes. Since types only become more precise through \code{join}, this process reaches a fixed type which we call a  fixpoint. Function return types are also propagated across the module, allowing calls with known argument types to be specialized. Any type that remains \code{unknown} is finally represented as \code{PyAny}.
-
-
-\subsubsection{SSA versioning across type mutations}
-\label{sec:ssa}
-Python rebinds freely, and a rebinding can change a variable's type:
-\code{x = "5"; x = int(x)} turns a \code{str} into an \code{int}. A single Lean binder cannot
-hold both. We therefore run an SSA pass that detects a
-\emph{type-changing} reassignment and versions the variable (\code{x}, \code{x'v1},~\dots), with
-$\phi$-joins where branches carrying different versions merge~\cite{cytron1991ssa}. Crucially,
-\emph{only type changes} trigger a new version with a same-type rebinding stays a Lean \code{let mut} update, preserving the imperative shape and widening within the tower (e.g.\ \code{None} followed by an \code{int}, i.e.\ acquiring \code{Optional}) is treated as \emph{widening}, not mutation, so it does not spuriously fork the variable. Just like Standard SSA, this new variable is passed referenced instead of the previous old copies.
-
-\subsubsection{The dynamic fallback: \texttt{PyAny}} \label{sec:pyany}
-
-When we genuinely cannot decide a type, the join reaches \code{.any} the value is
-boxed as \code{PyAny}, a tagged union of the runtime types. Following gradual
-typing~\cite{siek2006gradual}, \code{PyAny} is consistent with the rest of the program: it
-\emph{delegates} (rather than reimplements) the container, indexing, and truthiness protocols, so a boxed value still supports \code{x[i]}, \code{len(x)}, iteration, and \code{if x:}. However, all operations with \code{PyAny} is not possible.... \todo{complete this}
+\suggest{Because the engine is written in Lean we prove its core rather than only testing it. The literature on lattice-based analyses says which properties matter, and we prove each with no \code{sorry}: that the domain is a bounded join-semilattice and \code{join} is its least upper bound~\cite{davey2002lattices}, that \code{join} is monotone, so by Knaster--Tarski the fixpoint is least, unique and reached at bounded height~\cite{tarski1955fixpoint}, that widening is semantically sound, meaning a value of the inferred type still inhabits the widened one~\cite{milner1978polymorphism,wright1994soundness}, and that consistency for the dynamic type is reflexive, symmetric and \emph{not} transitive, which is what separates gradual typing from subtyping~\cite{siek2015refined}. Appendix \ref{app:typeinfer} gives the algorithm, the proofs and the cases in full.}
 
 
 \subsection{Verification}
@@ -471,9 +434,14 @@ our heap-manipulating programs (Section~\ref{sec:heap}).
 
 \section{Results}\label{results}
 
-\suggest{We evaluate PastaLean on three axes: how much Python it can translate into Lean that elaborates, whether the translated program computes the same answers as the original, and how well the type inference engine recovers types. Table \ref{tab:codegen} reports the first two, Table \ref{tab:typeinfer} the third. Appendix \ref{app:methodology} describes how each benchmark was run and measured.}
+\suggest{We evaluate PastaLean on three axes: how much Python it translates into Lean that elaborates(Code Generation), whether the translated program computes the same answers as the original(Correctness), and how well the type inference engine recovers types(Type Inference). Appendix \ref{app:methodology} describes how detailed methodology of how the benchmarks were evaluated.}
 
-\begin{table}[htbp]
+\suggest{For code generation task, a program counts as \emph{elaborated} when converted Lean successfully compiles and type-checks, a test counts as \emph{passed} when the computable twin returns the same answer as CPython on the dataset's own test input. Table \ref{tab:codegen} shows code generation coverage and correctness of the tool. The results show that the tool is able to cover > 95\% average of all datasets and > 98\% average tests passed. This gives us the confidence of using this tool robustly for transpilation purposes.}
+
+
+\suggest{Table \ref{tab:codegen} reports code generation. }
+
+\begin{table}[t]
 \centering
 \begin{tabular}{@{}lrrrr@{}}
 \toprule
@@ -484,85 +452,56 @@ LeetCode       & ?? & ?? & ?? & ?? \\
 LiveCodeBench  & ?? & ?? & ?? & ?? \\
 \bottomrule
 \end{tabular}
-\caption{Code generation and execution. \emph{Elaborated} counts programs whose generated Lean type-checks; \emph{Passed} counts the dataset's own tests that the Lean twin answers identically to CPython.}
+\caption{Code generation and execution.}
 \label{tab:codegen}
 \end{table}
 
-\begin{table}[htbp]
-\centering
-\footnotesize
-\begin{minipage}[t]{0.46\linewidth}
-\centering
-\textbf{Micro-benchmark}\\[2pt]
-\begin{tabular}{@{}lrrr@{}}
-\toprule
-Category & Facts & Matched & \% \\
-\midrule
-return    & 230 & 169 & 73.5 \\
-parameter & 95  & 62  & 65.3 \\
-variable  & 525 & 314 & 59.8 \\
-\textbf{all} & \textbf{850} & \textbf{545} & \textbf{64.1} \\
-\bottomrule
-\end{tabular}
-\end{minipage}\hfill
-\begin{minipage}[t]{0.46\linewidth}
-\centering
-\textbf{Autogen}\\[2pt]
-\begin{tabular}{@{}lrrr@{}}
-\toprule
-Category & Facts & Matched & \% \\
-\midrule
-return    & 17998 & 16179 & 89.9 \\
-parameter & 896   & 390   & 43.5 \\
-variable  & 58374 & 39473 & 67.6 \\
-\textbf{all} & \textbf{77268} & \textbf{56042} & \textbf{72.5} \\
-\bottomrule
-\end{tabular}
-\end{minipage}
-\caption{PastaLean's \code{TypeInfer} engine on the two TypeEvalPy~\cite{typeevalpy} sets (micro-benchmark left, autogen right), under the benchmark's exact-match metric. \emph{Facts} is the number of ground-truth type annotations; \emph{Matched} is those where the inferred type equals the expected one. The three categories are the benchmark's own: function return, function parameter, and local variable types.}
-\label{tab:typeinfer}
-\end{table}
 
-\begin{table}[htbp]
+\begin{table}[t]
 \centering
-\footnotesize
-\setlength{\tabcolsep}{4pt}
-\begin{tabular}{@{}lrrrr@{}}
-\toprule
-Static tool & Return & Param & Var & Total \\
-\midrule
-\textbf{PastaLean \code{TypeInfer}} & \textbf{16179} & \textbf{390} & \textbf{39473} & \textbf{56042} \\
-HeaderGen        & 14086 & 346 & 36370 & 50802 \\
-Jedi             & 13160 & 0   & 15403 & 28563 \\
-Scalpel          & 15383 & 171 & 18    & 15572 \\
-Type4Py          & 3143  & 38  & 2243  & 5424 \\
-\bottomrule
-\end{tabular}
-\caption{Static (non-LLM) type-inference tools on the TypeEvalPy autogen set~\cite{typeevalpy} (exact matches out of 77{,}268 facts; the four baselines are the static tools of the published leaderboard). Among the leaderboard's static tools PastaLean's \code{TypeInfer} is the \textbf{strongest} --- ahead of HeaderGen, the previous static leader, by 5{,}240 facts (56042 vs.\ 50802) --- and it places 12th of 26 overall, above several instruction-tuned LLMs, while emitting a single deterministic type per fact with no model and no sampling. (Modern production type checkers, which post-date this 2024 leaderboard, are compared separately in Table~\ref{tab:checkers}; one of them, pyrefly, edges ahead on autogen through local-variable coverage.) Function-return accuracy (16179) is competitive with the strongest LLMs; the remaining gap is almost entirely local-variable coverage, and function-parameter inference is the hardest category for every tool. Per-category coverage for both TypeEvalPy sets is in Table~\ref{tab:typeinfer}.}
-\label{tab:leaderboard}
-\end{table}
-
-\begin{table}[htbp]
-\centering
-\footnotesize
-\setlength{\tabcolsep}{5pt}
 \begin{tabular}{@{}lrrrrr@{}}
 \toprule
-Tool & Return & Param & Variable & Total & Time \\
+Tool & Return & Parameter & Variable & All & Match (\%) \\
 \midrule
-pyrefly            & 14246 & 54  & \textbf{46449} & \textbf{60749}\ (78.6\%) & 2.6s \\
-\textbf{PastaLean \code{TypeInfer}} & \textbf{16179} & \textbf{390} & 39473 & 56042\ (72.5\%) & 9.8s \\
-pyright            & 14110 & 28  & 37855 & 51993\ (67.3\%) & 11.3s \\
-zuban              & 13163 & 3   & 38179 & 51345\ (66.5\%) & 1.4s \\
-mypy$^\ddagger$    & 0     & 0   & 19097 & 19097\ (24.7\%) & 7.9s \\
-ty$^\ddagger$      & 0     & 29  & 18942 & 18971\ (24.6\%) & 1.8s \\
+\textbf{PastaLean} & \textbf{16{,}216} & \textbf{397} & \textbf{39{,}556} & \textbf{56{,}169} & \textbf{72.7} \\
+HeaderGen          & 14{,}086 & 346 & 36{,}370 & 50{,}802 & 65.7 \\
+Jedi               & 13{,}160 & 0   & 15{,}403 & 28{,}563 & 37.0 \\
+Scalpel            & 15{,}383 & 171 & 18       & 15{,}572 & 20.2 \\
+Type4Py            & 3{,}143  & 38  & 2{,}243  & 5{,}424  & 7.0 \\
 \bottomrule
 \end{tabular}
-\caption{PastaLean vs.\ modern production type checkers on the TypeEvalPy \emph{autogen} set (77{,}268 facts; per-category denominators 17{,}998 / 896 / 58{,}374). Each checker is scored by injecting \code{reveal\_type} and matching its output name-keyed against the ground truth at root-type granularity (e.g.\ \code{list[int]}$\to$\code{list}). PastaLean leads on function \emph{return} (89.9\%) and \emph{parameter} (43.5\%) types by wide margins --- the semantically load-bearing categories --- while pyrefly's much higher local-variable coverage puts it ahead on the (variable-dominated) total; the other checkers trail. $^\ddagger$mypy and ty follow the gradual guarantee, declining to infer unannotated code by design, so they report no unannotated returns/parameters. \emph{Time} is wall-clock over the whole benchmark; PastaLean's is warm inference through its already-booted compiled backend (Mathlib load excluded), the others include process startup, so timing is indicative. On the smaller micro-benchmark (850 facts) PastaLean leads \emph{overall}: 592 (0.2s) vs.\ pyrefly 411 (0.2s), pyright 407 (1.1s), zuban 345 (0.1s), ty 214 (0.1s), mypy 205 (0.8s).}
-\label{tab:checkers}
+\caption{Static tools on the autogen set (77{,}268 facts).}
+\label{tab:static-auto}
 \end{table}
 
-\clearpage
+\begin{table}[t]
+\centering
+\begin{tabular}{@{}lrrrrrr@{}}
+\toprule
+Tool & Return & Parameter & Variable & All & Match (\%) & Time \\
+\midrule
+\textbf{PastaLean} & \textbf{187} & \textbf{65} & \textbf{353} & \textbf{605} & \textbf{71.2} & 0.2s \\
+HeaderGen          & 186 & 56 & 322 & 564 & 66.4 & 0.64s \\
+pyrefly            & 95 & 9 & 307 & 411 & 48.4 & 0.2s \\
+pyright            & 91 & 6 & 310 & 407 & 47.9 & 1.1s \\
+zuban              & 85 & 2 & 258 & 345 & 40.6 & 0.1s \\
+ty$^\ddagger$      & 0  & 5 & 209 & 214 & 25.2 & 0.1s \\
+mypy$^\ddagger$    & 0  & 0 & 205 & 205 & 24.1 & 0.8s \\
+\bottomrule
+\end{tabular}
+\caption{Production type checkers on the micro-benchmark (850 facts). $\ddagger$ \texttt{mypy} and \texttt{ty} report a type only where one is annotated or directly inferable, which is why their return counts are zero.}
+\label{tab:checkers-micro}
+\end{table}
+
+
+
+\suggest{
+For Type inference task, a fact counts as matched only when the inferred type equals the expected one exactly. Tables \ref{tab:static-micro} and \ref{tab:static-auto} compare against the static tools on the TypeEvalPy leaderboard; Tables \ref{tab:checkers-micro} and \ref{tab:checkers-auto} against current production type checkers, which we ran ourselves and for which we also report wall-clock time. PastaLean matches more facts in all sub tasks and total than every other tool on the micro-benchmark (Table \ref{tab:checkers-micro}) and more than every static tool on the autogen set (Table \ref{tab:static-auto}). Since this is benchmark results from 2024, we ran results on the same dataset for many common and newer tools like pyrefly, ty, zuban, mypy and pyright. PastaLean is ahead of every tool on all sub tasks and total for the microbench by a margin of 3.2\% with HeaderGen. For the autogen dataset, we see pyrefly having better variable ype inference beatng PastaLean by a wide margin thus beating it in total by 6.1\% however PastaLean bets it on the Return and Parameter type inference easily. We also see comparable speed performances with other tools on a warm-backend computation for all tools. PastaLean's TypeInfer engine as mentioned is also machine checked, thus showing great capabilities as a static type checker for Python.}
+
+
+\FloatBarrier
+
+% \clearpage
 
 \section{Conclusions}
 
@@ -660,9 +599,9 @@ instance (priority := high) {α} : PyHAdd (List α) (List α) (List α) where
 @[default_instance 10001] instance : PyHAdd Int Int Int where hAdd a b := a + b
 \end{lstlisting}
 
-Python mixes numeric types freely, so every operator must accept every pair of them, and writing one instance per operator per pair does not scale. The conversions involved do not depend on the operator, so we declare them once: \code{PyNumJoin α β γ} records that \code{α} and \code{β} both convert into a common \code{γ}, with one instance per pair in the tower $\mathbb{N} \subset \mathbb{Z} \subset \mathbb{Q}$ together with \code{Float}. A single generic instance per operator then reads those conversions off the class (Listing \ref{lst:pynumjoin}). Floor division and the bitwise operators sit outside this scheme, the first because Python's \code{//} fixes its own result type, the second because it must model unbounded integers.
+Python mixes numeric types freely, so every operator must accept every pair of them, and writing one instance per operator per pair does not scale. The conversions involved do not depend on the operator, so we declare them once: \texttt{PyNumJoin} $\alpha\;\beta\;\gamma$ records that $\alpha$ and $\beta$ both convert into a common $\gamma$, with one instance per pair in the tower $\mathbb{N} \subset \mathbb{Z} \subset \mathbb{Q}$ together with \texttt{Float}. A single generic instance per operator then reads those conversions off the class (Listing \ref{lst:pynumjoin}). Floor division and the bitwise operators sit outside this scheme, the first because Python's \texttt{//} fixes its own result type, the second because it must model unbounded integers.
 
-\begin{lstlisting}[caption={The numeric tower, declared once and lifted to every operator.},label={lst:pynumjoin}, mathescape=true]
+\begin{lstlisting}[style=lean,caption={The numeric tower, declared once and lifted to every operator.},label={lst:pynumjoin}]
 
 class PyNumJoin (α β : Type) (γ : outParam Type) where
   coeL : α → γ
@@ -675,7 +614,7 @@ instance (priority := low) {α β γ} [j : PyNumJoin α β γ] [Add γ] : PyHAdd
   hAdd a b := j.coeL a + j.coeR b
 \end{lstlisting}
 
-\subsubsection{Implementing \code{float('inf')}} \label{floatinf}
+\subsubsection{Implementing \texttt{float('inf')}} \label{floatinf}
 
 Python has \code{inf} to represent infinity, i.e. no integer or float is bigger than it. Programmers often use \code{float('inf')} to initialise a running minimum (correspondingly \code{float('-inf')} for a running maximum), in the idiom \code{best = inf} followed by \code{best = min(best, ...)}. In the default exact mode a Python float is a $\mathbb{Q}$, and $\mathbb{Q}$ is a field with no infinities, so there is no value for the literal to denote. For plain execution we represent it as a large finite sentinel of magnitude $10^{30}$, letting the type of the slot it lands in select the representation through a class \code{PyNonFinite}, so that a \code{Float} slot receives the genuine IEEE infinity while a $\mathbb{Q}$ or $\mathbb{Z}$ slot receives the sentinel. That runs the idiom correctly, but a finite value can never satisfy $\forall x,\ x \le \mathit{inf}$, so it carries none of infinity's order structure and supports no proof.
 
@@ -945,13 +884,76 @@ Decorators like \code{@static} and \code{@property} are also supported. \todo{fi
 \todo{Talk more about limitations and what we currently support.}
 
 
-\section{More on TypeInfer Engine}
+\section{The Type Inference Engine}\label{app:typeinfer}
 
-In this section we talk more about the Type Inference and some intricacies to deal with while modeling Python. Note that the Type Infer engine has been refined as it was tested more and more with different and interesting pieces of code.
+\subsection{What the engine reads and what it writes}\label{app:ti-io}
 
-\subsection{Join over PyType Lattice}\label{join-pytype}
+The engine is a separate Lean library. It depends only on Lean's JSON library and nothing else in PastaLean, and the code generator depends on it, not the other way round.
 
-As mentioned in \ref{app:lattice}, we use the \emph{join} function to go up the numeric widening tower maintaining soundness of the type checker. These join operations are made keeping in mind behavior of Python.
+Its input is the JSON IR of one module: the Python AST after parsing and desugaring, before any code is generated. Its output is the same IR with two things added. Every statement carries \code{\_inferred}, a flag saying the whole-module pass has run. Every binder whose type the engine worked out carries \code{\_ty}, an annotation node holding that type, written in the same shape a hand-written Python annotation would have. Nothing else changes: no expression is rewritten and no node is removed.
+
+Writing the result back as ordinary annotations is what keeps the two halves separate. The code generator reads \code{\_ty} in the same place it reads a user's annotation, so it needs no special path for inferred types, and a program the user annotated fully produces the same Lean whether the engine ran or not.
+
+The engine is also optional, in a precise sense. If the pass is skipped or fails, the driver leaves the IR untouched and code generation proceeds with unannotated binders. Lean then elaborates what it can. This works for a binder Lean's own unifier can solve from the surrounding body, and fails for the ones it cannot: a top-level \code{def} fixes its parameter types before looking at the body, so an unannotated parameter used only as a container leaves instance resolution stuck. The engine exists to fill exactly those slots, which is why its failure degrades the output rather than breaking it.
+
+\subsection{The algorithm}\label{app:ti-algo}
+
+Inference runs in three nested layers. The innermost is a per-statement transfer function, the middle is a per-function fixpoint, and the outer is a whole-module fixpoint over function signatures. Listing \ref{lst:ti-algo} gives the shape.
+
+\begin{lstlisting}[style=pseudo,caption={The inference pipeline. $\sqcup$ is the lattice join.},label={lst:ti-algo}]
+
+INFER_MODULE(m):
+  (sigs, params) $\gets$ signatures of every function and method in m
+  repeat 6 times: // outer fixpoint over the module
+      for each call site f(a) in m:
+          params[f] $\gets$ params[f] $\sqcup$ typeof(a) // arguments refine parameters
+      for each function f in m:
+          sigs[f] $\gets$ sigs[f] $\sqcup$ INFER_FUNCTION(f).return
+      copy base-class members to subclasses that do not override
+      stop early if nothing changed
+  globals $\gets$ types of the module-level statements
+  return m with every binder stamped _ty from INFER_FUNCTION
+
+INFER_FUNCTION(f):
+  env $\gets$ usage(f) $\sqcup$ captures(f) $\sqcup$ callSiteHints(f) $\sqcup$ annotations(f)
+  repeat 8 times: // inner fixpoint over the body
+      env' $\gets$ env
+      for each statement s in body(f): env' $\gets$ APPLY(env', s)
+      env' $\gets$ learn from reads, dict methods and comprehension targets
+      if env' = env: break
+      env $\gets$ env'
+  return env
+
+APPLY(env, s): // the transfer function
+  match s:
+    x = e            $\Rightarrow$ env[x] $\gets$ env[x] $\sqcup$ TYPEOF(env, e)
+    x.append(e)      $\Rightarrow$ env[x] $\gets$ env[x] $\sqcup$ list(TYPEOF(env, e))
+    for x in e       $\Rightarrow$ env[x] $\gets$ env[x] $\sqcup$ elem(TYPEOF(env, e))
+    if/while/try     $\Rightarrow$ fold APPLY over each branch, then join the branches
+    return e         $\Rightarrow$ record TYPEOF(env, e) as f's return type
+\end{lstlisting}
+
+Three points about this shape. The environment only ever moves up the lattice, because every update is a join, so both loops are monotone and settle. The iteration counts are caps rather than convergence tests, which is sound because the lattice has small fixed height: a cap is a floor on how far the analysis climbs, not an approximation of it, and in practice the inner loop converges in about two passes. And precedence between the four seeds is fixed rather than order-dependent: body usage is weakest, then enclosing captures, then call-site hints, then written annotations, so an annotation the user wrote is never overridden by something the engine guessed.
+
+\subsection{What is proved, and why these are the right properties}\label{app:ti-proofs}
+
+The engine is a monotone dataflow fixpoint over a type lattice, and the literature is specific about what such an analysis has to satisfy. We take the requirements from that literature and prove each one in Lean, with no \code{sorry}.
+
+\begin{itemize}\itemsep2pt
+\item \textbf{The domain is a bounded join-semilattice.} This is what makes the fixpoint well defined and independent of the order in which facts are merged~\cite{cousot1977abstract,davey2002lattices}. Proved as \code{join\_comm}, \code{join\_assoc}, \code{join\_idem}, with \code{join\_unknown} for $\bot$ and \code{join\_any} for $\top$.
+\item \textbf{\code{join} is the least upper bound} of the induced precision order $a \sqsubseteq b := a \sqcup b = b$, so merging loses as little information as possible~\cite{davey2002lattices}. Proved as \code{le\_join\_left}, \code{le\_join\_right} and \code{join\_le}, with the order shown to be a partial order (\code{le\_refl}, \code{le\_trans}, \code{le\_antisymm}).
+\item \textbf{\code{join} is monotone}, which by Knaster--Tarski makes the fixpoint a least fixpoint: it exists, is unique, and is reached at bounded lattice height~\cite{tarski1955fixpoint,cousot1977abstract}. Proved as \code{join\_mono\_left}, \code{join\_mono\_right} and \code{join\_mono}.
+\item \textbf{Semantic soundness.} An inferred type must never lie about the runtime, which is the inference form of ``well-typed programs do not go wrong''~\cite{milner1978polymorphism,wright1994soundness}. We define \code{HasType v T}, a denotation of \code{PyType} over a model of Python runtime values, and prove \code{hasType\_join\_left}: if a value has type $a$ then it also has type $a \sqcup b$. Widening never excludes a value the program can actually produce. This holds on the full lattice, not only the numeric scalars.
+\item \textbf{Gradual-typing consistency} for the dynamic type. The relation must be reflexive and symmetric but \emph{not} transitive, which is precisely what separates gradual typing from subtyping~\cite{siek2006gradual,siek2015refined}. Proved as \code{consistent\_refl}, \code{consistent\_symm}, \code{consistent\_unknown} and \code{consistent\_not\_trans}.
+\end{itemize}
+
+The semilattice, least-upper-bound, monotonicity and soundness results are proved on the \emph{real} \code{PyType.join}, the function the engine runs, recursing over the actual element lists of \code{tuple} and \code{fn}. The consistency results are proved on a model type carrying one representative per distinct behaviour, so the equations reduce by computation, and the production functions are then pinned to that model by \code{\#guard} and \code{native\_decide}.
+
+Two caveats fall out of the proofs rather than being worked around. Idempotence and order-reflexivity are stated for \emph{normalized} types, those with no \code{Optional[Any]} subterm. That is a fact and not a gap: \code{join (opt any) (opt any)} is \code{any}, because a nullable dynamic value already is a dynamic value, and \code{normalized} is exactly the normal form the engine stays inside. The same absorption is what makes \code{join} associative at the \code{None}-versus-conflict junction, and associativity does hold on the full lattice. Second, the value model has no inhabitant for \code{set}, \code{dict}, \code{tuple} or \code{fn}, so soundness at those heads is vacuously true; the content of the theorem is the scalars, \code{None}, classes, and the \code{list} and \code{Optional} congruences.
+
+\subsection{Nuances}\label{app:ti-nuances}
+
+\subsubsection{The numeric tower}\label{numeric-widening}
 
 \begin{lstlisting}[language=lean,caption={Widening join over the numeric tower (excerpt).},label={lst:join}]
 def join : PyType → PyType → PyType
@@ -967,52 +969,29 @@ def join : PyType → PyType → PyType
   | a, b => if a.beq b then a else .any
 \end{lstlisting}
 
-A subtle point that took real care is that \code{opt}/\code{none} must \emph{absorb} into \code{any}
-(``a nullable dynamic value is just a dynamic value''). Without the rule
-\code{join (.opt a) b} that collapses \code{Optional[Any]} to \code{Any}, \code{join} is
-non-associative \code{join(join(None,int),str)} and \code{join(None,join(int,str))} disagree
-(\code{Option PyAny} on one grouping, \code{PyAny} on the other) which makes the predicted Type non-confluent. Associativity of \code{join} is exactly what a lattice fixpoint needs, so we
-restored it by construction.
+Python promotes silently, so \code{True + 1} is \code{2} and a list written with both \code{5} and \code{float('inf')} is a list of floats. A flat scalar domain would send \code{join(int, float)} to $\top$ and box the whole container, losing provability for an entirely ordinary program. Making the scalars a tower instead means the smaller operand is coerced up at code-generation time and the container keeps a concrete element type.
 
-\subsection{The lattice laws are machine-checked}
-\label{sec:latticeproof}
-The soundness of inference rests on properties of \code{join} and \code{consistent}: that
-\code{join} is a genuine bounded join-semilattice (so the fixpoint terminates and is
-order-independent) and that \code{consistent} is a gradual-typing consistency relation. We do not
-merely assert these---we \emph{prove} them in Lean, with no \code{sorry}, over a finite model that keeps one representative per distinct
-join behavior (so the equations reduce by computation). We establish \code{join\_comm},
-\code{join\_assoc}, \code{join\_idem}, and the bounds \code{join\_unknown} ($\bot$) /
-\code{join\_any} ($\top$); that the induced order ($a\le b$ iff \code{join a b} $=b$) is a partial
-order with \code{join} as least upper bound and \emph{monotone} (the property that makes the
-reflow converge); and, for the dynamic type, \code{consistent\_refl}, \code{consistent\_symm}, and
-crucially \code{consistent\_not\_trans}---the \emph{failure} of transitivity
-(\code{int}$\sim$\code{any}$\sim$\code{str} yet \code{int}$\not\sim$\code{str}), which is exactly
-what distinguishes gradual consistency~\cite{siek2006gradual} from subtyping. The production
-functions are then pinned to the model by \code{\#guard}/\code{native\_decide}. To our knowledge
-this is an unusual property for a transpiler: its type system's meta-theory is verified in the
-same assistant it targets.
+The \code{Optional} rule needed care. \code{Optional[Any]} must collapse to \code{Any}, because a nullable dynamic value is just a dynamic value. Without that rule \code{join} is not associative: \code{join(join(None, int), str)} and \code{join(None, join(int, str))} disagree, one giving \code{Option PyAny} and the other \code{PyAny}, so the fixpoint would depend on the order facts arrive in. Associativity is not a cosmetic law here; it is what makes the analysis confluent.
 
-The metatheory of \S\ref{sec:latticeproof} is established over a
-finite model \code{Ty} (one representative per distinct join behavior), with no \code{sorry}:
+\subsubsection{Type-changing reassignment}\label{sec:ssa}
 
-\begin{itemize}\itemsep1pt
-\item \textbf{Bounded join-semilattice.} \code{join\_comm}, \code{join\_assoc}, \code{join\_idem};
-bounds \code{join\_unknown} ($\bot$ is identity) and \code{join\_any} ($\top$ absorbs).
-\item \textbf{Induced order.} ($a \le b$ iff \code{join a b} $= b$) is a partial order
-(\code{le\_refl}, \code{le\_trans}, \code{le\_antisymm}); \code{le\_join\_left}/\code{le\_join\_right}
-give monotonicity---the property that forces the reflow fixpoint to converge---and \code{join\_lub}
-proves \code{join} is the least upper bound.
-\item \textbf{Gradual consistency.} \code{consistent\_refl}, \code{consistent\_symm},
-\code{consistent\_unknown} (the gradual guarantee), and \code{consistent\_not\_trans}: a machine-checked
-witness that consistency is \emph{not} transitive, the property separating gradual typing from
-subtyping.
-\item \textbf{Coercions total.} \code{reconcile\_refl} and \code{reconcile\_total}: every implicit
-coercion the code generator may insert is one of the finite intended actions
-(\code{boolToInt}, \code{intToFloat}, \code{unwrapOpt}, \code{box}), never ``stuck.''
-\end{itemize}
-The production \code{join}/\code{consistent}/\code{reconcile} used by the transpiler are then pinned
-to this model by \code{\#guard}/\code{native\_decide} in \code{PALC/TypeInfer/TestLattice.lean}.
-% TODO(author): paste the full `join`/`consistent`/`reconcile` and the associativity proofs verbatim.
+Python rebinds freely, and a rebinding can change a variable's type: \code{x = "5"} then \code{x = int(x)}. One Lean binder cannot hold both. An SSA pass versions the variable at exactly those points, giving \code{x}, \code{x'v1} and so on, with joins where branches carrying different versions meet~\cite{cytron1991ssa}. Only genuine type changes version. A same-type reassignment stays a \code{let mut} update, and numeric widening or acquiring \code{None} counts as refinement rather than change, so an accumulator is not split into versions. Versioning here buys concrete types where boxing would otherwise be forced: each version is a separate binder with its own type.
+
+\subsubsection{Types crossing function boundaries}
+
+Types flow both ways between a function and its callers. Return types flow outward: the module pass computes each function's return type to a fixpoint, so \code{data = make\_pairs(5)} is typed even though \code{make\_pairs} carries no return annotation, and a function returning another's result gets it too. Argument types flow inward: the types at every call site are joined position by position into the callee's parameters, so an unannotated parameter called only with integers is an integer parameter. Class methods join the same table under \code{Class.method} keys, so a method's parameters are refined from call sites exactly like a free function's, and single inheritance copies a base's member types to a subclass that does not override them.
+
+Because both directions are joins into the same lattice, adding a call site can only widen a signature, never narrow it, which is what keeps the outer loop monotone alongside the inner one.
+
+\subsubsection{Usage-based back-inference}
+
+An unannotated parameter is also typed by how the body uses it. \code{p.split()} makes \code{p} a string, \code{p << 1} makes it an integer, \code{p[k]} fixes a dictionary's key type, and comparison or membership against a literal pins \code{p} to that literal's type. Element types are recovered the same way and propagate through nested arithmetic, so \code{p[i] + 1} gives a list of integers and \code{p[i].upper()} a list of strings. This is the flow- and usage-driven inference of Shed Skin~\cite{dufour2006shedskin} and Agesen's Cartesian Product Algorithm~\cite{agesen1995cpa,salib2004starkiller}, restricted to the shapes we emit, and the overall reflow shape is that of PyPy's RPython annotator~\cite{rigo2006pypy,palsberg1991oot}.
+
+The rule that keeps this honest is that usage inference must never fight a type-changing reassignment. Conflicting evidence joins upward to $\top$, and the SSA pass has already split the genuinely different segments, so back-inference only ever refines a binding that has a single type to begin with.
+
+\subsubsection{When there is no single type}\label{sec:pyany}
+
+Some values genuinely have no static type, and the engine is designed to reach that conclusion rather than guess. When the join reaches $\top$ the value is boxed as \code{PyAny}, a tagged union of the runtime types, following the dynamic type of gradual typing~\cite{siek2006gradual}. Boxing is what makes the transpiler total: the program still compiles and runs instead of being rejected. The cost is provability, since a boxed value is not a commutative ring and the arithmetic tactics stall on it, so boxing is a last resort and Appendix \ref{app:pyany} describes what can still be proved about a boxed value.
 
 
 \subsection{The dynamic fallback: \code{PyAny}}\label{app:pyany}
@@ -1035,29 +1014,103 @@ example (a b : PyAny) : (a +ₚ b) +ₚ b = a +ₚ (b +ₚ b) := by
 
 Boxing costs provability, since \code{PyAny} is not a commutative ring and \code{ring} stalls on a boxed goal. The tactic \code{pyany_cases} recovers much of it by splitting the goal into one goal per runtime type the value could hold, discharging the tag-mismatch leaves automatically. The recovery is partial by nature: $+_p$ is not commutative over \code{PyAny}, since it concatenates on strings and lists, and the tactic correctly leaves that goal open.
 
-
 \section{Evaluation Methodology}\label{app:methodology}
 
-\todo{Describe the harness, the machine, timeouts, and how a run is reproduced.}
+To benchmark PastaLean we use three benchmarks to evaluate it's code generation and type inference abilities. For code generation, all three benchmarks, PastaLean starts one Lean process, loads Mathlib once, and then sends every program to it one after another. The slow Mathlib start-up is therefore paid a single time, not once per file, which is what keeps the numbers fast even though each translated program imports a large Lean library. For the code-generation benchmarks we also build the runnable twin and run the dataset's own tests against it; for type inference we read the type the engine gives each spot and compare it to the ground truth.
 
-\subsection{LeetCode and LiveCodeBench}\label{app:eval-cp}
+Every number in this paper, including the times reported for the type checkers, comes from one machine: a 32-core AMD Ryzen Threadripper PRO 5975WX with 128\,GiB of memory, running Linux 6.8.0 (x86\_64). Every tool was run on that machine over the same benchmark files, and each reported time is wall-clock for one full pass over the set.
 
-\todo{How problems and solutions are selected, how tests are executed, what counts as a pass.}
+\subsection{Code Generation Benchmarking}\label{app:eval-cp}
 
-\suggest{\paragraph{LeetCode}: The Leetcode dataset contains \textbf{2{,}589} LeetCode problems. More than \textbf{92\%} ($\approx$2{,}389) transpile and compile, and of those, the runnable twin reproduces CPython's answer on \textbf{$>$95\%} of test cases. The fail tests include primarily Timeout's from Lean's compiled code due to internal time complexity of implementation of Data Structures as highlighted in Section TODO.}
+For these three datasets we ask two things: does the generated Lean compile, and does it give the same answers as Python. We take each Python solution, send it to the warm backend to get Lean, and compile that Lean. If it compiles, we build the runnable twin (the \code{'rn} version, which uses \code{Float} and real \code{IO}) and run it on the problem's own test inputs, then check its output equals CPython's on the same inputs. A solution passes only if the twin agrees with CPython on \emph{every} test case. Both the translation and the test runs go through the one warm backend, so a whole dataset is one long stream of small jobs rather than thousands of cold starts.
 
-\suggest{\paragraph{LiveCodeBench}: The LiveCodeBench contains various sub datasets for execution, code generation, etc. However for our use case, we use the \code{execution-v2} latest dataset for Code Generation from Python GroundTruths containing \textbf{476} problems. More than \textbf{96.6\%} ($\approx$460) transpile and compile, and of those, the runnable twin reproduces CPython's answer on \textbf{$>$99.2\%} of test cases. }
+\todo{mention leetcode and live bench specific stuff}
+
+\subsubsection{HumanEval}\label{app:eval-humaneval}
+
+On the 164 HumanEval~\cite{chen2021codex} tasks, PastaLean translates and compiles \textbf{153/164} with no human annotation and zero degraded (\code{pyUnsupported}) statements. The other 11 are not really wrong: their types are genuinely undecidable from the code alone, and Lean, which needs one fixed type per name and per return, cannot pick. A clear example is \code{split_words}:
+
+\begin{lstlisting}[language=python]
+def split_words(txt):
+    # words on whitespace, else on commas, else a letter count
+    if any(c in txt for c in ' \n\r\t'): return txt.split()
+    if ',' in txt: return txt.split(',')
+    return sum(1 for c in txt if c.islower() and (ord(c)-ord('a')) % 2 == 1)
+\end{lstlisting}
+
+For most inputs this returns a \code{list[str]} (the words); for an input with no spaces or commas it returns an \code{int} (a count). Both are correct Python. Nothing in the code or the signature says which one the function ``is'' --- it depends on the input at run time. Python is fine with this because a name can hold either, but Lean is not, because a function has a single return type.
+
+The same problem shows up at the character level, choosing between \code{str} and \code{list[str]}(here a list of character strings). Python has no character type: a single character is just a string of length one. The helper below is taken from \code{Strongest_Extension}.
+
+\begin{lstlisting}[language=python]
+def strength(s):
+    CAP, SM = 0, 0
+    for ch in s:
+        if ch.isupper(): CAP += 1
+        if ch.islower(): SM += 1
+    return CAP - SM
+\end{lstlisting}
+
+Here \code{s} can be a \code{str}, which iterates into one-character strings, or a \code{list[str]}, which iterates into strings. Both support \code{isupper} and \code{islower}, so the loop says nothing that separates the two, and neither does the rest of the body. Both readings give the same answers in Python, so neither is more correct than the other. Lean has to pick one type for \code{s}, and there is nothing in the code to pick it from.
+
+Each of these compiles the moment we add one type hint at the ambiguous spot, so for code whose types are actually decidable we compile and run \textbf{164/164}. Running the runnable twins against the HumanEval\textsuperscript{+} test suites, the outputs match CPython on \textbf{98.9\%} of test cases (4{,}773 / 4{,}827), with \textbf{95} solutions correct on every single case.
 
 \subsection{Type Inference}\label{app:eval-type}
 
+
+\begin{table}[t]
+\centering
+\begin{tabular}{@{}lrrrrr@{}}
+\toprule
+Tool & Return & Parameter & Variable & All & Match (\%) \\
+\midrule
+\textbf{PastaLean} & \textbf{187} & \textbf{65} & \textbf{353} & \textbf{605} & \textbf{71.2} \\
+HeaderGen          & 186 & 56 & 322 & 564 & 66.4 \\
+Jedi               & 122 & 0  & 293 & 415 & 48.8 \\
+Pyright            & 100 & 8  & 297 & 405 & 47.6 \\
+HiTyper            & 141 & 7  & 102 & 250 & 29.4 \\
+Scalpel            & 155 & 32 & 6   & 193 & 22.7 \\
+Type4Py            & 39  & 19 & 99  & 157 & 18.5 \\
+\bottomrule
+\end{tabular}
+\caption{Static tools on the micro-benchmark. Baseline counts are those reported by TypeEvalPy~\cite{typeevalpy}; percentages are against the 850 facts our harness scores. Bold marks the best value in each column.}
+\label{tab:static-micro}
+\end{table}
+
+\begin{table}[t]
+\centering
+\begin{tabular}{@{}lrrrrrr@{}}
+\toprule
+Tool & Return & Parameter & Variable & All & Match (\%) & Time \\
+\midrule
+pyrefly            & 14{,}246 & 54  & \textbf{46{,}449} & \textbf{60{,}749} & \textbf{78.6} & 2.6s \\
+\textbf{PastaLean} & \textbf{16{,}216} & \textbf{397} & 39{,}556 & 56{,}169 & 72.7 & 9.8s \\
+pyright            & 14{,}110 & 28  & 37{,}855 & 51{,}993 & 67.3 & 11.3s \\
+zuban              & 13{,}163 & 3   & 38{,}179 & 51{,}345 & 66.5 & 1.4s \\
+HeaderGen          & 14{,}086 & 346 & 36{,}370 & 50{,}802 & 65.7 & 36.2s \\
+mypy$^\ddagger$    & 0        & 0   & 19{,}097 & 19{,}097 & 24.7 & 7.9s \\
+ty$^\ddagger$      & 0        & 29  & 18{,}942 & 18{,}971 & 24.6 & 1.8s \\
+\bottomrule
+\end{tabular}
+\caption{Production type checkers on the autogen set (77{,}268 facts). \texttt{mypy} and \texttt{ty} report a type only where one is annotated or directly inferable, which is why their return and parameter counts are near zero.}
+\label{tab:checkers-auto}
+\end{table}
+
+
 \paragraph{TypeEvalPy.} TypeEvalPy~\cite{typeevalpy} is a type-inference \emph{recall} benchmark (ICSE 2024): every ground-truth type annotation is a \emph{fact}, keyed by source location and name, and a tool is scored by how many facts it recovers by exact string match after both sides are normalised to a common vocabulary (\code{int}, \code{str}, \code{list}, \code{Callable}, class names, \code{None}, \ldots). Facts fall into three categories --- function return, function parameter, and local variable types. It ships two sets: a hand-written \emph{micro-benchmark} (153 snippets, 850 facts across 18 Python-feature categories) and the much larger \emph{autogen} set (5{,}453 snippets, 77{,}268 facts) generated by expanding the micro templates. To score \code{TypeInfer} we run the engine on each snippet, read the \code{PyType} it assigns to each annotated location, lower it to the benchmark's vocabulary, and compare against the ground truth; \emph{covered} counts facts we assign any type, \emph{matched} counts exact matches. We report both in Table~\ref{tab:typeinfer}, and place \code{TypeInfer} against the published leaderboard in Table~\ref{tab:leaderboard}.
+
+The micro-benchmark carries 849 ground-truth type facts over 154 hand-written snippets; the autogen set carries 77{,}268, split into 17{,}998 return types, 896 parameter types and 58{,}374 local variable types. 
 
 On the autogen set \code{TypeInfer} matches 56{,}042 / 77{,}268 facts (72.5\%), which makes it the \textbf{best static (non-LLM) tool} on the leaderboard --- ahead of HeaderGen, the previous static leader, by 5{,}240 facts --- and 12th of 26 overall, above several instruction-tuned LLMs, while emitting a single deterministic type per fact with no model and no sampling. Function-return inference (16{,}179, 89.9\%) is competitive with the strongest LLMs; the remaining gap is dominated by local-variable coverage, and function-parameter inference (43.5\%) is the hardest category for \emph{every} tool on the board. On the smaller micro-benchmark it matches 545 / 850 (64.1\%). The published leaderboard covers only the autogen set, so Table~\ref{tab:leaderboard} is over autogen; the micro numbers are PastaLean's own run.
 
-\subsection{HumanEval}\label{app:eval-humaneval}
+We first compared against the tools that ship with TypeEvalPy (its leaderboard). But TypeEvalPy is from 2024, and strong new checkers have appeared since --- ty, pyrefly, pyright, mypy, zuban --- so we ran those ourselves on the same facts (Table~\ref{tab:checkers}). We would have liked a newer benchmark, but we could not find one that matches what PastaLean does. PastaLean works on \emph{one file at a time}, while almost every modern type-inference benchmark is \emph{repo-based}: whole projects, with types that flow across many files and imports. TypeEvalPy is one of the few that is file-based --- one small self-contained snippet per test --- which is exactly our scope. That file-versus-repo mismatch is the main reason we chose it, and it is also a limitation of our evaluation: we do not yet measure cross-file, whole-project inference.
 
-\todo{Contract and non-contract variants, and the eleven-problem note.}
+Everything runs through the same warm backend. Against the static (non-LLM) tools PastaLean wins across the board on the micro-benchmark, and it leads \emph{every} tool on function-return and function-parameter types on both sets. The one place we trail is local variables on the large autogen set, where pyrefly infers more. When we look at those cases, most of the gap is union types --- a variable that holds, say, an \code{int} on one path and a \code{str} on another. We currently box such variables as \code{PyAny} instead of inferring the union, so we score them as misses. Union inference is future work; with it we expect to close most of this gap and likely overtake pyrefly here too.
 
-\suggest{\paragraph{HumanEvalPlus}: On the 164 HumanEval~\cite{chen2021codex} tasks, PastaLean transpiles and compiles \textbf{153/164} with \emph{no} human annotation and $0$ degraded (\code{pyUnsupported}) statements. Meanwhile the remaining 11 compile once given a light type hint on a single parameter (their local types are genuinely undecidable, e.g.\ a parameter used as both \code{str} and \code{list[str]}). Thus for decidable type's, our code compiles and runs \textbf{164/164}. Executing the runnable twins against the HumanEval$^+$ test suites, the outputs match CPython on \textbf{98.9\%} of test cases (4{,}773/4{,}827), with \textbf{95} solutions fully correct on every case.}
+PastaLean is slower per fact than the checkers, and the reason is that we are not really a type checker. A checker looks at the code and reasons about types directly. We do more: we parse the Python to an AST, translate the \emph{whole} program into Lean, and only then read the types back off the Lean side. So every ``type query'' is really a full source-to-source translation followed by a compile --- much more work than pure type analysis. That extra work is exactly what buys us runnable, provable Lean rather than only a type report, but it is why our per-fact time is higher.
+
+
+Tables \ref{tab:static-micro} and \ref{tab:checkers-auto} give the two comparisons not shown in Section \ref{results}: the static tools on the micro-benchmark, and the production type checkers on the autogen set.
 
 \end{document}
+
