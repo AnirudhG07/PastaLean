@@ -75,6 +75,18 @@ def passSyntax : (kind : SyntaxNodeKind) → Json →
         `(doElem| let _ := ())
     | _, _ => throwError s!"Unsupported syntax category for Pass node"
 
+/-- `global x` is a codegen no-op: a read-only or in-place-mutated module global already resolves to
+its top-level Lean def, so the declaration adds nothing (a *rebinding* global is refused upstream in
+the visitor). Lowered like `Pass`. -/
+@[pygen "Global"]
+def globalSyntax : (kind : SyntaxNodeKind) → Json →
+    PygenM (TSyntax kind)
+    | `command, _ => do
+        return ⟨mkNullNode #[]⟩
+    | `doElem, _ => do
+        `(doElem| let _ := ())
+    | _, _ => throwError s!"Unsupported syntax category for Global node"
+
 @[pygen "Continue"]
 def continueSyntax : (kind : SyntaxNodeKind) → Json →
     PygenM (TSyntax kind)

@@ -111,6 +111,7 @@ class ASTToJsonLeanVisitorBase:
         self.foreign_names = set()      # locally-bound names that come from foreign modules
         self.unsupported_log = []       # original source of every dropped/degraded statement
         self._next_unsup_id = 0         # for naming top-level placeholder defs
+        self._hoisted_classes = []      # nested classes lifted to module level with dotted names
         self.shadowed_builtins = set()  # builtins a top-level user `def` overrides (`def max(...)`)
 
     def _is_foreign_module(self, module_name):
@@ -499,6 +500,14 @@ class ASTToJsonLeanVisitorBase:
         """Translates `nonlocal a, b`. Closure conversion threads these names through the helper."""
         return {"node_type": "Nonlocal", "names": list(node.names)}
 
+    def visit_Global(self, node):
+        """Translates `global a, b`. The declaration is a codegen no-op (lowered like `Pass`): a
+        read-only global already resolves to the module-level Lean def, so `global` adds nothing. Any
+        `global` that MUTATES the name (rebind, `g[i] = v`, or `g.append(x)`) is refused in
+        `visit_FunctionDef` — a write back to a module global is not threaded through call sites — so
+        only read-only `global` reaches here."""
+        return {"node_type": "Global", "names": list(node.names)}
+
     def visit_Expr(self, node):
         """Translates ast.Expr (e.g., a standalone expression) to a JSON IR node."""
         return {
@@ -708,26 +717,39 @@ class ASTToJsonLeanVisitorBase:
             return fmt.values[0].value
         return None
 
+    def _dotted_name(self, node):
+        """`A.B.C` (nested Attribute/Name chain) -> the dotted string "A.B.C", or None if not a plain
+        dotted name."""
+        parts = []
+        while isinstance(node, ast.Attribute):
+            parts.append(node.attr)
+            node = node.value
+        if isinstance(node, ast.Name):
+            parts.append(node.id)
+            return ".".join(reversed(parts))
+        return None
+
     def visit_Module(self, node):
         """Translates ast.Module to a JSON IR node."""
         if self.best_effort:
             self.foreign_names = self._compute_foreign_names(node)
+        self._hoisted_classes = []
         # A top-level `def max(...)` shadows the builtin, so `max(a, b)` must NOT be normalized to the
         # iterable form `max([a, b])` — it is an ordinary 2-arg call to the user's function.
         self.shadowed_builtins = {
             s.name for s in node.body
             if isinstance(s, (ast.FunctionDef, ast.AsyncFunctionDef)) and s.name in {"min", "max"}
         }
-        return {
-            "node_type": "Module",
-            "body": self.visit_body_statements(
-                node.body,
-                body_start_line=1,
-                body_end_line=len(self.source_lines),
-                allow_docstring=True,
-                top_level=True,
-            )
-        }
+        body = self.visit_body_statements(
+            node.body,
+            body_start_line=1,
+            body_end_line=len(self.source_lines),
+            allow_docstring=True,
+            top_level=True,
+        )
+        # Nested classes lifted during the visit go to module level, before everything else (so a
+        # `class C(A.B)` sees `A.B` already defined).
+        return {"node_type": "Module", "body": self._hoisted_classes + body}
 
     def visit_Delete(self, node):
         """Translates ast.Delete (e.g., del x) to a JSON IR node."""
@@ -764,8 +786,68 @@ class ASTToJsonLeanVisitorBase:
             "foreign": self._is_foreign_module(node.module),
         }
 
+    @staticmethod
+    def _store_base_names(target):
+        """The root `Name` a write-target touches: `x` for `x`, `x[i]`, `x.a`, `x[i][j]`, `x.a[i]`
+        (unpacking tuples/lists and `*rest`). This is the name whose module-global object the write
+        would have to update."""
+        ids = set()
+        if isinstance(target, ast.Name):
+            ids.add(target.id)
+        elif isinstance(target, (ast.Subscript, ast.Attribute)):
+            ids |= ASTToJsonLeanVisitorBase._store_base_names(target.value)
+        elif isinstance(target, (ast.Tuple, ast.List)):
+            for elt in target.elts:
+                ids |= ASTToJsonLeanVisitorBase._store_base_names(elt)
+        elif isinstance(target, ast.Starred):
+            ids |= ASTToJsonLeanVisitorBase._store_base_names(target.value)
+        return ids
+
+    @classmethod
+    def _global_mutated_names(cls, node):
+        """Global-declared names the function MUTATES: rebound (`g = ..`, `g += ..`, `g: T = ..`),
+        written through (`g[i] = ..`, `g.a = ..`, `del g[i]`), or mutated by a bare method-call
+        statement (`g.append(x)` — a discarded-result call is a mutation, whereas `y = g.get(k)` /
+        `return g.count(1)` in a value position is a read). Every such write must update the module
+        global, which we do NOT thread through call sites — so it is a loud refusal (a rebind would
+        otherwise be a spurious local, an in-place write an opaque `cannot be mutated` Lean error).
+        Read-only `global` is fine. Nested functions/lambdas/classes are their own scope."""
+        global_names, mutated = set(), set()
+
+        def walk(n):
+            for child in ast.iter_child_nodes(n):
+                if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda, ast.ClassDef)):
+                    continue  # own scope — its globals/mutations are not this function's
+                if isinstance(child, ast.Global):
+                    global_names.update(child.names)
+                elif isinstance(child, ast.Assign):
+                    for t in child.targets:
+                        mutated.update(cls._store_base_names(t))
+                elif isinstance(child, (ast.AugAssign, ast.AnnAssign)):
+                    mutated.update(cls._store_base_names(child.target))
+                elif isinstance(child, ast.Delete):
+                    for t in child.targets:
+                        mutated.update(cls._store_base_names(t))
+                elif (isinstance(child, ast.Expr) and isinstance(child.value, ast.Call)
+                      and isinstance(child.value.func, ast.Attribute)
+                      and isinstance(child.value.func.value, ast.Name)):
+                    # A bare `g.method(...)` statement — result discarded, so treat as a mutation of g.
+                    mutated.add(child.value.func.value.id)
+                walk(child)
+
+        walk(node)
+        return global_names & mutated
+
     def visit_FunctionDef(self, node):
         """Translates ast.FunctionDef to a JSON IR node."""
+        mutated_globals = self._global_mutated_names(node)
+        if mutated_globals:
+            raise NotImplementedError(
+                "`global` that mutates "
+                + ", ".join(sorted(mutated_globals))
+                + " is unsupported: a write back to a module global (rebind, `g[i] = v`, or "
+                "`g.append(...)`) is not threaded through call sites. Read-only `global` is fine."
+            )
         body_json = self.visit_body_statements(
             node.body,
             body_start_line=getattr(node, "lineno", 1) + 1,
@@ -933,13 +1015,20 @@ class ASTToJsonLeanVisitorBase:
         """
         if node.keywords:
             raise NotImplementedError("Class keyword arguments (e.g. metaclass=) are not supported.")
-        if len(node.bases) > 1:
-            raise NotImplementedError("Multiple inheritance is not supported.")
+        # Multiple inheritance is supported: Lean's `structure C extends B1, B2` resolves an inherited
+        # method / conflicting field by MRO order (first base wins), matching Python.
         bases = []
         for base in node.bases:
             if isinstance(base, ast.Name):
                 if base.id != "object":
                     bases.append(self.visit(base))
+            elif isinstance(base, ast.Attribute):
+                # A nested/dotted base (`class C(A.B)`): reference the hoisted `A.B` structure by its
+                # dotted IR name. Lean accepts a dotted structure name and `extends A.B`.
+                dotted = self._dotted_name(base)
+                if dotted is None:
+                    raise NotImplementedError("Only simple or dotted (A.B) base classes are supported.")
+                bases.append({"node_type": "Name", "id": dotted})
             else:
                 raise NotImplementedError("Only a single simple (Name) base class is supported.")
 
@@ -989,6 +1078,12 @@ class ASTToJsonLeanVisitorBase:
                         if a.annotation is not None
                     }
                     self._collect_self_fields(stmt.body, fields, seen, param_types)
+            elif isinstance(stmt, ast.ClassDef):
+                # A nested class (`class A: class B: …`): hoist B to module level under the dotted name
+                # `A.B` (Lean emits `structure A.B`), and rename its nested children transitively.
+                nested = self.visit(stmt)
+                nested["name"] = f"{node.name}.{stmt.name}"
+                self._hoisted_classes.append(nested)
             elif isinstance(stmt, (ast.Pass, ast.Expr)):
                 continue  # docstring or `pass`
             else:

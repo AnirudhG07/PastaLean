@@ -1509,11 +1509,14 @@ def resolve_local_imports(source_code, module_dir):
 
 
 
-def translate_to_json(source_code, filepath=None, best_effort=False):
+def translate_to_json(source_code, filepath=None, best_effort=False, infer_only=False):
     """
     Parses Python source code and translates it to a JSON IR.
     If `filepath` is provided, it first runs the annotator code to add type annotations,
     else the source_code argument will be used as-is for translation.
+
+    `infer_only` skips the codegen-only effect passes (exception/IO effects, real-flow, main-guard)
+    for the `inferTypes` task, which reads none of them — a ~30% IR-build speedup for the benchmark.
 
     When `best_effort` is set, unsupported statements (foreign libraries, unhandled syntax) are
     replaced by `pyUnsupported(...)` placeholders instead of aborting; dropped lines are logged
@@ -1553,13 +1556,14 @@ def translate_to_json(source_code, filepath=None, best_effort=False):
         for src in translator.unsupported_log:
             logger.warning("  unsupported: %s", src)
     rename_reserved_shadows(data)
-    annotate_library_imports(data)
-    annotate_exception_effects(data)
-    annotate_io_effects(data)
-    annotate_real_flow(data)
-    annotate_main_entrypoint(data)
+    annotate_library_imports(data)          # inference reads library_module/member
+    if not infer_only:
+        annotate_exception_effects(data)    # codegen effects only — the inferTypes task ignores them
+        annotate_io_effects(data)
+        annotate_real_flow(data)
+        annotate_main_entrypoint(data)
     annotate_toplevel_state(data)
-    annotate_if_assigned_names(data)
+    annotate_if_assigned_names(data)        # inference reads if_assigned_names (hoist ascription)
     logger.debug("Generated JSON IR: %s", json.dumps(data))
     return json.dumps(data)
 

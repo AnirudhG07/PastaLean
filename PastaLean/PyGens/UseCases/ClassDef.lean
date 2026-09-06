@@ -579,33 +579,33 @@ def classStructCommand (json : Json) : PygenM (TSyntax `command) := do
   let noneParams :=
     (methods.find? (·.getObjValAs? String "name" == .ok "__init__")).elim [] noneDefaultParamNames
   let fieldBinders ← fields.mapM (classStructFieldSyntax name noneParams)
-  let baseId? : Option (TSyntax `ident) ←
-    match bases[0]? with
-    | some baseJson =>
-        match baseJson.getObjValAs? String "id" with
-        -- Suffix the base like the class's own name, so a `'rn` twin extends `Base'rn`, not `Base`.
-        | .ok bid => do
-            let bname ← withRunSuffix bid
-            pure (some (mkIdent bname.toName))
-        | _ => throwError s!"Class base is not a simple Name: {baseJson}"
-    | none => pure none
+  -- All bases (multiple inheritance → `structure C extends B1, B2`). Lean resolves an inherited
+  -- method / conflicting field by MRO order (first base wins), matching Python. Each base is suffixed
+  -- like the class's own name, so a `'rn` twin extends `Base'rn`, not `Base`.
+  let baseIds : Array (TSyntax ``Lean.Parser.Command.structParent) ← bases.mapM (fun baseJson => do
+    match baseJson.getObjValAs? String "id" with
+    | .ok bid => do
+        let bname ← withRunSuffix bid
+        let t : TSyntax `term ← `($(mkIdent bname.toName))
+        pure ⟨mkNode ``Lean.Parser.Command.structParent #[mkNullNode, t.raw]⟩
+    | _ => throwError s!"Class base is not a simple Name: {baseJson}")
   let docStx? : Option (TSyntax ``Lean.Parser.Command.docComment) :=
     match (json.getObjValAs? String "docstring").toOption with
     | some text =>
         let body := (text.trimAscii).toString.replace "-/" "- /"
         some ⟨mkNode ``Lean.Parser.Command.docComment #[mkAtom "/--", mkAtom (body ++ " -/")]⟩
     | none => none
-  match docStx?, baseId? with
-  | some doc, some baseId =>
-      `(command| $doc:docComment structure $nameId:ident extends $baseId:ident where
+  match docStx?, baseIds.isEmpty with
+  | some doc, false =>
+      `(command| $doc:docComment structure $nameId:ident extends $baseIds,* where
           $[$fieldBinders]* deriving $derivs,*)
-  | some doc, none =>
+  | some doc, true =>
       `(command| $doc:docComment structure $nameId:ident where
           $[$fieldBinders]* deriving $derivs,*)
-  | none, some baseId =>
-      `(command| structure $nameId:ident extends $baseId:ident where
+  | none, false =>
+      `(command| structure $nameId:ident extends $baseIds,* where
           $[$fieldBinders]* deriving $derivs,*)
-  | none, none =>
+  | none, true =>
       `(command| structure $nameId:ident where
           $[$fieldBinders]* deriving $derivs,*)
 

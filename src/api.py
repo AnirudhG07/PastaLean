@@ -188,20 +188,24 @@ class Session:
             except OSError as err:
                 yield TranslationResult(ok=False, error=str(err), source_path=Path(path))
 
-    def to_json_ir(self, source_code: str, *, filepath: str | Path | None = None, **overrides) -> dict:
-        """The intermediate JSON IR, before the Lean backend sees it. Does not start the backend."""
+    def to_json_ir(self, source_code: str, *, filepath: str | Path | None = None,
+                   infer_only: bool = False, **overrides) -> dict:
+        """The intermediate JSON IR, before the Lean backend sees it. Does not start the backend.
+        `infer_only` skips codegen-only effect passes (faster; only valid for the inferTypes task)."""
         opts = self._opts(overrides)
         with self._lock:
             raw = driver.translate_to_json(
                 source_code,
                 str(filepath) if filepath else None,
                 best_effort=opts["best_effort"],
+                infer_only=infer_only,
             )
         return json.loads(raw)
 
-    def to_json_ir_file(self, path: str | Path, **overrides) -> dict:
+    def to_json_ir_file(self, path: str | Path, *, infer_only: bool = False, **overrides) -> dict:
         path = Path(path)
-        return self.to_json_ir(path.read_text(encoding="utf-8"), filepath=path, **overrides)
+        return self.to_json_ir(path.read_text(encoding="utf-8"), filepath=path,
+                               infer_only=infer_only, **overrides)
 
 
 def _default_session(**kwargs) -> Session:
