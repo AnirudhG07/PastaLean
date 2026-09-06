@@ -89,14 +89,22 @@ def lowerItertoolsCallTerm? (funcJson : Json) (argsArray : Array Json) (argsCode
       let funcCode ← typedBinaryLambdaCode argsArray[0]! argsCodes[0]! none
       return some (← buildIOPureApplicationFromArgs argsArray #[funcCode, argsCodes[1]!] fun r =>
         `($ident $(r[0]!) $(r[1]!)))
-  -- `accumulate(xs, initial=v)` → `pyAccumulate xs (some v)`; without `initial`, fall through.
+  -- `accumulate(xs, f, initial=v)`. With a binary op `f` (arg 1) fold by it (`pyAccumulateBy`, e.g.
+  -- `accumulate(xs, operator.xor)`); with only `initial=` it is a running sum (`pyAccumulate`);
+  -- plain `accumulate(xs)` falls through to the member map.
   | "accumulate" =>
+      let initStx : TSyntax `term ← match keyWordsMap.get? "initial" with
+        | some initJson => do let c ← getCode initJson `term; `((some $c))
+        | none => `((none))
+      if argsArray.size ≥ 2 then
+        let ident := mkIdent ``Libraries.itertools.pyAccumulateBy
+        return some (← buildIOPureApplicationFromArgs argsArray argsCodes fun r =>
+          `($ident $(r[1]!) $(r[0]!) $initStx))
       match keyWordsMap.get? "initial" with
-      | some initJson =>
-          let initCode ← getCode initJson `term
+      | some _ =>
           let ident := mkIdent ``Libraries.itertools.pyAccumulate
           return some (← buildIOPureApplicationFromArgs argsArray argsCodes fun r =>
-            `($ident $(r[0]!) (some $initCode)))
+            `($ident $(r[0]!) $initStx))
       | none => return none
   | _ => return none
 

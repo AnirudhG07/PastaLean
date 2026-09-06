@@ -11,13 +11,7 @@ def pythonFunctoolsMemberMap? (member : String) : Option Lean.Name :=
   | "cmp_to_key" => some ``Libraries.functools.pyCmpToKey
   | _ => none
 
-/-- Behaviour of the `functools` members the core codegen must know something extra about.
-`cmp_to_key` turns a 3-way comparator into a sort key, which has no runtime object here — the sort
-paths unwrap it and use the comparator directly. -/
-def functoolsBehaviour? (member : String) : Option Behaviour :=
-  match member with
-  | "cmp_to_key" => some { cmpKeyWrapper := true }
-  | _ => none
+-- `functoolsBehaviour?` (type-inference return shapes) moved to `Libraries/TypeBehaviour.lean`.
 
 /-- Methods added by `@cache`/`@lru_cache` that lower to a no-op (see `pyCacheNoop`). -/
 def functoolsNoopMethod? (member : String) : Option Lean.Name :=

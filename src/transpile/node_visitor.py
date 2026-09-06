@@ -96,7 +96,7 @@ FUNCTION_DEF_SCHEMA = {
 
 class ASTToJsonLeanVisitorBase:
     def __init__(self, source_code="", *, best_effort=False, supported_modules=frozenset(),
-                 type_only_modules=frozenset(), module_dir=None):
+                 type_only_modules=frozenset(), module_dir=None, infer_only=False):
         self.source_code = source_code
         self.source_lines = source_code.splitlines()
         self.comment_entries = self._extract_comment_entries(source_code)
@@ -105,6 +105,11 @@ class ASTToJsonLeanVisitorBase:
         # that fail to translate are replaced by a `pyUnsupported(...)` placeholder instead of
         # aborting the whole file. See `docs/libraries_todo.md`.
         self.best_effort = best_effort
+        # Inference-only IR: keep `return`/assign statements that merely REFERENCE a foreign symbol
+        # (a plain `Name` to us) instead of degrading them wholesale, so type inference can still read
+        # their structure (`x == y` is `bool` regardless of whether `y` is translatable). Only codegen
+        # truly cannot emit those; inference does not codegen.
+        self.infer_only = infer_only
         self.supported_modules = frozenset(supported_modules)
         self.type_only_modules = frozenset(type_only_modules)
         self.module_dir = module_dir
@@ -242,7 +247,13 @@ class ASTToJsonLeanVisitorBase:
         if self._import_is_foreign(stmt):
             return None  # foreign import contributes nothing; drop it
         if not isinstance(stmt, self._SCOPE_OR_BODY_STMTS) and self._stmt_uses_foreign(stmt):
-            return self._make_unsupported_node(stmt, top_level=top_level)
+            # For inference, keep ANY statement whose only problem is a referenced foreign name — the
+            # visit below represents that name as a plain `Name`, so the engine still reads the
+            # statement's structure and usage (`name.startswith(...)` types `name` as `str`, `x + 1`
+            # types `x` as `int`). Usage-based PARAMETER inference depends on this. Degrade only if the
+            # visit actually throws. (Codegen keeps degrading, so its output is unaffected.)
+            if not self.infer_only:
+                return self._make_unsupported_node(stmt, top_level=top_level)
         try:
             return self.visit(stmt)
         except NotImplementedError:
@@ -1167,11 +1178,25 @@ class ASTToJsonLeanVisitorBase:
         # `annotate_python` introduces inside class methods (these are non-`simple`). Field types
         # are recovered separately from the raw AST in `visit_ClassDef`.
         if node.value is not None:
-            return {
+            out = {
                 "node_type": "Assign",
                 "target": self.visit(node.target),
                 "value": self.visit(node.value)
             }
+            # Preserve the user's declared type for TypeInfer (codegen ignores `_decl_ty`): a local
+            # `result: list[int] = []` must type as `list[int]`, not the `list` inferred from `[]`.
+            # Only a plain-Name target (an attribute annotation is recovered from the class instead).
+            # Best-effort: an exotic annotation must not drop the whole statement. A visit that raises,
+            # or that yields a non-JSON-serialisable node (e.g. `Callable[..., int]`, whose `...` is a
+            # Python Ellipsis), is simply skipped.
+            if isinstance(node.target, ast.Name):
+                try:
+                    ann = self.visit(node.annotation)
+                    json.dumps(ann)
+                    out["_decl_ty"] = ann
+                except Exception:  # noqa: BLE001
+                    pass
+            return out
         if node.simple != 1:
             raise NotImplementedError("Only simple declaration-only annotations are supported.")
         return {

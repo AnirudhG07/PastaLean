@@ -342,7 +342,7 @@ partial def markOptAttrs (sigs : Sigs) (env : Env) (json : Json) : Json :=
 /-- Stamp an int-literal `Constant` with `_ty = float` (so codegen emits `(0 : ℚ)`). -/
 def stampIfIntConst (e : Json) : Json :=
   if nodeTypeOf e == some "Constant" && (getField e "_ty").isNone
-     && e.getObjValAs? String "python_literal_kind" != .ok "float"
+     && (e.getObjValAs? String "python_literal_kind").toOption != some "float"
      && (match (e.getObjVal? "value").toOption with | some (.num ⟨_, 0⟩) => true | _ => false) then
     match toAnnotation? .float with | some ann => e.setObjVal! "_ty" ann | none => e
   else e
@@ -569,6 +569,26 @@ def initsAreLits (stmts : List Json) (name : String) (ty : PyType) (full : Bool)
           if !litMatchesNesting full ty ((getField s "value").getD Json.null) then return false
   return sawOne
 
+/-- Every assignment to `name` is a SLICE of an already-eligible (array-backed) variable, e.g.
+`head = sieve[:k]` (and there is at least one). `PySlice (Array β)` returns an `Array`, so such a
+binder is itself array-backed; without this its inferred `List` ascription clashes with the `Array`
+the slice produces in the run twin. Only a slice (a `Slice` subscript) yields a list, so a `list`-typed
+target guards against an element read `a[i]`. -/
+def initsAreArraySlices (eligible : Std.HashSet String) (stmts : List Json) (name : String) : Bool := Id.run do
+  let mut sawOne := false
+  for s in stmts do
+    if nodeTypeOf s == some "Assign" || nodeTypeOf s == some "AnnAssign" then
+      if let some tgt := getField s "target" then
+        if nameId? tgt == some name then
+          sawOne := true
+          let v := (getField s "value").getD Json.null
+          let isEligibleSlice :=
+            nodeTypeOf v == some "Subscript"
+            && ((getField v "slice").any (nodeTypeOf · == some "Slice"))
+            && ((getField v "value").any (fun b => (nameId? b).any eligible.contains))
+          if !isEligibleSlice then return false
+  return sawOne
+
 /-- Local list variables codegen may back with `Array` in the runnable twin: a FLAT scalar list whose
 uses are ported (append allowed), or a NESTED scalar list that is a full literal accessed by index
 (no append). Everything else stays `List`. -/
@@ -586,12 +606,24 @@ def arrayEligibleVars (env : Env) (fn : Json) : Std.HashSet String := Id.run do
     else if isNestedScalarList ty then
       if initsAreLits stmts name ty true && body.all (listUsePorted name false) then
         result := result.insert name
+  -- Propagate through slices: a var whose every init is a slice of an already-eligible var (`head =
+  -- sieve[:k]`) is itself array-backed, since `PySlice (Array β)` returns an `Array`. Fixpoint (bounded)
+  -- so a slice of a slice also flows; append is disallowed on such a var (its backing follows the source).
+  for _ in [0:4] do
+    let mut changed := false
+    for (name, ty) in env.toList do
+      if !params.contains name && !result.contains name
+         && (isFlatScalarList ty || isNestedScalarList ty)
+         && initsAreArraySlices result stmts name
+         && body.all (listUsePorted name false) then
+        result := result.insert name; changed := true
+    unless changed do break
   return result
 
 /-- Mark `_seq: "array"` on EVERY `list[...]` level of a type annotation (so `list[list[int]]` →
 `Array (Array Int)`, not `Array (List Int)`). -/
 partial def markSeqAnn (ann : Json) : Json :=
-  if ann.getObjValAs? String "node_type" == .ok "Subscript"
+  if (ann.getObjValAs? String "node_type").toOption == some "Subscript"
      && ((ann.getObjVal? "value").toOption.any (·.getObjValAs? String "id" |>.toOption |>.any (· == "list"))) then
     let ann := ann.setObjVal! "_seq" (Json.str "array")
     match ann.getObjVal? "slice" with

@@ -227,10 +227,10 @@ attribute [simp, taste_ingr] _k_smallest_after_pushes'push
 def k_smallest_after_pushes := fun (nums : List Int) ↦ fun (k : Int) ↦
   Id.run
     (do
-      let mut heap := []
+      let mut heap : List Int := []
       for v in (PastaLean.pyIter nums)do
         heap := _k_smallest_after_pushes'push heap v k
-      let p'_ret_1 := PastaLean.pySort ((PastaLean.pyIter heap).map fun x => -x)
+      let p'_ret_1 := PastaLean.pySort ((PastaLean.pyIter heap).map fun (x : Int) => -x)
       return p'_ret_1)
 
 attribute [simp, taste_ingr] k_smallest_after_pushes
@@ -247,10 +247,10 @@ private def _k_smallest_after_pushes'push'rn := fun (pq : List Int) ↦ fun (x :
 def k_smallest_after_pushes'rn := fun (nums : List Int) ↦ fun (k : Int) ↦
   Id.run
     (do
-      let mut heap := []
+      let mut heap : List Int := []
       for v in (PastaLean.pyIter nums)do
         heap := _k_smallest_after_pushes'push'rn heap v k
-      let p'_ret_1 := PastaLean.pySort ((PastaLean.pyIter heap).map fun x => -x)
+      let p'_ret_1 := PastaLean.pySort ((PastaLean.pyIter heap).map fun (x : Int) => -x)
       return p'_ret_1)
 
 -- A mutated parameter via a tuple-of-subscripts target (`arr[i], arr[j] = arr[j], arr[i]`).

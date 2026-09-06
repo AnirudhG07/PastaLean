@@ -19,6 +19,14 @@ def pyAccumulate {α : Type} [Add α] (xs : List α) (initial : Option α := non
   | [] => []
   | x :: rest => rest.scanl (· + ·) x
 
+/-- `itertools.accumulate(xs, f, initial=…)`: running fold with a CUSTOM binary op, e.g.
+`accumulate(xs, operator.xor)` or `accumulate(xs, mul)`. Same shape as `pyAccumulate` but folding by
+`f` instead of `+`, so it works for any element type (no `Add` needed). -/
+def pyAccumulateBy {α : Type} (f : α → α → α) (xs : List α) (initial : Option α := none) : List α :=
+  match (match initial with | some v => v :: xs | none => xs) with
+  | [] => []
+  | x :: rest => rest.scanl f x
+
 /-- `itertools.chain(*iterables)` / `chain.from_iterable(xss)`: concatenate in order. -/
 def pyChain {α β : Type} [PastaLean.PyIterable α β] (xss : List α) : List β :=
   xss.flatMap PastaLean.pyIter

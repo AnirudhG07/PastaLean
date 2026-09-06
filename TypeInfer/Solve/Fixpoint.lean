@@ -369,6 +369,25 @@ def defaultCallableSeed (sigs : Sigs) (fn : Json) : Env := Id.run do
               m := m.insert pn (.fn [] rt)
   return m
 
+/-- Seed a parameter's type from a SCALAR-literal default: `def f(verbose=False)` ⇒ `verbose : bool`,
+`n=0` ⇒ `int`, `name=""` ⇒ `str`. Only scalar literals (bool/int/str/float) — a `None` default gives no
+concrete type (the param is nullable, resolved by usage), and a container default (`x=[]`) would only
+pin an unknown element. Weaker than an explicit annotation or body usage, which override it. -/
+def defaultLiteralSeed (sigs : Sigs) (fn : Json) : Env := Id.run do
+  let mut m : Env := {}
+  let some argsNode := (fn.getObjVal? "args").toOption | return m
+  let params := (argsNode.getObjValAs? (Array Json) "args").toOption.getD #[]
+  let defaults := (argsNode.getObjValAs? (Array Json) "defaults").toOption.getD #[]
+  if defaults.isEmpty then return m
+  let firstDefault := params.size - defaults.size
+  for i in [0:params.size] do
+    if i ≥ firstDefault then
+      let t := typeOfExpr sigs {} defaults[i - firstDefault]!
+      if t == .int || t == .bool || t == .str || t == .float then
+        if let .ok pn := params[i]!.getObjValAs? String "arg" then
+          m := m.insert pn t
+  return m
+
 /-- Infer a type for every local in `fn`, reflowing to a fixpoint. `outer` seeds the environment
 with the enclosing scope so a nested def's captures start typed; `hints` seeds unannotated
 parameters with types learned from call sites; `sigs` resolves calls to user functions. Precedence:
@@ -396,11 +415,24 @@ partial def inferFunction (sigs : Sigs) (outer hints : Env) (fn : Json) : Env :=
     | _, _ => ann
   let mergeRefining (src : Env) (env : Env) : Env :=
     src.fold (fun m k v => m.insert k (refineElem v (m.get? k |>.getD .unknown))) env
+  -- Explicit local annotations (`result: list[int] = []`, kept as `_decl_ty` by the visitor) are
+  -- authoritative: they override the type inferred from the RHS/usage and stay sticky across the reflow
+  -- (an append of an untypeable element must not widen an annotated `list[int]` to `list[PyAny]`).
+  -- `refineElem` keeps a concrete annotated element while letting a BARE `list` annotation take the
+  -- usage element, so this never loses information.
+  let declTypes : Env := stmts.foldl (fun m s =>
+    if nodeTypeOf s == some "Assign" then
+      match (getField s "target").bind nameId?, getField s "_decl_ty" with
+      | some name, some ann => m.insert name (ofAnnotation ann)
+      | _, _ => m
+    else m) {}
   let mut env := paramUsageSeed fn
+  env := mergeRefining (defaultLiteralSeed sigs fn) env
   env := mergeRefining outer env
   env := mergeRefining hints env
   env := mergeRefining (paramSeed fn) env
   env := mergeRefining (defaultCallableSeed sigs fn) env
+  env := mergeRefining declTypes env
   let bodyJson := Json.arr body
   -- Reflow until stable. The lattice climbs, so a small cap is a sound floor, not a correctness risk.
   for _ in [0:8] do
@@ -413,17 +445,17 @@ partial def inferFunction (sigs : Sigs) (outer hints : Env) (fn : Json) : Env :=
     let stepped := applyCaptureMutations sigs [] paramEnv false (stmts.foldl (applyStmt sigs) env) bodyJson
     let stepped := learnFromReads sigs stepped bodyJson
     let stepped := learnFromDictMethods sigs stepped bodyJson
-    let next := compBindings sigs stepped bodyJson
+    let next := mergeRefining declTypes (compBindings sigs stepped bodyJson)
     if next.size == env.size && next.fold (fun ok k v => ok && (env.get? k |>.getD .unknown) == v) true then
       env := next
       break
     env := next
   return env
 
-/-- The type `fn` returns: the join of every `return <e>` under its inferred environment. A bare
-`return` (no value) or falling off the end contributes `None`. -/
-partial def returnTypeOf (sigs : Sigs) (hints : Env) (fn : Json) (outer : Env := {}) : PyType := Id.run do
-  let env := inferFunction sigs outer hints fn
+/-- The return type given an ALREADY-inferred body env — the half of `returnTypeOf` after
+`inferFunction`. Split out so a caller that already holds the env (the interprocedural fixpoint, which
+also needs it for call-site refinement) computes the body env ONCE instead of inferring it twice. -/
+partial def returnTypeFromEnv (sigs : Sigs) (env : Env) (fn : Json) : PyType := Id.run do
   let body := (fn.getObjValAs? (Array Json) "body").toOption.getD #[]
   let mut ret : PyType := .unknown
   let mut sawValueReturn := false
@@ -440,6 +472,9 @@ partial def returnTypeOf (sigs : Sigs) (hints : Env) (fn : Json) (outer : Env :=
   -- A function that never returns a VALUE (`def f(): pass`, or only bare `return`) returns `None` —
   -- so a call `y = f()` is typed `None`, not left unknown. Sound (Python's implicit `return None`).
   return if sawValueReturn then ret else .none
+
+partial def returnTypeOf (sigs : Sigs) (hints : Env) (fn : Json) (outer : Env := {}) : PyType :=
+  returnTypeFromEnv sigs (inferFunction sigs outer hints fn) fn
 
 
 end TypeInfer

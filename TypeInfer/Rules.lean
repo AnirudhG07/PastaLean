@@ -1,7 +1,9 @@
 import TypeInfer.PyType
 import TypeInfer.Annotation
 import TypeInfer.Value
-import Libraries.Registry
+-- The type engine consumes only the Mathlib-free type-behaviour view (return shapes + teaches);
+-- the codegen `Registry` (runtime names → Mathlib) is deliberately NOT imported here.
+import Libraries.TypeBehaviour
 import Libraries.Behaviour
 
 /-!
@@ -144,10 +146,13 @@ partial def typeOfExpr (sigs : Sigs) (env : Env) (e : Json) : PyType :=
               | _, _ => arith lt rt
           -- `s % args` is %-formatting → str; `n % m` is modulo (arithmetic).
           | some "mod" => match lt with | .str => .str | _ => arith lt rt
-          -- Python's `/` is always true division, so `int / int` is a `float` — but a boxed operand
-          -- keeps the result boxed (`PyAny / 2` dispatches on the tag → `PyAny`), else a `_ret_float`
-          -- stamp would ascribe `ℚ` onto a body that is actually `PyAny`.
-          | some "div" => match lt, rt with | .any, _ | _, .any => .any | _, _ => .float
+          -- Python's `/` is true division, so a NUMERIC left operand gives a `float` (`int / int`,
+          -- `float / n`). But `/` is overloaded — `pathlib.Path / "sub"` is a `Path`, not a float — so
+          -- only commit `float` when the left is actually numeric; otherwise leave it unknown. A boxed
+          -- operand stays boxed (`PyAny / 2` dispatches on the tag → `PyAny`).
+          | some "div" => match lt, rt with
+              | .any, _ | _, .any => .any
+              | _, _ => match lt with | .int | .float | .bool => .float | _ => .unknown
           -- `a ** -k` is a `float` even for an `int` base (`2 ** -1 = 0.5`); a FRACTIONAL exponent
           -- (`x ** 0.5`, a root) is always a `float` regardless of base (pow requires a numeric base,
           -- so this is sound even when the base type is still `unknown`); else keep the base's type.
@@ -155,6 +160,14 @@ partial def typeOfExpr (sigs : Sigs) (env : Env) (e : Json) : PyType :=
               if rt == .float then .float
               else if isNegativeIntLiteral r && lt == .int then .float
               else arith lt rt
+          -- `+` concatenation: with one KNOWN str/list operand and the other still `unknown`, a
+          -- well-typed program forces the unknown to that type (`str + x` errors unless `x` is a str),
+          -- so `v + "\n"` is `str` — which lets a `list[str]` built by `lines.append(v + "\n")` type.
+          | some "add" =>
+              match lt, rt with
+              | .str, .unknown | .unknown, .str => .str
+              | .list a, .unknown | .unknown, .list a => .list a
+              | _, _ => arith lt rt
           | _ => arith lt rt
       | _, _ => .unknown
   | some "UnaryOp" =>
@@ -213,8 +226,23 @@ partial def typeOfExpr (sigs : Sigs) (env : Env) (e : Json) : PyType :=
   | some "ListComp" | some "SetComp" | some "GeneratorExp" | some "DictComp" =>
       let gens := (e.getObjValAs? (Array Json) "generators").toOption.getD #[]
       let env' := gens.foldl (fun env gen =>
-        match (field gen "target").bind (fun t => (t.getObjValAs? String "id").toOption), field gen "iter" with
-        | some name, some iter => env.insert name (typeOfExpr sigs env iter).elemType
+        match field gen "target", field gen "iter" with
+        | some target, some iter =>
+            let elemT := (typeOfExpr sigs env iter).elemType
+            match nodeType? target with
+            | some "Name" => match (target.getObjValAs? String "id").toOption with
+                | some name => env.insert name elemT | none => env
+            -- A tuple target (`for k, v in d.items()`) distributes the element type: a tuple element
+            -- binds position-wise (`k : str, v : int`), any other iterable element goes to each name.
+            | some "Tuple" | some "List" =>
+                let elts := (target.getObjValAs? (Array Json) "elts").toOption.getD #[]
+                (Array.range elts.size).foldl (fun env i =>
+                  match (elts[i]!.getObjValAs? String "id").toOption with
+                  | some nm =>
+                      let t := match elemT with | .tuple ts => ts[i]?.getD .unknown | _ => elemT.elemType
+                      env.insert nm t
+                  | none => env) env
+            | _ => env
         | _, _ => env) env
       match nodeType? e with
       | some "DictComp" =>
@@ -288,7 +316,7 @@ partial def typeOfCall (sigs : Sigs) (env : Env) (e : Json) : PyType :=
                 -- A module-qualified collections constructor (`collections.Counter()`) declares its
                 -- return in `collectionsBehaviour?`; `defaultdict` reads its factory arg's identifier
                 -- (so it stays in `builtinReturn`); anything else is a method call.
-                match Libraries.memberBehaviour? "collections" attr with
+                match Libraries.memberTypeBehaviour? "collections" attr with
                 | some b => b.returns (args.map (typeOfExpr sigs env))
                 | none => if attr == "defaultdict" then builtinReturn sigs env attr args
                           else methodReturn sigs env attr (field func "value") args
@@ -359,7 +387,7 @@ partial def builtinReturn (sigs : Sigs) (env : Env) (name : String) (args : List
       | none => elemTy
     -- Every other arg-dependent builtin / star-imported member declares its return SHAPE in
     -- `Libraries.bareBehaviour?`, so this engine no longer hardcodes any member's name (§27).
-    else match Libraries.bareBehaviour? name with
+    else match Libraries.bareTypeBehaviour? name with
       | some b => b.returns (args.map (typeOfExpr sigs env))
       | none => .unknown
 

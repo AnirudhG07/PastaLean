@@ -1509,7 +1509,8 @@ def resolve_local_imports(source_code, module_dir):
 
 
 
-def translate_to_json(source_code, filepath=None, best_effort=False, infer_only=False):
+def translate_to_json(source_code, filepath=None, best_effort=False, infer_only=False,
+                      resolve_imports=True):
     """
     Parses Python source code and translates it to a JSON IR.
     If `filepath` is provided, it first runs the annotator code to add type annotations,
@@ -1527,7 +1528,9 @@ def translate_to_json(source_code, filepath=None, best_effort=False, infer_only=
     # resolve cross-file imports (`module_dir` below).
     # Inline LOCAL sibling imports so per-module inference sees the whole reachable program
     # (`from helper import f; x = f()` → `x` typed). Library/foreign imports are left untouched.
-    if filepath:
+    # `resolve_imports=False` is the repo-level path: keep each file a separate module (imports left
+    # in the IR) so the Lean `inferRepo` task does all cross-file resolution itself.
+    if filepath and resolve_imports:
         _resolved = resolve_local_imports(source_code, str(Path(filepath).resolve().parent))
         if _resolved is not None:
             source_code = _resolved
@@ -1542,6 +1545,7 @@ def translate_to_json(source_code, filepath=None, best_effort=False, infer_only=
         supported_modules=set(SUPPORTED_LIBRARY_IMPORTS) | set(LIBRARY_IMPORT_ALIASES),
         type_only_modules=TYPE_ONLY_IMPORTS,
         module_dir=module_dir,
+        infer_only=infer_only,
     )
     data = translator.visit(ast_tree)
     # Record which statements best-effort degraded, so callers (`TranslationResult.unsupported`)

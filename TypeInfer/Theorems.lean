@@ -212,7 +212,7 @@ remaining case — the numeric tower, the recursive `list`/`set`/`dict`/`tuple`/
 class-name fallback, and all the `Optional` absorption interactions — is discharged uniformly by `grind`
 from `join`'s equations and the inductive hypothesis. -/
 
-set_option maxHeartbeats 2000000 in
+-- set_option maxHeartbeats 2000000 in
 private theorem join_assoc_aux : ∀ (n : Nat) (a b c : PyType), sizeOf a + sizeOf b + sizeOf c ≤ n →
     join (join a b) c = join a (join b c) := by
   intro n
@@ -225,7 +225,7 @@ private theorem join_assoc_aux : ∀ (n : Nat) (a b c : PyType), sizeOf a + size
       | (simp only [join, beq, reduceCtorEq, ite_true, ite_false, ite_self]; done)
       | (simp only [join, beq, beq_iff_eq]; split_ifs <;> simp_all only [reduceCtorEq]; done)
       | (simp only [join, opt.sizeOf_spec, list.sizeOf_spec, set.sizeOf_spec,
-            dict.sizeOf_spec, cls.sizeOf_spec] at *; grind [join])
+            dict.sizeOf_spec, cls.sizeOf_spec] at *; grind only [join])
 
 /-- **Associativity** of the lattice join, on the full lattice: `(a ⊔ b) ⊔ c = a ⊔ (b ⊔ c)`. Together
 with `join_comm` and `join_idem` this makes `PyType`'s `join` a bounded join-semilattice, so the

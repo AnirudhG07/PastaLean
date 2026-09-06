@@ -40,10 +40,6 @@ def pythonScipyMemberMapReal? (member : String) : Option Lean.Name :=
   | "norm" => some ``pyScipyNormR
   | _ => none
 
-/-- Return type of a `scipy` member, for TypeInfer (all `.float` in this supported subset). -/
-def scipyBehaviour? (member : String) : Option Libraries.Behaviour :=
-  if ["factorial", "comb", "perm", "gamma", "erf", "pi", "golden", "golden_ratio", "tmean",
-      "gmean", "hmean", "norm", "det"].contains member then some (Libraries.Behaviour.const .float)
-  else none
+-- `scipyBehaviour?` (type-inference return shapes) moved to `Libraries/TypeBehaviour.lean`.
 
 end Libraries.scipy

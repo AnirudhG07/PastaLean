@@ -119,25 +119,7 @@ def pythonNumpyMemberMapReal? (member : String) : Option Lean.Name :=
   | "std" => some ``pyNumpyStdR
   | _ => none
 
-/-- Peel a nested list to its scalar element (`List (List ℚ)` → `ℚ`). -/
-partial def scalarField : TypeInfer.PyType → TypeInfer.PyType
-  | .list e => scalarField e
-  | t => t
-
-/-- numpy member behaviour — the return type as a function of the FIRST argument's type, since the
-shims are polymorphic over the field (`np.dot` of `ℚ` vectors gives `ℚ`). `none` = let Lean infer it.
-Reductions/elementwise/creators always return `Float` (never the caller's `ℚ`), so they are omitted
-and left for Lean to infer — forcing `ℚ` in exact mode would clash with the shim. -/
-def numpyBehaviour? (member : String) : Option Libraries.Behaviour :=
-  let ofArg0 (f : TypeInfer.PyType → TypeInfer.PyType) : Libraries.Behaviour :=
-    { returns := fun as => f ((as[0]?).getD .unknown) }
-  -- `dot` is the one field-scalar reduction (`… → γ`): result = the arg's scalar field.
-  if member == "dot" then some (ofArg0 scalarField)
-  -- Field-preserving matrix ops (`… → List (List α)`): result has the arg's shape and field.
-  else if ["add", "subtract", "multiply", "scale", "matmul"].contains member then some (ofArg0 id)
-  else if ["argmax", "argmin", "searchsorted"].contains member then some (ofArg0 fun _ => .int)
-  else if ["argsort", "nonzero", "shape"].contains member then some (ofArg0 fun _ => .list .int)
-  else if ["any", "all"].contains member then some (ofArg0 fun _ => .bool)
-  else none
+-- `scalarField` + `numpyBehaviour?` (type-inference return shapes) moved to
+-- `Libraries/TypeBehaviour.lean` — the Mathlib-free half consumed by the type engine.
 
 end Libraries.numpy

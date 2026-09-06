@@ -150,7 +150,7 @@ def classFieldSigs (module : Json) (params : ParamSigs := {}) : Sigs := Id.run d
     -- `__init__` params: their declared/default type, and which ones default to `None`.
     let mut ptype : Env := {}
     let mut noneParams : List String := []
-    if let some init := methods.find? (·.getObjValAs? String "name" == .ok "__init__") then
+    if let some init := methods.find? (fun m => (m.getObjValAs? String "name").toOption == some "__init__") then
       -- Seed from inferred call-site param types (`Rectangle(5, 10)` ⇒ `width, height : int`), so a
       -- field `self.width = width` on an UNannotated param still gets a concrete type.
       let initNames := paramNames init
@@ -232,14 +232,26 @@ def stampClassFields (fields : Sigs) (cls : String) (st : Json) : Json :=
 /-- Co-evolve every function's return type AND its parameter types to a fixpoint: a callee's return
 flows to its callers, and a caller's argument types flow to the callee's parameters. Both only climb
 the lattice, so this settles. -/
-partial def collectSigs (module : Json) : Sigs × ParamSigs := Id.run do
+-- `seedSigs`/`seedParams` carry the REPO-GLOBAL signature table (every other module's function
+-- returns, class types and parameter types, keyed by qualified/mangled name). Seeding the tables with
+-- them is what lets a per-module fixpoint resolve a cross-module call `x = other.f()` or constructor
+-- `x = OtherClass()` — the shared-table repo-level design. Empty by default = single-module behaviour.
+partial def collectSigs (module : Json) (seedSigs : Sigs := {}) (seedParams : ParamSigs := {}) :
+    Sigs × ParamSigs := Id.run do
   let fns := topFunctions module
+  -- Fill an annotation-derived param array's `unknown` slots from an incoming seed (cross-module
+  -- call-site refinement), never widening a concrete annotation. Keeps cross-module param info alive
+  -- through this module's own re-seed, since a function is only ever inferred in its defining module.
+  let seedFill (name : String) (arr : Array PyType) : Array PyType :=
+    match seedParams.get? name with
+    | some prior => arr.mapIdx (fun i t => if t == .unknown then (prior[i]?.getD .unknown) else t)
+    | none => arr
   -- Seed each function's parameters with their annotations (unknown where unannotated).
-  let mut params : ParamSigs := {}
+  let mut params : ParamSigs := seedParams
   for fn in fns do
     if let .ok name := fn.getObjValAs? String "name" then
       let seed := paramSeed fn
-      params := params.insert name ((paramNames fn).map fun p => (seed.get? p).getD .unknown)
+      params := params.insert name (seedFill name ((paramNames fn).map fun p => (seed.get? p).getD .unknown))
   -- Class methods join the same table under `"Class.method"` keys (a dot no function name has), so
   -- their params are refined from call sites just like a free function's. `methodSelf` records which
   -- take a leading `self` (an instance method) vs a `@staticmethod`, so a qualified `Class.m(...)` call
@@ -254,11 +266,11 @@ partial def collectSigs (module : Json) : Sigs × ParamSigs := Id.run do
   for (cls, mn, m) in methodEntries do
     let key := s!"{cls}.{mn}"
     let seed := paramSeed m
-    params := params.insert key ((paramNames m).map fun p => (seed.get? p).getD .unknown)
+    params := params.insert key (seedFill key ((paramNames m).map fun p => (seed.get? p).getD .unknown))
     methodSelf := methodSelf.insert key (isInstanceMethod m)
   -- Class field types share the `sigs` table under `"Class.field"` keys; a bare class name maps to
   -- `.cls C`, so a `t = C(...)` constructor call types `t` (letting `t.method(...)` resolve `C.method`).
-  let mut sigs : Sigs := classFieldSigs module
+  let mut sigs : Sigs := seedSigs.fold (fun m k v => m.insert k v) (classFieldSigs module)
   for cls in classNames.toList do sigs := sigs.insert cls (.cls cls)
   -- Hints for a method, with `self : .cls C` seeded (an instance method's receiver).
   let methodHints (params : ParamSigs) (cls key : String) (m : Json) : Env :=
@@ -306,9 +318,11 @@ partial def collectSigs (module : Json) : Sigs × ParamSigs := Id.run do
     for fn in fns do
       if let .ok name := fn.getObjValAs? String "name" then
         let hints := hintsFor params fn
-        nextSigs := nextSigs.insert name (returnTypeOf sigs hints fn fnEnv)
-        -- refine callees' params from this function's call sites, typed under its own env.
+        -- Infer the body env ONCE and reuse it for both the return type and the call-site refinement
+        -- (the return and the calls need the same env, so `returnTypeOf`'s internal re-inference was
+        -- pure duplication — the single dominant cost of a fixpoint iteration).
         let env := inferFunction sigs fnEnv hints fn
+        nextSigs := nextSigs.insert name (returnTypeFromEnv sigs env fn)
         nextParams := refineFrom nextParams (collectCalls sigs env fn)
         nextParams := refineFrom nextParams (collectMethodCalls sigs env classNames methodSelf fn)
     -- Class methods: refine callees from each method body, with `self` typed to its class.
@@ -320,14 +334,14 @@ partial def collectSigs (module : Json) : Sigs × ParamSigs := Id.run do
       let hints := match (baseMap.find? (·.1 == cls)).bind (·.2[0]?) with
         | some b => hints.insert "super#cls" (.cls b)
         | none => hints
-      let ret := returnTypeOf sigs hints m fnEnv
+      let env := inferFunction sigs fnEnv hints m
+      let ret := returnTypeFromEnv sigs env m
       nextSigs := nextSigs.insert key ret
       -- Also store the method's FUNCTION type under a `#fn`-suffixed key (no Python name has `#`), so a
       -- method REFERENCE `obj.method` (not a call) types as a function → `callable`, distinct from a
       -- data field. `obj.method()` still reads the return type via `key`.
       let methParams := ((params.get? key).getD #[]).toList.drop (if isInstanceMethod m then 1 else 0)
       nextSigs := nextSigs.insert s!"{key}#fn" (.fn methParams ret)
-      let env := inferFunction sigs fnEnv hints m
       nextParams := refineFrom nextParams (collectCalls sigs env m)
       nextParams := refineFrom nextParams (collectMethodCalls sigs env classNames methodSelf m)
     -- Module top-level call sites (outside any def), typed under `fnEnv` PLUS the module-level
@@ -569,10 +583,10 @@ partial def stampDecoratorParams (decoNames : List String) : Json → Json
       | none => json
     else json
 
-/-- Whole-module inference: co-evolve return and parameter types to a fixpoint, then stamp each
-top-level node with that knowledge. This is what the `inferTypes` backend task runs. -/
-def inferModule (module : Json) : Json :=
-  let (sigs, params) := collectSigs module
+/-- Stamp every top-level node of a module with an ALREADY-COMPUTED signature/parameter table. Split
+out of `inferModule` so a caller that already ran `collectSigs` (e.g. the repo-level pass, which
+collects signatures to a fixpoint first) can reuse them instead of re-running the fixpoint. -/
+def stampModuleWith (module : Json) (sigs : Sigs) (params : ParamSigs) : Json :=
   -- Module-level globals (`inf = float('inf')`, config constants) seed every function so a body that
   -- reads a global sees its type — e.g. `f = [[inf]*k for _ in range(n)]` becomes `list[list[float]]`.
   -- Top-level function names are seeded as their `.fn` value type so a `g = some_func` reference (a
@@ -580,22 +594,24 @@ def inferModule (module : Json) : Json :=
   let fnSeed : Env := (topFunctions module).foldl (fun e fn =>
     match fn.getObjValAs? String "name" with
     | .ok nm =>
-        -- Use the INFERRED return (from `sigs`) for the function value, not just its annotation, so a
-        -- `g = some_func; g()` resolves `g()` to `some_func`'s real return type.
         let sig := match functionSignatureType fn with
           | .fn as _ => .fn as ((sigs.get? nm).getD .unknown)
           | t => t
         e.insert nm sig
     | _ => e) {}
   let globals : Env := (topLevelStmts module).foldl (applyStmt sigs) fnSeed
-  -- Mark each statement `_inferred` so the per-request fallback pass (which lacks module context and
-  -- would re-derive worse types, e.g. a global-fed `float` local mis-stamped `int`) skips it.
   let decoNames := collectDecoratorNames module
   let mark (s : Json) : Json :=
     stampDecoratorParams decoNames ((stampNodeWith sigs params globals s).setObjVal! "_inferred" (Json.bool true))
   match module.getObjValAs? (Array Json) "body" with
   | .ok body => module.setObjVal! "body" (Json.arr (body.map mark))
   | _ => mark module
+
+/-- Whole-module inference: co-evolve return and parameter types to a fixpoint, then stamp each
+top-level node with that knowledge. This is what the `inferTypes` backend task runs. -/
+def inferModule (module : Json) (seedSigs : Sigs := {}) (seedParams : ParamSigs := {}) : Json :=
+  let (sigs, params) := collectSigs module seedSigs seedParams
+  stampModuleWith module sigs params
 
 
 end TypeInfer

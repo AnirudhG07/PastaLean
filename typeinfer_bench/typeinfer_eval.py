@@ -457,6 +457,76 @@ def _eval_chunk(chunk):
             per_snippet, errors)
 
 
+def _gen_ir_worker(py_path):
+    """Pure-Python IR generation (node_visitor + local-import inlining) — no Lean backend, so it
+    parallelises freely. Mirrors `Session.to_json_ir_file(py, infer_only=True)`."""
+    import json as _json
+    from pastalean.transpile import driver
+    try:
+        raw = driver.translate_to_json(open(py_path).read(), py_path,
+                                       best_effort=True, infer_only=True)
+        return (py_path, _json.loads(raw))
+    except Exception:  # noqa: BLE001
+        return (py_path, None)
+
+
+def _typeinfer_exe_path():
+    from pastalean import paths  # resolves repo locations from __file__, never the cwd
+    exe = Path(paths.LAKE_BIN_DIR) / "typeinfer"
+    return exe if exe.exists() else None
+
+
+def run_typeinfer_engine(snippets, jobs, out_total, out_by_cat, out_per_snippet):
+    """The fast path: parallel pure-Python IR-gen (no backend boot) → one batched, in-process-parallel
+    inference call to the standalone `typeinfer` exe → score. Returns the error count and phase times."""
+    import subprocess, time
+    from multiprocessing import Pool
+    exe = _typeinfer_exe_path()
+    if exe is None:
+        raise SystemExit("typeinfer exe not built — run `lake build typeinfer` first.")
+    withgt = [py for py in snippets if py.with_name("main_gt.json").exists()]
+
+    t0 = time.time()
+    if jobs > 1:
+        with Pool(jobs) as p:
+            irs = p.map(_gen_ir_worker, [str(py) for py in withgt])
+    else:
+        irs = [_gen_ir_worker(str(py)) for py in withgt]
+    t1 = time.time()
+
+    empty = {"node_type": "Module", "body": []}
+    asts = [ir if ir is not None else empty for _, ir in irs]
+    # Size the exe's task-scheduler thread pool (Lean's `LEAN_NUM_THREADS`) to the cores; the batch
+    # then fans across them in-process. Plateaus once threads ≥ ~cores (serial JSON framing bounds it).
+    import os as _os
+    env = {**_os.environ, "LEAN_NUM_THREADS": str(min(_os.cpu_count() or 8, 64))}
+    proc = subprocess.Popen([str(exe), "--server"], stdin=subprocess.PIPE,
+                            stdout=subprocess.PIPE, text=True, env=env)
+    import json as _json
+    proc.stdin.write(_json.dumps({"task": "inferBatch", "asts": asts}) + "\n")
+    proc.stdin.flush()
+    out = _json.loads(proc.stdout.readline())
+    proc.stdin.close(); proc.wait()
+    t2 = time.time()
+
+    errors = 0
+    for (py_path, ir), st in zip(irs, out.get("results", [])):
+        if ir is None:
+            errors += 1
+        stamped = st.get("ast", st) if isinstance(st, dict) else st
+        preds = collect(stamped)
+        py = Path(py_path); cat = py.parts[-3]
+        agg, _ = score(preds, load_gt(py.with_name("main_gt.json")))
+        out_per_snippet[f"{cat}/{py.parent.name}"] = {k: dict(v) for k, v in agg.items()}
+        for kind, a in agg.items():
+            for f in ("total", "covered", "matched"):
+                out_total[kind][f] += a[f]; out_by_cat[cat][kind][f] += a[f]
+            out_total[kind]["sim"] += a["sim"]; out_by_cat[cat][kind]["sim"] += a["sim"]
+    print(f"[*] IR-gen {t1-t0:.2f}s ({jobs} procs) + inference {t2-t1:.2f}s (1 exe, in-proc parallel) "
+          f"= {t2-t0:.2f}s, no backend boot")
+    return errors
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--bench", type=Path, default=DEFAULT_BENCH)
@@ -467,6 +537,11 @@ def main():
     ap.add_argument("--jobs", default="auto",
                     help="Parallel warm backends: 'auto' (memory-aware, 16-32 band) or an integer. "
                          "1 = serial. --diff/--misses force serial.")
+    ap.add_argument("--engine", choices=("typeinfer", "backend"), default="typeinfer",
+                    help="'typeinfer' (default; standalone exe: no boot, parallel pure-Python IR-gen "
+                         "+ one batched in-process-parallel inference call). 'backend' (legacy warm "
+                         "py2lean, per-snippet; slow, Mathlib-heavy) is only kept because --diff/--misses "
+                         "stream per-fact detail from its loop.")
     args = ap.parse_args()
     miss_counts = defaultdict(int)
     miss_examples = {}
@@ -487,7 +562,12 @@ def main():
         jobs = 1
     print(f"[*] jobs={jobs} ({args.jobs}){'  free=%.0fGiB cores=%d' % (_mem_available_gb(), (__import__('os').cpu_count() or 0)) if args.jobs == 'auto' else ''}")
 
-    if jobs > 1:
+    if args.engine == "typeinfer":
+        if args.diff or args.misses:
+            raise SystemExit("--diff/--misses require --engine backend")
+        errors = run_typeinfer_engine(snippets, jobs, total, by_cat, per_snippet)
+        _run_serial = False
+    elif jobs > 1:
         from multiprocessing import Pool
         paths = [str(p) for p in snippets]
         chunks = [paths[i::jobs] for i in range(jobs)]  # round-robin: even load per worker

@@ -620,10 +620,17 @@ def binOpSyntax : (kind : SyntaxNodeKind) → Json →
     if op == "mul" then
       let arrayBacked := (json.getObjValAs? String "_seq" == .ok "array") && (← getNumericMode) == .approx
       let repeatIdent := mkIdent (if arrayBacked then ``PastaLean.pyArrayRepeat else ``PastaLean.pyListRepeat)
+      -- The `[x]` operand is consumed by `pyListRepeat`, which wants a bare list — NOT a heap cell. Under
+      -- `--heap` the ordinary List generator wraps a literal in `(← allocM …)`, which would hand
+      -- `pyListRepeat` a `Ref`; regenerate the operand raw here (any heap-ness of the RESULT is applied at
+      -- the assignment, not to this transient operand).
+      let rawListOperand (listJson : Json) : PygenM (TSyntax `term) := do
+        let elts ← ((listJson.getObjValAs? (Array Json) "elts").toOption.getD #[]).mapM (getCode · `term)
+        if arrayBacked then `(#[$elts,*]) else `([$elts,*])
       if leftJson.getObjValAs? String "node_type" == .ok "List" then
-        return ← `($repeatIdent $leftCode $rightCode)
+        return ← `($repeatIdent $(← rawListOperand leftJson) $rightCode)
       else if rightJson.getObjValAs? String "node_type" == .ok "List" then
-        return ← `($repeatIdent $rightCode $leftCode)
+        return ← `($repeatIdent $(← rawListOperand rightJson) $leftCode)
     binOpApplyTerm op leftCode rightCode
   | _, _ => throwError s!"Unsupported syntax category for BinOp node"
 

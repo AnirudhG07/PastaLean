@@ -57,7 +57,7 @@ def applyMutation (sigs : Sigs) (env : Env) (value : Json) : Env :=
       -- is the element, and how (list / set / spliced-elements). The engine hardcodes no member name.
       let behArgs? : Option (Libraries.Behaviour × List Json) := match nodeTypeOf func with
         | some "Name" =>
-            (Libraries.bareBehaviour? ((func.getObjValAs? String "id").toOption.getD "")).map (·, args)
+            (Libraries.bareTypeBehaviour? ((func.getObjValAs? String "id").toOption.getD "")).map (·, args)
         | some "Attribute" => match getField func "value" with
             | some recv =>
                 -- A user class instance's method (`node.insert(...)`) must NOT be read as a same-named

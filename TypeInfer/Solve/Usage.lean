@@ -29,7 +29,7 @@ partial def isListOfNone (j : Json) : Bool :=
       let elts := (j.getObjValAs? (Array Json) "elts").toOption.getD #[]
       !elts.isEmpty && elts.all isNoneConst
   | some "BinOp" =>
-      j.getObjValAs? String "op" == .ok "mul"
+      (j.getObjValAs? String "op").toOption == some "mul"
         && ((getField j "left").any isListOfNone || (getField j "right").any isListOfNone)
   | some "ListComp" => (getField j "elt").any isNoneConst
   | _ => false

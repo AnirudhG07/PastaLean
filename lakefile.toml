@@ -48,6 +48,12 @@ supportInterpreter = true
 name="py2lean"
 supportInterpreter = true
 
+# Standalone whole-module type inference — pure `Json → Json`, no elaboration environment, so it skips
+# the ~4 s Mathlib boot the full backend pays. Batches parallelise across cores in one process.
+[[lean_exe]]
+name="typeinfer"
+root = "typeinfer_exe"
+
 [[lean_exe]]
 name="palc"
 root = "PALC.PastaCheck"
