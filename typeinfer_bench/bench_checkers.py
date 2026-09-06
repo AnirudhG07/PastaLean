@@ -319,7 +319,7 @@ def score_pastalean(snippets):
     try:
         for py, facts in snippets:
             try:
-                ir = s.to_json_ir_file(py)
+                ir = s.to_json_ir_file(py, infer_only=True)
                 res = s.client.infer_types(ir)
                 stamped = res.get("ast", res) if isinstance(res, dict) else res
                 agg, _ = pl_score(collect(stamped), facts)

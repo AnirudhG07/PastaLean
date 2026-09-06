@@ -369,7 +369,7 @@ def main():
             try:
                 # Local sibling imports are resolved by the transpiler pipeline itself
                 # (driver.resolve_local_imports), so this is exactly what `pastalean translate` sees.
-                ir = s.to_json_ir_file(py)
+                ir = s.to_json_ir_file(py, infer_only=True)
                 res = s.client.infer_types(ir)
                 stamped = res.get("ast", res) if isinstance(res, dict) else res
                 preds = collect(stamped)

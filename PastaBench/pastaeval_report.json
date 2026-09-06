@@ -3,7 +3,7 @@
     "returncode": 0,
     "breakdown": {
       "Function Return Type": {
-        "matched": 173,
+        "matched": 176,
         "total": 230
       },
       "Function Parameter Type": {
@@ -11,11 +11,11 @@
         "total": 95
       },
       "Local Variable Type": {
-        "matched": 344,
+        "matched": 353,
         "total": 525
       },
       "Total": {
-        "matched": 580,
+        "matched": 592,
         "total": 850
       }
     }
