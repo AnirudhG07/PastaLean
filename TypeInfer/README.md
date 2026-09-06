@@ -255,20 +255,39 @@ last resort.)
 
 ## Is any of this *correct*?
 
-Because the engine is written in Lean, we don't just test it — we **prove** its core is sound.
-`Lattice.lean` proves, with no `sorry`:
+Because the engine is written in Lean, we don't just test it — we **prove** its core is sound, with no
+`sorry`. This matters because the engine is a *monotone dataflow fixpoint over a type lattice*, and the
+literature is explicit about what such an analysis must satisfy to be correct. The properties below, and
+the papers that say they are the ones that matter, drive exactly which theorems we prove.
 
-- **`join` is a bounded join-semilattice** — commutative, associative, idempotent, with `unknown` as
-  bottom and `any` as top. The induced order is a partial order and `join` computes its *least* upper
-  bound. This is what **guarantees the fixpoint terminates**: every reflow step moves strictly up a
-  partial order, so it can't loop forever.
-- **`consistent` is a genuine gradual-typing relation** (Siek & Taha) — reflexive, symmetric, with
-  the *gradual guarantee* (`unknown` is consistent with everything) and, crucially, **provably not
-  transitive**. Non-transitivity is the exact property that separates gradual typing from subtyping:
-  a boxed value may flow anywhere, but that never makes two unrelated concrete types interchangeable.
+**What "correct" means for a lattice-based inferrer, and where each requirement comes from:**
 
-The universal laws are proved on a faithful model; the same facts are then checked on the *actual*
-production functions with `native_decide`.
+| Requirement — and *why it is the right one* | Established by | Proved as (in `Theorems.lean`, on the real `PyType`) |
+|---|---|---|
+| The abstract domain is a **bounded join-semilattice** — so the reflow fixpoint is well-defined and its result is independent of the order/grouping in which assignments are merged | Cousot & Cousot, *Abstract Interpretation* (POPL 1977); Davey & Priestley, *Introduction to Lattices and Order* (2002) | `join_unknown_{left,right}` (⊥), `join_any_{left,right}` (⊤), `join_comm`, `join_assoc`, `join_idem` |
+| **`join` is the least upper bound** of the induced precision order `a ⊑ b := a⊔b = b` — the canonical, information-minimal merge | Davey & Priestley (2002) | `le_join_left`, `le_join_right` (upper bound) + `join_le` (least); order is a partial order: `le_refl`, `le_trans`, `le_antisymm` |
+| **`join` is monotone** ⇒ by Knaster–Tarski the fixpoint is a *least* fixpoint, so it exists, is unique, and terminates at bounded lattice height | Tarski, *A lattice-theoretical fixpoint theorem* (1955); Cousot & Cousot (1977) | `join_mono_left`, `join_mono_right`, `join_mono` |
+| **Semantic soundness** — an inferred type never lies about the runtime: every value the program produces lies in the inferred type's denotation (the inference analogue of "well-typed programs can't go wrong") | Milner, *A Theory of Type Polymorphism* (1978); Wright & Felleisen, *A Syntactic Approach to Type Soundness* (1994) | `HasType` + `hasType_join_tower`, `hasType_join_any` (the join over-approximates) — **numeric tower proven; general containers are the open frontier** |
+| **Gradual-typing consistency** for the dynamic type `PyAny` — reflexive, symmetric, and *non-transitive* (what separates gradual typing from subtyping) | Siek & Taha, *Gradual Typing for Functional Languages* (2006); Siek, Vitousek, Cimini & Boyland, *Refined Criteria for Gradual Typing* (2015) | `consistent_refl`, `consistent_symm`, `consistent_unknown`, `consistent_not_trans` (in `Lattice.lean`, on the model `Ty`) |
+
+**Two honest caveats, both surfaced *by* the proofs:**
+
+- Idempotence (`join_idem`) and order-reflexivity (`le_refl`) are stated for **`normalized`** types — those
+  with no `Optional[Any]` subterm. This is not a gap but a *fact*: `join (opt any) (opt any) = any ≠ opt any`
+  (`join_opt_any`), because a nullable dynamic value already *is* a dynamic value. `normalized` is exactly
+  the engine's reachable normal form (it collapses `Optional[Any] → Any` by construction), so the laws hold
+  everywhere the engine actually goes. The very same `Optional`/`None` absorption is what makes `join`
+  **associative** at the `None`-⊔-conflict junction — `join_assoc` holds on the *full* lattice.
+- Semantic soundness is proved for the numeric tower `bool <: int <: float`; extending it to a general
+  denotation over every container shape is the deepest remaining piece.
+
+**Model vs. production.** The semilattice, LUB and monotonicity laws (`Theorems.lean`) are proved on the
+**real** `PyType.join` — the one the engine runs, recursing over the actual `List PyType` in `tuple`/`fn`
+(via well-founded recursion and `grind`). The gradual-consistency laws (`Lattice.lean`) are proved on a
+faithful **model** type `Ty` (one subterm per constructor, so equations reduce cheaply); the same facts
+are cross-checked on the production functions with `native_decide`. `Theorems.lean` is deliberately **not
+imported into the default build** (its full-lattice associativity proof runs `grind` over every
+constructor triple, which is slow); build and re-check it on demand with `lake build TypeInfer.Theorems`.
 
 ## Algorithm, complexity & prior art
 
