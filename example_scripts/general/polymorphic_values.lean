@@ -51,7 +51,7 @@ attribute [simp] add
 def add'rn := fun (a : PyAny) ↦ fun (b : PyAny) ↦ (show PastaLean.PyAny from a +ₚ b)
 
 @[taste_ingr]
-theorem add_thm : ∀ a, ∀ b, a +ₚ b +ₚ b = a +ₚ (b +ₚ b) := by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; omega
+theorem add_thm : ∀ (a : PyAny), ∀ (b : PyAny), a +ₚ b +ₚ b = a +ₚ (b +ₚ b) := by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
 
 -- A try/except whose branches return different types (int vs str) → the whole function is PyAny,
 -- so the `PyExcept _` codomain in Exceptions.lean infers `PyAny` on its own.

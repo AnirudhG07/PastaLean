@@ -100,6 +100,13 @@ partial def usedInPyAnyPosition (name : String) (json : Json) : Bool :=
           (op == some "is" || op == some "isnot") &&
             ((isName "left" && isNoneJson (getField json "right")) ||
              (isName "right" && isNoneJson (getField json "left")))
+      -- `a + b` on an un-inferred operand is POLYMORPHIC in Python — int ADDITION but list/str
+      -- CONCATENATION (`[1]+[1]=[1,1]`, `"a"+"b"="ab"`). `PyAny`'s `+ₚ` (= `PyAny.add`) covers all
+      -- three, so box it; a bare binder otherwise defaults to `ℤ` and `add([1],[1])` is impossible.
+      -- Fallback-only (fires after inference fails to pin the type), and `+` ONLY — `-`/`/`/`%` are
+      -- numeric, so boxing those would wrongly admit lists.
+      | some "BinOp" =>
+          (json.getObjValAs? String "op").toOption == some "add" && (isName "left" || isName "right")
       | _ => false
     hitHere || (match json with
       | .arr xs => xs.any (usedInPyAnyPosition name)

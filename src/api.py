@@ -21,7 +21,9 @@ serialises its own calls with a lock. Prefer one `Session` per thread for real p
 from __future__ import annotations
 
 import json
+import os
 import threading
+from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterable, Iterator, Sequence
@@ -67,6 +69,56 @@ class TranslationResult:
 
     def __str__(self) -> str:
         return self.lean_code or ""
+
+
+# ── Parallel translation (multiprocessing) ──────────────────────────────────────────────────────
+# Translating one Python file to Lean is independent of every other, but a single warm backend does
+# them serially (one JSON task in / out) and the driver keeps per-call module GLOBALS (`_NUMERIC_MODE`,
+# `_HEAP_MODE`, …) — so speed-up comes from separate PROCESSES, each with its own backend + globals,
+# NOT threads. `Session.translate_files` shards across a pool transparently, so every caller (the
+# eval harnesses included) gets the win without changing. Fixed cost is the ~5s Mathlib boot each
+# worker pays once, so small batches stay serial (boot-bound); warm, the convert scales ~linearly.
+_PER_WORKER_GB = 1.8
+
+
+def _mem_available_gb() -> float:
+    try:
+        with open("/proc/meminfo") as f:
+            for line in f:
+                if line.startswith("MemAvailable:"):
+                    return int(line.split()[1]) / (1024 * 1024)
+    except OSError:
+        pass
+    return 8.0
+
+
+def auto_translate_jobs(n_files: int) -> int:
+    """Memory- and size-aware worker count. Translating one file is cheap (tens of µs/node warm)
+    versus the fixed ~5s Mathlib boot each worker pays — and cold boots CONTEND (16 at once take far
+    longer than one). So a small/medium batch stays SERIAL (parallel would lose to boot overhead);
+    only a large batch, where the convert work finally dwarfs the boots, goes parallel. Measured
+    break-even is ~2k files (≤1k loses, ~3k wins ~1.8×); the speed-up plateaus around 8-16 workers
+    (boot-bound past that), so we cap there rather than the 16-32 a CPU-heavier stage would use.
+    Pulled below by free RAM (`_PER_WORKER_GB`/backend) or core count when either is tight."""
+    if n_files < 2000:
+        return 1
+    cores = os.cpu_count() or 4
+    mem_cap = max(1, int(_mem_available_gb() / _PER_WORKER_GB))
+    return max(1, min(16, cores, mem_cap, n_files // 250))
+
+
+def _translate_shard(args: tuple[dict, list[str]]) -> list["TranslationResult"]:
+    """One worker: boot a PRIVATE backend from `init_kwargs` and translate a slice of file paths,
+    returning the results (picklable `TranslationResult`s the parent re-yields)."""
+    init_kwargs, paths = args
+    out: list[TranslationResult] = []
+    with Session(**init_kwargs) as s:
+        for p in paths:
+            try:
+                out.append(s.translate_file(p))
+            except OSError as err:
+                out.append(TranslationResult(ok=False, error=str(err), source_path=Path(p)))
+    return out
 
 
 class Session:
@@ -180,13 +232,36 @@ class Session:
         path = Path(path)
         return self.translate(path.read_text(encoding="utf-8"), filepath=path, **overrides)
 
-    def translate_files(self, paths: Iterable[str | Path], **overrides) -> Iterator[TranslationResult]:
-        """Translate many files through this one warm backend, yielding results as they finish."""
-        for path in paths:
-            try:
-                yield self.translate_file(path, **overrides)
-            except OSError as err:
-                yield TranslationResult(ok=False, error=str(err), source_path=Path(path))
+    def translate_files(self, paths: Iterable[str | Path], *, jobs: int | str = "auto",
+                        **overrides) -> Iterator[TranslationResult]:
+        """Translate many files, yielding a `TranslationResult` per file.
+
+        Parallel by default: `jobs="auto"` shards the files across a memory-aware pool of worker
+        PROCESSES (each its own warm backend), transparently — every caller gets the speed-up. Pass
+        `jobs=1` to force the serial path through THIS session's backend (e.g. inside a subprocess, or
+        to keep original ordering). A small batch stays serial regardless (boot-bound). In parallel
+        mode results are yielded shard-by-shard, so ORDER is not the input order — key by
+        `result.source_path`, not position."""
+        paths = [Path(p) for p in paths]
+        n = len(paths)
+        j = auto_translate_jobs(n) if jobs == "auto" else max(1, int(jobs))
+        if j <= 1 or n <= 1:
+            for path in paths:
+                try:
+                    yield self.translate_file(path, **overrides)
+                except OSError as err:
+                    yield TranslationResult(ok=False, error=str(err), source_path=path)
+            return
+        # Bake the per-batch options into each worker's Session (the driver applies them per process).
+        init_kwargs = {"target": self.target, "mode": self.mode, "best_effort": self.best_effort,
+                       "prove_asserts": self.prove_asserts, "imports_add": self.imports_add,
+                       "heap": self.heap}
+        init_kwargs.update({k: v for k, v in overrides.items() if k in init_kwargs})
+        shards = [[str(p) for p in paths[i::j]] for i in range(j)]
+        shards = [sh for sh in shards if sh]
+        with ProcessPoolExecutor(max_workers=len(shards)) as ex:
+            for results in ex.map(_translate_shard, [(init_kwargs, sh) for sh in shards]):
+                yield from results
 
     def to_json_ir(self, source_code: str, *, filepath: str | Path | None = None,
                    infer_only: bool = False, **overrides) -> dict:

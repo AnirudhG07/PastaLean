@@ -1508,9 +1508,17 @@ class CPastaEval:
         return "ok", None
 
     def convert(self):
-        """Translate + compile-check every selected problem. Writes `convert_summary.json`."""
+        """Translate + compile-check every selected problem. Writes `convert_summary.json`.
+
+        Two independent parallelisms, both automatic: the TRANSLATE is batched through
+        `Session.translate_files`, which shards across worker backends INSIDE PastaLean; the
+        compile-check (a separate concern) fans out over a thread pool. `sol_0` unchanged serially."""
         self._prepare_tmp()
         problems, totals, histogram = {}, {"ok": 0, "convert_fail": 0, "compile_fail": 0, "skipped": 0}, {}
+
+        # Phase 1 — gather work-units and materialise the (uniquely-named, so a batch can coexist)
+        # `__main__`-wrapped sources. `unit = (prob, sol_name, name, lean_dir, source, src_path)`.
+        units = []
         for prob_dir in self.problems():
             sols_dir = prob_dir / "solutions"
             if not sols_dir.is_dir():
@@ -1518,18 +1526,68 @@ class CPastaEval:
             lean_dir = prob_dir / "lean"
             lean_dir.mkdir(exist_ok=True)
             wrap = self.kind_of(prob_dir) != KIND_FUNCTION
-
-            prob_results = {}
             for sol_path in sorted(sols_dir.glob("sol_*.py")):
-                status, error = self.convert_solution(sol_path, lean_dir, wrap)
-                prob_results[sol_path.name] = {"status": status}
-                if error is not None:
-                    prob_results[sol_path.name]["error"] = error
-                    histogram[error] = histogram.get(error, 0) + 1
-                totals[status] += 1
-                print(f"[{status:>12}] {prob_dir.name}/{sol_path.name}"
-                      + (f"  -- {error}" if error else ""))
-            problems[prob_dir.name] = prob_results
+                source = sol_path.read_text()
+                if wrap:
+                    src_path = self.tmp_dir / f"{prob_dir.name}__{sol_path.stem}_wrapped.py"
+                    src_path.write_text(wrap_for_main(source))
+                else:
+                    src_path = sol_path
+                units.append((prob_dir.name, sol_path.name, sol_path.stem, lean_dir, source, src_path))
+
+        # Phase 2 — batch-translate (PastaLean parallelises internally over its own backend pool).
+        by_src = {str(Path(u[5]).resolve()): u for u in units}
+        translated = {}
+        for r in self.session.translate_files([u[5] for u in units]):
+            key = str(Path(r.source_path).resolve()) if r.source_path else None
+            translated[key] = r
+
+        # Phase 3 — write `.lean` for the ones that translated; record skipped / convert_fail for the
+        # rest; collect the ones that still need compiling.
+        status_of, to_compile = {}, []
+        for key, u in by_src.items():
+            prob, sol_name, name, lean_dir, source, _src = u
+            r = translated.get(key)
+            status_path, log_path = lean_dir / f"{name}.status", lean_dir / f"{name}.log"
+            if r is None or not r.ok or not (r.lean_code or "").strip():
+                error_text = (r.error if r else None) or "empty output"
+                reason = out_of_scope_reason(source)
+                if reason is not None:
+                    status_path.write_text("skipped"); log_path.write_text(error_text)
+                    status_of[(prob, sol_name)] = ("skipped", reason)
+                else:
+                    status_path.write_text("convert_fail"); log_path.write_text(error_text)
+                    status_of[(prob, sol_name)] = ("convert_fail", summarize_error("convert_fail", error_text))
+            else:
+                lean_path = lean_dir / f"{name}.lean"
+                lean_path.write_text(r.lean_code)
+                to_compile.append((u, lean_path))
+
+        # Phase 4 — compile-check the emitted Lean, fanned out over a thread pool (each `lake env lean`
+        # is its own subprocess). This is the test-side parallelism, independent of the translate pool.
+        def _cc(item):
+            u, lean_path = item
+            return item, self.compile_check(lean_path)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max(4, self.workers)) as ex:
+            for (u, lean_path), (ok, err) in ex.map(_cc, to_compile):
+                prob, sol_name, name, lean_dir = u[0], u[1], u[2], u[3]
+                status_path, log_path = lean_dir / f"{name}.status", lean_dir / f"{name}.log"
+                if not ok:
+                    status_path.write_text("compile_fail"); log_path.write_text(err)
+                    status_of[(prob, sol_name)] = ("compile_fail", summarize_error("compile_fail", err))
+                else:
+                    status_path.write_text("ok"); log_path.unlink(missing_ok=True)
+                    status_of[(prob, sol_name)] = ("ok", None)
+
+        # Phase 5 — aggregate + report, in original problem/solution order.
+        for prob, sol_name, *_ in units:
+            status, error = status_of[(prob, sol_name)]
+            problems.setdefault(prob, {})[sol_name] = {"status": status}
+            if error is not None:
+                problems[prob][sol_name]["error"] = error
+                histogram[error] = histogram.get(error, 0) + 1
+            totals[status] += 1
+            print(f"[{status:>12}] {prob}/{sol_name}" + (f"  -- {error}" if error else ""))
 
         top_errors = dict(sorted(histogram.items(), key=lambda kv: kv[1], reverse=True))
         summary = {"totals": totals, "errors_by_frequency": top_errors, "problems": problems}

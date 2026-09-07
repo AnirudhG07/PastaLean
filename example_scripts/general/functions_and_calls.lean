@@ -13,11 +13,11 @@ set_option maxHeartbeats 200000
 
 namespace PastaLean.User.Root
 
-def add := fun a ↦ fun (b : Int) ↦ a +ₚ b
+def add := fun (a : PyAny) ↦ fun (b : Int) ↦ (show PastaLean.PyAny from a +ₚ b)
 
-attribute [simp, taste_ingr] add
+attribute [simp] add
 
-def add'rn := fun a ↦ fun (b : Int) ↦ a +ₚ b
+def add'rn := fun (a : PyAny) ↦ fun (b : Int) ↦ (show PastaLean.PyAny from a +ₚ b)
 
 def call_add := fun n ↦ add n (1 : Int)
 
@@ -31,11 +31,13 @@ attribute [simp, taste_ingr] keyword_call
 
 def keyword_call'rn := fun n ↦ add'rn (a := n) (b := (2 : Int))
 
-def many_args := fun a ↦ fun b ↦ fun c ↦ fun d ↦ fun e ↦ a +ₚ b +ₚ c +ₚ d +ₚ e
+def many_args := fun (a : PyAny) ↦ fun (b : PyAny) ↦ fun (c : PyAny) ↦ fun (d : PyAny) ↦ fun (e : PyAny) ↦
+  (show PastaLean.PyAny from a +ₚ b +ₚ c +ₚ d +ₚ e)
 
-attribute [simp, taste_ingr] many_args
+attribute [simp] many_args
 
-def many_args'rn := fun a ↦ fun b ↦ fun c ↦ fun d ↦ fun e ↦ a +ₚ b +ₚ c +ₚ d +ₚ e
+def many_args'rn := fun (a : PyAny) ↦ fun (b : PyAny) ↦ fun (c : PyAny) ↦ fun (d : PyAny) ↦ fun (e : PyAny) ↦
+  (show PastaLean.PyAny from a +ₚ b +ₚ c +ₚ d +ₚ e)
 
 def complex_func := fun x ↦ fun y ↦ fun z ↦
   let res := x *ₚ y
