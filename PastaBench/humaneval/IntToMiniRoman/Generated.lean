@@ -57,6 +57,31 @@ def int_to_mini_roman := fun (number : Int) ↦
       >>> int_to_mini_roman(426) == 'cdxxvi'
       
   -/
+  let m := (["", "m"] : List String)
+  let c := (["", "c", "cc", "ccc", "cd", "d", "dc", "dcc", "dccc", "cm"] : List String)
+  let x := (["", "x", "xx", "xxx", "xl", "l", "lx", "lxx", "lxxx", "xc"] : List String)
+  let i := (["", "i", "ii", "iii", "iv", "v", "vi", "vii", "viii", "ix"] : List String)
+  let thousands := (m⦋PastaLean.pyFloorDiv number (1000 : Int)⦌ : String)
+  let hundreds := (c⦋PastaLean.pyFloorDiv (number %ₚ (1000 : Int)) (100 : Int)⦌ : String)
+  let tens := (x⦋PastaLean.pyFloorDiv (number %ₚ (100 : Int)) (10 : Int)⦌ : String)
+  let ones := (i⦋number %ₚ (10 : Int)⦌ : String)
+  thousands +ₚ hundreds +ₚ tens +ₚ ones
+
+attribute [simp, taste_ingr] int_to_mini_roman
+
+def int_to_mini_roman'rn := fun (number : Int) ↦
+  /-
+  
+      Given a positive integer, obtain its roman numeral equivalent as a string,
+      and return it in lowercase.
+      Restrictions: 1 <= num <= 1000
+  
+      Examples:
+      >>> int_to_mini_roman(19) == 'xix'
+      >>> int_to_mini_roman(152) == 'clii'
+      >>> int_to_mini_roman(426) == 'cdxxvi'
+      
+  -/
   let m := (#["", "m"] : Array String)
   let c := (#["", "c", "cc", "ccc", "cd", "d", "dc", "dcc", "dccc", "cm"] : Array String)
   let x := (#["", "x", "xx", "xxx", "xl", "l", "lx", "lxx", "lxxx", "xc"] : Array String)

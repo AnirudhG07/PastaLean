@@ -39,4 +39,15 @@ def flip_case := fun (string : String) ↦
   -/
   PastaLean.pyStringJoin "" (PastaLean.pyMap (fun x ↦ PastaLean.pyStringSwapcase x) string)
 
+attribute [simp, taste_ingr] flip_case
+
+def flip_case'rn := fun (string : String) ↦
+  /-
+   For a given string, flip lowercase characters to uppercase and uppercase to lowercase.
+      >>> flip_case('Hello')
+      'hELLO'
+      
+  -/
+  PastaLean.pyStringJoin "" (PastaLean.pyMap (fun x ↦ PastaLean.pyStringSwapcase x) string)
+
 end PastaBench.humaneval.FlipCase

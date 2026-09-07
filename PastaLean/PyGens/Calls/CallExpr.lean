@@ -307,6 +307,13 @@ def mutatingMethodDoElem (recvJson : Json)
   if let some refCode ← heapContainerRef? recvJson then
     let lVar := mkIdent `__hc_l
     let newVal ← mkNewValue lVar
+    -- A `newVal` with a `(← …)` await (`g[i].append(Node())` → `pyAppend l (← Node.new)`; a heap
+    -- read `dictionary[idx]`) can't sit inside `modifyRefM`'s `fun l => …` — the await cannot lift
+    -- over the lambda binder. Read-then-write instead, so the awaits stay in the enclosing `do`.
+    if syntaxHasLift newVal then
+      return ← `(doElem| do
+        let $lVar ← PastaLean.readRefM $refCode
+        PastaLean.writeRefM $refCode $newVal)
     return ← `(doElem| PastaLean.modifyRefM $refCode (fun $lVar => $newVal))
   let recvTerm ← getCode recvJson `term
   assignBackToReceiver recvJson (← mkNewValue recvTerm)
@@ -603,6 +610,10 @@ def callSyntaxTerm (json : Json) : PygenM (TSyntax `term) := do
               <|> pythonMethodMap attr with
         | some funcName =>
             funcIdent := mkIdent funcName
+            -- Under `--heap`, a runtime method that CONSUMES a container arg (`sep.join(xs)` →
+            -- `pyStringJoin sep xs`) needs that arg dereferenced when it's held by reference — the
+            -- deref only fires on a heap container arg, leaving scalars/strings untouched.
+            argsCodes ← derefBuiltinArgCodes argsArray argsCodes
         | none =>
             -- A user-defined method `recv.m(args)` -> `C.m recv args` (receiver already pushed).
             -- Prefer the py2lean stamp (`_receiver_class`/`_is_mutator`); fall back to the registry.
@@ -1401,7 +1412,15 @@ def attributeSyntax : (kind : SyntaxNodeKind) → Json →
         let valueCode ← getCode valueJson `term
         -- `_unwrap_opt` (TypeInfer): the receiver is `Option _`, so unwrap before projecting the field
         if json.getObjValAs? Bool "_unwrap_opt" == .ok true then
-          `((($valueCode).getD default).$attrId)
+          -- Under `--heap` the unwrapped value is a `Ref Node` (an `Option (Ref Node)` list element,
+          -- `node.children[i].cnt`), so deref-and-project (`~>`). Match on the `Option` rather than
+          -- `getD default`: a `None` there would deref a bogus DEFAULT ref (address 0 — another cell of
+          -- a different kind) when a short-circuited `and` guard (`child and child.cnt`) still evaluates
+          -- it; `none => pure default` returns the field default without touching the heap.
+          if ← getHeapMode then
+            `((← (($valueCode).elim (pure default) (fun __r => __r ~> $attrId))))
+          else
+            `((($valueCode).getD default).$attrId)
         else
           `($valueCode.$attrId)
   | `ident, json => do

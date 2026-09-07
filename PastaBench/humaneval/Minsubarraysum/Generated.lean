@@ -54,8 +54,6 @@ def minSubArraySum := fun (nums : List Int) ↦
       if h_1 : ∀ x ∈ PastaLean.pyIter nums, x ≥ (0 : Int) then 
         let p'_ret_1 := PastaLean.pyMin nums
         return p'_ret_1
-      else
-        let _ := ()
       let mut s : Int := (0 : Int)
       let mut ans : Int := (0 : Int)
       for x in (PastaLean.pyIter nums)do
@@ -63,8 +61,32 @@ def minSubArraySum := fun (nums : List Int) ↦
         ans := PastaLean.pyMin [ans, s]
         if h_2 : s ≥ (0 : Int) then 
           s := (0 : Int)
-        else
-          let _ := ()
+      return ans)
+
+attribute [simp, taste_ingr] minSubArraySum
+
+def minSubArraySum'rn := fun (nums : List Int) ↦
+  Id.run
+    (do
+      /-
+      
+          Given an array of integers nums, find the minimum sum of any non-empty sub-array
+          of nums.
+          Example
+          minSubArraySum([2, 3, 4, 1, 2, 4]) == 1
+          minSubArraySum([-1, -2, -3]) == -6
+          
+      -/
+      if h_1 : ∀ x ∈ PastaLean.pyIter nums, x ≥ (0 : Int) then 
+        let p'_ret_1 := PastaLean.pyMin nums
+        return p'_ret_1
+      let mut s : Int := (0 : Int)
+      let mut ans : Int := (0 : Int)
+      for x in (PastaLean.pyIter nums)do
+        s := s +ₚ x
+        ans := PastaLean.pyMin [ans, s]
+        if h_2 : s ≥ (0 : Int) then 
+          s := (0 : Int)
       return ans)
 
 end PastaBench.humaneval.Minsubarraysum

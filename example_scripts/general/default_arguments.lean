@@ -48,7 +48,7 @@ instance : Coe Counter (Option Counter) :=
 def Counter.new (start : Int := (0 : Int)) (step : Int := (1 : Int)) : Counter :=
   ({ value := start, step := step } : Counter)
 
-def Counter.bumped (self : Counter) («by» : _ := (1 : Int)) :=
+def Counter.bumped (self : Counter) («by» : Int := (1 : Int)) :=
   self.value +ₚ «by» *ₚ self.step
 
 attribute [simp, taste_ingr] Counter.bumped
@@ -68,7 +68,7 @@ instance : Coe Counter'rn (Option Counter'rn) :=
 def Counter'rn.new (start : Int := (0 : Int)) (step : Int := (1 : Int)) : Counter'rn :=
   ({ value := start, step := step } : Counter'rn)
 
-def Counter'rn.bumped (self : Counter'rn) («by» : _ := (1 : Int)) :=
+def Counter'rn.bumped (self : Counter'rn) («by» : Int := (1 : Int)) :=
   self.value +ₚ «by» *ₚ self.step
 
 structure TreeNode where

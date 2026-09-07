@@ -47,10 +47,30 @@ def string_to_md5 := fun (text : String) ↦
             >>> string_to_md5('Hello world') == '3e25960a79dbc69b674cd4ec67a72c62'
             
         -/
+        if h_1 : text = "" then 
+          return Option.none
+        let _ := ()
+        let mut m : String := Libraries.hashlib.pyMd5
+        m := Libraries.hashlib.pyHashUpdate m (PastaLean.pyStringEncodeDummy text "utf-8")
+        let p'_ret_1 := Libraries.hashlib.pyMd5Hexdigest m
+        return p'_ret_1))
+
+attribute [simp, taste_ingr] string_to_md5
+
+def string_to_md5'rn := fun (text : String) ↦
+  (show Option String from
+    Id.run
+      (do
+        /-
+        
+            Given a string 'text', return its md5 hash equivalent string.
+            If 'text' is an empty string, return None.
+        
+            >>> string_to_md5('Hello world') == '3e25960a79dbc69b674cd4ec67a72c62'
+            
+        -/
         if h_1 : text == "" then 
           return Option.none
-        else
-          let _ := ()
         let _ := ()
         let mut m : String := Libraries.hashlib.pyMd5
         m := Libraries.hashlib.pyHashUpdate m (PastaLean.pyStringEncodeDummy text "utf-8")

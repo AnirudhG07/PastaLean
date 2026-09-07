@@ -48,6 +48,40 @@ private def _count_nums'judge := fun (x : Int) ↦
     (do
       let mut l : List String := PastaLean.pyList (PastaLean.pyStr x)
       let mut l'v3 : List Int := default
+      if h_1 : l⦋(0 : Int)⦌ = "-" then 
+        l := PastaLean.pySlice l (some (1 : Int)) none none
+        let mut l'v1 : List Int := PastaLean.pyList (PastaLean.pyMap PastaLean.pyInt l)
+        l'v1 := PastaLean.pySetItem l'v1 (0 : Int) (-l'v1⦋(0 : Int)⦌)
+        l'v3 := l'v1
+      else
+        let mut l'v2 : List Int := PastaLean.pyList (PastaLean.pyMap PastaLean.pyInt l)
+        l'v3 := l'v2
+      let p'_ret_1 := if PastaLean.pySum l'v3 > (0 : Int) then (1 : Int) else (0 : Int)
+      return p'_ret_1)
+
+attribute [simp, taste_ingr] _count_nums'judge
+
+def count_nums := fun (arr : List Int) ↦
+  /-
+  
+      Write a function count_nums which takes an array of integers and returns
+      the number of elements which has a sum of digits > 0.
+      If a number is negative, then its first signed digit will be negative:
+      e.g. -123 has signed digits -1, 2, and 3.
+      >>> count_nums([]) == 0
+      >>> count_nums([-1, 11, -11]) == 1
+      >>> count_nums([1, 1, 2]) == 3
+      
+  -/
+  PastaLean.pySum (PastaLean.pyMap _count_nums'judge arr)
+
+attribute [simp, taste_ingr] count_nums
+
+private def _count_nums'judge'rn := fun (x : Int) ↦
+  Id.run
+    (do
+      let mut l : List String := PastaLean.pyList (PastaLean.pyStr x)
+      let mut l'v3 : List Int := default
       if h_1 : l⦋(0 : Int)⦌ == "-" then 
         l := PastaLean.pySlice l (some (1 : Int)) none none
         let mut l'v1 : List Int := PastaLean.pyList (PastaLean.pyMap PastaLean.pyInt l)
@@ -59,7 +93,7 @@ private def _count_nums'judge := fun (x : Int) ↦
       let p'_ret_1 := if PastaLean.pySum l'v3 > (0 : Int) then (1 : Int) else (0 : Int)
       return p'_ret_1)
 
-def count_nums := fun (arr : List Int) ↦
+def count_nums'rn := fun (arr : List Int) ↦
   /-
   
       Write a function count_nums which takes an array of integers and returns

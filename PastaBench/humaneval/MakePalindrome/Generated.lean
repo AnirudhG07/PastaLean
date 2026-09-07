@@ -52,6 +52,14 @@ def is_palindrome := fun (string : String) ↦
   -/
   string == PastaLean.pySlice string none none (some (-(1 : Int)))
 
+attribute [simp, taste_ingr] is_palindrome
+
+def is_palindrome'rn := fun (string : String) ↦
+  /-
+   Test if given string is a palindrome 
+  -/
+  string == PastaLean.pySlice string none none (some (-(1 : Int)))
+
 def make_palindrome := fun (string : String) ↦
   Id.run
     (do
@@ -70,14 +78,36 @@ def make_palindrome := fun (string : String) ↦
       -/
       if h_1 : PastaLean.pyTruthy (is_palindrome string) then 
         return string
-      else
-        let _ := ()
       for i in (PastaLean.pyRange (PastaLean.pyLen string))do
         if h_2 : PastaLean.pyTruthy (is_palindrome (PastaLean.pySlice string (some i) none none)) then 
           let p'_ret_1 := string +ₚ PastaLean.pySlice string (some (i -ₚ (1 : Int))) none (some (-(1 : Int)))
           return p'_ret_1
-        else
-          let _ := ()
+      return default)
+
+attribute [simp, taste_ingr] make_palindrome
+
+def make_palindrome'rn := fun (string : String) ↦
+  Id.run
+    (do
+      /-
+       Find the shortest palindrome that begins with a supplied string.
+          Algorithm idea is simple:
+          - Find the longest postfix of supplied string that is a palindrome.
+          - Append to the end of the string reverse of a string prefix that comes before the palindromic suffix.
+          >>> make_palindrome('')
+          ''
+          >>> make_palindrome('cat')
+          'catac'
+          >>> make_palindrome('cata')
+          'catac'
+          
+      -/
+      if h_1 : PastaLean.pyTruthy (is_palindrome'rn string) then 
+        return string
+      for i in (PastaLean.pyRange (PastaLean.pyLen string))do
+        if h_2 : PastaLean.pyTruthy (is_palindrome'rn (PastaLean.pySlice string (some i) none none)) then 
+          let p'_ret_1 := string +ₚ PastaLean.pySlice string (some (i -ₚ (1 : Int))) none (some (-(1 : Int)))
+          return p'_ret_1
       return default)
 
 end PastaBench.humaneval.MakePalindrome

@@ -68,10 +68,36 @@ def pairs_sum_to_zero := fun (l : List Int) ↦
       -/
       for i in (PastaLean.pyRange (PastaLean.pyLen l))do
         for j in (PastaLean.pyRange (PastaLean.pyLen l))do
+          if h_1 : i ≠ j ∧ l⦋i⦌ +ₚ l⦋j⦌ = (0 : Int) then 
+            return Bool.true
+      return Bool.false)
+
+attribute [simp, taste_ingr] pairs_sum_to_zero
+
+def pairs_sum_to_zero'rn := fun (l : List Int) ↦
+  Id.run
+    (do
+      /-
+      
+          pairs_sum_to_zero takes a list of integers as an input.
+          it returns True if there are two distinct elements in the list that
+          sum to zero, and False otherwise.
+          >>> pairs_sum_to_zero([1, 3, 5, 0])
+          False
+          >>> pairs_sum_to_zero([1, 3, -2, 1])
+          False
+          >>> pairs_sum_to_zero([1, 2, 3, 7])
+          False
+          >>> pairs_sum_to_zero([2, 4, -5, 3, 5, 7])
+          True
+          >>> pairs_sum_to_zero([1])
+          False
+          
+      -/
+      for i in (PastaLean.pyRange (PastaLean.pyLen l))do
+        for j in (PastaLean.pyRange (PastaLean.pyLen l))do
           if h_1 : i != j && l⦋i⦌ +ₚ l⦋j⦌ == (0 : Int) then 
             return Bool.true
-          else
-            let _ := ()
       return Bool.false)
 
 end PastaBench.humaneval.PairsSumToZero

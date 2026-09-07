@@ -65,13 +65,47 @@ def fibfib := fun (n : Int) ↦
           24
           
       -/
+      if h_1 : n = (0 : Int) ∨ n = (1 : Int) then 
+        return (0 : Int)
+      else
+        if h_2 : n = (2 : Int) then 
+          return (1 : Int)
+      let mut a : Int := (0 : Int)
+      let mut b : Int := (0 : Int)
+      let mut c : Int := (1 : Int)
+      for _ in (PastaLean.pyRange (n +ₚ (1 : Int)) (3 : Int))do
+        let p'_unpack_value_1 := (b, (c, a +ₚ b +ₚ c))
+        let p'_unpack_pair_1 := p'_unpack_value_1
+        a := Prod.fst p'_unpack_pair_1
+        b := Prod.fst (Prod.snd p'_unpack_pair_1)
+        c := Prod.snd (Prod.snd p'_unpack_pair_1)
+      return c)
+
+attribute [simp, taste_ingr] fibfib
+
+def fibfib'rn := fun (n : Int) ↦
+  Id.run
+    (do
+      /-
+      The FibFib number sequence is a sequence similar to the Fibbonacci sequnece that's defined as follows:
+          fibfib(0) == 0
+          fibfib(1) == 0
+          fibfib(2) == 1
+          fibfib(n) == fibfib(n-1) + fibfib(n-2) + fibfib(n-3).
+          Please write a function to efficiently compute the n-th element of the fibfib number sequence.
+          >>> fibfib(1)
+          0
+          >>> fibfib(5)
+          4
+          >>> fibfib(8)
+          24
+          
+      -/
       if h_1 : n == (0 : Int) || n == (1 : Int) then 
         return (0 : Int)
       else
         if h_2 : n == (2 : Int) then 
           return (1 : Int)
-        else
-          let _ := ()
       let mut a : Int := (0 : Int)
       let mut b : Int := (0 : Int)
       let mut c : Int := (1 : Int)

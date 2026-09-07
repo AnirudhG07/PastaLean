@@ -57,21 +57,47 @@ def f := fun (n : Int) ↦
           f(5) == [1, 2, 6, 24, 15]
           
       -/
+      if h_1 : n = (0 : Int) then 
+        let p'_ret_1 := []
+        return p'_ret_1
+      if h_2 : n = (1 : Int) then 
+        let p'_ret_1 := [(1 : Int)]
+        return p'_ret_1
+      if h_3 : n = (2 : Int) then 
+        let p'_ret_1 := [(1 : Int), (2 : Int)]
+        return p'_ret_1
+      let mut ans : List Int := [(1 : Int), (2 : Int)]
+      for i in (PastaLean.pyRange (n +ₚ (1 : Int)) (3 : Int))do
+        if h_4 : i %ₚ (2 : Int) = (1 : Int) then 
+          ans := PastaLean.pyAppend ans (ans⦋(-2 : Int)⦌ +ₚ (i -ₚ (1 : Int)) +ₚ i)
+        else
+          ans := PastaLean.pyAppend ans (ans⦋(-2 : Int)⦌ *ₚ (i -ₚ (1 : Int)) *ₚ i)
+      return ans)
+
+attribute [simp, taste_ingr] f
+
+def f'rn := fun (n : Int) ↦
+  Id.run
+    (do
+      /-
+       Implement the function f that takes n as a parameter,
+          and returns a list of size n, such that the value of the element at index i is the factorial of i if i is even
+          or the sum of numbers from 1 to i otherwise.
+          i starts from 1.
+          the factorial of i is the multiplication of the numbers from 1 to i (1 * 2 * ... * i).
+          Example:
+          f(5) == [1, 2, 6, 24, 15]
+          
+      -/
       if h_1 : n == (0 : Int) then 
         let p'_ret_1 := []
         return p'_ret_1
-      else
-        let _ := ()
       if h_2 : n == (1 : Int) then 
         let p'_ret_1 := [(1 : Int)]
         return p'_ret_1
-      else
-        let _ := ()
       if h_3 : n == (2 : Int) then 
         let p'_ret_1 := [(1 : Int), (2 : Int)]
         return p'_ret_1
-      else
-        let _ := ()
       let mut ans : List Int := [(1 : Int), (2 : Int)]
       for i in (PastaLean.pyRange (n +ₚ (1 : Int)) (3 : Int))do
         if h_4 : i %ₚ (2 : Int) == (1 : Int) then 

@@ -53,11 +53,32 @@ def digits := fun (n : PyAny) ↦
       let mut has_odd : Bool := Bool.false
       let mut prod : Int := (1 : Int)
       for ch in (PastaLean.pyIter (PastaLean.pyStr n))do
+        if h_1 : PastaLean.pyInt ch %ₚ (2 : Int) = (1 : Int) then 
+          has_odd := Bool.true
+          prod := prod *ₚ PastaLean.pyInt ch
+      let p'_ret_1 := if ¬PastaLean.pyTruthy has_odd = true then (0 : Int) else prod
+      return p'_ret_1)
+
+attribute [simp, taste_ingr] digits
+
+def digits'rn := fun (n : PyAny) ↦
+  Id.run
+    (do
+      /-
+      Given a positive integer n, return the product of the odd digits.
+          Return 0 if all digits are even.
+          For example:
+          digits(1)  == 1
+          digits(4)  == 0
+          digits(235) == 15
+          
+      -/
+      let mut has_odd : Bool := Bool.false
+      let mut prod : Int := (1 : Int)
+      for ch in (PastaLean.pyIter (PastaLean.pyStr n))do
         if h_1 : PastaLean.pyInt ch %ₚ (2 : Int) == (1 : Int) then 
           has_odd := Bool.true
           prod := prod *ₚ PastaLean.pyInt ch
-        else
-          let _ := ()
       let p'_ret_1 := if !PastaLean.pyTruthy has_odd then (0 : Int) else prod
       return p'_ret_1)
 

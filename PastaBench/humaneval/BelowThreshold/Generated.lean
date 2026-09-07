@@ -43,4 +43,17 @@ def below_threshold := fun (l : List Int) ↦ fun (t : Int) ↦
   -/
   PastaLean.pyAll ((PastaLean.pyIter l).map fun (x : Int) => decide (x < t))
 
+attribute [simp, taste_ingr] below_threshold
+
+def below_threshold'rn := fun (l : List Int) ↦ fun (t : Int) ↦
+  /-
+  Return True if all numbers in the list l are below threshold t.
+      >>> below_threshold([1, 2, 4, 10], 100)
+      True
+      >>> below_threshold([1, 20, 4, 10], 5)
+      False
+      
+  -/
+  PastaLean.pyAll ((PastaLean.pyIter l).map fun (x : Int) => decide (x < t))
+
 end PastaBench.humaneval.BelowThreshold

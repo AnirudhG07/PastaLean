@@ -43,4 +43,17 @@ def rolling_max := fun (numbers : List Int) ↦
   (PastaLean.pyRange (PastaLean.pyLen numbers)).map fun (i : Int) =>
     PastaLean.pyMax (PastaLean.pySlice numbers none (some (i +ₚ (1 : Int))) none)
 
+attribute [simp, taste_ingr] rolling_max
+
+def rolling_max'rn := fun (numbers : List Int) ↦
+  /-
+   From a given list of integers, generate a list of rolling maximum element found until given moment
+      in the sequence.
+      >>> rolling_max([1, 2, 3, 2, 3, 4, 2])
+      [1, 2, 3, 3, 3, 4, 4]
+      
+  -/
+  (PastaLean.pyRange (PastaLean.pyLen numbers)).map fun (i : Int) =>
+    PastaLean.pyMax (PastaLean.pySlice numbers none (some (i +ₚ (1 : Int))) none)
+
 end PastaBench.humaneval.RollingMax

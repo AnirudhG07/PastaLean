@@ -71,10 +71,38 @@ def triples_sum_to_zero := fun (l : List PyAny) ↦
       for i in (PastaLean.pyRange (PastaLean.pyLen l))do
         for j in (PastaLean.pyRange (PastaLean.pyLen l))do
           for k in (PastaLean.pyRange (PastaLean.pyLen l))do
+            if h_1 : ((i ≠ j ∧ i ≠ k) ∧ j ≠ k) ∧ l⦋i⦌ +ₚ l⦋j⦌ +ₚ l⦋k⦌ = (0 : Int) then 
+              return Bool.true
+      return Bool.false)
+
+attribute [simp, taste_ingr] triples_sum_to_zero
+
+def triples_sum_to_zero'rn := fun (l : List PyAny) ↦
+  Id.run
+    (do
+      /-
+      
+          triples_sum_to_zero takes a list of integers as an input.
+          it returns True if there are three distinct elements in the list that
+          sum to zero, and False otherwise.
+      
+          >>> triples_sum_to_zero([1, 3, 5, 0])
+          False
+          >>> triples_sum_to_zero([1, 3, -2, 1])
+          True
+          >>> triples_sum_to_zero([1, 2, 3, 7])
+          False
+          >>> triples_sum_to_zero([2, 4, -5, 3, 9, 7])
+          True
+          >>> triples_sum_to_zero([1])
+          False
+          
+      -/
+      for i in (PastaLean.pyRange (PastaLean.pyLen l))do
+        for j in (PastaLean.pyRange (PastaLean.pyLen l))do
+          for k in (PastaLean.pyRange (PastaLean.pyLen l))do
             if h_1 : i != j && i != k && j != k && l⦋i⦌ +ₚ l⦋j⦌ +ₚ l⦋k⦌ == (0 : Int) then 
               return Bool.true
-            else
-              let _ := ()
       return Bool.false)
 
 end PastaBench.humaneval.TriplesSumToZero

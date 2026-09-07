@@ -64,4 +64,29 @@ def special_factorial := fun (n : Int) ↦
         ans := ans *ₚ fac
       return ans)
 
+attribute [simp, taste_ingr] special_factorial
+
+def special_factorial'rn := fun (n : Int) ↦
+  Id.run
+    (do
+      /-
+      The Brazilian factorial is defined as:
+          brazilian_factorial(n) = n! * (n-1)! * (n-2)! * ... * 1!
+          where n > 0
+      
+          For example:
+          >>> special_factorial(4)
+          288
+      
+          The function will receive an integer as input and should return the special
+          factorial of this integer.
+          
+      -/
+      let mut fac : Int := (1 : Int)
+      let mut ans : Int := (1 : Int)
+      for i in (PastaLean.pyRange (n +ₚ (1 : Int)) (2 : Int))do
+        fac := fac *ₚ i
+        ans := ans *ₚ fac
+      return ans)
+
 end PastaBench.humaneval.SpecialFactorial

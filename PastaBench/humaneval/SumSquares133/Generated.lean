@@ -40,7 +40,26 @@ def sum_squares(lst: List[float]):
 
 namespace PastaBench.humaneval.SumSquares133
 
-def sum_squares := fun (lst : List Float) ↦
+def sum_squares := fun (lst : List Rat) ↦
+  /-
+  You are given a list of numbers.
+      You need to return the sum of squared numbers in the given list,
+      round each element in the list to the upper int(Ceiling) first.
+      Examples:
+      For lst = [1,2,3] the output should be 14
+      For lst = [1,4,9] the output should be 98
+      For lst = [1,3,5,7] the output should be 84
+      For lst = [1.4,4.2,0] the output should be 29
+      For lst = [-2.4,1,1] the output should be 6
+      
+  
+      
+  -/
+  PastaLean.pySum (PastaLean.pyMap (fun x ↦ Libraries.math.pyMathCeil x ^ₚ (2 : Int)) lst)
+
+attribute [simp, taste_ingr] sum_squares
+
+def sum_squares'rn := fun (lst : List Float) ↦
   /-
   You are given a list of numbers.
       You need to return the sum of squared numbers in the given list,

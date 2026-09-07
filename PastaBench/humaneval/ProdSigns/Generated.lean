@@ -59,14 +59,41 @@ def prod_signs := fun (arr : List Int) ↦
             >>> prod_signs([]) == None
             
         -/
-        if h_1 : arr == [] then 
+        if h_1 : arr = [] then 
           return Option.none
-        else
-          let _ := ()
         if h_2 : PastaLean.pyContains arr (0 : Int) then 
           return (0 : Int)
-        else
-          let _ := ()
+        let mut s : Int := (0 : Int)
+        let mut sgn : Int := (1 : Int)
+        for x in (PastaLean.pyIter arr)do
+          s := s +ₚ PastaLean.pyAbs x
+          sgn := sgn *ₚ PastaLean.pyFloorDiv x (PastaLean.pyAbs x)
+        let p'_ret_1 := s *ₚ sgn
+        return p'_ret_1))
+
+attribute [simp, taste_ingr] prod_signs
+
+def prod_signs'rn := fun (arr : List Int) ↦
+  (show Option Int from
+    Id.run
+      (do
+        /-
+        
+            You are given an array arr of integers and you need to return
+            sum of magnitudes of integers multiplied by product of all signs
+            of each number in the array, represented by 1, -1 or 0.
+            Note: return None for empty arr.
+        
+            Example:
+            >>> prod_signs([1, 2, 2, -4]) == -9
+            >>> prod_signs([0, 1]) == 0
+            >>> prod_signs([]) == None
+            
+        -/
+        if h_1 : arr == [] then 
+          return Option.none
+        if h_2 : PastaLean.pyContains arr (0 : Int) then 
+          return (0 : Int)
         let mut s : Int := (0 : Int)
         let mut sgn : Int := (1 : Int)
         for x in (PastaLean.pyIter arr)do

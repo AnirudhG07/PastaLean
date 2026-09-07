@@ -1,23 +1,833 @@
 {
-  "typeinfer": {
-    "returncode": 0,
-    "breakdown": {
-      "Function Return Type": {
-        "matched": 176,
-        "total": 230
-      },
-      "Function Parameter Type": {
-        "matched": 63,
-        "total": 95
-      },
-      "Local Variable Type": {
-        "matched": 353,
-        "total": 525
-      },
-      "Total": {
-        "matched": 592,
-        "total": 850
-      }
+  "humaneval": {
+    "total": 164,
+    "status": {
+      "Bf": [
+        50,
+        50,
+        "ok"
+      ],
+      "BelowZero": [
+        50,
+        50,
+        "ok"
+      ],
+      "AnyInt": [
+        50,
+        50,
+        "ok"
+      ],
+      "AntiShuffle": [
+        50,
+        50,
+        "ok"
+      ],
+      "CarRaceCollision": [
+        50,
+        50,
+        "ok"
+      ],
+      "AllPrefixes": [
+        50,
+        50,
+        "ok"
+      ],
+      "Add53": [
+        50,
+        50,
+        "ok"
+      ],
+      "AddElements": [
+        50,
+        50,
+        "ok"
+      ],
+      "BelowThreshold": [
+        44,
+        44,
+        "ok"
+      ],
+      "ByLength": [
+        50,
+        50,
+        "ok"
+      ],
+      "Add85": [
+        50,
+        50,
+        "ok"
+      ],
+      "CanArrange": [
+        50,
+        50,
+        "ok"
+      ],
+      "CheckDictCase": [
+        0,
+        0,
+        "no_cases"
+      ],
+      "Common": [
+        0,
+        0,
+        "no_cases"
+      ],
+      "ChangeBase": [
+        50,
+        50,
+        "ok"
+      ],
+      "ChooseNum": [
+        50,
+        50,
+        "ok"
+      ],
+      "CircularShift": [
+        50,
+        50,
+        "ok"
+      ],
+      "Compare": [
+        50,
+        50,
+        "ok"
+      ],
+      "CompareOne": [
+        0,
+        0,
+        "no_cases"
+      ],
+      "ClosestInteger": [
+        0,
+        0,
+        "compile_fail"
+      ],
+      "Concatenate": [
+        50,
+        50,
+        "ok"
+      ],
+      "CheckIfLastCharIsALetter": [
+        50,
+        50,
+        "ok"
+      ],
+      "CorrectBracketing61": [
+        50,
+        50,
+        "ok"
+      ],
+      "CorrectBracketing56": [
+        50,
+        50,
+        "ok"
+      ],
+      "CountDistinctCharacters": [
+        50,
+        50,
+        "ok"
+      ],
+      "CountUpTo": [
+        50,
+        50,
+        "ok"
+      ],
+      "CountNums": [
+        50,
+        50,
+        "ok"
+      ],
+      "DecimalToBinary": [
+        50,
+        50,
+        "ok"
+      ],
+      "CountUpper": [
+        0,
+        0,
+        "compile_fail"
+      ],
+      "DecodeShift": [
+        50,
+        50,
+        "ok"
+      ],
+      "DecodeCyclic": [
+        50,
+        50,
+        "ok"
+      ],
+      "CycpatternCheck": [
+        50,
+        50,
+        "ok"
+      ],
+      "Derivative": [
+        50,
+        50,
+        "ok"
+      ],
+      "Digits": [
+        50,
+        50,
+        "ok"
+      ],
+      "Digitsum": [
+        50,
+        50,
+        "ok"
+      ],
+      "DoAlgebra": [
+        0,
+        0,
+        "compile_fail"
+      ],
+      "DoubleTheDifference": [
+        39,
+        39,
+        "ok"
+      ],
+      "Encrypt": [
+        50,
+        50,
+        "ok"
+      ],
+      "EvenOddPalindrome": [
+        50,
+        50,
+        "ok"
+      ],
+      "F": [
+        50,
+        50,
+        "ok"
+      ],
+      "Exchange": [
+        50,
+        50,
+        "ok"
+      ],
+      "Eat": [
+        50,
+        50,
+        "ok"
+      ],
+      "EvenOddCount": [
+        50,
+        50,
+        "ok"
+      ],
+      "Fib4": [
+        50,
+        50,
+        "ok"
+      ],
+      "Encode": [
+        0,
+        0,
+        "compile_fail"
+      ],
+      "Fib": [
+        43,
+        43,
+        "ok"
+      ],
+      "Fibfib": [
+        48,
+        48,
+        "ok"
+      ],
+      "Factorize": [
+        50,
+        50,
+        "ok"
+      ],
+      "FilterByPrefix": [
+        27,
+        27,
+        "ok"
+      ],
+      "FilterIntegers": [
+        0,
+        0,
+        "no_cases"
+      ],
+      "FileNameCheck": [
+        50,
+        50,
+        "ok"
+      ],
+      "FilterBySubstring": [
+        50,
+        50,
+        "ok"
+      ],
+      "FindClosestElements": [
+        50,
+        50,
+        "ok"
+      ],
+      "FindMax": [
+        50,
+        50,
+        "ok"
+      ],
+      "FruitDistribution": [
+        50,
+        50,
+        "ok"
+      ],
+      "FlipCase": [
+        50,
+        50,
+        "ok"
+      ],
+      "FindZero": [
+        0,
+        0,
+        "compile_fail"
+      ],
+      "FixSpaces": [
+        50,
+        50,
+        "ok"
+      ],
+      "FizzBuzz": [
+        50,
+        50,
+        "ok"
+      ],
+      "GenerateIntegers": [
+        50,
+        50,
+        "ok"
+      ],
+      "GetClosestVowel": [
+        50,
+        50,
+        "ok"
+      ],
+      "GetMaxTriples": [
+        2,
+        2,
+        "ok"
+      ],
+      "GetPositive": [
+        50,
+        50,
+        "ok"
+      ],
+      "GetOddCollatz": [
+        50,
+        50,
+        "ok"
+      ],
+      "GetRow": [
+        0,
+        0,
+        "no_cases"
+      ],
+      "GreatestCommonDivisor": [
+        50,
+        50,
+        "ok"
+      ],
+      "HexKey": [
+        0,
+        0,
+        "compile_fail"
+      ],
+      "HasCloseElements": [
+        50,
+        50,
+        "ok"
+      ],
+      "Histogram": [
+        0,
+        0,
+        "no_cases"
+      ],
+      "IncrList": [
+        41,
+        41,
+        "ok"
+      ],
+      "HowManyTimes": [
+        50,
+        50,
+        "ok"
+      ],
+      "IntToMiniRoman": [
+        50,
+        50,
+        "ok"
+      ],
+      "Intersperse": [
+        50,
+        50,
+        "ok"
+      ],
+      "IsEqualToSumEven": [
+        50,
+        50,
+        "ok"
+      ],
+      "IsBored": [
+        50,
+        50,
+        "ok"
+      ],
+      "IsHappy": [
+        50,
+        50,
+        "ok"
+      ],
+      "IsMultiplyPrime": [
+        50,
+        50,
+        "ok"
+      ],
+      "IsSimplePower": [
+        50,
+        50,
+        "ok"
+      ],
+      "IsPrime": [
+        50,
+        50,
+        "ok"
+      ],
+      "Intersection": [
+        50,
+        50,
+        "ok"
+      ],
+      "IsNested": [
+        0,
+        0,
+        "no_cases"
+      ],
+      "IsPalindrome": [
+        50,
+        50,
+        "ok"
+      ],
+      "IsSorted": [
+        50,
+        50,
+        "ok"
+      ],
+      "Iscube": [
+        50,
+        50,
+        "ok"
+      ],
+      "MaxElement": [
+        50,
+        50,
+        "ok"
+      ],
+      "MaxFill": [
+        50,
+        50,
+        "ok"
+      ],
+      "MakeAPile": [
+        50,
+        50,
+        "ok"
+      ],
+      "LargestDivisor": [
+        50,
+        50,
+        "ok"
+      ],
+      "Maximum": [
+        50,
+        50,
+        "ok"
+      ],
+      "Longest": [
+        49,
+        49,
+        "ok"
+      ],
+      "MakePalindrome": [
+        50,
+        50,
+        "ok"
+      ],
+      "MatchParens": [
+        50,
+        50,
+        "ok"
+      ],
+      "LargestSmallestIntegers": [
+        33,
+        33,
+        "ok"
+      ],
+      "LargestPrimeFactor": [
+        50,
+        50,
+        "ok"
+      ],
+      "MeanAbsoluteDeviation": [
+        50,
+        50,
+        "ok"
+      ],
+      "Median": [
+        50,
+        50,
+        "ok"
+      ],
+      "Modp": [
+        50,
+        50,
+        "ok"
+      ],
+      "Multiply": [
+        50,
+        50,
+        "ok"
+      ],
+      "Minsubarraysum": [
+        50,
+        50,
+        "ok"
+      ],
+      "Minpath": [
+        50,
+        50,
+        "ok"
+      ],
+      "Monotonic": [
+        50,
+        50,
+        "ok"
+      ],
+      "MoveOneBall": [
+        50,
+        50,
+        "ok"
+      ],
+      "NumericalLetterGrade": [
+        50,
+        50,
+        "ok"
+      ],
+      "NextSmallest": [
+        46,
+        46,
+        "ok"
+      ],
+      "OddCount": [
+        50,
+        50,
+        "ok"
+      ],
+      "OrderByPoints": [
+        50,
+        50,
+        "ok"
+      ],
+      "PairsSumToZero": [
+        49,
+        49,
+        "ok"
+      ],
+      "ParseMusic": [
+        50,
+        50,
+        "ok"
+      ],
+      "ParseNestedParens": [
+        50,
+        50,
+        "ok"
+      ],
+      "Pluck": [
+        50,
+        50,
+        "ok"
+      ],
+      "ProdSigns": [
+        49,
+        49,
+        "ok"
+      ],
+      "PrimeLength": [
+        50,
+        50,
+        "ok"
+      ],
+      "PrimeFib": [
+        0,
+        0,
+        "compile_fail"
+      ],
+      "RescaleToUnit": [
+        50,
+        50,
+        "ok"
+      ],
+      "ReverseDelete": [
+        0,
+        0,
+        "compile_fail"
+      ],
+      "RemoveVowels": [
+        0,
+        0,
+        "compile_fail"
+      ],
+      "RemoveDuplicates": [
+        50,
+        50,
+        "ok"
+      ],
+      "RightAngleTriangle": [
+        50,
+        50,
+        "ok"
+      ],
+      "RollingMax": [
+        50,
+        50,
+        "ok"
+      ],
+      "RoundedAvg": [
+        50,
+        50,
+        "ok"
+      ],
+      "SameChars": [
+        50,
+        50,
+        "ok"
+      ],
+      "SelectWords": [
+        50,
+        50,
+        "ok"
+      ],
+      "Search": [
+        50,
+        50,
+        "ok"
+      ],
+      "Simplify": [
+        50,
+        50,
+        "ok"
+      ],
+      "SmallestChange": [
+        50,
+        50,
+        "ok"
+      ],
+      "SeparateParenGroups": [
+        50,
+        50,
+        "ok"
+      ],
+      "Skjkasdkd": [
+        50,
+        50,
+        "ok"
+      ],
+      "Solution": [
+        50,
+        50,
+        "ok"
+      ],
+      "Solve161": [
+        0,
+        0,
+        "compile_fail"
+      ],
+      "Solve84": [
+        50,
+        50,
+        "ok"
+      ],
+      "SortArray116": [
+        50,
+        50,
+        "ok"
+      ],
+      "SortArray88": [
+        50,
+        50,
+        "ok"
+      ],
+      "SortEven": [
+        50,
+        50,
+        "ok"
+      ],
+      "SortNumbers": [
+        50,
+        50,
+        "ok"
+      ],
+      "SortThird": [
+        50,
+        50,
+        "ok"
+      ],
+      "SpecialFactorial": [
+        49,
+        49,
+        "ok"
+      ],
+      "SortedListSum": [
+        0,
+        0,
+        "compile_fail"
+      ],
+      "StartsOneEnds": [
+        39,
+        39,
+        "ok"
+      ],
+      "Specialfilter": [
+        50,
+        50,
+        "ok"
+      ],
+      "SplitWords": [
+        50,
+        50,
+        "ok"
+      ],
+      "StrangeSortList": [
+        50,
+        50,
+        "ok"
+      ],
+      "StringToMd5": [
+        49,
+        49,
+        "ok"
+      ],
+      "StringSequence": [
+        50,
+        50,
+        "ok"
+      ],
+      "StringXor": [
+        50,
+        50,
+        "ok"
+      ],
+      "Strlen": [
+        50,
+        50,
+        "ok"
+      ],
+      "StrongestExtension": [
+        0,
+        0,
+        "compile_fail"
+      ],
+      "SumProduct": [
+        50,
+        50,
+        "ok"
+      ],
+      "SumSquares133": [
+        50,
+        50,
+        "ok"
+      ],
+      "SumSquares142": [
+        50,
+        50,
+        "ok"
+      ],
+      "TotalMatch": [
+        50,
+        50,
+        "ok"
+      ],
+      "SumToN": [
+        50,
+        50,
+        "ok"
+      ],
+      "TriangleArea45": [
+        50,
+        50,
+        "ok"
+      ],
+      "Tri": [
+        50,
+        50,
+        "ok"
+      ],
+      "TriangleArea71": [
+        0,
+        0,
+        "compile_fail"
+      ],
+      "TriplesSumToZero": [
+        50,
+        50,
+        "ok"
+      ],
+      "TruncateNumber": [
+        50,
+        50,
+        "ok"
+      ],
+      "Unique": [
+        0,
+        0,
+        "no_cases"
+      ],
+      "UniqueDigits": [
+        50,
+        50,
+        "ok"
+      ],
+      "ValidDate": [
+        50,
+        50,
+        "ok"
+      ],
+      "VowelsCount": [
+        50,
+        50,
+        "ok"
+      ],
+      "WillItFly": [
+        50,
+        50,
+        "ok"
+      ],
+      "WordsInSentence": [
+        50,
+        50,
+        "ok"
+      ],
+      "WordsString": [
+        50,
+        50,
+        "ok"
+      ],
+      "XOrY": [
+        50,
+        50,
+        "ok"
+      ]
     }
+  },
+  "numpy": {
+    "NumpyDef.lean": "ok",
+    "TheoremsNumpy.lean": "ok",
+    "numpy_test.lean": "ok",
+    "numpy_extended_test.lean": "ok"
   }
 }

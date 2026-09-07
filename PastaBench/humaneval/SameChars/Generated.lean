@@ -61,4 +61,26 @@ def same_chars := fun (s0 : String) ↦ fun (s1 : String) ↦
   -/
   PastaLean.pySetEq (PastaLean.pySet s0) (PastaLean.pySet s1)
 
+attribute [simp, taste_ingr] same_chars
+
+def same_chars'rn := fun (s0 : String) ↦ fun (s1 : String) ↦
+  /-
+  
+      Check if two words have the same characters.
+      >>> same_chars('eabcdzzzz', 'dddzzzzzzzddeddabc')
+      True
+      >>> same_chars('abcd', 'dddddddabc')
+      True
+      >>> same_chars('dddddddabc', 'abcd')
+      True
+      >>> same_chars('eabcd', 'dddddddabc')
+      False
+      >>> same_chars('abcd', 'dddddddabce')
+      False
+      >>> same_chars('eabcdzzzz', 'dddzzzzzzzddddabc')
+      False
+      
+  -/
+  PastaLean.pySetEq (PastaLean.pySet s0) (PastaLean.pySet s1)
+
 end PastaBench.humaneval.SameChars

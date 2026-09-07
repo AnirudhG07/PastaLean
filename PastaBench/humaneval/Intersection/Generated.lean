@@ -49,14 +49,16 @@ def intersection(interval1, interval2):
 
 namespace PastaBench.humaneval.Intersection
 
-private def _intersection'is_prime := fun (a : PyAny) ↦
+private noncomputable def _intersection'is_prime := fun (a : PyAny) ↦
   !if PastaLean.pyTruthy (decide (a < (2 : Int))) then decide (a < (2 : Int))
     else
       PastaLean.pyStdAny
-        ((PastaLean.pyRange (PastaLean.pyInt (a ^ₚ (0.5 : Float)) +ₚ (1 : Int)) (2 : Int)).map fun (x : Int) =>
+        ((PastaLean.pyRange (PastaLean.pyInt (a ^ₚ (0.5 : Rat)) +ₚ (1 : Int)) (2 : Int)).map fun (x : Int) =>
           a %ₚ x == (0 : Int))
 
-def intersection := fun (interval1 : PyAny) ↦ fun (interval2 : PyAny) ↦
+attribute [simp] _intersection'is_prime
+
+noncomputable def intersection := fun (interval1 : PyAny) ↦ fun (interval2 : PyAny) ↦
   Id.run
     (do
       let mut interval1 := interval1
@@ -87,11 +89,54 @@ def intersection := fun (interval1 : PyAny) ↦ fun (interval2 : PyAny) ↦
         let p'_unpack_pair_1 := p'_unpack_value_1
         interval1 := Prod.fst p'_unpack_pair_1
         interval2 := Prod.snd p'_unpack_pair_1
-      else
-        let _ := ()
       let mut l : PyAny := interval2⦋(0 : Int)⦌
       let mut r : PyAny := PastaLean.pyMin [interval1⦋(1 : Int)⦌, interval2⦋(1 : Int)⦌]
       let p'_ret_1 := if PastaLean.pyTruthy (_intersection'is_prime (r -ₚ l)) then "YES" else "NO"
+      return p'_ret_1)
+
+attribute [simp] intersection
+
+private def _intersection'is_prime'rn := fun (a : PyAny) ↦
+  !if PastaLean.pyTruthy (decide (a < (2 : Int))) then decide (a < (2 : Int))
+    else
+      PastaLean.pyStdAny
+        ((PastaLean.pyRange (PastaLean.pyInt (a ^ₚ (0.5 : Float)) +ₚ (1 : Int)) (2 : Int)).map fun (x : Int) =>
+          a %ₚ x == (0 : Int))
+
+def intersection'rn := fun (interval1 : PyAny) ↦ fun (interval2 : PyAny) ↦
+  Id.run
+    (do
+      let mut interval1 := interval1
+      let mut interval2 := interval2
+      /-
+      You are given two intervals,
+          where each interval is a pair of integers. For example, interval = (start, end) = (1, 2).
+          The given intervals are closed which means that the interval (start, end)
+          includes both start and end.
+          For each given interval, it is assumed that its start is less or equal its end.
+          Your task is to determine whether the length of intersection of these two 
+          intervals is a prime number.
+          Example, the intersection of the intervals (1, 3), (2, 4) is (2, 3)
+          which its length is 1, which not a prime number.
+          If the length of the intersection is a prime number, return "YES",
+          otherwise, return "NO".
+          If the two intervals don't intersect, return "NO".
+      
+      
+          [input/output] samples:
+          intersection((1, 2), (2, 3)) ==> "NO"
+          intersection((-1, 1), (0, 4)) ==> "NO"
+          intersection((-3, -1), (-5, 5)) ==> "YES"
+          
+      -/
+      if h_1 : interval1⦋(0 : Int)⦌ > interval2⦋(0 : Int)⦌ then 
+        let p'_unpack_value_1 := (interval2, interval1)
+        let p'_unpack_pair_1 := p'_unpack_value_1
+        interval1 := Prod.fst p'_unpack_pair_1
+        interval2 := Prod.snd p'_unpack_pair_1
+      let mut l : PyAny := interval2⦋(0 : Int)⦌
+      let mut r : PyAny := PastaLean.pyMin [interval1⦋(1 : Int)⦌, interval2⦋(1 : Int)⦌]
+      let p'_ret_1 := if PastaLean.pyTruthy (_intersection'is_prime'rn (r -ₚ l)) then "YES" else "NO"
       return p'_ret_1)
 
 end PastaBench.humaneval.Intersection

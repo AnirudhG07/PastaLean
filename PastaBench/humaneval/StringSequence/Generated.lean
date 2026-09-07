@@ -44,4 +44,17 @@ def string_sequence := fun (n : Int) ↦
   -/
   PastaLean.pyStringJoin " " (PastaLean.pyMap PastaLean.pyStr (PastaLean.pyRange (n +ₚ (1 : Int))))
 
+attribute [simp, taste_ingr] string_sequence
+
+def string_sequence'rn := fun (n : Int) ↦
+  /-
+   Return a string containing space-delimited numbers starting from 0 upto n inclusive.
+      >>> string_sequence(0)
+      '0'
+      >>> string_sequence(5)
+      '0 1 2 3 4 5'
+      
+  -/
+  PastaLean.pyStringJoin " " (PastaLean.pyMap PastaLean.pyStr (PastaLean.pyRange (n +ₚ (1 : Int))))
+
 end PastaBench.humaneval.StringSequence

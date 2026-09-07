@@ -69,10 +69,44 @@ def is_nested := fun (string : List String) ↦
           
       -/
       for i in (PastaLean.pyRange (PastaLean.pyLen string))do
+        if h_1 : string⦋i⦌ = "]" then 
+          continue
+        let mut cnt : Int := (0 : Int)
+        let mut max_nest : Int := (0 : Int)
+        for j in (PastaLean.pyRange (PastaLean.pyLen string) i)do
+          if h_2 : string⦋j⦌ = "[" then 
+            cnt := cnt +ₚ (1 : Int)
+          else
+            cnt := cnt -ₚ (1 : Int)
+          max_nest := PastaLean.pyMax [max_nest, cnt]
+          if h_3 : cnt = (0 : Int) then 
+            if h_4 : max_nest ≥ (2 : Int) then 
+              return Bool.true
+            break
+      return Bool.false)
+
+attribute [simp, taste_ingr] is_nested
+
+def is_nested'rn := fun (string : List String) ↦
+  Id.run
+    (do
+      /-
+      
+          Create a function that takes a string as input which contains only square brackets.
+          The function should return True if and only if there is a valid subsequence of brackets 
+          where at least one bracket in the subsequence is nested.
+      
+          is_nested('[[]]') ➞ True
+          is_nested('[]]]]]]][[[[[]') ➞ False
+          is_nested('[][]') ➞ False
+          is_nested('[]') ➞ False
+          is_nested('[[][]]') ➞ True
+          is_nested('[[]][[') ➞ True
+          
+      -/
+      for i in (PastaLean.pyRange (PastaLean.pyLen string))do
         if h_1 : string⦋i⦌ == "]" then 
           continue
-        else
-          let _ := ()
         let mut cnt : Int := (0 : Int)
         let mut max_nest : Int := (0 : Int)
         for j in (PastaLean.pyRange (PastaLean.pyLen string) i)do
@@ -84,11 +118,7 @@ def is_nested := fun (string : List String) ↦
           if h_3 : cnt == (0 : Int) then 
             if h_4 : max_nest ≥ (2 : Int) then 
               return Bool.true
-            else
-              let _ := ()
             break
-          else
-            let _ := ()
       return Bool.false)
 
 end PastaBench.humaneval.IsNested

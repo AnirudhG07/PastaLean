@@ -49,6 +49,41 @@ namespace PastaBench.humaneval.ParseMusic
 private def _parse_music'count_beats := fun (note : String) ↦
   Id.run
     (do
+      if h_1 : note = "o" then 
+        return (4 : Int)
+      else
+        if h_2 : note = "o|" then 
+          return (2 : Int)
+        else
+          if h_3 : note = ".|" then 
+            return (1 : Int)
+      return default)
+
+attribute [simp, taste_ingr] _parse_music'count_beats
+
+def parse_music := fun (music_string : String) ↦
+  /-
+   Input to this function is a string representing musical notes in a special ASCII format.
+      Your task is to parse this string and return list of integers corresponding to how many beats does each
+      not last.
+  
+      Here is a legend:
+      'o' - whole note, lasts four beats
+      'o|' - half note, lasts two beats
+      '.|' - quater note, lasts one beat
+  
+      >>> parse_music('o o| .| o| o| .| .| .| .| o o')
+      [4, 2, 1, 2, 2, 1, 1, 1, 1, 4, 4]
+      
+  -/
+  if music_string = "" then []
+  else PastaLean.pyList (PastaLean.pyMap _parse_music'count_beats (PastaLean.pyStringSplit music_string " "))
+
+attribute [simp, taste_ingr] parse_music
+
+private def _parse_music'count_beats'rn := fun (note : String) ↦
+  Id.run
+    (do
       if h_1 : note == "o" then 
         return (4 : Int)
       else
@@ -57,11 +92,9 @@ private def _parse_music'count_beats := fun (note : String) ↦
         else
           if h_3 : note == ".|" then 
             return (1 : Int)
-          else
-            let _ := ()
       return default)
 
-def parse_music := fun (music_string : String) ↦
+def parse_music'rn := fun (music_string : String) ↦
   /-
    Input to this function is a string representing musical notes in a special ASCII format.
       Your task is to parse this string and return list of integers corresponding to how many beats does each

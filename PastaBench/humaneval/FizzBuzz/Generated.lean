@@ -53,10 +53,29 @@ def fizz_buzz := fun (n : Int) ↦
       -/
       let mut cnt : Int := (0 : Int)
       for i in (PastaLean.pyRange n)do
+        if h_1 : i %ₚ (11 : Int) = (0 : Int) ∨ i %ₚ (13 : Int) = (0 : Int) then 
+          cnt := cnt +ₚ PastaLean.pyLen (PastaLean.pyList (PastaLean.pyFilter (fun c ↦ c == "7") (PastaLean.pyStr i)))
+      return cnt)
+
+attribute [simp, taste_ingr] fizz_buzz
+
+def fizz_buzz'rn := fun (n : Int) ↦
+  Id.run
+    (do
+      /-
+      Return the number of times the digit 7 appears in integers less than n which are divisible by 11 or 13.
+          >>> fizz_buzz(50)
+          0
+          >>> fizz_buzz(78)
+          2
+          >>> fizz_buzz(79)
+          3
+          
+      -/
+      let mut cnt : Int := (0 : Int)
+      for i in (PastaLean.pyRange n)do
         if h_1 : i %ₚ (11 : Int) == (0 : Int) || i %ₚ (13 : Int) == (0 : Int) then 
           cnt := cnt +ₚ PastaLean.pyLen (PastaLean.pyList (PastaLean.pyFilter (fun c ↦ c == "7") (PastaLean.pyStr i)))
-        else
-          let _ := ()
       return cnt)
 
 end PastaBench.humaneval.FizzBuzz

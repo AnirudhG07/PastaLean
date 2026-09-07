@@ -35,14 +35,16 @@ def x_or_y(n, x, y):
 
 namespace PastaBench.humaneval.XOrY
 
-private def _x_or_y'is_prime := fun (a : Int) ↦
+private noncomputable def _x_or_y'is_prime := fun (a : Int) ↦
   !if PastaLean.pyTruthy (decide (a < (2 : Int))) then decide (a < (2 : Int))
     else
       PastaLean.pyStdAny
-        ((PastaLean.pyRange (PastaLean.pyInt (a ^ₚ (0.5 : Float)) +ₚ (1 : Int)) (2 : Int)).map fun (x : Int) =>
+        ((PastaLean.pyRange (PastaLean.pyInt (a ^ₚ (0.5 : Rat)) +ₚ (1 : Int)) (2 : Int)).map fun (x : Int) =>
           a %ₚ x == (0 : Int))
 
-def x_or_y := fun (n : Int) ↦ fun (x : Int) ↦ fun y ↦
+attribute [simp] _x_or_y'is_prime
+
+noncomputable def x_or_y := fun (n : Int) ↦ fun (x : Int) ↦ fun y ↦
   /-
   A simple program which should return the value of x if n is 
       a prime number and should return the value of y otherwise.
@@ -54,5 +56,27 @@ def x_or_y := fun (n : Int) ↦ fun (x : Int) ↦ fun y ↦
       
   -/
   if PastaLean.pyTruthy (_x_or_y'is_prime n) then x else y
+
+attribute [simp] x_or_y
+
+private def _x_or_y'is_prime'rn := fun (a : Int) ↦
+  !if PastaLean.pyTruthy (decide (a < (2 : Int))) then decide (a < (2 : Int))
+    else
+      PastaLean.pyStdAny
+        ((PastaLean.pyRange (PastaLean.pyInt (a ^ₚ (0.5 : Float)) +ₚ (1 : Int)) (2 : Int)).map fun (x : Int) =>
+          a %ₚ x == (0 : Int))
+
+def x_or_y'rn := fun (n : Int) ↦ fun (x : Int) ↦ fun y ↦
+  /-
+  A simple program which should return the value of x if n is 
+      a prime number and should return the value of y otherwise.
+  
+      Examples:
+      for x_or_y(7, 34, 12) == 34
+      for x_or_y(15, 8, 5) == 5
+      
+      
+  -/
+  if PastaLean.pyTruthy (_x_or_y'is_prime'rn n) then x else y
 
 end PastaBench.humaneval.XOrY

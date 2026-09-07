@@ -61,4 +61,27 @@ def exchange := fun (lst1 : List Int) ↦ fun (lst2 : List Int) ↦
     (PastaLean.pyLen (PastaLean.pyList (PastaLean.pyFilter (fun x ↦ x %ₚ (2 : Int) == (0 : Int)) lst2)) : Int)
   if cnt_odd ≤ cnt_even then "YES" else "NO"
 
+attribute [simp, taste_ingr] exchange
+
+def exchange'rn := fun (lst1 : List Int) ↦ fun (lst2 : List Int) ↦
+  /-
+  In this problem, you will implement a function that takes two lists of numbers,
+      and determines whether it is possible to perform an exchange of elements
+      between them to make lst1 a list of only even numbers.
+      There is no limit on the number of exchanged elements between lst1 and lst2.
+      If it is possible to exchange elements between the lst1 and lst2 to make
+      all the elements of lst1 to be even, return "YES".
+      Otherwise, return "NO".
+      For example:
+      exchange([1, 2, 3, 4], [1, 2, 3, 4]) => "YES"
+      exchange([1, 2, 3, 4], [1, 5, 3, 4]) => "NO"
+      It is assumed that the input lists will be non-empty.
+      
+  -/
+  let cnt_odd :=
+    (PastaLean.pyLen (PastaLean.pyList (PastaLean.pyFilter (fun x ↦ x %ₚ (2 : Int) == (1 : Int)) lst1)) : Int)
+  let cnt_even :=
+    (PastaLean.pyLen (PastaLean.pyList (PastaLean.pyFilter (fun x ↦ x %ₚ (2 : Int) == (0 : Int)) lst2)) : Int)
+  if cnt_odd ≤ cnt_even then "YES" else "NO"
+
 end PastaBench.humaneval.Exchange

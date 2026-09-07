@@ -53,10 +53,28 @@ def intersperse := fun (numbers : List Int) ↦ fun (delimeter : Int) ↦
       let mut res : List Int := []
       for i in (PastaLean.pyRange (PastaLean.pyLen numbers))do
         res := PastaLean.pyAppend res numbers⦋i⦌
+        if h_1 : i ≠ PastaLean.pyLen numbers -ₚ (1 : Int) then 
+          res := PastaLean.pyAppend res delimeter
+      return res)
+
+attribute [simp, taste_ingr] intersperse
+
+def intersperse'rn := fun (numbers : List Int) ↦ fun (delimeter : Int) ↦
+  Id.run
+    (do
+      /-
+       Insert a number 'delimeter' between every two consecutive elements of input list `numbers'
+          >>> intersperse([], 4)
+          []
+          >>> intersperse([1, 2, 3], 4)
+          [1, 4, 2, 4, 3]
+          
+      -/
+      let mut res : List Int := []
+      for i in (PastaLean.pyRange (PastaLean.pyLen numbers))do
+        res := PastaLean.pyAppend res numbers⦋i⦌
         if h_1 : i != PastaLean.pyLen numbers -ₚ (1 : Int) then 
           res := PastaLean.pyAppend res delimeter
-        else
-          let _ := ()
       return res)
 
 end PastaBench.humaneval.Intersperse

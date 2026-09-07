@@ -46,13 +46,39 @@ private def _unique_digits'judge := fun (x : PyAny) ↦
   Id.run
     (do
       for ch in (PastaLean.pyIter (PastaLean.pyStr x))do
-        if h_1 : PastaLean.pyInt ch %ₚ (2 : Int) == (0 : Int) then 
+        if h_1 : PastaLean.pyInt ch %ₚ (2 : Int) = (0 : Int) then 
           return Bool.false
-        else
-          let _ := ()
       return Bool.true)
 
-def unique_digits := fun x ↦
+attribute [simp, taste_ingr] _unique_digits'judge
+
+def unique_digits := fun (x : PyAny) ↦
+  /-
+  Given a list of positive integers x. return a sorted list of all 
+      elements that hasn't any even digit.
+  
+      Note: Returned list should be sorted in increasing order.
+      
+      For example:
+      >>> unique_digits([15, 33, 1422, 1])
+      [1, 15, 33]
+      >>> unique_digits([152, 323, 1422, 10])
+      []
+      
+  -/
+  PastaLean.pySort (PastaLean.pyList (PastaLean.pyFilter _unique_digits'judge x))
+
+attribute [simp, taste_ingr] unique_digits
+
+private def _unique_digits'judge'rn := fun (x : PyAny) ↦
+  Id.run
+    (do
+      for ch in (PastaLean.pyIter (PastaLean.pyStr x))do
+        if h_1 : PastaLean.pyInt ch %ₚ (2 : Int) == (0 : Int) then 
+          return Bool.false
+      return Bool.true)
+
+def unique_digits'rn := fun (x : PyAny) ↦
   /-
   Given a list of positive integers x. return a sorted list of all 
       elements that hasn't any even digit.

@@ -59,13 +59,42 @@ def split_words := fun (txt : String) ↦
         if h_1 : ∃ x ∈ PastaLean.pyIter whitespace, PastaLean.pyContains txt x then 
           let p'_ret_1 := (PastaLean.pyStringSplit txt : PastaLean.PyAny)
           return p'_ret_1
-        else
-          let _ := ()
         if h_2 : PastaLean.pyStrContainsSubstr txt "," then 
           let p'_ret_1 := (PastaLean.pyStringSplit txt "," : PastaLean.PyAny)
           return p'_ret_1
-        else
-          let _ := ()
+        let mut cnt : Int := (0 : Int)
+        for ch in (PastaLean.pyIter txt)do
+          if h_3 :
+              PastaLean.pyTruthy (PastaLean.pyIsLower ch) = true ∧
+                (PastaLean.pyOrd ch -ₚ PastaLean.pyOrd "a") %ₚ (2 : Int) = (1 : Int) then
+            
+            cnt := cnt +ₚ (1 : Int)
+        return (cnt : PastaLean.PyAny)))
+
+attribute [simp] split_words
+
+def split_words'rn := fun (txt : String) ↦
+  (show PastaLean.PyAny from
+    Id.run
+      (do
+        /-
+        
+            Given a string of words, return a list of words split on whitespace, if no whitespaces exists in the text you
+            should split on commas ',' if no commas exists you should return the number of lower-case letters with odd order in the
+            alphabet, ord('a') = 0, ord('b') = 1, ... ord('z') = 25
+            Examples
+            split_words("Hello world!") ➞ ["Hello", "world!"]
+            split_words("Hello,world!") ➞ ["Hello", "world!"]
+            split_words("abcdef") == 3 
+            
+        -/
+        let mut whitespace : List String := PastaLean.pyList " \n\x0d\t"
+        if h_1 : ∃ x ∈ PastaLean.pyIter whitespace, PastaLean.pyContains txt x then 
+          let p'_ret_1 := (PastaLean.pyStringSplit txt : PastaLean.PyAny)
+          return p'_ret_1
+        if h_2 : PastaLean.pyStrContainsSubstr txt "," then 
+          let p'_ret_1 := (PastaLean.pyStringSplit txt "," : PastaLean.PyAny)
+          return p'_ret_1
         let mut cnt : Int := (0 : Int)
         for ch in (PastaLean.pyIter txt)do
           if h_3 :
@@ -73,8 +102,6 @@ def split_words := fun (txt : String) ↦
                 (PastaLean.pyOrd ch -ₚ PastaLean.pyOrd "a") %ₚ (2 : Int) == (1 : Int) then
             
             cnt := cnt +ₚ (1 : Int)
-          else
-            let _ := ()
         return (cnt : PastaLean.PyAny)))
 
 end PastaBench.humaneval.SplitWords

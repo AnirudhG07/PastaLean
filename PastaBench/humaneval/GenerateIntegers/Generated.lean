@@ -57,8 +57,35 @@ def generate_integers := fun (a : Int) ↦ fun (b : Int) ↦
         let p'_unpack_pair_1 := p'_unpack_value_1
         a := Prod.fst p'_unpack_pair_1
         b := Prod.snd p'_unpack_pair_1
-      else
-        let _ := ()
+      let p'_ret_1 :=
+        (List.filter (fun (i : Int) => i %ₚ (2 : Int) = (0 : Int))
+              (PastaLean.pyRange (PastaLean.pyMin [b +ₚ (1 : Int), (10 : Int)]) a)).map
+          fun (i : Int) => i
+      return p'_ret_1)
+
+attribute [simp, taste_ingr] generate_integers
+
+def generate_integers'rn := fun (a : Int) ↦ fun (b : Int) ↦
+  Id.run
+    (do
+      let mut a := a
+      let mut b := b
+      /-
+      
+          Given two positive integers a and b, return the even digits between a
+          and b, in ascending order.
+      
+          For example:
+          generate_integers(2, 8) => [2, 4, 6, 8]
+          generate_integers(8, 2) => [2, 4, 6, 8]
+          generate_integers(10, 14) => []
+          
+      -/
+      if h_1 : a > b then 
+        let p'_unpack_value_1 := (b, a)
+        let p'_unpack_pair_1 := p'_unpack_value_1
+        a := Prod.fst p'_unpack_pair_1
+        b := Prod.snd p'_unpack_pair_1
       let p'_ret_1 :=
         (List.filter (fun (i : Int) => i %ₚ (2 : Int) == (0 : Int))
               (PastaLean.pyRange (PastaLean.pyMin [b +ₚ (1 : Int), (10 : Int)]) a)).map

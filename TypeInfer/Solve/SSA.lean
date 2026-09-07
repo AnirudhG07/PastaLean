@@ -129,7 +129,13 @@ partial def ssaStmts (sigs : Sigs) (n0 : Nat) (tbl0 : Std.HashMap String (String
           let vb := (tblB.get? x).orElse (fun _ => tbl.get? x)
           match va, vb with
           | some (na, ta), some (nb, tb) =>
-              if na == nb && ta == tb then tbl := tbl.insert x (na, ta)
+              -- A phi is needed ONLY when the branches renamed `x` to DIFFERENT versions (a type
+              -- mutation versioned it in one branch). When both branches kept the same name, `x` is a
+              -- shared `let mut` reassigned in place — NO phi; just merge the type. Forcing a phi on a
+              -- mere type REFINEMENT (`unknown`→`int`, same name) would, for a loop-carried accumulator,
+              -- silently drop the update: the phi version is not threaded across the loop back-edge,
+              -- so later reads of `x` (next iteration, and after the loop) see only the pre-phi value.
+              if na == nb then tbl := tbl.insert x (na, PyType.join ta tb)
               else
                 n := n + 1
                 let nm := s!"{x}'v{n}"

@@ -72,6 +72,52 @@ def fib4 := fun (n : Int) ↦
           14
           
       -/
+      if h_1 : n = (0 : Int) then 
+        return (0 : Int)
+      else
+        if h_2 : n = (1 : Int) then 
+          return (0 : Int)
+        else
+          if h_3 : n = (2 : Int) then 
+            return (2 : Int)
+          else
+            if h_4 : n = (3 : Int) then 
+              return (0 : Int)
+            else
+              let mut a : Int := (0 : Int)
+              let mut b : Int := (0 : Int)
+              let mut c : Int := (2 : Int)
+              let mut d : Int := (0 : Int)
+              for i in (PastaLean.pyRange (n +ₚ (1 : Int)) (4 : Int))do
+                let p'_unpack_value_1 := (b, (c, (d, a +ₚ b +ₚ c +ₚ d)))
+                let p'_unpack_pair_1 := p'_unpack_value_1
+                a := Prod.fst p'_unpack_pair_1
+                b := Prod.fst (Prod.snd p'_unpack_pair_1)
+                c := Prod.fst (Prod.snd (Prod.snd p'_unpack_pair_1))
+                d := Prod.snd (Prod.snd (Prod.snd p'_unpack_pair_1))
+              return d)
+
+attribute [simp, taste_ingr] fib4
+
+def fib4'rn := fun (n : Int) ↦
+  Id.run
+    (do
+      /-
+      The Fib4 number sequence is a sequence similar to the Fibbonacci sequnece that's defined as follows:
+          fib4(0) -> 0
+          fib4(1) -> 0
+          fib4(2) -> 2
+          fib4(3) -> 0
+          fib4(n) -> fib4(n-1) + fib4(n-2) + fib4(n-3) + fib4(n-4).
+          Please write a function to efficiently compute the n-th element of the fib4 number sequence.  Do not use recursion.
+          >>> fib4(5)
+          4
+          >>> fib4(6)
+          8
+          >>> fib4(7)
+          14
+          
+      -/
       if h_1 : n == (0 : Int) then 
         return (0 : Int)
       else

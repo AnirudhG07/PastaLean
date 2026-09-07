@@ -47,7 +47,32 @@ def encode_shift := fun (s : String) ↦
     ((PastaLean.pyIter s).map fun (ch : String) =>
       PastaLean.pyChr ((PastaLean.pyOrd ch +ₚ (5 : Int) -ₚ PastaLean.pyOrd "a") %ₚ (26 : Int) +ₚ PastaLean.pyOrd "a"))
 
+attribute [simp, taste_ingr] encode_shift
+
+def encode_shift'rn := fun (s : String) ↦
+  /-
+  
+      returns encoded string by shifting every character by 5 in the alphabet.
+      
+  -/
+  PastaLean.pyStringJoin ""
+    ((PastaLean.pyIter s).map fun (ch : String) =>
+      PastaLean.pyChr ((PastaLean.pyOrd ch +ₚ (5 : Int) -ₚ PastaLean.pyOrd "a") %ₚ (26 : Int) +ₚ PastaLean.pyOrd "a"))
+
 def decode_shift := fun (s : String) ↦
+  /-
+  
+      takes as input string encoded with encode_shift function. Returns decoded string.
+      
+  -/
+  PastaLean.pyStringJoin ""
+    ((PastaLean.pyIter s).map fun (ch : String) =>
+      PastaLean.pyChr
+        ((PastaLean.pyOrd ch -ₚ PastaLean.pyOrd "a" -ₚ (5 : Int) +ₚ (26 : Int)) %ₚ (26 : Int) +ₚ PastaLean.pyOrd "a"))
+
+attribute [simp, taste_ingr] decode_shift
+
+def decode_shift'rn := fun (s : String) ↦
   /-
   
       takes as input string encoded with encode_shift function. Returns decoded string.

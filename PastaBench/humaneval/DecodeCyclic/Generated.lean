@@ -57,6 +57,29 @@ def encode_cyclic := fun (s : String) ↦
   -- cycle elements in each group. Unless group has fewer elements than 3.
   let groups :=
     ((PastaLean.pyIter groups).map fun (group : String) =>
+        if PastaLean.pyLen group = (3 : Int) then
+          PastaLean.pySlice group (some (1 : Int)) none none +ₚ group⦋(0 : Int)⦌
+        else group :
+      List String)
+  PastaLean.pyStringJoin "" groups
+
+attribute [simp, taste_ingr] encode_cyclic
+
+def encode_cyclic'rn := fun (s : String) ↦
+  /-
+  
+      returns encoded string by cycling groups of three characters.
+      
+  -/
+  -- split string to groups. Each of length 3.
+  let groups :=
+    ((PastaLean.pyRange (PastaLean.pyFloorDiv (PastaLean.pyLen s +ₚ (2 : Int)) (3 : Int))).map fun (i : Int) =>
+        PastaLean.pySlice s (some ((3 : Int) *ₚ i))
+          (some (PastaLean.pyMin [(3 : Int) *ₚ i +ₚ (3 : Int), PastaLean.pyLen s])) none :
+      List String)
+  -- cycle elements in each group. Unless group has fewer elements than 3.
+  let groups :=
+    ((PastaLean.pyIter groups).map fun (group : String) =>
         if PastaLean.pyLen group == (3 : Int) then
           PastaLean.pySlice group (some (1 : Int)) none none +ₚ group⦋(0 : Int)⦌
         else group :
@@ -64,6 +87,27 @@ def encode_cyclic := fun (s : String) ↦
   PastaLean.pyStringJoin "" groups
 
 def decode_cyclic := fun (s : String) ↦
+  /-
+  
+      takes as input string encoded with encode_cyclic function. Returns decoded string.
+      
+  -/
+  let groups :=
+    ((PastaLean.pyRange (PastaLean.pyFloorDiv (PastaLean.pyLen s +ₚ (2 : Int)) (3 : Int))).map fun (i : Int) =>
+        PastaLean.pySlice s (some ((3 : Int) *ₚ i))
+          (some (PastaLean.pyMin [(3 : Int) *ₚ i +ₚ (3 : Int), PastaLean.pyLen s])) none :
+      List String)
+  let groups :=
+    ((PastaLean.pyIter groups).map fun (group : String) =>
+        if PastaLean.pyLen group = (3 : Int) then
+          group⦋(2 : Int)⦌ +ₚ PastaLean.pySlice group none (some (2 : Int)) none
+        else group :
+      List String)
+  PastaLean.pyStringJoin "" groups
+
+attribute [simp, taste_ingr] decode_cyclic
+
+def decode_cyclic'rn := fun (s : String) ↦
   /-
   
       takes as input string encoded with encode_cyclic function. Returns decoded string.

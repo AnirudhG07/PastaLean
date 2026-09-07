@@ -44,4 +44,17 @@ def concatenate := fun (strings : List String) ↦
   -/
   PastaLean.pyStringJoin "" strings
 
+attribute [simp, taste_ingr] concatenate
+
+def concatenate'rn := fun (strings : List String) ↦
+  /-
+   Concatenate list of strings into a single string
+      >>> concatenate([])
+      ''
+      >>> concatenate(['a', 'b', 'c'])
+      'abc'
+      
+  -/
+  PastaLean.pyStringJoin "" strings
+
 end PastaBench.humaneval.Concatenate

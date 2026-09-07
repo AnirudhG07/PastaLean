@@ -47,14 +47,16 @@ def words_in_sentence(sentence):
 
 namespace PastaBench.humaneval.WordsInSentence
 
-private def _words_in_sentence'is_prime := fun (a : Int) ↦
+private noncomputable def _words_in_sentence'is_prime := fun (a : Int) ↦
   !if PastaLean.pyTruthy (decide (a < (2 : Int))) then decide (a < (2 : Int))
     else
       PastaLean.pyStdAny
-        ((PastaLean.pyRange (PastaLean.pyInt (a ^ₚ (0.5 : Float)) +ₚ (1 : Int)) (2 : Int)).map fun (x : Int) =>
+        ((PastaLean.pyRange (PastaLean.pyInt (a ^ₚ (0.5 : Rat)) +ₚ (1 : Int)) (2 : Int)).map fun (x : Int) =>
           a %ₚ x == (0 : Int))
 
-def words_in_sentence := fun (sentence : String) ↦
+attribute [simp] _words_in_sentence'is_prime
+
+noncomputable def words_in_sentence := fun (sentence : String) ↦
   /-
   
       You are given a string representing a sentence,
@@ -79,6 +81,42 @@ def words_in_sentence := fun (sentence : String) ↦
   PastaLean.pyStringJoin " "
     (PastaLean.pyList
       (PastaLean.pyFilter (fun word ↦ _words_in_sentence'is_prime (PastaLean.pyLen word))
+        (PastaLean.pyStringSplit sentence " ")))
+
+attribute [simp] words_in_sentence
+
+private def _words_in_sentence'is_prime'rn := fun (a : Int) ↦
+  !if PastaLean.pyTruthy (decide (a < (2 : Int))) then decide (a < (2 : Int))
+    else
+      PastaLean.pyStdAny
+        ((PastaLean.pyRange (PastaLean.pyInt (a ^ₚ (0.5 : Float)) +ₚ (1 : Int)) (2 : Int)).map fun (x : Int) =>
+          a %ₚ x == (0 : Int))
+
+def words_in_sentence'rn := fun (sentence : String) ↦
+  /-
+  
+      You are given a string representing a sentence,
+      the sentence contains some words separated by a space,
+      and you have to return a string that contains the words from the original sentence,
+      whose lengths are prime numbers,
+      the order of the words in the new string should be the same as the original one.
+  
+      Example 1:
+          Input: sentence = "This is a test"
+          Output: "is"
+  
+      Example 2:
+          Input: sentence = "lets go for swimming"
+          Output: "go for"
+  
+      Constraints:
+          * 1 <= len(sentence) <= 100
+          * sentence contains only letters
+      
+  -/
+  PastaLean.pyStringJoin " "
+    (PastaLean.pyList
+      (PastaLean.pyFilter (fun word ↦ _words_in_sentence'is_prime'rn (PastaLean.pyLen word))
         (PastaLean.pyStringSplit sentence " ")))
 
 end PastaBench.humaneval.WordsInSentence

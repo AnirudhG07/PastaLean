@@ -41,4 +41,16 @@ def all_prefixes := fun (string : String) ↦
   (PastaLean.pyRange (PastaLean.pyLen string)).map fun (i : Int) =>
     PastaLean.pySlice string none (some (i +ₚ (1 : Int))) none
 
+attribute [simp, taste_ingr] all_prefixes
+
+def all_prefixes'rn := fun (string : String) ↦
+  /-
+   Return list of all prefixes from shortest to longest of the input string
+      >>> all_prefixes('abc')
+      ['a', 'ab', 'abc']
+      
+  -/
+  (PastaLean.pyRange (PastaLean.pyLen string)).map fun (i : Int) =>
+    PastaLean.pySlice string none (some (i +ₚ (1 : Int))) none
+
 end PastaBench.humaneval.AllPrefixes

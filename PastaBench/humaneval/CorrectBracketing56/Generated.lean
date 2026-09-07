@@ -63,18 +63,42 @@ def correct_bracketing := fun (brackets : String) ↦
       -/
       let mut cnt : Int := (0 : Int)
       for x in (PastaLean.pyIter brackets)do
-        if h_1 : x == "<" then 
+        if h_1 : x = "<" then 
           cnt := cnt +ₚ (1 : Int)
-        else
-          let _ := ()
-        if h_2 : x == ">" then 
+        if h_2 : x = ">" then 
           cnt := cnt -ₚ (1 : Int)
-        else
-          let _ := ()
         if h_3 : cnt < (0 : Int) then 
           return Bool.false
-        else
-          let _ := ()
+      let p'_ret_1 := cnt == (0 : Int)
+      return p'_ret_1)
+
+attribute [simp, taste_ingr] correct_bracketing
+
+def correct_bracketing'rn := fun (brackets : String) ↦
+  Id.run
+    (do
+      /-
+       brackets is a string of "<" and ">".
+          return True if every opening bracket has a corresponding closing bracket.
+      
+          >>> correct_bracketing("<")
+          False
+          >>> correct_bracketing("<>")
+          True
+          >>> correct_bracketing("<<><>>")
+          True
+          >>> correct_bracketing("><<>")
+          False
+          
+      -/
+      let mut cnt : Int := (0 : Int)
+      for x in (PastaLean.pyIter brackets)do
+        if h_1 : x == "<" then 
+          cnt := cnt +ₚ (1 : Int)
+        if h_2 : x == ">" then 
+          cnt := cnt -ₚ (1 : Int)
+        if h_3 : cnt < (0 : Int) then 
+          return Bool.false
       let p'_ret_1 := cnt == (0 : Int)
       return p'_ret_1)
 

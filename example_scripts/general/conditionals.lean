@@ -118,14 +118,11 @@ def hoist_conflicting_branches := fun (c : Int) ↦
       -- block scope; Lean does). It is hoisted to `let mut v : PyAny := emptyPyAny` before the `if`, and
       -- each branch REASSIGNS (boxing): `v = 5` / `v = "hi"` all mutate one PyAny variable.
       let mut v : PyAny := default
-      let mut v'v1 : PyAny := default
       if h_1 : c > (0 : Int) then 
-        let mut v'rb0 := (5 : Int)
-        let mut v'v1'rb1 := v'rb0
+        v := (5 : Int)
       else
-        let mut v'rb2 := "hi"
-        let mut v'v1'rb3 := v'rb2
-      let p'_ret_1 := PastaLean.pyStr v'v1
+        v := "hi"
+      let p'_ret_1 := PastaLean.pyStr v
       return p'_ret_1)
 
 attribute [simp, taste_ingr] hoist_conflicting_branches
@@ -137,14 +134,11 @@ def hoist_conflicting_branches'rn := fun (c : Int) ↦
       -- block scope; Lean does). It is hoisted to `let mut v : PyAny := emptyPyAny` before the `if`, and
       -- each branch REASSIGNS (boxing): `v = 5` / `v = "hi"` all mutate one PyAny variable.
       let mut v : PyAny := default
-      let mut v'v1 : PyAny := default
       if h_1 : c > (0 : Int) then 
-        let mut v'rb0 := (5 : Int)
-        let mut v'v1'rb1 := v'rb0
+        v := (5 : Int)
       else
-        let mut v'rb2 := "hi"
-        let mut v'v1'rb3 := v'rb2
-      let p'_ret_1 := PastaLean.pyStr v'v1
+        v := "hi"
+      let p'_ret_1 := PastaLean.pyStr v
       return p'_ret_1)
 
 def hoist_partial_branch := fun (c : Int) ↦

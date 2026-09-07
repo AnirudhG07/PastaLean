@@ -50,6 +50,30 @@ def sort_third := fun (l : List PyAny) ↦
           
       -/
       let mut third : List PyAny :=
+        (List.filter (fun (i : Int) => i %ₚ (3 : Int) = (0 : Int)) (PastaLean.pyRange (PastaLean.pyLen l))).map
+          fun (i : Int) => l⦋i⦌
+      third := PastaLean.pySort third
+      let p'_ret_1 :=
+        (PastaLean.pyRange (PastaLean.pyLen l)).map fun (i : Int) =>
+          if i %ₚ (3 : Int) = (0 : Int) then third⦋PastaLean.pyFloorDiv i (3 : Int)⦌ else l⦋i⦌
+      return p'_ret_1)
+
+attribute [simp, taste_ingr] sort_third
+
+def sort_third'rn := fun (l : List PyAny) ↦
+  Id.run
+    (do
+      /-
+      This function takes a list l and returns a list l' such that
+          l' is identical to l in the indicies that are not divisible by three, while its values at the indicies that are divisible by three are equal
+          to the values of the corresponding indicies of l, but sorted.
+          >>> sort_third([1, 2, 3])
+          [1, 2, 3]
+          >>> sort_third([5, 6, 3, 4, 8, 9, 2])
+          [2, 6, 3, 4, 8, 9, 5]
+          
+      -/
+      let mut third : List PyAny :=
         (List.filter (fun (i : Int) => i %ₚ (3 : Int) == (0 : Int)) (PastaLean.pyRange (PastaLean.pyLen l))).map
           fun (i : Int) => l⦋i⦌
       third := PastaLean.pySort third

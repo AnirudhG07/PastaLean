@@ -64,6 +64,36 @@ def any_int := fun (x : PyAny) ↦ fun (y : PyAny) ↦ fun (z : PyAny) ↦
       
   -/
   if
+      (PastaLean.pyType x != TypeInfer.PyType.int ∨ PastaLean.pyType y != TypeInfer.PyType.int) ∨
+        PastaLean.pyType z != TypeInfer.PyType.int then
+    Bool.false
+  else
+    if PastaLean.pyTruthy (x == y +ₚ z) then x == y +ₚ z
+    else if PastaLean.pyTruthy (y == x +ₚ z) then y == x +ₚ z else z == y +ₚ x
+
+attribute [simp, taste_ingr] any_int
+
+def any_int'rn := fun (x : PyAny) ↦ fun (y : PyAny) ↦ fun (z : PyAny) ↦
+  /-
+  
+      Create a function that takes 3 numbers.
+      Returns true if one of the numbers is equal to the sum of the other two, and all numbers are integers.
+      Returns false in any other cases.
+      
+      Examples
+      any_int(5, 2, 7) ➞ True
+      
+      any_int(3, 2, 2) ➞ False
+  
+      any_int(3, -2, 1) ➞ True
+      
+      any_int(3.6, -2.2, 2) ➞ False
+    
+  
+      
+      
+  -/
+  if
       PastaLean.pyType x != TypeInfer.PyType.int || PastaLean.pyType y != TypeInfer.PyType.int ||
         PastaLean.pyType z != TypeInfer.PyType.int then
     Bool.false

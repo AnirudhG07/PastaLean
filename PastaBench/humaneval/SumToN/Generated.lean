@@ -56,4 +56,23 @@ def sum_to_n := fun (n : Int) ↦
   -/
   PastaLean.pyFloorDiv ((n +ₚ (1 : Int)) *ₚ n) (2 : Int)
 
+attribute [simp, taste_ingr] sum_to_n
+
+def sum_to_n'rn := fun (n : Int) ↦
+  /-
+  sum_to_n is a function that sums numbers from 1 to n.
+      >>> sum_to_n(30)
+      465
+      >>> sum_to_n(100)
+      5050
+      >>> sum_to_n(5)
+      15
+      >>> sum_to_n(10)
+      55
+      >>> sum_to_n(1)
+      1
+      
+  -/
+  PastaLean.pyFloorDiv ((n +ₚ (1 : Int)) *ₚ n) (2 : Int)
+
 end PastaBench.humaneval.SumToN

@@ -92,7 +92,10 @@ def run_humaneval(source: str, prove: bool, workers: int) -> dict:
     detail: dict[str, str] = {}
     to_compile: dict[str, pathlib.Path] = {}
 
-    with Session(target="command", mode="run", prove_asserts=prove) as s:
+    # `mode="both"` emits AND compile-checks BOTH twins — the provable (`method`, exact ℚ/ℝ, the one
+    # `--prove` proves) and the computable (`method'rn`, Float, the runnable) — so a failure in EITHER
+    # is caught, not just the computable one.
+    with Session(target="command", mode="both", prove_asserts=prove) as s:
         for i, d in enumerate(probs, 1):
             name = d.name
             src = d / source

@@ -28,8 +28,7 @@ def topo_order_count := fun (n : Int) ↦ fun (edges : List (List Int)) ↦
         let b := PastaLean.pyListGetItem p'_pair_1 (1 : Int)
         g := PastaLean.pySetItem g b (PastaLean.pyAppend g⦋b⦌ a)
         indeg := PastaLean.pySetItem indeg a (indeg⦋a⦌ +ₚ (1 : Int))
-      let mut q : List Int :=
-        (List.filter (fun (i : Int) => indeg⦋i⦌ = (0 : Int)) (PastaLean.pyRange n)).map fun (i : Int) => i
+      let mut q : List Int := List.filter (fun (i : Int) => indeg⦋i⦌ = (0 : Int)) (PastaLean.pyRange n)
       let mut seen : Int := (0 : Int)
       let mut p'_fi'_1 : Int := -1
       while (p'_fi'_1 +ₚ (1 : Int)) < PastaLean.pyLen q do
@@ -54,9 +53,7 @@ def topo_order_count'rn := fun (n : Int) ↦ fun (edges : List (List Int)) ↦
         let b := PastaLean.pyListGetItem p'_pair_1 (1 : Int)
         g := PastaLean.pySetItem g b (PastaLean.pyAppend g⦋b⦌ a)
         indeg := PastaLean.pySetItem indeg a (indeg⦋a⦌ +ₚ (1 : Int))
-      let mut q : Array Int :=
-        ((List.filter (fun (i : Int) => indeg⦋i⦌ == (0 : Int)) (PastaLean.pyRange n)).map fun (i : Int) =>
-            i) |>.toArray
+      let mut q : Array Int := List.filter (fun (i : Int) => indeg⦋i⦌ == (0 : Int)) (PastaLean.pyRange n) |>.toArray
       let mut seen : Int := (0 : Int)
       let mut p'_fi'_1 : Int := -1
       while (p'_fi'_1 +ₚ (1 : Int)) < PastaLean.pyLen q do

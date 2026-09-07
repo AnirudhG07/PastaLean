@@ -60,7 +60,23 @@ def find_zero(xs: list):
 
 namespace PastaBench.humaneval.FindZero
 
-def poly := fun (xs : List PyAny) ↦ fun (x : Float) ↦
+def poly := fun (xs : List PyAny) ↦ fun (x : Rat) ↦
+  (show PastaLean.PyAny from
+    /-
+    
+        Evaluates polynomial with coefficients xs at point x.
+        return xs[0] + xs[1] * x + xs[1] * x^2 + .... xs[n] * x^n
+        
+    -/
+    PastaLean.pySum
+      ((PastaLean.pyIter (PastaLean.pyEnumerate xs)).map fun (p'_pair_1 : Int × PyAny) =>
+        let i := Prod.fst p'_pair_1;
+        let coeff := Prod.snd p'_pair_1;
+        coeff *ₚ Libraries.math.pyMathPowExact x i))
+
+attribute [simp] poly
+
+def poly'rn := fun (xs : List PyAny) ↦ fun (x : Float) ↦
   (show PastaLean.PyAny from
     /-
     
@@ -74,38 +90,73 @@ def poly := fun (xs : List PyAny) ↦ fun (x : Float) ↦
         let coeff := Prod.snd p'_pair_1;
         coeff *ₚ Libraries.math.pyMathPow x i))
 
-private def _find_zero'func := fun (x : Float) ↦ fun (xs : List PyAny) ↦ (show PastaLean.PyAny from poly xs x)
+private def _find_zero'func := fun (x : Int) ↦ fun (xs : List PyAny) ↦ (show PastaLean.PyAny from poly xs x)
 
-private def _find_zero'derivative := fun (x : Float) ↦ fun (dxs : List PyAny) ↦ (show PastaLean.PyAny from poly dxs x)
+attribute [simp] _find_zero'func
+
+private def _find_zero'derivative := fun (x : Int) ↦ fun (dxs : List PyAny) ↦ (show PastaLean.PyAny from poly dxs x)
+
+attribute [simp] _find_zero'derivative
 
 def find_zero := fun (xs : List PyAny) ↦
-  (show Float from
-    Id.run
-      (do
-        /-
-         xs are coefficients of a polynomial.
-            find_zero find x such that poly(x) = 0.
-            find_zero returns only only zero point, even if there are many.
-            Moreover, find_zero only takes list xs having even number of coefficients
-            and largest non zero coefficient as it guarantees
-            a solution.
-            >>> round(find_zero([1, 2]), 2) # f(x) = 1 + 2x
-            -0.5
-            >>> round(find_zero([-6, 11, -6, 1]), 2) # (x - 1) * (x - 2) * (x - 3) = -6 + 11x - 6x^2 + x^3
-            1.0
-            
-        -/
-        let mut dxs : List PyAny := (PastaLean.pyRange (PastaLean.pyLen xs) (1 : Int)).map fun (i : Int) => xs⦋i⦌ *ₚ i
-        let mut x := (0 : Float)
-        let mut tol := Float.ofScientific 1 true 5
-        for _ in (PastaLean.pyRange (1000 : Int))do
-          let mut fx := _find_zero'func x xs
-          let mut dfx := _find_zero'derivative x dxs
-          if h_1 : PastaLean.pyAbs fx < tol then 
-            break
-          else
-            let _ := ()
-          x := x -ₚ PastaLean.pyFloat fx /ₚ dfx
-        return x))
+  Id.run
+    (do
+      /-
+       xs are coefficients of a polynomial.
+          find_zero find x such that poly(x) = 0.
+          find_zero returns only only zero point, even if there are many.
+          Moreover, find_zero only takes list xs having even number of coefficients
+          and largest non zero coefficient as it guarantees
+          a solution.
+          >>> round(find_zero([1, 2]), 2) # f(x) = 1 + 2x
+          -0.5
+          >>> round(find_zero([-6, 11, -6, 1]), 2) # (x - 1) * (x - 2) * (x - 3) = -6 + 11x - 6x^2 + x^3
+          1.0
+          
+      -/
+      let mut dxs : List PyAny := (PastaLean.pyRange (PastaLean.pyLen xs) (1 : Int)).map fun (i : Int) => xs⦋i⦌ *ₚ i
+      let mut x : Int := (0 : Int)
+      let mut tol := (OfScientific.ofScientific 1 true 5 : Rat)
+      for _ in (PastaLean.pyRange (1000 : Int))do
+        let mut fx := _find_zero'func x xs
+        let mut dfx := _find_zero'derivative x dxs
+        if h_1 : PastaLean.pyAbs fx < tol then 
+          break
+        x := x -ₚ fx /ₚ dfx
+      return x)
+
+attribute [simp, taste_ingr] find_zero
+
+private def _find_zero'func'rn := fun (x : Int) ↦ fun (xs : List PyAny) ↦ (show PastaLean.PyAny from poly'rn xs x)
+
+private def _find_zero'derivative'rn := fun (x : Int) ↦ fun (dxs : List PyAny) ↦
+  (show PastaLean.PyAny from poly'rn dxs x)
+
+def find_zero'rn := fun (xs : List PyAny) ↦
+  Id.run
+    (do
+      /-
+       xs are coefficients of a polynomial.
+          find_zero find x such that poly(x) = 0.
+          find_zero returns only only zero point, even if there are many.
+          Moreover, find_zero only takes list xs having even number of coefficients
+          and largest non zero coefficient as it guarantees
+          a solution.
+          >>> round(find_zero([1, 2]), 2) # f(x) = 1 + 2x
+          -0.5
+          >>> round(find_zero([-6, 11, -6, 1]), 2) # (x - 1) * (x - 2) * (x - 3) = -6 + 11x - 6x^2 + x^3
+          1.0
+          
+      -/
+      let mut dxs : List PyAny := (PastaLean.pyRange (PastaLean.pyLen xs) (1 : Int)).map fun (i : Int) => xs⦋i⦌ *ₚ i
+      let mut x : Int := (0 : Int)
+      let mut tol := Float.ofScientific 1 true 5
+      for _ in (PastaLean.pyRange (1000 : Int))do
+        let mut fx := _find_zero'func'rn x xs
+        let mut dfx := _find_zero'derivative'rn x dxs
+        if h_1 : PastaLean.pyAbs fx < tol then 
+          break
+        x := x -ₚ PastaLean.pyFloat fx /ₚ dfx
+      return x)
 
 end PastaBench.humaneval.FindZero

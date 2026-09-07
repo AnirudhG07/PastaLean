@@ -65,6 +65,37 @@ def sum_squares := fun (lst : PyAny) ↦
         for p'_pair_1 in (PastaLean.pyIter (PastaLean.pyEnumerate lst))do
           let i := Prod.fst p'_pair_1
           let num := Prod.snd p'_pair_1
+          if h_1 : i %ₚ (3 : Int) = (0 : Int) then 
+            ans := ans +ₚ num ^ₚ (2 : Int)
+          else
+            if h_2 : i %ₚ (4 : Int) = (0 : Int) then 
+              ans := ans +ₚ num ^ₚ (3 : Int)
+            else
+              ans := ans +ₚ num
+        return (ans : PastaLean.PyAny)))
+
+attribute [simp] sum_squares
+
+def sum_squares'rn := fun (lst : PyAny) ↦
+  (show PastaLean.PyAny from
+    Id.run
+      (do
+        /-
+        "
+            This function will take a list of integers. For all entries in the list, the function shall square the integer entry if its index is a 
+            multiple of 3 and will cube the integer entry if its index is a multiple of 4 and not a multiple of 3. The function will not 
+            change the entries in the list whose indexes are not a multiple of 3 or 4. The function shall then return the sum of all entries. 
+            
+            Examples:
+            For lst = [1,2,3] the output should be 6
+            For lst = []  the output should be 0
+            For lst = [-1,-5,2,-1,-5]  the output should be -126
+            
+        -/
+        let mut ans : PyAny := (0 : Int)
+        for p'_pair_1 in (PastaLean.pyIter (PastaLean.pyEnumerate lst))do
+          let i := Prod.fst p'_pair_1
+          let num := Prod.snd p'_pair_1
           if h_1 : i %ₚ (3 : Int) == (0 : Int) then 
             ans := ans +ₚ num ^ₚ (2 : Int)
           else

@@ -42,4 +42,17 @@ def is_equal_to_sum_even := fun (n : Int) ↦
   -/
   if PastaLean.pyTruthy (decide (n ≥ (8 : Int))) then n %ₚ (2 : Int) == (0 : Int) else decide (n ≥ (8 : Int))
 
+attribute [simp, taste_ingr] is_equal_to_sum_even
+
+def is_equal_to_sum_even'rn := fun (n : Int) ↦
+  /-
+  Evaluate whether the given number n can be written as the sum of exactly 4 positive even numbers
+      Example
+      is_equal_to_sum_even(4) == False
+      is_equal_to_sum_even(6) == False
+      is_equal_to_sum_even(8) == True
+      
+  -/
+  if PastaLean.pyTruthy (decide (n ≥ (8 : Int))) then n %ₚ (2 : Int) == (0 : Int) else decide (n ≥ (8 : Int))
+
 end PastaBench.humaneval.IsEqualToSumEven

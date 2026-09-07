@@ -150,6 +150,11 @@ structure State where
   `defaultdict(…)`/`Counter(…)`). `d.pop(k)` on a dict is the DICT pop (remove key, return value),
   which shares the method name with a 1-arg `list.pop(i)`; the receiver's dict-ness disambiguates. -/
   dictVars : HashSet Name := HashSet.emptyWithCapacity 16
+  /-- Variables whose slot type is `Option T` (a `None`-initialised sentinel local, `ans = None`, later
+  reassigned a `T`). Ordered comparisons (`t < ans`) and the `X if ans is None else ans` coalescing
+  return must UNWRAP the `Option` — there is no `String < Option String` / `Option String → String`.
+  `pyLen`/`is None`/reassignment already handle the `Option` directly, so those are left untouched. -/
+  optionVars : HashSet Name := HashSet.emptyWithCapacity 16
   /-- Variables bound with `let mut` (reassignable in place). An immutable `let` loop var that a body
   reassigns to a different type is shadowed instead; a `let mut` (incl. a `PyAny` slot) is not. -/
   mutVars : HashSet Name := HashSet.emptyWithCapacity 32
@@ -323,6 +328,7 @@ def withFixedVariables {α : Type} (x : PygenM α) : PygenM α := do
      withPygenStateField (·.sortedVars) (fun st sortedVars => { st with sortedVars := sortedVars }) (← get).sortedVars <|
       withPygenStateField (·.libObjVars) (fun st libObjVars => { st with libObjVars := libObjVars }) (← get).libObjVars <|
       withPygenStateField (·.dictVars) (fun st dictVars => { st with dictVars := dictVars }) (← get).dictVars <|
+       withPygenStateField (·.optionVars) (fun st optionVars => { st with optionVars := optionVars }) (← get).optionVars <|
        withPygenStateField (·.renames) (fun st renames => { st with renames := renames }) (← get).renames <|
         withPygenStateField (·.mutVars) (fun st mutVars => { st with mutVars := mutVars }) (← get).mutVars <|
          withPygenStateField (·.pyAnySlotVars) (fun st v => { st with pyAnySlotVars := v }) (← get).pyAnySlotVars x
@@ -428,6 +434,14 @@ def isSetVar (name : Name) : PygenM Bool := do
 /-- Mark (`isSet := true`) or unmark a variable as holding a Python `set`. -/
 def setSetVar (name : Name) (isSet : Bool) : PygenM Unit := do
   modify fun st => { st with setVars := if isSet then st.setVars.insert name else st.setVars.erase name }
+
+def isOptionVar (name : Name) : PygenM Bool := do
+  return (← get).optionVars.contains name
+
+/-- Mark a variable as holding an `Option T` slot (never unmarked: a plain reassignment `ans = t`
+keeps the `Option` slot, coercing `t` to `some t`). -/
+def setOptionVar (name : Name) : PygenM Unit := do
+  modify fun st => { st with optionVars := st.optionVars.insert name }
 
 def isDictVar (name : Name) : PygenM Bool := do
   return (← get).dictVars.contains name

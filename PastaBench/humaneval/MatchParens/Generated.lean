@@ -51,13 +51,13 @@ private def _match_parens'valid_parens := fun (s : String) ↦
     (do
       let mut cnt : Int := (0 : Int)
       for ch in (PastaLean.pyIter s)do
-        cnt := if ch == "(" then cnt +ₚ (1 : Int) else cnt -ₚ (1 : Int)
+        cnt := if ch = "(" then cnt +ₚ (1 : Int) else cnt -ₚ (1 : Int)
         if h_1 : cnt < (0 : Int) then 
           return Bool.false
-        else
-          let _ := ()
       let p'_ret_1 := cnt == (0 : Int)
       return p'_ret_1)
+
+attribute [simp, taste_ingr] _match_parens'valid_parens
 
 def match_parens := fun (lst : List String) ↦
   /-
@@ -77,8 +77,44 @@ def match_parens := fun (lst : List String) ↦
       
   -/
   if
-      PastaLean.pyTruthy (_match_parens'valid_parens (lst⦋(0 : Int)⦌ +ₚ lst⦋(1 : Int)⦌)) ||
-        PastaLean.pyTruthy (_match_parens'valid_parens (lst⦋(1 : Int)⦌ +ₚ lst⦋(0 : Int)⦌)) then
+      PastaLean.pyTruthy (_match_parens'valid_parens (lst⦋(0 : Int)⦌ +ₚ lst⦋(1 : Int)⦌)) = true ∨
+        PastaLean.pyTruthy (_match_parens'valid_parens (lst⦋(1 : Int)⦌ +ₚ lst⦋(0 : Int)⦌)) = true then
+    "Yes"
+  else "No"
+
+attribute [simp, taste_ingr] match_parens
+
+private def _match_parens'valid_parens'rn := fun (s : String) ↦
+  Id.run
+    (do
+      let mut cnt : Int := (0 : Int)
+      for ch in (PastaLean.pyIter s)do
+        cnt := if ch == "(" then cnt +ₚ (1 : Int) else cnt -ₚ (1 : Int)
+        if h_1 : cnt < (0 : Int) then 
+          return Bool.false
+      let p'_ret_1 := cnt == (0 : Int)
+      return p'_ret_1)
+
+def match_parens'rn := fun (lst : List String) ↦
+  /-
+  
+      You are given a list of two strings, both strings consist of open
+      parentheses '(' or close parentheses ')' only.
+      Your job is to check if it is possible to concatenate the two strings in
+      some order, that the resulting string will be good.
+      A string S is considered to be good if and only if all parentheses in S
+      are balanced. For example: the string '(())()' is good, while the string
+      '())' is not.
+      Return 'Yes' if there's a way to make a good string, and return 'No' otherwise.
+  
+      Examples:
+      match_parens(['()(', ')']) == 'Yes'
+      match_parens([')', ')']) == 'No'
+      
+  -/
+  if
+      PastaLean.pyTruthy (_match_parens'valid_parens'rn (lst⦋(0 : Int)⦌ +ₚ lst⦋(1 : Int)⦌)) ||
+        PastaLean.pyTruthy (_match_parens'valid_parens'rn (lst⦋(1 : Int)⦌ +ₚ lst⦋(0 : Int)⦌)) then
     "Yes"
   else "No"
 

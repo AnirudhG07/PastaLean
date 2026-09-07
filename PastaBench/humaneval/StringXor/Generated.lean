@@ -45,4 +45,18 @@ def string_xor := fun (a : String) ↦ fun (b : String) ↦
     ((PastaLean.pyRange (PastaLean.pyLen a)).map fun (i : Int) =>
       PastaLean.pyStr (PastaLean.pyBitXor (PastaLean.pyInt a⦋i⦌) (PastaLean.pyInt b⦋i⦌)))
 
+attribute [simp, taste_ingr] string_xor
+
+def string_xor'rn := fun (a : String) ↦ fun (b : String) ↦
+  /-
+   Input are two strings a and b consisting only of 1s and 0s.
+      Perform binary XOR on these inputs and return result also as a string.
+      >>> string_xor('010', '110')
+      '100'
+      
+  -/
+  PastaLean.pyStringJoin ""
+    ((PastaLean.pyRange (PastaLean.pyLen a)).map fun (i : Int) =>
+      PastaLean.pyStr (PastaLean.pyBitXor (PastaLean.pyInt a⦋i⦌) (PastaLean.pyInt b⦋i⦌)))
+
 end PastaBench.humaneval.StringXor

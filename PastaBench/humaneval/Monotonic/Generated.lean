@@ -56,12 +56,33 @@ def monotonic := fun (l : List PyAny) ↦
       for i in (PastaLean.pyRange (PastaLean.pyLen l -ₚ (1 : Int)))do
         if h_1 : l⦋i⦌ > l⦋i +ₚ (1 : Int)⦌ then 
           inc := Bool.false
-        else
-          let _ := ()
         if h_2 : l⦋i⦌ < l⦋i +ₚ (1 : Int)⦌ then 
           dec := Bool.false
-        else
-          let _ := ()
+      let p'_ret_1 := if PastaLean.pyTruthy inc then inc else dec
+      return p'_ret_1)
+
+attribute [simp, taste_ingr] monotonic
+
+def monotonic'rn := fun (l : List PyAny) ↦
+  Id.run
+    (do
+      /-
+      Return True is list elements are monotonically increasing or decreasing.
+          >>> monotonic([1, 2, 4, 20])
+          True
+          >>> monotonic([1, 20, 4, 10])
+          False
+          >>> monotonic([4, 1, 0, -10])
+          True
+          
+      -/
+      let mut inc : Bool := Bool.true
+      let mut dec : Bool := Bool.true
+      for i in (PastaLean.pyRange (PastaLean.pyLen l -ₚ (1 : Int)))do
+        if h_1 : l⦋i⦌ > l⦋i +ₚ (1 : Int)⦌ then 
+          inc := Bool.false
+        if h_2 : l⦋i⦌ < l⦋i +ₚ (1 : Int)⦌ then 
+          dec := Bool.false
       let p'_ret_1 := if PastaLean.pyTruthy inc then inc else dec
       return p'_ret_1)
 

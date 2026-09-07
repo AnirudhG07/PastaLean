@@ -43,7 +43,41 @@ def find_closest_elements(numbers: List[float]) -> Tuple[float, float]:
 
 namespace PastaBench.humaneval.FindClosestElements
 
-def find_closest_elements := fun (numbers : List Float) ↦
+def find_closest_elements := fun (numbers : List Rat) ↦
+  Id.run
+    (do
+      let mut numbers := numbers
+      /-
+       From a supplied list of numbers (of length at least two) select and return two that are the closest to each
+          other and return them in order (smaller number, larger number).
+          >>> find_closest_elements([1.0, 2.0, 3.0, 4.0, 5.0, 2.2])
+          (2.0, 2.2)
+          >>> find_closest_elements([1.0, 2.0, 3.0, 4.0, 5.0, 2.0])
+          (2.0, 2.0)
+          
+      -/
+      numbers := PastaLean.pySort numbers
+      let mut min_diff := PastaLean.pyNonFinite "inf"
+      let mut min_pair : Option (Rat × Rat) := Option.none
+      for p'_pair_1 in
+        (PastaLean.pyIter
+          (PastaLean.pyZip (PastaLean.pySlice numbers none (some (-(1 : Int))) none)
+            (PastaLean.pySlice numbers (some (1 : Int)) none none)))do
+        let l := Prod.fst p'_pair_1
+        let r := Prod.snd p'_pair_1
+        let mut diff := r -ₚ l
+        let mut min_pair'v1 : Option (Rat × Rat) := default
+        if h_1 : diff < min_diff then 
+          min_diff := diff
+          min_pair := (l, r)
+          min_pair'v1 := min_pair
+        else
+          min_pair'v1 := min_pair
+      return min_pair)
+
+attribute [simp, taste_ingr] find_closest_elements
+
+def find_closest_elements'rn := fun (numbers : List Float) ↦
   Id.run
     (do
       let mut numbers := numbers

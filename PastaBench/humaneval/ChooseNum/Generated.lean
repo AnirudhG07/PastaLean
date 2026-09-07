@@ -49,6 +49,24 @@ def choose_num := fun x ↦ fun (y : Int) ↦
   -/
   if x > y then -(1 : Int)
   else
+    if x = y then if y %ₚ (2 : Int) = (0 : Int) then y else -(1 : Int)
+    else if y %ₚ (2 : Int) = (0 : Int) then y else y -ₚ (1 : Int)
+
+attribute [simp, taste_ingr] choose_num
+
+def choose_num'rn := fun x ↦ fun (y : Int) ↦
+  /-
+  This function takes two positive numbers x and y and returns the
+      biggest even integer number that is in the range [x, y] inclusive. If 
+      there's no such number, then the function should return -1.
+  
+      For example:
+      choose_num(12, 15) = 14
+      choose_num(13, 12) = -1
+      
+  -/
+  if x > y then -(1 : Int)
+  else
     if x == y then if y %ₚ (2 : Int) == (0 : Int) then y else -(1 : Int)
     else if y %ₚ (2 : Int) == (0 : Int) then y else y -ₚ (1 : Int)
 

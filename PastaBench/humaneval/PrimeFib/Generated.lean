@@ -76,51 +76,41 @@ def prime_fib(n: int):
 
 namespace PastaBench.humaneval.PrimeFib
 
-private def _prime_fib'miller_rabin (n : Int) (k : _ := (10 : Int)) :=
-  ((do
-      /-
-      Test if n is prime using the Miller-Rabin primality test.
-      -/
-      if h_1 : n < (2 : Int) then 
-        return Bool.false
-      else
-        let _ := ()
-      if h_2 : n == (2 : Int) || n == (3 : Int) then 
-        return Bool.true
-      else
-        let _ := ()
-      if h_3 : n %ₚ (2 : Int) == (0 : Int) then 
-        return Bool.false
-      else
-        let _ := ()
-      let mut r : Int := (0 : Int)
-      let mut d : Int := n -ₚ (1 : Int)
-      while (d %ₚ (2 : Int) == (0 : Int)) do
-        r := r +ₚ (1 : Int)
-        d := PastaLean.pyFloorDiv d (2 : Int)
-      for _ in (PastaLean.pyRange k)do
-        let mut a : Int := (← Libraries.random.pyRandomRandint (2 : Int) (n -ₚ (2 : Int)))
-        let mut x := PastaLean.pyPow a d n
-        if h_4 : x == (1 : Int) || x == n -ₚ (1 : Int) then 
-          continue
-        else
-          let _ := ()
-        let mut p'_broke_1 := false
-        for _ in (PastaLean.pyRange (r -ₚ (1 : Int)))do
-          x := PastaLean.pyPow x (2 : Int) n
-          if h_5 : x == n -ₚ (1 : Int) then 
-            p'_broke_1 := true
-            break
-          else
-            let _ := ()
-        if (!p'_broke_1) then 
-          return Bool.false
-        else
-          let _ := ()
-      return Bool.true) :
-    IO _)
+private def _prime_fib'miller_rabin (n : Int) (k : Int := (10 : Int)) : PastaLean.ProofMode.PyProofM Bool := do
+  /-
+  Test if n is prime using the Miller-Rabin primality test.
+  -/
+  if h_1 : n < (2 : Int) then 
+    return Bool.false
+  if h_2 : n = (2 : Int) ∨ n = (3 : Int) then 
+    return Bool.true
+  if h_3 : n %ₚ (2 : Int) = (0 : Int) then 
+    return Bool.false
+  let mut r : Int := (0 : Int)
+  let mut d : Int := n -ₚ (1 : Int)
+  while (d %ₚ (2 : Int) = (0 : Int)) do
+    r := r +ₚ (1 : Int)
+    d := PastaLean.pyFloorDiv d (2 : Int)
+  for _ in (PastaLean.pyRange k)do
+    let mut a : Int := (← Libraries.random.pyRandomRandintProof (2 : Int) (n -ₚ (2 : Int)))
+    let mut x := PastaLean.pyPow a d n
+    if h_4 : x = (1 : Int) ∨ x = n -ₚ (1 : Int) then 
+      continue
+    let mut p'_broke_1 := false
+    for _ in (PastaLean.pyRange (r -ₚ (1 : Int)))do
+      x := PastaLean.pyPow x (2 : Int) n
+      if h_5 : x = n -ₚ (1 : Int) then 
+        p'_broke_1 := true
+        break
+    if (!p'_broke_1) then 
+      return Bool.false
+    else
+      let _ := ()
+  return Bool.true
 
-def prime_fib : Int → IO Int := fun (n : Int) ↦ do
+attribute [simp] _prime_fib'miller_rabin
+
+def prime_fib : Int → PastaLean.ProofMode.PyProofM Int := fun (n : Int) ↦ do
   /-
   
       prime_fib returns n-th number that is a Fibonacci number and it's also prime.
@@ -145,10 +135,71 @@ def prime_fib : Int → IO Int := fun (n : Int) ↦ do
     let p'_unpack_pair_1 := p'_unpack_value_1
     a := Prod.fst p'_unpack_pair_1
     b := Prod.snd p'_unpack_pair_1
-    if h_1 : PastaLean.pyTruthy (← _prime_fib'miller_rabin b) then 
+    if h_4 : PastaLean.pyTruthy (← _prime_fib'miller_rabin b) then 
       c_prime := c_prime +ₚ (1 : Int)
+  return b
+
+attribute [simp] prime_fib
+
+private def _prime_fib'miller_rabin'rn (n : Int) (k : Int := (10 : Int)) : IO Bool := do
+  /-
+  Test if n is prime using the Miller-Rabin primality test.
+  -/
+  if h_1 : n < (2 : Int) then 
+    return Bool.false
+  if h_2 : n == (2 : Int) || n == (3 : Int) then 
+    return Bool.true
+  if h_3 : n %ₚ (2 : Int) == (0 : Int) then 
+    return Bool.false
+  let mut r : Int := (0 : Int)
+  let mut d : Int := n -ₚ (1 : Int)
+  while (d %ₚ (2 : Int) == (0 : Int)) do
+    r := r +ₚ (1 : Int)
+    d := PastaLean.pyFloorDiv d (2 : Int)
+  for _ in (PastaLean.pyRange k)do
+    let mut a : Int := (← Libraries.random.pyRandomRandint (2 : Int) (n -ₚ (2 : Int)))
+    let mut x := PastaLean.pyPow a d n
+    if h_4 : x == (1 : Int) || x == n -ₚ (1 : Int) then 
+      continue
+    let mut p'_broke_1 := false
+    for _ in (PastaLean.pyRange (r -ₚ (1 : Int)))do
+      x := PastaLean.pyPow x (2 : Int) n
+      if h_5 : x == n -ₚ (1 : Int) then 
+        p'_broke_1 := true
+        break
+    if (!p'_broke_1) then 
+      return Bool.false
     else
       let _ := ()
+  return Bool.true
+
+def prime_fib'rn : Int → IO Int := fun (n : Int) ↦ do
+  /-
+  
+      prime_fib returns n-th number that is a Fibonacci number and it's also prime.
+      >>> prime_fib(1)
+      2
+      >>> prime_fib(2)
+      3
+      >>> prime_fib(3)
+      5
+      >>> prime_fib(4)
+      13
+      >>> prime_fib(5)
+      89
+      
+  -/
+  let _ := ()
+  let mut c_prime : Int := (0 : Int)
+  let mut a : Int := (0 : Int)
+  let mut b : Int := (1 : Int)
+  while (c_prime < n) do
+    let p'_unpack_value_1 := (b, a +ₚ b)
+    let p'_unpack_pair_1 := p'_unpack_value_1
+    a := Prod.fst p'_unpack_pair_1
+    b := Prod.snd p'_unpack_pair_1
+    if h_4 : PastaLean.pyTruthy (← _prime_fib'miller_rabin'rn b) then 
+      c_prime := c_prime +ₚ (1 : Int)
   return b
 
 end PastaBench.humaneval.PrimeFib

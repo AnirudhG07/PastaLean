@@ -65,11 +65,39 @@ def modp := fun (n : Int) ↦ fun (p : Int) ↦
       -/
       let mut res : Int := (1 : Int)
       let mut x : Int := (2 : Int)
+      while (n ≠ (0 : Int)) do
+        if h_1 : n %ₚ (2 : Int) = (1 : Int) then 
+          res := res *ₚ x %ₚ p
+        x := x *ₚ x %ₚ p
+        n := PastaLean.pyFloorDiv n (2 : Int)
+      let p'_ret_1 := res %ₚ p
+      return p'_ret_1)
+
+attribute [simp, taste_ingr] modp
+
+def modp'rn := fun (n : Int) ↦ fun (p : Int) ↦
+  Id.run
+    (do
+      let mut n := n
+      /-
+      Return 2^n modulo p (be aware of numerics).
+          >>> modp(3, 5)
+          3
+          >>> modp(1101, 101)
+          2
+          >>> modp(0, 101)
+          1
+          >>> modp(3, 11)
+          8
+          >>> modp(100, 101)
+          1
+          
+      -/
+      let mut res : Int := (1 : Int)
+      let mut x : Int := (2 : Int)
       while (n != (0 : Int)) do
         if h_1 : n %ₚ (2 : Int) == (1 : Int) then 
           res := res *ₚ x %ₚ p
-        else
-          let _ := ()
         x := x *ₚ x %ₚ p
         n := PastaLean.pyFloorDiv n (2 : Int)
       let p'_ret_1 := res %ₚ p

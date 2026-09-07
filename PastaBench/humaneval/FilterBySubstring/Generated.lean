@@ -44,4 +44,17 @@ def filter_by_substring := fun (strings : List String) ↦ fun (substring : Stri
   -/
   PastaLean.pyList (PastaLean.pyFilter (fun s ↦ PastaLean.pyContains s substring) strings)
 
+attribute [simp, taste_ingr] filter_by_substring
+
+def filter_by_substring'rn := fun (strings : List String) ↦ fun (substring : String) ↦
+  /-
+   Filter an input list of strings only for ones that contain given substring
+      >>> filter_by_substring([], 'a')
+      []
+      >>> filter_by_substring(['abc', 'bacd', 'cde', 'array'], 'a')
+      ['abc', 'bacd', 'array']
+      
+  -/
+  PastaLean.pyList (PastaLean.pyFilter (fun s ↦ PastaLean.pyContains s substring) strings)
+
 end PastaBench.humaneval.FilterBySubstring

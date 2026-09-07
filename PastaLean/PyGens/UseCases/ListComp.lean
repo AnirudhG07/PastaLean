@@ -119,6 +119,17 @@ def listCompTargetLambda (targetJson : Json) (body : TSyntax `term) :
   | _ =>
       throwError s!"Unsupported comprehension target: {targetJson}"
 
+/-- `[x for x in xs if p x]` maps the loop target to itself, so the `map` is the identity and the
+filtered iterable *is* the result. Detects that so the emitted term is `xs.filter p`, not
+`(xs.filter p).map fun x => x`. -/
+def identityComprehensionElement (targetJson eltJson : Json) : Bool :=
+  match jsonNodeType? targetJson, jsonNodeType? eltJson with
+  | some "Name", some "Name" =>
+      match targetJson.getObjValAs? String "id", eltJson.getObjValAs? String "id" with
+      | .ok t, .ok e => t == e
+      | _, _ => false
+  | _, _ => false
+
 /-- Apply a comprehension generator's `pyIter` normalization and `if`-clause filters to an
 already-lowered base iterable term `baseIter`. Factored out so the same logic applies whether
 the iterable is pure or has been awaited from an `IO` action. -/
@@ -194,7 +205,11 @@ def lowerComprehensionClauses (eltJson : Json) (generators : List Json) :
         let memoComp ← match ← getMemoizeSelf with
           | some (memoName, _) => pure (jsonCallsName memoName eltJson)
           | none => pure false
-        if memoComp then
+        -- A comprehension element that AWAITS (`[trie.search(w) for w in words]` under `--heap`, or a
+        -- memoized self-call) cannot sit in a plain `.map` lambda (`fun w => (← search)` can't lift the
+        -- `←`). Run it with `mapM` over `do return <elt>` and await the whole list, so the effect threads.
+        let effectfulElt := memoComp || ((← getHeapMode) && jsonUsesHeapEffect eltJson)
+        if effectfulElt then
           let mapper ← listCompTargetLambda targetJson (← `((do return $eltCode)))
           let baseIter ←
             match ← heapContainerDeref? iterJson with
@@ -216,6 +231,9 @@ def lowerComprehensionClauses (eltJson : Json) (generators : List Json) :
             if jsonUsesIOEffect iterJson then inlineEffectfulTerm iterJson
             else getCode iterJson `term
         let filtered ← comprehensionFilterOver compJson baseIter
+        -- `[x for x in xs if …]`: the map is the identity, so the filtered iterable is the answer.
+        if mapMethod.getId == `map && identityComprehensionElement targetJson eltJson then
+          return filtered
         -- Emit dot-form `iterable.map (fun x => …)` so the iterable (whose element type is known,
         -- e.g. `List ℤ`) elaborates first and *binds* the lambda's parameter type. With the
         -- prefix form `List.map (fun x => …) iterable`, an operator default-instance (e.g. the

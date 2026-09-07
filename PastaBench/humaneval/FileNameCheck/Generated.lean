@@ -67,6 +67,37 @@ def file_name_check := fun (file_name : String) ↦
     "No"
   else
     let f_list := (PastaLean.pyStringSplit file_name "." : List String)
+    if PastaLean.pyLen f_list ≠ (2 : Int) then "No"
+    else
+      if PastaLean.pyLen f_list⦋(0 : Int)⦌ = (0 : Int) then "No"
+      else
+        if ¬PastaLean.pyTruthy (PastaLean.pyIsAlpha f_list⦋(0 : Int)⦌⦋(0 : Int)⦌) = true then "No"
+        else if !(PastaLean.pyContains ["txt", "exe", "dll"] f_list⦋(1 : Int)⦌) then "No" else "Yes"
+
+attribute [simp, taste_ingr] file_name_check
+
+def file_name_check'rn := fun (file_name : String) ↦
+  /-
+  Create a function which takes a string representing a file's name, and returns
+      'Yes' if the the file's name is valid, and returns 'No' otherwise.
+      A file's name is considered to be valid if and only if all the following conditions 
+      are met:
+      - There should not be more than three digits ('0'-'9') in the file's name.
+      - The file's name contains exactly one dot '.'
+      - The substring before the dot should not be empty, and it starts with a letter from 
+      the latin alphapet ('a'-'z' and 'A'-'Z').
+      - The substring after the dot should be one of these: ['txt', 'exe', 'dll']
+      Examples:
+      file_name_check("example.txt") # => 'Yes'
+      file_name_check("1example.dll") # => 'No' (the name should start with a latin alphapet letter)
+      
+  -/
+  if
+      PastaLean.pyLen (PastaLean.pyList (PastaLean.pyFilter (fun ch ↦ PastaLean.pyIsDecimal ch) file_name)) >
+        (3 : Int) then
+    "No"
+  else
+    let f_list := (PastaLean.pyStringSplit file_name "." : List String)
     if PastaLean.pyLen f_list != (2 : Int) then "No"
     else
       if PastaLean.pyLen f_list⦋(0 : Int)⦌ == (0 : Int) then "No"

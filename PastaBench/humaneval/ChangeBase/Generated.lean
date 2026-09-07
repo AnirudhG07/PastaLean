@@ -58,10 +58,34 @@ def change_base := fun (x : Int) ↦ fun (base : Int) ↦
           '111'
           
       -/
+      if h_1 : x = (0 : Int) then 
+        return "0"
+      let mut ret : String := ""
+      while (x ≠ (0 : Int)) do
+        ret := PastaLean.pyStr (x %ₚ base) +ₚ ret
+        x := PastaLean.pyFloorDiv x base
+      return ret)
+
+attribute [simp, taste_ingr] change_base
+
+def change_base'rn := fun (x : Int) ↦ fun (base : Int) ↦
+  Id.run
+    (do
+      let mut x := x
+      /-
+      Change numerical base of input number x to base.
+          return string representation after the conversion.
+          base numbers are less than 10.
+          >>> change_base(8, 3)
+          '22'
+          >>> change_base(8, 2)
+          '1000'
+          >>> change_base(7, 2)
+          '111'
+          
+      -/
       if h_1 : x == (0 : Int) then 
         return "0"
-      else
-        let _ := ()
       let mut ret : String := ""
       while (x != (0 : Int)) do
         ret := PastaLean.pyStr (x %ₚ base) +ₚ ret

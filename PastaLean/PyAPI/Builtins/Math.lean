@@ -54,10 +54,10 @@ instance : PyAbs Rat where pyAbs x := if x < 0 then -x else x
 
 /-! ### `divmod` -/
 
-/-- Python `divmod(a, b) = (a // b, a % b)` with floor-division semantics (the remainder takes
-the sign of the divisor), so that `b * q + r = a` always holds. -/
+/-- Python `divmod(a, b) = (a // b, a % b)`, flooring quotient (`Int.fdiv`, matching `pyFloorDiv`)
+so the remainder `a - b*q` carries the divisor's sign, like Python. `divmod(-21, 10) = (-3, 9)`. -/
 def pyDivmod (a b : Int) : Int × Int :=
-  let q := if (a % b == 0) || ((a < 0) == (b < 0)) then a / b else a / b - 1
+  let q := Int.fdiv a b
   (q, a - b * q)
 
 /-! ### `round` -/

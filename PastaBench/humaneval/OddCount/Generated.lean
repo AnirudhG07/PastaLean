@@ -67,4 +67,31 @@ def odd_count := fun (lst : List String) ↦
         ans := PastaLean.pyAppend ans (PastaLean.pyStringReplace template "i" (PastaLean.pyStr odd_cnt))
       return ans)
 
+attribute [simp, taste_ingr] odd_count
+
+def odd_count'rn := fun (lst : List String) ↦
+  Id.run
+    (do
+      /-
+      Given a list of strings, where each string consists of only digits, return a list.
+          Each element i of the output should be "the number of odd elements in the
+          string i of the input." where all the i's should be replaced by the number
+          of odd digits in the i'th string of the input.
+      
+          >>> odd_count(['1234567'])
+          ["the number of odd elements 4n the str4ng 4 of the 4nput."]
+          >>> odd_count(['3',"11111111"])
+          ["the number of odd elements 1n the str1ng 1 of the 1nput.",
+           "the number of odd elements 8n the str8ng 8 of the 8nput."]
+          
+      -/
+      let mut ans : List String := []
+      let mut template : String := "the number of odd elements in the string i of the input."
+      for s in (PastaLean.pyIter lst)do
+        let mut odd_cnt : Int :=
+          PastaLean.pyLen
+            (PastaLean.pyList (PastaLean.pyFilter (fun ch ↦ PastaLean.pyInt ch %ₚ (2 : Int) == (1 : Int)) s))
+        ans := PastaLean.pyAppend ans (PastaLean.pyStringReplace template "i" (PastaLean.pyStr odd_cnt))
+      return ans)
+
 end PastaBench.humaneval.OddCount

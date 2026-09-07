@@ -66,4 +66,30 @@ def get_max_triples := fun (n : Int) ↦
     PastaLean.pyFloorDiv (one_cnt *ₚ (one_cnt -ₚ (1 : Int)) *ₚ (one_cnt -ₚ (2 : Int))) (6 : Int) +ₚ
       PastaLean.pyFloorDiv (zero_cnt *ₚ (zero_cnt -ₚ (1 : Int)) *ₚ (zero_cnt -ₚ (2 : Int))) (6 : Int)
 
+attribute [simp, taste_ingr] get_max_triples
+
+def get_max_triples'rn := fun (n : Int) ↦
+  /-
+  
+      You are given a positive integer n. You have to create an integer array a of length n.
+          For each i (1 ≤ i ≤ n), the value of a[i] = i * i - i + 1.
+          Return the number of triples (a[i], a[j], a[k]) of a where i < j < k, 
+      and a[i] + a[j] + a[k] is a multiple of 3.
+  
+      Example :
+          Input: n = 5
+          Output: 1
+          Explanation: 
+          a = [1, 3, 7, 13, 21]
+          The only valid triple is (1, 7, 13).
+      
+  -/
+  if n ≤ (2 : Int) then Bool.false
+  else
+    let one_cnt :=
+      ((1 : Int) +ₚ PastaLean.pyFloorDiv (n -ₚ (2 : Int)) (3 : Int) *ₚ (2 : Int) +ₚ (n -ₚ (2 : Int)) %ₚ (3 : Int) : Int)
+    let zero_cnt := (n -ₚ one_cnt : Int)
+    PastaLean.pyFloorDiv (one_cnt *ₚ (one_cnt -ₚ (1 : Int)) *ₚ (one_cnt -ₚ (2 : Int))) (6 : Int) +ₚ
+      PastaLean.pyFloorDiv (zero_cnt *ₚ (zero_cnt -ₚ (1 : Int)) *ₚ (zero_cnt -ₚ (2 : Int))) (6 : Int)
+
 end PastaBench.humaneval.GetMaxTriples

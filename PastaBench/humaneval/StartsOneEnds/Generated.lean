@@ -38,6 +38,17 @@ def starts_one_ends := fun (n : Int) ↦
       positive integers that start or end with 1.
       
   -/
+  if n = (1 : Int) then (1 : Int) else (18 : Int) *ₚ (10 : Int) ^ₚ (n -ₚ (2 : Int))
+
+attribute [simp, taste_ingr] starts_one_ends
+
+def starts_one_ends'rn := fun (n : Int) ↦
+  /-
+  
+      Given a positive integer n, return the count of the numbers of n-digit
+      positive integers that start or end with 1.
+      
+  -/
   if n == (1 : Int) then (1 : Int) else (18 : Int) *ₚ (10 : Int) ^ₚ (n -ₚ (2 : Int))
 
 end PastaBench.humaneval.StartsOneEnds

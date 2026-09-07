@@ -301,11 +301,28 @@ partial def markTuples (sigs : Sigs) (env : Env) (json : Json) : Json :=
     | .obj fs => Json.mkObj (fs.toList.map (fun (k, v) => (k, markTuples sigs env v)))
     | _ => json
 
+/-- Names tested against `None` (`x is None`, `x is not None`, `x == None`, `x != None`) anywhere in a
+tree — such a variable must STAY `Option` (the test needs the tag), so the `_narrow` cursor-unwrap
+below must NOT fire on it (a `node = node.children[i]` cursor that Python later checks `is None`). -/
+partial def collectNoneTested (json : Json) : Std.HashSet String := Id.run do
+  let mut acc : Std.HashSet String := {}
+  if nodeTypeOf json == some "Compare" then
+    if let some op := (json.getObjValAs? String "op").toOption then
+      if op == "is" || op == "isnot" || op == "eq" || op == "ne" then
+        for side in ["left", "right"] do
+          let other := if side == "left" then "right" else "left"
+          if (getField json side).any isNoneConst then
+            if let some nm := (getField json other).bind nameId? then acc := acc.insert nm
+  match json with
+  | .arr xs => xs.foldl (fun a x => collectNoneTested x |>.fold (·.insert ·) a) acc
+  | .obj fs => fs.foldl (fun a _ v => collectNoneTested v |>.fold (·.insert ·) a) acc
+  | _ => acc
+
 /-- Mark every `x.attr` whose receiver `x` is `Option`-typed with
 `_unwrap_opt`, so the field codegen emits `(x.getD default).attr` instead of the invalid
 `Option.attr` projection. Covers the tree/linked-list traversal case (`root.val`, `root.left`).
 Skips nested defs (own scope). -/
-partial def markOptAttrs (sigs : Sigs) (env : Env) (json : Json) : Json :=
+partial def markOptAttrs (sigs : Sigs) (env : Env) (noneTested : Std.HashSet String) (json : Json) : Json :=
   if nodeTypeOf json == some "FunctionDef" then json
   else
     let json :=
@@ -332,10 +349,33 @@ partial def markOptAttrs (sigs : Sigs) (env : Env) (json : Json) : Json :=
             || ((getField json "body").any isNoneConst && branchOpt "orelse") then
           json.setObjVal! "_branch_opt" (Json.bool true)
         else json
+      -- `node = node.children[idx]` — the trie/linked cursor WALK: a var reassigned from a SUBSCRIPT of
+      -- its OWN attribute (`node.<field>[idx]`), where that element is `Optional[Node]`. The value is
+      -- guarded non-`None` (a preceding `is None` check creates/returns), and the cursor's slot is a
+      -- bare node (fixed by the first `node = self`), so mark the value `_narrow` — codegen unwraps it
+      -- (`.get!`) to match. Keyed on the self-walk shape (target root == subscript's attribute root), so
+      -- it never fires on a genuine `Option` accumulator (`x = None; x = d.get(k)`). SKIP a cursor that
+      -- is later tested `is None` — there the `None` tag must survive (`node = node.children[v]` then
+      -- `if node is None: return`), so unwrapping to a bogus default ref would break the guard.
+      else if nodeTypeOf json == some "Assign" then
+        let tgtName := (getField json "target").bind nameId?
+          |>.orElse (fun _ => ((getField json "targets").bind (·.getArr?.toOption)).bind (·[0]?.bind nameId?))
+        match tgtName, getField json "value" with
+        | some tname, some v =>
+            let isSelfWalk :=
+              nodeTypeOf v == some "Subscript"
+              && (match (getField v "value") with
+                  | some inner => nodeTypeOf inner == some "Attribute"
+                      && ((getField inner "value").bind nameId? == some tname)
+                  | none => false)
+            match isSelfWalk && !noneTested.contains tname, typeOfExpr sigs env v with
+            | true, .opt (.cls _) => json.setObjVal! "value" (v.setObjVal! "_narrow" (Json.bool true))
+            | _, _ => json
+        | _, _ => json
       else json
     match json with
-    | .arr xs => Json.arr (xs.map (markOptAttrs sigs env))
-    | .obj fs => Json.mkObj (fs.toList.map (fun (k, v) => (k, markOptAttrs sigs env v)))
+    | .arr xs => Json.arr (xs.map (markOptAttrs sigs env noneTested))
+    | .obj fs => Json.mkObj (fs.toList.map (fun (k, v) => (k, markOptAttrs sigs env noneTested v)))
     | _ => json
 
 
@@ -555,6 +595,12 @@ partial def litMatchesNesting (full : Bool) (ty : PyType) (v : Json) : Bool :=
       -- 2D-DP idiom `[[inf]*(m) for _ in range(n)]`), as long as its element matches the inner nesting.
       || ((nodeTypeOf v == some "ListComp" || nodeTypeOf v == some "GeneratorExp")
           && (getField v "elt").any (litMatchesNesting full inner))
+      -- `[base] + [x]*n` — concatenation of two array-portable list expressions is itself array-safe
+      -- (the DP-init idiom `f = [1] + [0]*n`); each side is a `list` of the SAME type, so recurse with
+      -- `ty` (not `inner`). Keeps a big DP table an `Array` (O(1) `f[i]=v`) instead of a List (O(n²)).
+      || (nodeTypeOf v == some "BinOp" && (getField v "op").any (· == Json.str "add") &&
+          (let sides := [getField v "left", getField v "right"]
+           sides.all fun s? => (s?.map (litMatchesNesting full ty)).getD false))
   | _ => true
 
 /-- Every bare-`Name` assignment to `name` is a nesting-matching `List` literal (and there is at
@@ -648,6 +694,14 @@ partial def markSeqLit (v : Json) : Json :=
     if [getField v "left", getField v "right"].any (fun s? => s?.any (nodeTypeOf · == some "List")) then
       markSide "right" (markSide "left" (v.setObjVal! "_seq" (Json.str "array")))
     else v
+  else if nodeTypeOf v == some "BinOp" && (getField v "op").any (· == Json.str "add") then
+    -- `[base] + [x]*n`: back the concatenation as an `Array` and recurse into both list operands (so a
+    -- `[1]` prefix becomes `#[1]` and a `[0]*n` suffix becomes `pyArrayRepeat`, and `Array ++ Array`).
+    let markSide (k : String) (v : Json) : Json :=
+      match getField v k with
+      | some s => v.setObjVal! k (markSeqLit s)
+      | none => v
+    markSide "right" (markSide "left" (v.setObjVal! "_seq" (Json.str "array")))
   else if nodeTypeOf v == some "ListComp" || nodeTypeOf v == some "GeneratorExp" then
     -- `[<row> for …]`: back the comprehension result as an `Array` and its element (row) too.
     let v := v.setObjVal! "_seq" (Json.str "array")
@@ -834,8 +888,10 @@ partial def stampFunction (sigs : Sigs) (outer hints : Env) (fn : Json) : Json :
     | _ => fn
   let eligible := arrayEligibleVars env fn
   match fn.getObjValAs? (Array Json) "body" with
-  | .ok body => fn.setObjVal! "body"
-      (Json.arr ((((((body.map (stampStmt sigs env body)).map (markTuples sigs env)).map (markOptAttrs sigs env)).map
+  | .ok body =>
+    let noneTested := collectNoneTested (Json.arr body)
+    fn.setObjVal! "body"
+      (Json.arr ((((((body.map (stampStmt sigs env body)).map (markTuples sigs env)).map (markOptAttrs sigs env noneTested)).map
         (stampArraySeqs eligible)).map (stampCompTargets sigs env)).map (stampKeyLambdas sigs env)))
   | _ => fn
 
@@ -1249,5 +1305,58 @@ partial def stampStmt (sigs : Sigs) (env : Env) (roots : Array Json) (s : Json) 
 
 end
 
+/-- The root `Name` of an attribute/subscript chain (`node.children[i]` → `node`). -/
+private partial def chainRoot? (j : Json) : Option String :=
+  match nodeTypeOf j with
+  | some "Name" => nameId? j
+  | some "Attribute" | some "Subscript" => (getField j "value").bind chainRoot?
+  | _ => none
+
+/-- Whether an lvalue/rvalue chain passes through at least one `.attr` (so `node.next` counts, a bare
+`node` or `arr[i]` does not). -/
+private partial def chainHasAttr (j : Json) : Bool :=
+  match nodeTypeOf j with
+  | some "Attribute" => true
+  | some "Subscript" => (getField j "value").any chainHasAttr
+  | _ => false
+
+/-- A cursor-ADVANCE `node = node.<attr>…` (target Name equals the value chain's root, through ≥1
+attribute): the value re-reads the cursor's own field, i.e. walks a linked structure. -/
+private def cursorAdvanceName? (stmt : Json) : Option String :=
+  if nodeTypeOf stmt != some "Assign" then none else
+  match (getField stmt "target").bind nameId?, getField stmt "value" with
+  | some t, some v => if chainRoot? v == some t && chainHasAttr v then some t else none
+  | _, _ => none
+
+/-- A STRUCTURAL mutation `x.<field>[i] = …` — writing a CONTAINER ELEMENT of a cursor's field (the
+trie `node.children[idx] = Trie()`), the write value semantics silently drops. Returns the mutated
+cursor's root name. Deliberately NOT a plain scalar field write (`head.val = v`): value semantics
+handles that (the linked-list walk returns a correct accumulator even though the write is lost), so
+flagging it would needlessly force the heap tier on a program that already works. -/
+private def fieldMutationRoot? (stmt : Json) : Option String :=
+  let nt := nodeTypeOf stmt
+  if nt != some "Assign" && nt != some "AugAssign" then none else
+  match getField stmt "target" with
+  | some t =>
+      if nodeTypeOf t == some "Subscript" && (getField t "value").any chainHasAttr then chainRoot? t
+      else none
+  | none => none
+
+private partial def collectAll (f : Json → Option String) (j : Json) (acc : Std.HashSet String) : Std.HashSet String :=
+  let acc := match f j with | some s => acc.insert s | none => acc
+  match j with
+  | .arr xs => xs.foldl (fun a x => collectAll f x a) acc
+  | .obj fs => fs.foldl (fun a _ v => collectAll f v a) acc
+  | _ => acc
+
+/-- Best-effort detection that a program NEEDS reference (`--heap`) semantics: some cursor is BOTH
+advanced into its own field AND has that field mutated — the trie / linked-list / tree pattern that
+value semantics (which copies the cursor) silently drops. Conservative: both signals must name the
+SAME cursor, so an ordinary `arr[i] = v` or a read-only traversal never trips it. -/
+def astNeedsHeap (json : Json) : Bool :=
+  let advanced := collectAll cursorAdvanceName? json {}
+  if advanced.isEmpty then false else
+  let mutated := collectAll fieldMutationRoot? json {}
+  advanced.any mutated.contains
 
 end TypeInfer

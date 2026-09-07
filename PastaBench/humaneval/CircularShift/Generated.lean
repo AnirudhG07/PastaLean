@@ -55,6 +55,28 @@ def circular_shift := fun (x : PyAny) ↦ fun (shift : Int) ↦
   if shift > PastaLean.pyLen s then PastaLean.pySlice s none none (some (-(1 : Int)))
   else
     let shift := (shift %ₚ PastaLean.pyLen s : Int)
+    if shift = (0 : Int) then s
+    else
+      PastaLean.pySlice s (some (PastaLean.pyLen s -ₚ shift)) none none +ₚ
+        PastaLean.pySlice s none (some (PastaLean.pyLen s -ₚ shift)) none
+
+attribute [simp, taste_ingr] circular_shift
+
+def circular_shift'rn := fun (x : PyAny) ↦ fun (shift : Int) ↦
+  /-
+  Circular shift the digits of the integer x, shift the digits right by shift
+      and return the result as a string.
+      If shift > number of digits, return digits reversed.
+      >>> circular_shift(12, 1)
+      "21"
+      >>> circular_shift(12, 2)
+      "12"
+      
+  -/
+  let s := (PastaLean.pyStr x : String)
+  if shift > PastaLean.pyLen s then PastaLean.pySlice s none none (some (-(1 : Int)))
+  else
+    let shift := (shift %ₚ PastaLean.pyLen s : Int)
     if shift == (0 : Int) then s
     else
       PastaLean.pySlice s (some (PastaLean.pyLen s -ₚ shift)) none none +ₚ

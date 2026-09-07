@@ -78,29 +78,31 @@ def numerical_letter_grade(grades):
 
 namespace PastaBench.humaneval.NumericalLetterGrade
 
-private def _numerical_letter_grade'to_letter_grade := fun (score : Float) ↦
-  if score == (4.0 : Float) then "A+"
+private def _numerical_letter_grade'to_letter_grade := fun (score : Rat) ↦
+  if score = (4.0 : Rat) then "A+"
   else
-    if score > (3.7 : Float) then "A"
+    if score > (3.7 : Rat) then "A"
     else
-      if score > (3.3 : Float) then "A-"
+      if score > (3.3 : Rat) then "A-"
       else
-        if score > (3.0 : Float) then "B+"
+        if score > (3.0 : Rat) then "B+"
         else
-          if score > (2.7 : Float) then "B"
+          if score > (2.7 : Rat) then "B"
           else
-            if score > (2.3 : Float) then "B-"
+            if score > (2.3 : Rat) then "B-"
             else
-              if score > (2.0 : Float) then "C+"
+              if score > (2.0 : Rat) then "C+"
               else
-                if score > (1.7 : Float) then "C"
+                if score > (1.7 : Rat) then "C"
                 else
-                  if score > (1.3 : Float) then "C-"
+                  if score > (1.3 : Rat) then "C-"
                   else
-                    if score > (1.0 : Float) then "D+"
-                    else if score > (0.7 : Float) then "D" else if score > (0.0 : Float) then "D-" else "E"
+                    if score > (1.0 : Rat) then "D+"
+                    else if score > (0.7 : Rat) then "D" else if score > (0.0 : Rat) then "D-" else "E"
 
-def numerical_letter_grade := fun (grades : List Float) ↦
+attribute [simp, taste_ingr] _numerical_letter_grade'to_letter_grade
+
+def numerical_letter_grade := fun (grades : List Rat) ↦
   /-
   It is the last week of the semester and the teacher has to give the grades
       to students. The teacher has been making her own algorithm for grading.
@@ -127,6 +129,59 @@ def numerical_letter_grade := fun (grades : List Float) ↦
       grade_equation([4.0, 3, 1.7, 2, 3.5]) ==> ['A+', 'B', 'C-', 'C', 'A-']
       
   -/
-  (PastaLean.pyIter grades).map fun (x : Float) => _numerical_letter_grade'to_letter_grade x
+  (PastaLean.pyIter grades).map fun (x : Rat) => _numerical_letter_grade'to_letter_grade x
+
+attribute [simp, taste_ingr] numerical_letter_grade
+
+private def _numerical_letter_grade'to_letter_grade'rn := fun (score : Float) ↦
+  if score == (4.0 : Float) then "A+"
+  else
+    if score > (3.7 : Float) then "A"
+    else
+      if score > (3.3 : Float) then "A-"
+      else
+        if score > (3.0 : Float) then "B+"
+        else
+          if score > (2.7 : Float) then "B"
+          else
+            if score > (2.3 : Float) then "B-"
+            else
+              if score > (2.0 : Float) then "C+"
+              else
+                if score > (1.7 : Float) then "C"
+                else
+                  if score > (1.3 : Float) then "C-"
+                  else
+                    if score > (1.0 : Float) then "D+"
+                    else if score > (0.7 : Float) then "D" else if score > (0.0 : Float) then "D-" else "E"
+
+def numerical_letter_grade'rn := fun (grades : List Float) ↦
+  /-
+  It is the last week of the semester and the teacher has to give the grades
+      to students. The teacher has been making her own algorithm for grading.
+      The only problem is, she has lost the code she used for grading.
+      She has given you a list of GPAs for some students and you have to write 
+      a function that can output a list of letter grades using the following table:
+               GPA       |    Letter grade
+                4.0                A+
+              > 3.7                A 
+              > 3.3                A- 
+              > 3.0                B+
+              > 2.7                B 
+              > 2.3                B-
+              > 2.0                C+
+              > 1.7                C
+              > 1.3                C-
+              > 1.0                D+ 
+              > 0.7                D 
+              > 0.0                D-
+                0.0                E
+      
+  
+      Example:
+      grade_equation([4.0, 3, 1.7, 2, 3.5]) ==> ['A+', 'B', 'C-', 'C', 'A-']
+      
+  -/
+  (PastaLean.pyIter grades).map fun (x : Float) => _numerical_letter_grade'to_letter_grade'rn x
 
 end PastaBench.humaneval.NumericalLetterGrade

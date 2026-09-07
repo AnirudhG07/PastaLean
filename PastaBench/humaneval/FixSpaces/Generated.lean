@@ -59,4 +59,27 @@ def fix_spaces := fun (text : String) ↦
       let p'_ret_1 := PastaLean.pyStringReplace ans " " "_"
       return p'_ret_1)
 
+attribute [simp, taste_ingr] fix_spaces
+
+def fix_spaces'rn := fun (text : String) ↦
+  Id.run
+    (do
+      /-
+      
+          Given a string text, replace all spaces in it with underscores, 
+          and if a string has more than 2 consecutive spaces, 
+          then replace all consecutive spaces with - 
+          
+          fix_spaces("Example") == "Example"
+          fix_spaces("Example 1") == "Example_1"
+          fix_spaces(" Example 2") == "_Example_2"
+          fix_spaces(" Example   3") == "_Example-3"
+          
+      -/
+      let mut ans : String := text
+      for i in (PastaLean.pyRange (2 : Int) (PastaLean.pyLen text) (-(1 : Int)))do
+        ans := PastaLean.pyStringReplace ans (" " *ₚ i) "-"
+      let p'_ret_1 := PastaLean.pyStringReplace ans " " "_"
+      return p'_ret_1)
+
 end PastaBench.humaneval.FixSpaces

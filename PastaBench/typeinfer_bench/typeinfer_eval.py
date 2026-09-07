@@ -530,7 +530,7 @@ def run_typeinfer_engine(snippets, jobs, out_total, out_by_cat, out_per_snippet)
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--bench", type=Path, default=DEFAULT_BENCH)
-    ap.add_argument("--out", type=Path, default=Path("typeinfer_bench/typeinfer_summary.json"))
+    ap.add_argument("--out", type=Path, default=Path(__file__).resolve().parent / "typeinfer_summary.json")
     ap.add_argument("--diff", default=None, help="Dump per-fact pred-vs-gold for snippets in this category")
     ap.add_argument("--misses", action="store_true", help="Aggregate the most common miss patterns globally")
     ap.add_argument("--limit", type=int, default=None, help="Only run the first N snippets (for a quick slice)")

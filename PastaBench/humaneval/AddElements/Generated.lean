@@ -44,7 +44,9 @@ namespace PastaBench.humaneval.AddElements
 
 private def _add_elements'digits := fun (x : Int) ↦
   let s := (PastaLean.pyStr x : String)
-  if s⦋(0 : Int)⦌ == "-" then PastaLean.pyLen s -ₚ (1 : Int) else PastaLean.pyLen s
+  if s⦋(0 : Int)⦌ = "-" then PastaLean.pyLen s -ₚ (1 : Int) else PastaLean.pyLen s
+
+attribute [simp, taste_ingr] _add_elements'digits
 
 def add_elements := fun (arr : List Int) ↦ fun k ↦
   /-
@@ -64,6 +66,32 @@ def add_elements := fun (arr : List Int) ↦ fun k ↦
   -/
   PastaLean.pySum
     (PastaLean.pyFilter (fun x ↦ decide (_add_elements'digits x ≤ (2 : Int)))
+      (PastaLean.pySlice arr none (some k) none))
+
+attribute [simp, taste_ingr] add_elements
+
+private def _add_elements'digits'rn := fun (x : Int) ↦
+  let s := (PastaLean.pyStr x : String)
+  if s⦋(0 : Int)⦌ == "-" then PastaLean.pyLen s -ₚ (1 : Int) else PastaLean.pyLen s
+
+def add_elements'rn := fun (arr : List Int) ↦ fun k ↦
+  /-
+  
+      Given a non-empty array of integers arr and an integer k, return
+      the sum of the elements with at most two digits from the first k elements of arr.
+  
+      Example:
+  
+          Input: arr = [111,21,3,4000,5,6,7,8,9], k = 4
+          Output: 24 # sum of 21 + 3
+  
+      Constraints:
+          1. 1 <= len(arr) <= 100
+          2. 1 <= k <= len(arr)
+      
+  -/
+  PastaLean.pySum
+    (PastaLean.pyFilter (fun x ↦ decide (_add_elements'digits'rn x ≤ (2 : Int)))
       (PastaLean.pySlice arr none (some k) none))
 
 end PastaBench.humaneval.AddElements

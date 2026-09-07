@@ -41,7 +41,32 @@ def remove_vowels(text):
 
 namespace PastaBench.humaneval.RemoveVowels
 
-def remove_vowels := fun text ↦
+def remove_vowels := fun (text : PyAny) ↦
+  /-
+  
+      remove_vowels is a function that takes string and returns string without vowels.
+      >>> remove_vowels('')
+      ''
+      >>> remove_vowels("abcdef
+  ghijklm")
+      'bcdf
+  ghjklm'
+      >>> remove_vowels('abcdef')
+      'bcdf'
+      >>> remove_vowels('aaaaa')
+      ''
+      >>> remove_vowels('aaBAA')
+      'B'
+      >>> remove_vowels('zbcd')
+      'zbcd'
+      
+  -/
+  PastaLean.pyStringJoin ""
+    (PastaLean.pyList (PastaLean.pyFilter (fun ch ↦ !(PastaLean.pyContains "aeiouAEIOU" ch)) text))
+
+attribute [simp, taste_ingr] remove_vowels
+
+def remove_vowels'rn := fun (text : PyAny) ↦
   /-
   
       remove_vowels is a function that takes string and returns string without vowels.

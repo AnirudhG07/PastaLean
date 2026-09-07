@@ -46,7 +46,14 @@ def sum_to_n := fun (n : Int) ↦ PastaLean.pyFloorDiv ((n +ₚ (1 : Int)) *ₚ 
 attribute [simp] sum_to_n
 
 @[taste_ingr]
-theorem sum_to_n_correct : ∀ (n : Int), n ≥ (0 : Int) → (2 : Int) *ₚ sum_to_n n = n *ₚ (n +ₚ (1 : Int)) := by taste?
+theorem sum_to_n_correct : ∀ (n : Int), n ≥ (0 : Int) → (2 : Int) *ₚ sum_to_n n = n *ₚ (n +ₚ (1 : Int)) := by
+  intro n _
+  obtain ⟨k, hk⟩ := (Int.even_mul_succ_self n).two_dvd
+  have hc : (n + 1) * n = 2 * k := by rw [mul_comm]; exact hk
+  simp only [sum_to_n, taste_ingr, PastaLean.pyFloorDiv, PyFloorDiv.floorDiv]
+  rw [if_neg (by decide), hc, Int.mul_fdiv_cancel_left k (by decide)]
+  omega
+
 
 def sum_to_n'rn := fun (n : Int) ↦ PastaLean.pyFloorDiv ((n +ₚ (1 : Int)) *ₚ n) (2 : Int)
 

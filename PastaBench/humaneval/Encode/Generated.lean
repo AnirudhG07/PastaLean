@@ -53,6 +53,43 @@ namespace PastaBench.humaneval.Encode
 
 private def _encode'switch_case := fun (ch : PyAny) ↦
   (show PastaLean.PyAny from
+    if PastaLean.pyOrd "A" ≤ PastaLean.pyOrd ch ∧ PastaLean.pyOrd ch ≤ PastaLean.pyOrd "Z" then
+      PastaLean.pyChr (PastaLean.pyOrd ch +ₚ (32 : Int))
+    else
+      if PastaLean.pyOrd "a" ≤ PastaLean.pyOrd ch ∧ PastaLean.pyOrd ch ≤ PastaLean.pyOrd "z" then
+        PastaLean.pyChr (PastaLean.pyOrd ch -ₚ (32 : Int))
+      else ch)
+
+attribute [simp] _encode'switch_case
+
+private def _encode'vowel_change := fun (ch : String) ↦
+  if !(PastaLean.pyContains "aeiouAEIOU" ch) then ch else PastaLean.pyChr (PastaLean.pyOrd ch +ₚ (2 : Int))
+
+attribute [simp, taste_ingr] _encode'vowel_change
+
+def encode := fun (message : PyAny) ↦
+  /-
+  
+      Write a function that takes a message, and encodes in such a 
+      way that it swaps case of all letters, replaces all vowels in 
+      the message with the letter that appears 2 places ahead of that 
+      vowel in the english alphabet. 
+      Assume only letters. 
+      
+      Examples:
+      >>> encode('test')
+      'TGST'
+      >>> encode('This is a message')
+      'tHKS KS C MGSSCGG'
+      
+  -/
+  let m := (PastaLean.pyStringJoin "" (PastaLean.pyMap _encode'switch_case message) : String)
+  PastaLean.pyStringJoin "" (PastaLean.pyMap _encode'vowel_change m)
+
+attribute [simp, taste_ingr] encode
+
+private def _encode'switch_case'rn := fun (ch : PyAny) ↦
+  (show PastaLean.PyAny from
     if decide (PastaLean.pyOrd "A" ≤ PastaLean.pyOrd ch) && decide (PastaLean.pyOrd ch ≤ PastaLean.pyOrd "Z") then
       PastaLean.pyChr (PastaLean.pyOrd ch +ₚ (32 : Int))
     else
@@ -60,10 +97,10 @@ private def _encode'switch_case := fun (ch : PyAny) ↦
         PastaLean.pyChr (PastaLean.pyOrd ch -ₚ (32 : Int))
       else ch)
 
-private def _encode'vowel_change := fun (ch : String) ↦
+private def _encode'vowel_change'rn := fun (ch : String) ↦
   if !(PastaLean.pyContains "aeiouAEIOU" ch) then ch else PastaLean.pyChr (PastaLean.pyOrd ch +ₚ (2 : Int))
 
-def encode := fun (message : PyAny) ↦
+def encode'rn := fun (message : PyAny) ↦
   /-
   
       Write a function that takes a message, and encodes in such a 

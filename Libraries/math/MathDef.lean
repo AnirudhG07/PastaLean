@@ -189,13 +189,15 @@ def pyMathHypot {α β : Type} [PyMathFloatArg α] [PyMathFloatArg β] (x : α) 
   let yf := toFloat y
   Float.sqrt (xf * xf + yf * yf)
 
-/-- Python `math.log2`, via the natural logarithm. -/
+/-- Python `math.log2`, via libm's `log2` (correctly rounded — exact on powers of 2). The naive
+`log x / log 2` is NOT: e.g. `log2(1024)` comes out just below 10, so `int(log2(1024))` = 9. -/
 def pyMathLog2 {α : Type} [PyMathFloatArg α] (x : α) : Float :=
-  Float.log (toFloat x) / Float.log 2.0
+  Float.log2 (toFloat x)
 
-/-- Python `math.log10`, via the natural logarithm. -/
+/-- Python `math.log10`, via libm's `log10` (correctly rounded — exact on powers of 10). The naive
+`log x / log 10` is NOT: `log10(1e6)` comes out just below 6, so `int(log10(1e6))` = 5. -/
 def pyMathLog10 {α : Type} [PyMathFloatArg α] (x : α) : Float :=
-  Float.log (toFloat x) / Float.log 10.0
+  Float.log10 (toFloat x)
 
 /-- Python `math.radians`, converting degrees to radians. -/
 def pyMathRadians {α : Type} [PyMathFloatArg α] (deg : α) : Float :=

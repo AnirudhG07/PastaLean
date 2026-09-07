@@ -51,12 +51,31 @@ def even_odd_count := fun (num : PyAny) ↦
       for ch in (PastaLean.pyIter (PastaLean.pyStr num))do
         if h_1 : PastaLean.pyContains "02468" ch then 
           even := even +ₚ (1 : Int)
-        else
-          let _ := ()
         if h_2 : PastaLean.pyContains "13579" ch then 
           odd := odd +ₚ (1 : Int)
-        else
-          let _ := ()
+      let p'_ret_1 := (even, odd)
+      return p'_ret_1)
+
+attribute [simp, taste_ingr] even_odd_count
+
+def even_odd_count'rn := fun (num : PyAny) ↦
+  Id.run
+    (do
+      /-
+      Given an integer. return a tuple that has the number of even and odd digits respectively.
+      
+           Example:
+              even_odd_count(-12) ==> (1, 1)
+              even_odd_count(123) ==> (1, 2)
+          
+      -/
+      let mut even : Int := (0 : Int)
+      let mut odd : Int := (0 : Int)
+      for ch in (PastaLean.pyIter (PastaLean.pyStr num))do
+        if h_1 : PastaLean.pyContains "02468" ch then 
+          even := even +ₚ (1 : Int)
+        if h_2 : PastaLean.pyContains "13579" ch then 
+          odd := odd +ₚ (1 : Int)
       let p'_ret_1 := (even, odd)
       return p'_ret_1)
 

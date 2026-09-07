@@ -51,18 +51,37 @@ def largest_prime_factor := fun (n : Int) ↦
           2
           
       -/
+      let mut isprime : List Bool := PastaLean.pyListRepeat [Bool.true] (n +ₚ (1 : Int))
+      for i in (PastaLean.pyRange (n +ₚ (1 : Int)) (2 : Int))do
+        if h_1 : PastaLean.pyTruthy isprime⦋i⦌ then 
+          for j in (PastaLean.pyRange n (i +ₚ i) i)do
+            isprime := PastaLean.pySetItem isprime j Bool.false
+      for i in (PastaLean.pyRange (0 : Int) (n -ₚ (1 : Int)) (-(1 : Int)))do
+        if h_1 : PastaLean.pyTruthy isprime⦋i⦌ = true ∧ n %ₚ i = (0 : Int) then 
+          return i
+      return default)
+
+attribute [simp, taste_ingr] largest_prime_factor
+
+def largest_prime_factor'rn := fun (n : Int) ↦
+  Id.run
+    (do
+      /-
+      Return the largest prime factor of n. Assume n > 1 and is not a prime.
+          >>> largest_prime_factor(13195)
+          29
+          >>> largest_prime_factor(2048)
+          2
+          
+      -/
       let mut isprime : Array Bool := PastaLean.pyArrayRepeat #[Bool.true] (n +ₚ (1 : Int))
       for i in (PastaLean.pyRange (n +ₚ (1 : Int)) (2 : Int))do
         if h_1 : PastaLean.pyTruthy isprime⦋i⦌ then 
           for j in (PastaLean.pyRange n (i +ₚ i) i)do
             isprime := PastaLean.pySetItem isprime j Bool.false
-        else
-          let _ := ()
       for i in (PastaLean.pyRange (0 : Int) (n -ₚ (1 : Int)) (-(1 : Int)))do
         if h_1 : PastaLean.pyTruthy isprime⦋i⦌ && n %ₚ i == (0 : Int) then 
           return i
-        else
-          let _ := ()
       return default)
 
 end PastaBench.humaneval.LargestPrimeFactor

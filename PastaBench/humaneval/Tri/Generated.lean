@@ -51,6 +51,45 @@ def tri(n):
 namespace PastaBench.humaneval.Tri
 
 def tri := fun (n : Int) ↦
+  (show List Rat from
+    Id.run
+      (do
+        /-
+        Everyone knows Fibonacci sequence, it was studied deeply by mathematicians in 
+            the last couple centuries. However, what people don't know is Tribonacci sequence.
+            Tribonacci sequence is defined by the recurrence:
+            tri(1) = 3
+            tri(n) = 1 + n / 2, if n is even.
+            tri(n) =  tri(n - 1) + tri(n - 2) + tri(n + 1), if n is odd.
+            For example:
+            tri(2) = 1 + (2 / 2) = 2
+            tri(4) = 3
+            tri(3) = tri(2) + tri(1) + tri(4)
+                   = 2 + 3 + 3 = 8 
+            You are given a non-negative integer number n, you have to a return a list of the 
+            first n + 1 numbers of the Tribonacci sequence.
+            Examples:
+            tri(3) = [1, 3, 2, 8]
+            
+        -/
+        if h_1 : n = (0 : Int) then 
+          let p'_ret_1 := [(1 : Int)]
+          return p'_ret_1
+        if h_2 : n = (1 : Int) then 
+          let p'_ret_1 := [(1 : Int), (3 : Int)]
+          return p'_ret_1
+        let mut ans := ([(1 : Rat), (3 : Rat)] : List Rat)
+        for i in (PastaLean.pyRange (n +ₚ (1 : Int)) (2 : Int))do
+          if h_3 : i %ₚ (2 : Int) = (0 : Int) then 
+            ans := PastaLean.pyAppend ans ((1 : Int) +ₚ i /ₚ (2 : Int))
+          else
+            ans :=
+              PastaLean.pyAppend ans (ans⦋(-1 : Int)⦌ +ₚ ans⦋(-2 : Int)⦌ +ₚ (1 : Int) +ₚ (i +ₚ (1 : Int)) /ₚ (2 : Int))
+        return ans))
+
+attribute [simp, taste_ingr] tri
+
+def tri'rn := fun (n : Int) ↦
   (show List Float from
     Id.run
       (do
@@ -75,13 +114,9 @@ def tri := fun (n : Int) ↦
         if h_1 : n == (0 : Int) then 
           let p'_ret_1 := [(1 : Int)]
           return p'_ret_1
-        else
-          let _ := ()
         if h_2 : n == (1 : Int) then 
           let p'_ret_1 := [(1 : Int), (3 : Int)]
           return p'_ret_1
-        else
-          let _ := ()
         let mut ans := ([(1 : Float), (3 : Float)] : List Float)
         for i in (PastaLean.pyRange (n +ₚ (1 : Int)) (2 : Int))do
           if h_3 : i %ₚ (2 : Int) == (0 : Int) then 

@@ -53,10 +53,30 @@ def can_arrange := fun (arr : List Int) ↦
           
       -/
       for i in (PastaLean.pyRange (0 : Int) (PastaLean.pyLen arr -ₚ (1 : Int)) (-(1 : Int)))do
+        if h_1 : ¬arr⦋i⦌ ≥ arr⦋i -ₚ (1 : Int)⦌ then 
+          return i
+      let p'_ret_1 := -(1 : Int)
+      return p'_ret_1)
+
+attribute [simp, taste_ingr] can_arrange
+
+def can_arrange'rn := fun (arr : List Int) ↦
+  Id.run
+    (do
+      /-
+      Create a function which returns the largest index of an element which
+          is not greater than or equal to the element immediately preceding it. If
+          no such element exists then return -1. The given array will not contain
+          duplicate values.
+      
+          Examples:
+          can_arrange([1,2,4,3,5]) = 3
+          can_arrange([1,2,3]) = -1
+          
+      -/
+      for i in (PastaLean.pyRange (0 : Int) (PastaLean.pyLen arr -ₚ (1 : Int)) (-(1 : Int)))do
         if h_1 : !decide (arr⦋i⦌ ≥ arr⦋i -ₚ (1 : Int)⦌) then 
           return i
-        else
-          let _ := ()
       let p'_ret_1 := -(1 : Int)
       return p'_ret_1)
 

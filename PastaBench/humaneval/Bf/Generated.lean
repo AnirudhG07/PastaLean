@@ -65,11 +65,9 @@ def bf := fun planet1 ↦ fun planet2 ↦
           
       -/
       let mut planets : List String := ["Mercury", "Venus", "Earth", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune"]
-      if h_1 : !(PastaLean.pyContains planets planet1) || !(PastaLean.pyContains planets planet2) then 
+      if h_1 : !(PastaLean.pyContains planets planet1) ∨ !(PastaLean.pyContains planets planet2) then 
         let p'_ret_1 := []
         return p'_ret_1
-      else
-        let _ := ()
       let mut i1 : Int := PastaLean.pyIndex planets planet1
       let mut i2 : Int := PastaLean.pyIndex planets planet2
       if h_2 : i1 > i2 then 
@@ -77,8 +75,42 @@ def bf := fun planet1 ↦ fun planet2 ↦
         let p'_unpack_pair_1 := p'_unpack_value_1
         i1 := Prod.fst p'_unpack_pair_1
         i2 := Prod.snd p'_unpack_pair_1
-      else
-        let _ := ()
+      let p'_ret_1 := PastaLean.pyList (PastaLean.pySlice planets (some (i1 +ₚ (1 : Int))) (some i2) none)
+      return p'_ret_1)
+
+attribute [simp, taste_ingr] bf
+
+def bf'rn := fun planet1 ↦ fun planet2 ↦
+  Id.run
+    (do
+      /-
+      
+          There are eight planets in our solar system: the closerst to the Sun 
+          is Mercury, the next one is Venus, then Earth, Mars, Jupiter, Saturn, 
+          Uranus, Neptune.
+          Write a function that takes two planet names as strings planet1 and planet2. 
+          The function should return a tuple containing all planets whose orbits are 
+          located between the orbit of planet1 and the orbit of planet2, sorted by 
+          the proximity to the sun. 
+          The function should return an empty tuple if planet1 or planet2
+          are not correct planet names. 
+          Examples
+          bf("Jupiter", "Neptune") ==> ("Saturn", "Uranus")
+          bf("Earth", "Mercury") ==> ("Venus")
+          bf("Mercury", "Uranus") ==> ("Venus", "Earth", "Mars", "Jupiter", "Saturn")
+          
+      -/
+      let mut planets : List String := ["Mercury", "Venus", "Earth", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune"]
+      if h_1 : !(PastaLean.pyContains planets planet1) || !(PastaLean.pyContains planets planet2) then 
+        let p'_ret_1 := []
+        return p'_ret_1
+      let mut i1 : Int := PastaLean.pyIndex planets planet1
+      let mut i2 : Int := PastaLean.pyIndex planets planet2
+      if h_2 : i1 > i2 then 
+        let p'_unpack_value_1 := (i2, i1)
+        let p'_unpack_pair_1 := p'_unpack_value_1
+        i1 := Prod.fst p'_unpack_pair_1
+        i2 := Prod.snd p'_unpack_pair_1
       let p'_ret_1 := PastaLean.pyList (PastaLean.pySlice planets (some (i1 +ₚ (1 : Int))) (some i2) none)
       return p'_ret_1)
 

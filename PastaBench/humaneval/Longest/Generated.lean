@@ -57,16 +57,37 @@ def longest := fun (strings : List String) ↦
             'ccc'
             
         -/
+        if h_1 : ¬PastaLean.pyTruthy strings = true then 
+          return Option.none
+        let mut maxlen : Int := PastaLean.pyMax ((PastaLean.pyIter strings).map fun (x : String) => PastaLean.pyLen x)
+        for s in (PastaLean.pyIter strings)do
+          if h_2 : PastaLean.pyLen s = maxlen then 
+            return s
+        return default))
+
+attribute [simp, taste_ingr] longest
+
+def longest'rn := fun (strings : List String) ↦
+  (show Option String from
+    Id.run
+      (do
+        /-
+         Out of list of strings, return the longest one. Return the first one in case of multiple
+            strings of the same length. Return None in case the input list is empty.
+            >>> longest([])
+        
+            >>> longest(['a', 'b', 'c'])
+            'a'
+            >>> longest(['a', 'bb', 'ccc'])
+            'ccc'
+            
+        -/
         if h_1 : !PastaLean.pyTruthy strings then 
           return Option.none
-        else
-          let _ := ()
         let mut maxlen : Int := PastaLean.pyMax ((PastaLean.pyIter strings).map fun (x : String) => PastaLean.pyLen x)
         for s in (PastaLean.pyIter strings)do
           if h_2 : PastaLean.pyLen s == maxlen then 
             return s
-          else
-            let _ := ()
         return default))
 
 end PastaBench.humaneval.Longest

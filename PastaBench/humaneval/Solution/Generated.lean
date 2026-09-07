@@ -46,6 +46,24 @@ def solution := fun (lst : List Int) ↦
       
   -/
   PastaLean.pySum
+    ((List.filter (fun (i : Int) => i %ₚ (2 : Int) = (0 : Int) ∧ lst⦋i⦌ %ₚ (2 : Int) = (1 : Int))
+          (PastaLean.pyRange (PastaLean.pyLen lst))).map
+      fun (i : Int) => lst⦋i⦌)
+
+attribute [simp, taste_ingr] solution
+
+def solution'rn := fun (lst : List Int) ↦
+  /-
+  Given a non-empty list of integers, return the sum of all of the odd elements that are in even positions.
+      
+  
+      Examples
+      solution([5, 8, 7, 1]) ==> 12
+      solution([3, 3, 3, 3, 3]) ==> 9
+      solution([30, 13, 24, 321]) ==>0
+      
+  -/
+  PastaLean.pySum
     ((List.filter (fun (i : Int) => i %ₚ (2 : Int) == (0 : Int) && lst⦋i⦌ %ₚ (2 : Int) == (1 : Int))
           (PastaLean.pyRange (PastaLean.pyLen lst))).map
       fun (i : Int) => lst⦋i⦌)

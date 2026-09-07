@@ -61,4 +61,28 @@ def simplify := fun (x : String) ↦ fun (n : String) ↦
   let n2 := PastaLean.pyListGetItem p'_unpack_pair_1 (1 : Int)
   x1 *ₚ n1 %ₚ (x2 *ₚ n2) == (0 : Int)
 
+attribute [simp, taste_ingr] simplify
+
+def simplify'rn := fun (x : String) ↦ fun (n : String) ↦
+  /-
+  Your task is to implement a function that will simplify the expression
+      x * n. The function returns True if x * n evaluates to a whole number and False
+      otherwise. Both x and n, are string representation of a fraction, and have the following format,
+      <numerator>/<denominator> where both numerator and denominator are positive whole numbers.
+  
+      You can assume that x, and n are valid fractions, and do not have zero as denominator.
+  
+      simplify("1/5", "5/1") = True
+      simplify("1/6", "2/1") = False
+      simplify("7/10", "10/2") = False
+      
+  -/
+  let p'_unpack_pair_2 := PastaLean.pyMap PastaLean.pyInt (PastaLean.pyStringSplit x "/")
+  let x1 := PastaLean.pyListGetItem p'_unpack_pair_2 (0 : Int)
+  let x2 := PastaLean.pyListGetItem p'_unpack_pair_2 (1 : Int)
+  let p'_unpack_pair_1 := PastaLean.pyMap PastaLean.pyInt (PastaLean.pyStringSplit n "/")
+  let n1 := PastaLean.pyListGetItem p'_unpack_pair_1 (0 : Int)
+  let n2 := PastaLean.pyListGetItem p'_unpack_pair_1 (1 : Int)
+  x1 *ₚ n1 %ₚ (x2 *ₚ n2) == (0 : Int)
+
 end PastaBench.humaneval.Simplify

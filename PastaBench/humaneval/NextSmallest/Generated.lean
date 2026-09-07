@@ -57,14 +57,36 @@ def next_smallest := fun (lst : PyAny) ↦
         -/
         if h_1 : PastaLean.pyLen lst ≤ (1 : Int) then 
           return (PastaLean.PyAny.none : PastaLean.PyAny)
-        else
-          let _ := ()
+        let mut sorted_list : List PyAny := PastaLean.pySort lst
+        for x in (PastaLean.pyIter sorted_list)do
+          if h_2 : x ≠ sorted_list⦋(0 : Int)⦌ then 
+            return (x : PastaLean.PyAny)
+        return default))
+
+attribute [simp] next_smallest
+
+def next_smallest'rn := fun (lst : PyAny) ↦
+  (show PastaLean.PyAny from
+    Id.run
+      (do
+        /-
+        
+            You are given a list of integers.
+            Write a function next_smallest() that returns the 2nd smallest element of the list.
+            Return None if there is no such element.
+            
+            next_smallest([1, 2, 3, 4, 5]) == 2
+            next_smallest([5, 1, 4, 3, 2]) == 2
+            next_smallest([]) == None
+            next_smallest([1, 1]) == None
+            
+        -/
+        if h_1 : PastaLean.pyLen lst ≤ (1 : Int) then 
+          return (PastaLean.PyAny.none : PastaLean.PyAny)
         let mut sorted_list : List PyAny := PastaLean.pySort lst
         for x in (PastaLean.pyIter sorted_list)do
           if h_2 : x != sorted_list⦋(0 : Int)⦌ then 
             return (x : PastaLean.PyAny)
-          else
-            let _ := ()
         return default))
 
 end PastaBench.humaneval.NextSmallest

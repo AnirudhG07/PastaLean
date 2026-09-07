@@ -35,7 +35,23 @@ def truncate_number(number: float) -> float:
 
 namespace PastaBench.humaneval.TruncateNumber
 
-def truncate_number := fun (number : Float) ↦
+def truncate_number := fun (number : Rat) ↦
+  (show Rat from
+    /-
+     Given a positive floating point number, it can be decomposed into
+        and integer part (largest integer smaller than given number) and decimals
+        (leftover part always smaller than 1).
+    
+        Return the decimal part of the number.
+        >>> truncate_number(3.5)
+        0.5
+        
+    -/
+    number -ₚ PastaLean.pyInt number)
+
+attribute [simp, taste_ingr] truncate_number
+
+def truncate_number'rn := fun (number : Float) ↦
   (show Float from
     /-
      Given a positive floating point number, it can be decomposed into

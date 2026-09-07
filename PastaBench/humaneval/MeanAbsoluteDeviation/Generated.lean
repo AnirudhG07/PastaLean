@@ -36,7 +36,25 @@ def mean_absolute_deviation(numbers: List[float]) -> float:
 
 namespace PastaBench.humaneval.MeanAbsoluteDeviation
 
-def mean_absolute_deviation := fun (numbers : List Float) ↦
+def mean_absolute_deviation := fun (numbers : List Rat) ↦
+  (show Rat from
+    /-
+     For a given list of input numbers, calculate Mean Absolute Deviation
+        around the mean of this dataset.
+        Mean Absolute Deviation is the average absolute difference between each
+        element and a centerpoint (mean in this case):
+        MAD = average | x - x_mean |
+        >>> mean_absolute_deviation([1.0, 2.0, 3.0, 4.0])
+        1.0
+        
+    -/
+    let mean := PastaLean.pySum numbers /ₚ PastaLean.pyLen numbers
+    PastaLean.pySum ((PastaLean.pyIter numbers).map fun (x : Rat) => PastaLean.pyAbs (x -ₚ mean)) /ₚ
+      PastaLean.pyLen numbers)
+
+attribute [simp, taste_ingr] mean_absolute_deviation
+
+def mean_absolute_deviation'rn := fun (numbers : List Float) ↦
   (show Float from
     /-
      For a given list of input numbers, calculate Mean Absolute Deviation

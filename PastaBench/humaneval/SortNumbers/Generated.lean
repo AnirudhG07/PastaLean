@@ -51,6 +51,27 @@ def sort_numbers := fun (numbers : String) ↦
         [("zero", (0 : Int)), ("one", (1 : Int)), ("two", (2 : Int)), ("three", (3 : Int)), ("four", (4 : Int)),
           ("five", (5 : Int)), ("six", (6 : Int)), ("seven", (7 : Int)), ("eight", (8 : Int)), ("nine", (9 : Int))] :
       Std.HashMap String Int)
+  if numbers = "" then ""
+  else
+    PastaLean.pyStringJoin " "
+      (PastaLean.pySortBy (fun (n : String) ↦ to_int⦋n⦌) false (PastaLean.pyStringSplit numbers " "))
+
+attribute [simp, taste_ingr] sort_numbers
+
+def sort_numbers'rn := fun (numbers : String) ↦
+  /-
+   Input is a space-delimited string of numberals from 'zero' to 'nine'.
+      Valid choices are 'zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight' and 'nine'.
+      Return the string with numbers sorted from smallest to largest
+      >>> sort_numbers('three one five')
+      'one three five'
+      
+  -/
+  let to_int :=
+    (Std.HashMap.ofList
+        [("zero", (0 : Int)), ("one", (1 : Int)), ("two", (2 : Int)), ("three", (3 : Int)), ("four", (4 : Int)),
+          ("five", (5 : Int)), ("six", (6 : Int)), ("seven", (7 : Int)), ("eight", (8 : Int)), ("nine", (9 : Int))] :
+      Std.HashMap String Int)
   if numbers == "" then ""
   else
     PastaLean.pyStringJoin " "

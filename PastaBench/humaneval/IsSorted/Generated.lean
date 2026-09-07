@@ -70,13 +70,41 @@ def is_sorted := fun (lst : PyAny) ↦
       for x in (PastaLean.pyIter lst)do
         if h_1 : !(PastaLean.pyContains count x) then 
           count := PastaLean.pySetItem count x (0 : Int)
-        else
-          let _ := ()
         count := PastaLean.pySetItem count x (count⦋x⦌ +ₚ (1 : Int))
         if h_2 : count⦋x⦌ > (2 : Int) then 
           return Bool.false
-        else
-          let _ := ()
+      let p'_ret_1 := lst == PastaLean.pySort lst
+      return p'_ret_1)
+
+attribute [simp, taste_ingr] is_sorted
+
+def is_sorted'rn := fun (lst : PyAny) ↦
+  Id.run
+    (do
+      /-
+      
+          Given a list of numbers, return whether or not they are sorted
+          in ascending order. If list has more than 1 duplicate of the same
+          number, return False. Assume no negative numbers and only integers.
+      
+          Examples
+          is_sorted([5]) ➞ True
+          is_sorted([1, 2, 3, 4, 5]) ➞ True
+          is_sorted([1, 3, 2, 4, 5]) ➞ False
+          is_sorted([1, 2, 3, 4, 5, 6]) ➞ True
+          is_sorted([1, 2, 3, 4, 5, 6, 7]) ➞ True
+          is_sorted([1, 3, 2, 4, 5, 6, 7]) ➞ False
+          is_sorted([1, 2, 2, 3, 3, 4]) ➞ True
+          is_sorted([1, 2, 2, 2, 3, 4]) ➞ False
+          
+      -/
+      let mut count : Std.HashMap PyAny Int := Std.HashMap.ofList []
+      for x in (PastaLean.pyIter lst)do
+        if h_1 : !(PastaLean.pyContains count x) then 
+          count := PastaLean.pySetItem count x (0 : Int)
+        count := PastaLean.pySetItem count x (count⦋x⦌ +ₚ (1 : Int))
+        if h_2 : count⦋x⦌ > (2 : Int) then 
+          return Bool.false
       let p'_ret_1 := lst == PastaLean.pySort lst
       return p'_ret_1)
 

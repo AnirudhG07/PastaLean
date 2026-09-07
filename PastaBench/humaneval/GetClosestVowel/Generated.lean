@@ -47,6 +47,8 @@ namespace PastaBench.humaneval.GetClosestVowel
 
 private def _get_closest_vowel'is_vowel := fun (ch : String) ↦ PastaLean.pyContains "aeiouAEIOU" ch
 
+attribute [simp, taste_ingr] _get_closest_vowel'is_vowel
+
 def get_closest_vowel := fun (word : String) ↦
   Id.run
     (do
@@ -68,14 +70,45 @@ def get_closest_vowel := fun (word : String) ↦
       -/
       for i in (PastaLean.pyRange (0 : Int) (PastaLean.pyLen word -ₚ (2 : Int)) (-(1 : Int)))do
         if h_1 :
-            PastaLean.pyTruthy (_get_closest_vowel'is_vowel word⦋i⦌) &&
-                !PastaLean.pyTruthy (_get_closest_vowel'is_vowel word⦋i -ₚ (1 : Int)⦌) &&
-              !PastaLean.pyTruthy (_get_closest_vowel'is_vowel word⦋i +ₚ (1 : Int)⦌) then
+            (PastaLean.pyTruthy (_get_closest_vowel'is_vowel word⦋i⦌) = true ∧
+                ¬PastaLean.pyTruthy (_get_closest_vowel'is_vowel word⦋i -ₚ (1 : Int)⦌) = true) ∧
+              ¬PastaLean.pyTruthy (_get_closest_vowel'is_vowel word⦋i +ₚ (1 : Int)⦌) = true then
           
           let p'_ret_1 := word⦋i⦌
           return p'_ret_1
-        else
-          let _ := ()
+      return "")
+
+attribute [simp, taste_ingr] get_closest_vowel
+
+private def _get_closest_vowel'is_vowel'rn := fun (ch : String) ↦ PastaLean.pyContains "aeiouAEIOU" ch
+
+def get_closest_vowel'rn := fun (word : String) ↦
+  Id.run
+    (do
+      /-
+      You are given a word. Your task is to find the closest vowel that stands between 
+          two consonants from the right side of the word (case sensitive).
+          
+          Vowels in the beginning and ending doesn't count. Return empty string if you didn't
+          find any vowel met the above condition. 
+      
+          You may assume that the given string contains English letter only.
+      
+          Example:
+          get_closest_vowel("yogurt") ==> "u"
+          get_closest_vowel("FULL") ==> "U"
+          get_closest_vowel("quick") ==> ""
+          get_closest_vowel("ab") ==> ""
+          
+      -/
+      for i in (PastaLean.pyRange (0 : Int) (PastaLean.pyLen word -ₚ (2 : Int)) (-(1 : Int)))do
+        if h_1 :
+            PastaLean.pyTruthy (_get_closest_vowel'is_vowel'rn word⦋i⦌) &&
+                !PastaLean.pyTruthy (_get_closest_vowel'is_vowel'rn word⦋i -ₚ (1 : Int)⦌) &&
+              !PastaLean.pyTruthy (_get_closest_vowel'is_vowel'rn word⦋i +ₚ (1 : Int)⦌) then
+          
+          let p'_ret_1 := word⦋i⦌
+          return p'_ret_1
       return "")
 
 end PastaBench.humaneval.GetClosestVowel

@@ -50,6 +50,30 @@ def sort_even := fun (l : List PyAny) ↦
           
       -/
       let mut even : List PyAny :=
+        (List.filter (fun (i : Int) => i %ₚ (2 : Int) = (0 : Int)) (PastaLean.pyRange (PastaLean.pyLen l))).map
+          fun (i : Int) => l⦋i⦌
+      even := PastaLean.pySort even
+      let p'_ret_1 :=
+        (PastaLean.pyRange (PastaLean.pyLen l)).map fun (i : Int) =>
+          if i %ₚ (2 : Int) = (0 : Int) then even⦋PastaLean.pyFloorDiv i (2 : Int)⦌ else l⦋i⦌
+      return p'_ret_1)
+
+attribute [simp, taste_ingr] sort_even
+
+def sort_even'rn := fun (l : List PyAny) ↦
+  Id.run
+    (do
+      /-
+      This function takes a list l and returns a list l' such that
+          l' is identical to l in the odd indicies, while its values at the even indicies are equal
+          to the values of the even indicies of l, but sorted.
+          >>> sort_even([1, 2, 3])
+          [1, 2, 3]
+          >>> sort_even([5, 6, 3, 4])
+          [3, 6, 5, 4]
+          
+      -/
+      let mut even : List PyAny :=
         (List.filter (fun (i : Int) => i %ₚ (2 : Int) == (0 : Int)) (PastaLean.pyRange (PastaLean.pyLen l))).map
           fun (i : Int) => l⦋i⦌
       even := PastaLean.pySort even

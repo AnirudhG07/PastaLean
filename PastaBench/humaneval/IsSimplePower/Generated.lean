@@ -60,31 +60,57 @@ def is_simple_power := fun (x : Int) ↦ fun (n : Int) ↦
           is_simple_power(5, 3) => false
           
       -/
+      if h_1 : x = (1 : Int) then 
+        return Bool.true
+      if h_2 : n = (0 : Int) then 
+        let p'_ret_1 := x == (0 : Int)
+        return p'_ret_1
+      if h_3 : n = (1 : Int) then 
+        let p'_ret_1 := x == (1 : Int)
+        return p'_ret_1
+      if h_4 : n = -(1 : Int) then 
+        let p'_ret_1 := PastaLean.pyAbs x == (1 : Int)
+        return p'_ret_1
+      let mut p : Int := n
+      while (PastaLean.pyAbs p ≤ PastaLean.pyAbs x) do
+        if h_5 : p = x then 
+          return Bool.true
+        p := p *ₚ n
+      return Bool.false)
+
+attribute [simp, taste_ingr] is_simple_power
+
+def is_simple_power'rn := fun (x : Int) ↦ fun (n : Int) ↦
+  Id.run
+    (do
+      /-
+      Your task is to write a function that returns true if a number x is a simple
+          power of n and false in other cases.
+          x is a simple power of n if n**int=x
+          For example:
+          is_simple_power(1, 4) => true
+          is_simple_power(2, 2) => true
+          is_simple_power(8, 2) => true
+          is_simple_power(3, 2) => false
+          is_simple_power(3, 1) => false
+          is_simple_power(5, 3) => false
+          
+      -/
       if h_1 : x == (1 : Int) then 
         return Bool.true
-      else
-        let _ := ()
       if h_2 : n == (0 : Int) then 
         let p'_ret_1 := x == (0 : Int)
         return p'_ret_1
-      else
-        let _ := ()
       if h_3 : n == (1 : Int) then 
         let p'_ret_1 := x == (1 : Int)
         return p'_ret_1
-      else
-        let _ := ()
       if h_4 : n == -(1 : Int) then 
         let p'_ret_1 := PastaLean.pyAbs x == (1 : Int)
         return p'_ret_1
-      else
-        let _ := ()
       let mut p : Int := n
       while (PastaLean.pyAbs p ≤ PastaLean.pyAbs x) do
         if h_5 : p == x then 
           return Bool.true
-        else
-          let _ := ()
         p := p *ₚ n
       return Bool.false)
 

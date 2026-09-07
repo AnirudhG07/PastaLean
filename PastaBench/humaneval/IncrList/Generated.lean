@@ -43,4 +43,17 @@ def incr_list := fun (l : List Int) ↦
   -/
   (PastaLean.pyIter l).map fun (x : Int) => x +ₚ (1 : Int)
 
+attribute [simp, taste_ingr] incr_list
+
+def incr_list'rn := fun (l : List Int) ↦
+  /-
+  Return list with elements incremented by 1.
+      >>> incr_list([1, 2, 3])
+      [2, 3, 4]
+      >>> incr_list([5, 3, 5, 2, 3, 3, 9, 0, 123])
+      [6, 4, 6, 3, 4, 4, 10, 1, 124]
+      
+  -/
+  (PastaLean.pyIter l).map fun (x : Int) => x +ₚ (1 : Int)
+
 end PastaBench.humaneval.IncrList

@@ -54,8 +54,27 @@ def count_upper := fun (s : PyAny) ↦
       for i in (PastaLean.pyRange (PastaLean.pyLen s) (0 : Int) (2 : Int))do
         if h_1 : PastaLean.pyContains "AEIOU" s⦋i⦌ then 
           cnt := cnt +ₚ (1 : Int)
-        else
-          let _ := ()
+      return cnt)
+
+attribute [simp, taste_ingr] count_upper
+
+def count_upper'rn := fun (s : PyAny) ↦
+  Id.run
+    (do
+      /-
+      
+          Given a string s, count the number of uppercase vowels in even indices.
+          
+          For example:
+          count_upper('aBCdEf') returns 1
+          count_upper('abcdefg') returns 0
+          count_upper('dBBE') returns 0
+          
+      -/
+      let mut cnt : Int := (0 : Int)
+      for i in (PastaLean.pyRange (PastaLean.pyLen s) (0 : Int) (2 : Int))do
+        if h_1 : PastaLean.pyContains "AEIOU" s⦋i⦌ then 
+          cnt := cnt +ₚ (1 : Int)
       return cnt)
 
 end PastaBench.humaneval.CountUpper

@@ -45,4 +45,18 @@ def common := fun (l1 : List PyAny) ↦ fun (l2 : List PyAny) ↦
   -/
   PastaLean.pySort (PastaLean.pyList (PastaLean.pySetIntersection (PastaLean.pySet l1) (PastaLean.pySet l2)))
 
+attribute [simp, taste_ingr] common
+
+def common'rn := fun (l1 : List PyAny) ↦ fun (l2 : List PyAny) ↦
+  /-
+  Return sorted unique common elements for two lists.
+      >>> common([1, 4, 3, 34, 653, 2, 5], [5, 7, 1, 5, 9, 653, 121])
+      [1, 5, 653]
+      >>> common([5, 3, 2, 8], [3, 2])
+      [2, 3]
+  
+      
+  -/
+  PastaLean.pySort (PastaLean.pyList (PastaLean.pySetIntersection (PastaLean.pySet l1) (PastaLean.pySet l2)))
+
 end PastaBench.humaneval.Common

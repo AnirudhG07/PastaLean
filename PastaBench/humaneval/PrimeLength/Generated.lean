@@ -36,14 +36,16 @@ def prime_length(string):
 
 namespace PastaBench.humaneval.PrimeLength
 
-private def _prime_length'is_prime := fun (a : Int) ↦
+private noncomputable def _prime_length'is_prime := fun (a : Int) ↦
   !if PastaLean.pyTruthy (decide (a < (2 : Int))) then decide (a < (2 : Int))
     else
       PastaLean.pyStdAny
-        ((PastaLean.pyRange (PastaLean.pyInt (a ^ₚ (0.5 : Float)) +ₚ (1 : Int)) (2 : Int)).map fun (x : Int) =>
+        ((PastaLean.pyRange (PastaLean.pyInt (a ^ₚ (0.5 : Rat)) +ₚ (1 : Int)) (2 : Int)).map fun (x : Int) =>
           a %ₚ x == (0 : Int))
 
-def prime_length := fun (string : PyAny) ↦
+attribute [simp] _prime_length'is_prime
+
+noncomputable def prime_length := fun (string : PyAny) ↦
   /-
   Write a function that takes a string and returns True if the string
       length is a prime number or False otherwise
@@ -55,5 +57,27 @@ def prime_length := fun (string : PyAny) ↦
       
   -/
   _prime_length'is_prime (PastaLean.pyLen string)
+
+attribute [simp] prime_length
+
+private def _prime_length'is_prime'rn := fun (a : Int) ↦
+  !if PastaLean.pyTruthy (decide (a < (2 : Int))) then decide (a < (2 : Int))
+    else
+      PastaLean.pyStdAny
+        ((PastaLean.pyRange (PastaLean.pyInt (a ^ₚ (0.5 : Float)) +ₚ (1 : Int)) (2 : Int)).map fun (x : Int) =>
+          a %ₚ x == (0 : Int))
+
+def prime_length'rn := fun (string : PyAny) ↦
+  /-
+  Write a function that takes a string and returns True if the string
+      length is a prime number or False otherwise
+      Examples
+      prime_length('Hello') == True
+      prime_length('abcdcba') == True
+      prime_length('kittens') == True
+      prime_length('orange') == False
+      
+  -/
+  _prime_length'is_prime'rn (PastaLean.pyLen string)
 
 end PastaBench.humaneval.PrimeLength

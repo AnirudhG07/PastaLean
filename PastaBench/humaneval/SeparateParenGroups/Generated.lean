@@ -59,26 +59,46 @@ def separate_paren_groups := fun (paren_string : String) ↦
       let mut group : String := ""
       let mut results : List String := []
       for ch in (PastaLean.pyIter paren_string)do
+        if h_1 : ch = "(" then 
+          cnt := cnt +ₚ (1 : Int)
+        if h_2 : ch = ")" then 
+          cnt := cnt -ₚ (1 : Int)
+        if h_3 : ch ≠ " " then 
+          group := group +ₚ ch
+        if h_4 : cnt = (0 : Int) then 
+          if h_5 : group ≠ "" then 
+            results := PastaLean.pyAppend results group
+          group := ""
+      return results)
+
+attribute [simp, taste_ingr] separate_paren_groups
+
+def separate_paren_groups'rn := fun (paren_string : String) ↦
+  Id.run
+    (do
+      /-
+       Input to this function is a string containing multiple groups of nested parentheses. Your goal is to
+          separate those group into separate strings and return the list of those.
+          Separate groups are balanced (each open brace is properly closed) and not nested within each other
+          Ignore any spaces in the input string.
+          >>> separate_paren_groups('( ) (( )) (( )( ))')
+          ['()', '(())', '(()())']
+          
+      -/
+      let mut cnt : Int := (0 : Int)
+      let mut group : String := ""
+      let mut results : List String := []
+      for ch in (PastaLean.pyIter paren_string)do
         if h_1 : ch == "(" then 
           cnt := cnt +ₚ (1 : Int)
-        else
-          let _ := ()
         if h_2 : ch == ")" then 
           cnt := cnt -ₚ (1 : Int)
-        else
-          let _ := ()
         if h_3 : ch != " " then 
           group := group +ₚ ch
-        else
-          let _ := ()
         if h_4 : cnt == (0 : Int) then 
           if h_5 : group != "" then 
             results := PastaLean.pyAppend results group
-          else
-            let _ := ()
           group := ""
-        else
-          let _ := ()
       return results)
 
 end PastaBench.humaneval.SeparateParenGroups

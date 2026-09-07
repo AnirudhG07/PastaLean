@@ -49,13 +49,20 @@ def runTranslateTask (jsonTask : Json) (ctx : Core.Context) (env : Environment) 
   PastaLean.userNamesRef.set ((jsonTask.getObjValAs? (Array String) "userNames" |>.toOption.getD #[]).toList)
   -- Best-effort: degrade a single failing statement to `pyUnsupported` (keep the rest of the function).
   PastaLean.bestEffortRef.set (jsonTask.getObjValAs? Bool "best_effort" |>.toOption.getD false)
-  -- Opt-in reference semantics (`--heap`): generators read this to emit heap ops instead of value
-  -- rebuilds. Off by default keeps the value-semantics path byte-identical.
-  PastaLean.heapModeRef.set (jsonTask.getObjValAs? Bool "heap" |>.toOption.getD false)
   -- `getObjVal?`, not `getObjValAs? Json`: the latter reads a missing key as `null` and defers the
   -- failure to codegen, which then reports a confusing "no 'node_type' field" instead.
   let .ok json := jsonTask.getObjVal? "ast"
     | return errorResponse "Invalid JSON: missing 'ast' field"
+  -- Reference semantics (`--heap`): explicit via the task flag, OR best-effort AUTO-DETECTED when the
+  -- program mutates a recursive structure through a cursor (trie / linked list / tree) — value
+  -- semantics copies the cursor and silently drops those writes, so heap is the only correct lowering.
+  -- Off otherwise keeps the value-semantics path byte-identical.
+  -- Auto-detect only on a WHOLE module (a one-shot `translate`); the driver sends per-statement tasks
+  -- where the cursor pattern lives only in the class, so it detects on the whole module Python-side and
+  -- passes `heap` consistently to every statement — a per-statement auto-detect would be inconsistent.
+  let explicitHeap := jsonTask.getObjValAs? Bool "heap" |>.toOption.getD false
+  let autoHeap := TypeInfer.nodeTypeOf json == some "Module" && TypeInfer.astNeedsHeap json
+  PastaLean.heapModeRef.set (explicitHeap || autoHeap)
   -- The whole-module `inferTypes` pass (run by the driver) marks each statement `_inferred`; only fall
   -- back to the context-free per-statement stamp when it did not run (a bare term, or on failure).
   let alreadyInferred := (json.getObjVal? "_inferred").toOption.isSome

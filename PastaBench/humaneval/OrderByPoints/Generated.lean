@@ -49,6 +49,41 @@ private def _order_by_points'weight := fun (x : Int) ↦
     (do
       let mut x_list : List String := PastaLean.pyList (PastaLean.pyStr x)
       let mut x_list'v3 : List Int := default
+      if h_1 : x_list⦋(0 : Int)⦌ = "-" then 
+        x_list := PastaLean.pySlice x_list (some (1 : Int)) none none
+        let mut x_list'v1 : List Int := PastaLean.pyList (PastaLean.pyMap PastaLean.pyInt x_list)
+        x_list'v1 := PastaLean.pySetItem x_list'v1 (0 : Int) (-x_list'v1⦋(0 : Int)⦌)
+        x_list'v3 := x_list'v1
+      else
+        let mut x_list'v2 : List Int := PastaLean.pyList (PastaLean.pyMap PastaLean.pyInt x_list)
+        x_list'v3 := x_list'v2
+      let p'_ret_1 := PastaLean.pySum x_list'v3
+      return p'_ret_1)
+
+attribute [simp, taste_ingr] _order_by_points'weight
+
+def order_by_points := fun (nums : List Int) ↦
+  /-
+  
+      Write a function which sorts the given list of integers
+      in ascending order according to the sum of their digits.
+      Note: if there are several items with similar sum of their digits,
+      order them based on their index in original list.
+  
+      For example:
+      >>> order_by_points([1, 11, -1, -11, -12]) == [-1, -11, 1, -12, 11]
+      >>> order_by_points([]) == []
+      
+  -/
+  PastaLean.pySortBy _order_by_points'weight false nums
+
+attribute [simp, taste_ingr] order_by_points
+
+private def _order_by_points'weight'rn := fun (x : Int) ↦
+  Id.run
+    (do
+      let mut x_list : List String := PastaLean.pyList (PastaLean.pyStr x)
+      let mut x_list'v3 : List Int := default
       if h_1 : x_list⦋(0 : Int)⦌ == "-" then 
         x_list := PastaLean.pySlice x_list (some (1 : Int)) none none
         let mut x_list'v1 : List Int := PastaLean.pyList (PastaLean.pyMap PastaLean.pyInt x_list)
@@ -60,7 +95,7 @@ private def _order_by_points'weight := fun (x : Int) ↦
       let p'_ret_1 := PastaLean.pySum x_list'v3
       return p'_ret_1)
 
-def order_by_points := fun (nums : List Int) ↦
+def order_by_points'rn := fun (nums : List Int) ↦
   /-
   
       Write a function which sorts the given list of integers

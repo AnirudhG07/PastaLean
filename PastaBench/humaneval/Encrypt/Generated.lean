@@ -59,4 +59,29 @@ def encrypt := fun (s : String) ↦
         else ch)
       s)
 
+attribute [simp, taste_ingr] encrypt
+
+def encrypt'rn := fun (s : String) ↦
+  /-
+  Create a function encrypt that takes a string as an argument and
+      returns a string encrypted with the alphabet being rotated. 
+      The alphabet should be rotated in a manner such that the letters 
+      shift down by two multiplied to two places.
+      For example:
+      encrypt('hi') returns 'lm'
+      encrypt('asdfghjkl') returns 'ewhjklnop'
+      encrypt('gf') returns 'kj'
+      encrypt('et') returns 'ix'
+      
+  -/
+  let d := ("abcdefghijklmnopqrstuvwxyz" : String)
+  PastaLean.pyStringJoin ""
+    (PastaLean.pyMap
+      (fun ch ↦
+        if PastaLean.pyContains d ch then
+          PastaLean.pyChr
+            ((PastaLean.pyOrd ch -ₚ PastaLean.pyOrd "a" +ₚ (4 : Int)) %ₚ (26 : Int) +ₚ PastaLean.pyOrd "a")
+        else ch)
+      s)
+
 end PastaBench.humaneval.Encrypt

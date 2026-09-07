@@ -30,9 +30,7 @@ def digit_parity := fun (x : Int) ↦
         let mut digits'v2 : List Int := PastaLean.pyList (PastaLean.pyMap PastaLean.pyInt digits)
         digits'v3 := digits'v2
       let p'_ret_1 :=
-        PastaLean.pySum
-          ((List.filter (fun (d : Int) => d %ₚ (2 : Int) = (0 : Int)) (PastaLean.pyIter digits'v3)).map
-            fun (d : Int) => d)
+        PastaLean.pySum (List.filter (fun (d : Int) => d %ₚ (2 : Int) = (0 : Int)) (PastaLean.pyIter digits'v3))
       return p'_ret_1)
 
 attribute [simp, taste_ingr] digit_parity
@@ -50,9 +48,7 @@ def digit_parity'rn := fun (x : Int) ↦
         let mut digits'v2 : List Int := PastaLean.pyList (PastaLean.pyMap PastaLean.pyInt digits)
         digits'v3 := digits'v2
       let p'_ret_1 :=
-        PastaLean.pySum
-          ((List.filter (fun (d : Int) => d %ₚ (2 : Int) == (0 : Int)) (PastaLean.pyIter digits'v3)).map
-            fun (d : Int) => d)
+        PastaLean.pySum (List.filter (fun (d : Int) => d %ₚ (2 : Int) == (0 : Int)) (PastaLean.pyIter digits'v3))
       return p'_ret_1)
 
 def main' :=

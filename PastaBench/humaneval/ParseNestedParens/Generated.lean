@@ -49,16 +49,14 @@ private def _parse_nested_parens'count_depth := fun (s : String) ↦
       let mut max_depth : Int := (0 : Int)
       let mut cnt : Int := (0 : Int)
       for ch in (PastaLean.pyIter s)do
-        if h_1 : ch == "(" then 
+        if h_1 : ch = "(" then 
           cnt := cnt +ₚ (1 : Int)
-        else
-          let _ := ()
-        if h_2 : ch == ")" then 
+        if h_2 : ch = ")" then 
           cnt := cnt -ₚ (1 : Int)
-        else
-          let _ := ()
         max_depth := PastaLean.pyMax [max_depth, cnt]
       return max_depth)
+
+attribute [simp, taste_ingr] _parse_nested_parens'count_depth
 
 def parse_nested_parens := fun (paren_string : String) ↦
   /-
@@ -70,7 +68,35 @@ def parse_nested_parens := fun (paren_string : String) ↦
       [2, 3, 1, 3]
       
   -/
-  (List.filter (fun (s : String) => s != "") (PastaLean.pyIter (PastaLean.pyStringSplit paren_string " "))).map
+  (List.filter (fun (s : String) => s ≠ "") (PastaLean.pyIter (PastaLean.pyStringSplit paren_string " "))).map
     fun (s : String) => _parse_nested_parens'count_depth s
+
+attribute [simp, taste_ingr] parse_nested_parens
+
+private def _parse_nested_parens'count_depth'rn := fun (s : String) ↦
+  Id.run
+    (do
+      let mut max_depth : Int := (0 : Int)
+      let mut cnt : Int := (0 : Int)
+      for ch in (PastaLean.pyIter s)do
+        if h_1 : ch == "(" then 
+          cnt := cnt +ₚ (1 : Int)
+        if h_2 : ch == ")" then 
+          cnt := cnt -ₚ (1 : Int)
+        max_depth := PastaLean.pyMax [max_depth, cnt]
+      return max_depth)
+
+def parse_nested_parens'rn := fun (paren_string : String) ↦
+  /-
+   Input to this function is a string represented multiple groups for nested parentheses separated by spaces.
+      For each of the group, output the deepest level of nesting of parentheses.
+      E.g. (()()) has maximum two levels of nesting while ((())) has three.
+  
+      >>> parse_nested_parens('(()()) ((())) () ((())()())')
+      [2, 3, 1, 3]
+      
+  -/
+  (List.filter (fun (s : String) => s != "") (PastaLean.pyIter (PastaLean.pyStringSplit paren_string " "))).map
+    fun (s : String) => _parse_nested_parens'count_depth'rn s
 
 end PastaBench.humaneval.ParseNestedParens

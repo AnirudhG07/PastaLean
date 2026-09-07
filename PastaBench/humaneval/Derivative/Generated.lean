@@ -48,4 +48,19 @@ def derivative := fun (xs : List PyAny) ↦
   -/
   (PastaLean.pyRange (PastaLean.pyLen xs) (1 : Int)).map fun (i : Int) => xs⦋i⦌ *ₚ i
 
+attribute [simp, taste_ingr] derivative
+
+def derivative'rn := fun (xs : List PyAny) ↦
+  /-
+   xs represent coefficients of a polynomial.
+      xs[0] + xs[1] * x + xs[2] * x^2 + ....
+       Return derivative of this polynomial in the same form.
+      >>> derivative([3, 1, 2, 4, 5])
+      [1, 4, 12, 20]
+      >>> derivative([1, 2, 3])
+      [2, 6]
+      
+  -/
+  (PastaLean.pyRange (PastaLean.pyLen xs) (1 : Int)).map fun (i : Int) => xs⦋i⦌ *ₚ i
+
 end PastaBench.humaneval.Derivative

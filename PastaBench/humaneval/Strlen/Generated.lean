@@ -43,4 +43,17 @@ def strlen := fun (string : String) ↦
   -/
   PastaLean.pyLen string
 
+attribute [simp, taste_ingr] strlen
+
+def strlen'rn := fun (string : String) ↦
+  /-
+   Return length of given string
+      >>> strlen('')
+      0
+      >>> strlen('abc')
+      3
+      
+  -/
+  PastaLean.pyLen string
+
 end PastaBench.humaneval.Strlen

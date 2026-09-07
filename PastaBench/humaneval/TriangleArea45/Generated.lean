@@ -32,13 +32,23 @@ def triangle_area(a, h):
 namespace PastaBench.humaneval.TriangleArea45
 
 def triangle_area := fun a ↦ fun h ↦
-  (show Float from
-    /-
-    Given length of a side and high return area for a triangle.
-        >>> triangle_area(5, 3)
-        7.5
-        
-    -/
-    PastaLean.pyFloat (a *ₚ h) /ₚ (2 : Int))
+  /-
+  Given length of a side and high return area for a triangle.
+      >>> triangle_area(5, 3)
+      7.5
+      
+  -/
+  a *ₚ h /ₚ (2 : Int)
+
+attribute [simp, taste_ingr] triangle_area
+
+def triangle_area'rn := fun a ↦ fun h ↦
+  /-
+  Given length of a side and high return area for a triangle.
+      >>> triangle_area(5, 3)
+      7.5
+      
+  -/
+  PastaLean.pyFloat (a *ₚ h) /ₚ (2 : Int)
 
 end PastaBench.humaneval.TriangleArea45

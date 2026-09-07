@@ -43,4 +43,17 @@ def add := fun (x : Int) ↦ fun (y : Int) ↦
   -/
   x +ₚ y
 
+attribute [simp, taste_ingr] add
+
+def add'rn := fun (x : Int) ↦ fun (y : Int) ↦
+  /-
+  Add two numbers x and y
+      >>> add(2, 3)
+      5
+      >>> add(5, 7)
+      12
+      
+  -/
+  x +ₚ y
+
 end PastaBench.humaneval.Add53

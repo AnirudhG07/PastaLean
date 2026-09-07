@@ -59,14 +59,12 @@ private def _Strongest_Extension'strength := fun (s : String) ↦
       for ch in (PastaLean.pyIter s)do
         if h_1 : PastaLean.pyTruthy (PastaLean.pyIsUpper ch) then 
           CAP := CAP +ₚ (1 : Int)
-        else
-          let _ := ()
         if h_2 : PastaLean.pyTruthy (PastaLean.pyIsLower ch) then 
           SM := SM +ₚ (1 : Int)
-        else
-          let _ := ()
       let p'_ret_1 := CAP -ₚ SM
       return p'_ret_1)
+
+attribute [simp, taste_ingr] _Strongest_Extension'strength
 
 def Strongest_Extension := fun (class_name : String) ↦ fun (extensions : PyAny) ↦
   (show PastaLean.PyAny from
@@ -92,11 +90,53 @@ def Strongest_Extension := fun (class_name : String) ↦ fun (extensions : PyAny
         -/
         let mut max_strength := PastaLean.pyMax (PastaLean.pyMap _Strongest_Extension'strength extensions)
         for e in (PastaLean.pyIter extensions)do
-          if h_1 : _Strongest_Extension'strength e == max_strength then 
+          if h_1 : _Strongest_Extension'strength e = max_strength then 
             let p'_ret_1 := (class_name +ₚ "." +ₚ e : PastaLean.PyAny)
             return p'_ret_1
-          else
-            let _ := ()
+        return default))
+
+attribute [simp] Strongest_Extension
+
+private def _Strongest_Extension'strength'rn := fun (s : String) ↦
+  Id.run
+    (do
+      let mut CAP : Int := (0 : Int)
+      let mut SM : Int := (0 : Int)
+      for ch in (PastaLean.pyIter s)do
+        if h_1 : PastaLean.pyTruthy (PastaLean.pyIsUpper ch) then 
+          CAP := CAP +ₚ (1 : Int)
+        if h_2 : PastaLean.pyTruthy (PastaLean.pyIsLower ch) then 
+          SM := SM +ₚ (1 : Int)
+      let p'_ret_1 := CAP -ₚ SM
+      return p'_ret_1)
+
+def Strongest_Extension'rn := fun (class_name : String) ↦ fun (extensions : PyAny) ↦
+  (show PastaLean.PyAny from
+    Id.run
+      (do
+        /-
+        You will be given the name of a class (a string) and a list of extensions.
+            The extensions are to be used to load additional classes to the class. The
+            strength of the extension is as follows: Let CAP be the number of the uppercase
+            letters in the extension's name, and let SM be the number of lowercase letters 
+            in the extension's name, the strength is given by the fraction CAP - SM. 
+            You should find the strongest extension and return a string in this 
+            format: ClassName.StrongestExtensionName.
+            If there are two or more extensions with the same strength, you should
+            choose the one that comes first in the list.
+            For example, if you are given "Slices" as the class and a list of the
+            extensions: ['SErviNGSliCes', 'Cheese', 'StuFfed'] then you should
+            return 'Slices.SErviNGSliCes' since 'SErviNGSliCes' is the strongest extension 
+            (its strength is -1).
+            Example:
+            for Strongest_Extension('my_class', ['AA', 'Be', 'CC']) == 'my_class.AA'
+            
+        -/
+        let mut max_strength := PastaLean.pyMax (PastaLean.pyMap _Strongest_Extension'strength extensions)
+        for e in (PastaLean.pyIter extensions)do
+          if h_1 : _Strongest_Extension'strength'rn e == max_strength then 
+            let p'_ret_1 := (class_name +ₚ "." +ₚ e : PastaLean.PyAny)
+            return p'_ret_1
         return default))
 
 end PastaBench.humaneval.StrongestExtension

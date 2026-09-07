@@ -39,7 +39,7 @@ def has_close_elements(numbers: List[float], threshold: float) -> bool:
 
 namespace PastaBench.humaneval.HasCloseElements
 
-def has_close_elements := fun (numbers : List Float) ↦ fun (threshold : Float) ↦
+def has_close_elements := fun (numbers : List Rat) ↦ fun (threshold : Rat) ↦
   Id.run
     (do
       /-
@@ -55,8 +55,26 @@ def has_close_elements := fun (numbers : List Float) ↦ fun (threshold : Float)
       for i in (PastaLean.pyRange (PastaLean.pyLen sorted_numbers -ₚ (1 : Int)))do
         if h_1 : sorted_numbers⦋i +ₚ (1 : Int)⦌ -ₚ sorted_numbers⦋i⦌ < threshold then 
           return Bool.true
-        else
-          let _ := ()
+      return Bool.false)
+
+attribute [simp, taste_ingr] has_close_elements
+
+def has_close_elements'rn := fun (numbers : List Float) ↦ fun (threshold : Float) ↦
+  Id.run
+    (do
+      /-
+       Check if in given list of numbers, are any two numbers closer to each other than
+          given threshold.
+          >>> has_close_elements([1.0, 2.0, 3.0], 0.5)
+          False
+          >>> has_close_elements([1.0, 2.8, 3.0, 4.0, 5.0, 2.0], 0.3)
+          True
+          
+      -/
+      let mut sorted_numbers := PastaLean.pySort numbers
+      for i in (PastaLean.pyRange (PastaLean.pyLen sorted_numbers -ₚ (1 : Int)))do
+        if h_1 : sorted_numbers⦋i +ₚ (1 : Int)⦌ -ₚ sorted_numbers⦋i⦌ < threshold then 
+          return Bool.true
       return Bool.false)
 
 end PastaBench.humaneval.HasCloseElements

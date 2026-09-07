@@ -44,4 +44,17 @@ def filter_by_prefix := fun (strings : List String) ↦ fun («prefix» : String
   -/
   PastaLean.pyList (PastaLean.pyFilter (fun x ↦ PastaLean.pyStringStartswith x «prefix») strings)
 
+attribute [simp, taste_ingr] filter_by_prefix
+
+def filter_by_prefix'rn := fun (strings : List String) ↦ fun («prefix» : String) ↦
+  /-
+   Filter an input list of strings only for ones that start with a given prefix.
+      >>> filter_by_prefix([], 'a')
+      []
+      >>> filter_by_prefix(['abc', 'bcd', 'cde', 'array'], 'a')
+      ['abc', 'array']
+      
+  -/
+  PastaLean.pyList (PastaLean.pyFilter (fun x ↦ PastaLean.pyStringStartswith x «prefix») strings)
+
 end PastaBench.humaneval.FilterByPrefix

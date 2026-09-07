@@ -65,8 +65,6 @@ def search := fun (lst : PyAny) ↦
         for num in (PastaLean.pyIter lst)do
           if h_1 : !(PastaLean.pyContains count num) then 
             count := PastaLean.pySetItem count num (0 : Int)
-          else
-            let _ := ()
           count := PastaLean.pySetItem count num (count⦋num⦌ +ₚ (1 : Int))
         let mut ans : PyAny := -(1 : Int)
         for p'_pair_1 in (PastaLean.pyIter (PastaLean.pyItems count))do
@@ -74,8 +72,37 @@ def search := fun (lst : PyAny) ↦
           let cnt := Prod.snd p'_pair_1
           if h_1 : cnt ≥ num then 
             ans := PastaLean.pyMax [ans, num]
-          else
-            let _ := ()
+        return (ans : PastaLean.PyAny)))
+
+attribute [simp] search
+
+def search'rn := fun (lst : PyAny) ↦
+  (show PastaLean.PyAny from
+    Id.run
+      (do
+        /-
+        
+            You are given a non-empty list of positive integers. Return the greatest integer that is greater than 
+            zero, and has a frequency greater than or equal to the value of the integer itself. 
+            The frequency of an integer is the number of times it appears in the list.
+            If no such a value exist, return -1.
+            Examples:
+                search([4, 1, 2, 2, 3, 1]) == 2
+                search([1, 2, 2, 3, 3, 3, 4, 4, 4]) == 3
+                search([5, 5, 4, 4, 4]) == -1
+            
+        -/
+        let mut count : Std.HashMap PyAny Int := Std.HashMap.ofList []
+        for num in (PastaLean.pyIter lst)do
+          if h_1 : !(PastaLean.pyContains count num) then 
+            count := PastaLean.pySetItem count num (0 : Int)
+          count := PastaLean.pySetItem count num (count⦋num⦌ +ₚ (1 : Int))
+        let mut ans : PyAny := -(1 : Int)
+        for p'_pair_1 in (PastaLean.pyIter (PastaLean.pyItems count))do
+          let num := Prod.fst p'_pair_1
+          let cnt := Prod.snd p'_pair_1
+          if h_1 : cnt ≥ num then 
+            ans := PastaLean.pyMax [ans, num]
         return (ans : PastaLean.PyAny)))
 
 end PastaBench.humaneval.Search

@@ -52,12 +52,34 @@ def specialFilter := fun (nums : List Int) ↦
       let mut odd : List String := ["1", "3", "5", "7", "9"]
       for num in (PastaLean.pyIter nums)do
         if h_1 :
+            (num > (10 : Int) ∧ PastaLean.pyContains odd (PastaLean.pyStr num)⦋(0 : Int)⦌) ∧
+              PastaLean.pyContains odd (PastaLean.pyStr num)⦋(-1 : Int)⦌ then
+          
+          ans := ans +ₚ (1 : Int)
+      return ans)
+
+attribute [simp, taste_ingr] specialFilter
+
+def specialFilter'rn := fun (nums : List Int) ↦
+  Id.run
+    (do
+      /-
+      Write a function that takes an array of numbers as input and returns 
+          the number of elements in the array that are greater than 10 and both 
+          first and last digits of a number are odd (1, 3, 5, 7, 9).
+          For example:
+          specialFilter([15, -73, 14, -15]) => 1 
+          specialFilter([33, -2, -3, 45, 21, 109]) => 2
+          
+      -/
+      let mut ans : Int := (0 : Int)
+      let mut odd : List String := ["1", "3", "5", "7", "9"]
+      for num in (PastaLean.pyIter nums)do
+        if h_1 :
             decide (num > (10 : Int)) && PastaLean.pyContains odd (PastaLean.pyStr num)⦋(0 : Int)⦌ &&
               PastaLean.pyContains odd (PastaLean.pyStr num)⦋(-1 : Int)⦌ then
           
           ans := ans +ₚ (1 : Int)
-        else
-          let _ := ()
       return ans)
 
 end PastaBench.humaneval.Specialfilter

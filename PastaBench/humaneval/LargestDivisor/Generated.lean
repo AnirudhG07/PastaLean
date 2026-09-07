@@ -43,11 +43,26 @@ def largest_divisor := fun (n : Int) ↦
           
       -/
       for i in (PastaLean.pyRange n (2 : Int))do
+        if h_1 : n %ₚ i = (0 : Int) then 
+          let p'_ret_1 := PastaLean.pyFloorDiv n i
+          return p'_ret_1
+      return (1 : Int))
+
+attribute [simp, taste_ingr] largest_divisor
+
+def largest_divisor'rn := fun (n : Int) ↦
+  Id.run
+    (do
+      /-
+       For a given number n, find the largest number that divides n evenly, smaller than n
+          >>> largest_divisor(15)
+          5
+          
+      -/
+      for i in (PastaLean.pyRange n (2 : Int))do
         if h_1 : n %ₚ i == (0 : Int) then 
           let p'_ret_1 := PastaLean.pyFloorDiv n i
           return p'_ret_1
-        else
-          let _ := ()
       return (1 : Int))
 
 end PastaBench.humaneval.LargestDivisor

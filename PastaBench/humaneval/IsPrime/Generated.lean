@@ -71,16 +71,45 @@ def is_prime := fun (n : Int) ↦
       -/
       if h_1 : n ≤ (1 : Int) then 
         return Bool.false
-      else
-        let _ := ()
+      let mut n_sqrt : Int := (1 : Int)
+      while (n_sqrt ^ₚ (2 : Int) < n) do
+        n_sqrt := n_sqrt +ₚ (1 : Int)
+      for i in (PastaLean.pyRange (PastaLean.pyMin [n_sqrt +ₚ (1 : Int), n]) (2 : Int))do
+        if h_2 : n %ₚ i = (0 : Int) then 
+          return Bool.false
+      return Bool.true)
+
+attribute [simp, taste_ingr] is_prime
+
+def is_prime'rn := fun (n : Int) ↦
+  Id.run
+    (do
+      /-
+      Return true if a given number is prime, and false otherwise.
+          >>> is_prime(6)
+          False
+          >>> is_prime(101)
+          True
+          >>> is_prime(11)
+          True
+          >>> is_prime(13441)
+          True
+          >>> is_prime(61)
+          True
+          >>> is_prime(4)
+          False
+          >>> is_prime(1)
+          False
+          
+      -/
+      if h_1 : n ≤ (1 : Int) then 
+        return Bool.false
       let mut n_sqrt : Int := (1 : Int)
       while (n_sqrt ^ₚ (2 : Int) < n) do
         n_sqrt := n_sqrt +ₚ (1 : Int)
       for i in (PastaLean.pyRange (PastaLean.pyMin [n_sqrt +ₚ (1 : Int), n]) (2 : Int))do
         if h_2 : n %ₚ i == (0 : Int) then 
           return Bool.false
-        else
-          let _ := ()
       return Bool.true)
 
 end PastaBench.humaneval.IsPrime

@@ -62,16 +62,41 @@ def select_words := fun (s : String) ↦ fun n ↦
       -/
       let mut ans : List String := []
       for word in (PastaLean.pyIter (PastaLean.pyStringSplit s " "))do
+        if h_1 : word ≠ "" then 
+          let mut c_cnt : Int :=
+            PastaLean.pyLen
+              (PastaLean.pyList (PastaLean.pyFilter (fun ch ↦ !(PastaLean.pyContains "aeiouAEIOU" ch)) word))
+          if h_2 : c_cnt = n then 
+            ans := PastaLean.pyAppend ans word
+      return ans)
+
+attribute [simp, taste_ingr] select_words
+
+def select_words'rn := fun (s : String) ↦ fun n ↦
+  Id.run
+    (do
+      /-
+      Given a string s and a natural number n, you have been tasked to implement 
+          a function that returns a list of all words from string s that contain exactly 
+          n consonants, in order these words appear in the string s.
+          If the string s is empty then the function should return an empty list.
+          Note: you may assume the input string contains only letters and spaces.
+          Examples:
+          select_words("Mary had a little lamb", 4) ==> ["little"]
+          select_words("Mary had a little lamb", 3) ==> ["Mary", "lamb"]
+          select_words("simple white space", 2) ==> []
+          select_words("Hello world", 4) ==> ["world"]
+          select_words("Uncle sam", 3) ==> ["Uncle"]
+          
+      -/
+      let mut ans : List String := []
+      for word in (PastaLean.pyIter (PastaLean.pyStringSplit s " "))do
         if h_1 : word != "" then 
           let mut c_cnt : Int :=
             PastaLean.pyLen
               (PastaLean.pyList (PastaLean.pyFilter (fun ch ↦ !(PastaLean.pyContains "aeiouAEIOU" ch)) word))
           if h_2 : c_cnt == n then 
             ans := PastaLean.pyAppend ans word
-          else
-            let _ := ()
-        else
-          let _ := ()
       return ans)
 
 end PastaBench.humaneval.SelectWords

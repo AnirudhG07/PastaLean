@@ -48,6 +48,25 @@ def median := fun (l : List PyAny) ↦
         
     -/
     let sorted_l := (PastaLean.pySort l : List PyAny)
+    if PastaLean.pyLen l %ₚ (2 : Int) = (1 : Int) then sorted_l⦋PastaLean.pyFloorDiv (PastaLean.pyLen l) (2 : Int)⦌
+    else
+      (sorted_l⦋PastaLean.pyFloorDiv (PastaLean.pyLen l) (2 : Int) -ₚ (1 : Int)⦌ +ₚ
+          sorted_l⦋PastaLean.pyFloorDiv (PastaLean.pyLen l) (2 : Int)⦌) /ₚ
+        (2 : Int))
+
+attribute [simp] median
+
+def median'rn := fun (l : List PyAny) ↦
+  (show PastaLean.PyAny from
+    /-
+    Return median of elements in the list l.
+        >>> median([3, 1, 2, 4, 5])
+        3
+        >>> median([-10, 4, 6, 1000, 10, 20])
+        15.0
+        
+    -/
+    let sorted_l := (PastaLean.pySort l : List PyAny)
     if PastaLean.pyLen l %ₚ (2 : Int) == (1 : Int) then sorted_l⦋PastaLean.pyFloorDiv (PastaLean.pyLen l) (2 : Int)⦌
     else
       PastaLean.pyFloat

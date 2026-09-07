@@ -221,6 +221,10 @@ def pow (a b : PyAny) : PyAny :=
   match asNum a, asNum b with
   | some (.inl x), some (.inl y) => if y ≥ 0 then .int (x ^ y.toNat) else .float ((toRat (.inl x)) ^ y)
   | some x, some (.inl y) => .float ((toRat x) ^ y)
+  -- FRACTIONAL exponent (`4 ** 0.5`): a Rat base to a Rat power is generally irrational, so compute it
+  -- as a `Float` (like Python) and box the result — `int(4 ** 0.5)` = 2 only if `2.0` comes back
+  -- exact, so this must go through `Float.pow` (correctly rounded), not a stuck `.none`.
+  | some x, some (.inr q) => .float (floatToRat (Float.pow (Rat.toFloat (toRat x)) (Rat.toFloat q)))
   | _, _ => .none
 
 /-- The integer value of a boxed `int`/`bool`, for the integer-only bitwise/shift operators. -/

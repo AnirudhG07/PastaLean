@@ -54,6 +54,30 @@ def check_if_last_char_is_a_letter := fun (txt : String) ↦
       check_if_last_char_is_a_letter("") ➞ False 
       
   -/
+  if PastaLean.pyLen txt = (0 : Int) then Bool.false
+  else
+    if PastaLean.pyLen txt = (1 : Int) then PastaLean.pyIsAlpha txt
+    else
+      if PastaLean.pyTruthy (PastaLean.pyIsAlpha txt⦋(-1 : Int)⦌) then txt⦋(-2 : Int)⦌ == " "
+      else PastaLean.pyIsAlpha txt⦋(-1 : Int)⦌
+
+attribute [simp, taste_ingr] check_if_last_char_is_a_letter
+
+def check_if_last_char_is_a_letter'rn := fun (txt : String) ↦
+  /-
+  
+      Create a function that returns True if the last character
+      of a given string is an alphabetical character and is not
+      a part of a word, and False otherwise.
+      Note: "word" is a group of characters separated by space.
+  
+      Examples:
+      check_if_last_char_is_a_letter("apple pie") ➞ False
+      check_if_last_char_is_a_letter("apple pi e") ➞ True
+      check_if_last_char_is_a_letter("apple pi e ") ➞ False
+      check_if_last_char_is_a_letter("") ➞ False 
+      
+  -/
   if PastaLean.pyLen txt == (0 : Int) then Bool.false
   else
     if PastaLean.pyLen txt == (1 : Int) then PastaLean.pyIsAlpha txt

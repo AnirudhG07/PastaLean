@@ -46,6 +46,22 @@ def words_string := fun (s : String) ↦
       
   -/
   let words := (PastaLean.pyStringSplit (PastaLean.pyStringReplace s "," " ") : List String)
+  (List.filter (fun (word : String) => word ≠ "") (PastaLean.pyIter words)).map fun (word : String) => word
+
+attribute [simp, taste_ingr] words_string
+
+def words_string'rn := fun (s : String) ↦
+  /-
+  
+      You will be given a string of words separated by commas or spaces. Your task is
+      to split the string into words and return an array of the words.
+      
+      For example:
+      words_string("Hi, my name is John") == ["Hi", "my", "name", "is", "John"]
+      words_string("One, two, three, four, five, six") == ["One", "two", "three", "four", "five", "six"]
+      
+  -/
+  let words := (PastaLean.pyStringSplit (PastaLean.pyStringReplace s "," " ") : List String)
   (List.filter (fun (word : String) => word != "") (PastaLean.pyIter words)).map fun (word : String) => word
 
 end PastaBench.humaneval.WordsString

@@ -59,8 +59,30 @@ def how_many_times := fun (string : String) ↦ fun (substring : String) ↦
               (PastaLean.pyStringStartswith (PastaLean.pySlice string (some i) none none) substring) then
           
           occurences := occurences +ₚ (1 : Int)
-        else
-          let _ := ()
+      return occurences)
+
+attribute [simp, taste_ingr] how_many_times
+
+def how_many_times'rn := fun (string : String) ↦ fun (substring : String) ↦
+  Id.run
+    (do
+      /-
+       Find how many times a given substring can be found in the original string. Count overlaping cases.
+          >>> how_many_times('', 'a')
+          0
+          >>> how_many_times('aaa', 'a')
+          3
+          >>> how_many_times('aaaa', 'aa')
+          3
+          
+      -/
+      let mut occurences : Int := (0 : Int)
+      for i in (PastaLean.pyRange (PastaLean.pyLen string))do
+        if h_1 :
+            PastaLean.pyTruthy
+              (PastaLean.pyStringStartswith (PastaLean.pySlice string (some i) none none) substring) then
+          
+          occurences := occurences +ₚ (1 : Int)
       return occurences)
 
 end PastaBench.humaneval.HowManyTimes

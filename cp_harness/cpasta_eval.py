@@ -683,6 +683,15 @@ def _signature_arg_types(converted_lean, fn_name, arity):
     if m is None:
         return None
     s, i, n = converted_lean, m.end(), len(converted_lean)
+    # A non-contract `mode="run"` twin is an ALIAS `def NAME'rn := NAME`; follow it to the real
+    # `def NAME := fun (a : T) ↦ …` whose binder chain actually carries the parameter types (the alias
+    # itself has none, so we'd otherwise fall back to `List PyAny`-style data inference and mismatch).
+    eol = s.find("\n", i)
+    alias = re.fullmatch(r"\s*([A-Za-z_][A-Za-z0-9_'.]*)\s*", s[i:eol if eol != -1 else n])
+    if alias is not None:
+        m2 = re.search(r"\bdef\s+" + re.escape(alias.group(1)) + r"\s*:=", s)
+        if m2 is not None:
+            i = m2.end()
     types, guard = [], 0
     while len(types) < arity and guard < 100000:
         guard += 1

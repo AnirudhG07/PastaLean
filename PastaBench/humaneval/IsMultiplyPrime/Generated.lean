@@ -57,15 +57,41 @@ def is_multiply_prime := fun (a : Int) ↦
       -/
       if h_1 : a ≤ (1 : Int) then 
         return Bool.false
-      else
-        let _ := ()
+      let mut isprime : List Bool := PastaLean.pyListRepeat [Bool.true] (a +ₚ (1 : Int))
+      for i in (PastaLean.pyRange (a +ₚ (1 : Int)) (2 : Int))do
+        if h_2 : PastaLean.pyTruthy isprime⦋i⦌ then 
+          for j in (PastaLean.pyRange (a +ₚ (1 : Int)) (i +ₚ i) i)do
+            isprime := PastaLean.pySetItem isprime j Bool.false
+      let mut cnt : Int := (0 : Int)
+      let mut tmp : Int := a
+      for i in (PastaLean.pyRange (a +ₚ (1 : Int)) (2 : Int))do
+        while (PastaLean.pyTruthy isprime⦋i⦌ = true ∧ tmp %ₚ i = (0 : Int)) do
+          tmp := PastaLean.pyFloorDiv tmp i
+          cnt := cnt +ₚ (1 : Int)
+      let p'_ret_1 := cnt == (3 : Int)
+      return p'_ret_1)
+
+attribute [simp, taste_ingr] is_multiply_prime
+
+def is_multiply_prime'rn := fun (a : Int) ↦
+  Id.run
+    (do
+      /-
+      Write a function that returns true if the given number is the multiplication of 3 prime numbers
+          and false otherwise.
+          Knowing that (a) is less then 100. 
+          Example:
+          is_multiply_prime(30) == True
+          30 = 2 * 3 * 5
+          
+      -/
+      if h_1 : a ≤ (1 : Int) then 
+        return Bool.false
       let mut isprime : Array Bool := PastaLean.pyArrayRepeat #[Bool.true] (a +ₚ (1 : Int))
       for i in (PastaLean.pyRange (a +ₚ (1 : Int)) (2 : Int))do
         if h_2 : PastaLean.pyTruthy isprime⦋i⦌ then 
           for j in (PastaLean.pyRange (a +ₚ (1 : Int)) (i +ₚ i) i)do
             isprime := PastaLean.pySetItem isprime j Bool.false
-        else
-          let _ := ()
       let mut cnt : Int := (0 : Int)
       let mut tmp : Int := a
       for i in (PastaLean.pyRange (a +ₚ (1 : Int)) (2 : Int))do

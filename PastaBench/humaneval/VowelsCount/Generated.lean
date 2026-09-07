@@ -62,16 +62,38 @@ def vowels_count := fun (s : String) ↦
           3
           
       -/
-      if h_1 : s == "" then 
+      if h_1 : s = "" then 
         return (0 : Int)
-      else
-        let _ := ()
       let mut cnt : Int :=
         PastaLean.pyLen (PastaLean.pyList (PastaLean.pyFilter (fun ch ↦ PastaLean.pyContains "aeiouAEIOU" ch) s))
       if h_2 : PastaLean.pyContains "yY" s⦋(-1 : Int)⦌ then 
         cnt := cnt +ₚ (1 : Int)
-      else
-        let _ := ()
+      return cnt)
+
+attribute [simp, taste_ingr] vowels_count
+
+def vowels_count'rn := fun (s : String) ↦
+  Id.run
+    (do
+      /-
+      Write a function vowels_count which takes a string representing
+          a word as input and returns the number of vowels in the string.
+          Vowels in this case are 'a', 'e', 'i', 'o', 'u'. Here, 'y' is also a
+          vowel, but only when it is at the end of the given word.
+      
+          Example:
+          >>> vowels_count("abcde")
+          2
+          >>> vowels_count("ACEDY")
+          3
+          
+      -/
+      if h_1 : s == "" then 
+        return (0 : Int)
+      let mut cnt : Int :=
+        PastaLean.pyLen (PastaLean.pyList (PastaLean.pyFilter (fun ch ↦ PastaLean.pyContains "aeiouAEIOU" ch) s))
+      if h_2 : PastaLean.pyContains "yY" s⦋(-1 : Int)⦌ then 
+        cnt := cnt +ₚ (1 : Int)
       return cnt)
 
 end PastaBench.humaneval.VowelsCount

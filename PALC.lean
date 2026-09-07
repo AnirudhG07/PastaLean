@@ -9,3 +9,4 @@ import PALC.Libraries.scipy.scipy_test
 import PALC.Libraries.pandas.pandas_test
 import PALC.Libraries.sortedcontainers.sortedlist_test
 import PALC.Libraries.hashlib_test
+import PALC.Libraries.collections_test

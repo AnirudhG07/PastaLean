@@ -65,30 +65,59 @@ def histogram := fun (test : String) ↦
       
           
       -/
+      if h_1 : test = "" then 
+        let p'_ret_1 := Std.HashMap.ofList []
+        return p'_ret_1
+      let mut count : Std.HashMap String Int := Std.HashMap.ofList []
+      let mut ans : Std.HashMap String Int := Std.HashMap.ofList []
+      for word in (PastaLean.pyIter (PastaLean.pyStringSplit test " "))do
+        if h_2 : word ≠ "" then 
+          if h_3 : !(PastaLean.pyContains count word) then 
+            count := PastaLean.pySetItem count word (0 : Int)
+          count := PastaLean.pySetItem count word (count⦋word⦌ +ₚ (1 : Int))
+      let mut mx : Int := PastaLean.pyMax (PastaLean.pyList (PastaLean.pyAnys count))
+      for p'_pair_1 in (PastaLean.pyIter (PastaLean.pyItems count))do
+        let ch := Prod.fst p'_pair_1
+        let c := Prod.snd p'_pair_1
+        if h_2 : c = mx then 
+          ans := PastaLean.pySetItem ans ch c
+      return ans)
+
+attribute [simp, taste_ingr] histogram
+
+def histogram'rn := fun (test : String) ↦
+  Id.run
+    (do
+      /-
+      Given a string representing a space separated lowercase letters, return a dictionary
+          of the letter with the most repetition and containing the corresponding count.
+          If several letters have the same occurrence, return all of them.
+          
+          Example:
+          histogram('a b c') == {'a': 1, 'b': 1, 'c': 1}
+          histogram('a b b a') == {'a': 2, 'b': 2}
+          histogram('a b c a b') == {'a': 2, 'b': 2}
+          histogram('b b b b a') == {'b': 4}
+          histogram('') == {}
+      
+          
+      -/
       if h_1 : test == "" then 
         let p'_ret_1 := Std.HashMap.ofList []
         return p'_ret_1
-      else
-        let _ := ()
       let mut count : Std.HashMap String Int := Std.HashMap.ofList []
       let mut ans : Std.HashMap String Int := Std.HashMap.ofList []
       for word in (PastaLean.pyIter (PastaLean.pyStringSplit test " "))do
         if h_2 : word != "" then 
           if h_3 : !(PastaLean.pyContains count word) then 
             count := PastaLean.pySetItem count word (0 : Int)
-          else
-            let _ := ()
           count := PastaLean.pySetItem count word (count⦋word⦌ +ₚ (1 : Int))
-        else
-          let _ := ()
       let mut mx : Int := PastaLean.pyMax (PastaLean.pyList (PastaLean.pyAnys count))
       for p'_pair_1 in (PastaLean.pyIter (PastaLean.pyItems count))do
         let ch := Prod.fst p'_pair_1
         let c := Prod.snd p'_pair_1
         if h_2 : c == mx then 
           ans := PastaLean.pySetItem ans ch c
-        else
-          let _ := ()
       return ans)
 
 end PastaBench.humaneval.Histogram

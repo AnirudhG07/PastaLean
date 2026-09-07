@@ -58,8 +58,28 @@ def below_zero := fun (operations : List Int) ↦
         account := account +ₚ operation
         if h_1 : account < (0 : Int) then 
           return Bool.true
-        else
-          let _ := ()
+      return Bool.false)
+
+attribute [simp, taste_ingr] below_zero
+
+def below_zero'rn := fun (operations : List Int) ↦
+  Id.run
+    (do
+      /-
+       You're given a list of deposit and withdrawal operations on a bank account that starts with
+          zero balance. Your task is to detect if at any point the balance of account fallls below zero, and
+          at that point function should return True. Otherwise it should return False.
+          >>> below_zero([1, 2, 3])
+          False
+          >>> below_zero([1, 2, -4, 5])
+          True
+          
+      -/
+      let mut account : Int := (0 : Int)
+      for operation in (PastaLean.pyIter operations)do
+        account := account +ₚ operation
+        if h_1 : account < (0 : Int) then 
+          return Bool.true
       return Bool.false)
 
 end PastaBench.humaneval.BelowZero

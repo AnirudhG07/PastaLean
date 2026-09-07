@@ -70,18 +70,20 @@ def by_length(arr):
 namespace PastaBench.humaneval.ByLength
 
 private def _by_length'to_word := fun (x : Int) ↦
-  if x == (1 : Int) then "One"
+  if x = (1 : Int) then "One"
   else
-    if x == (2 : Int) then "Two"
+    if x = (2 : Int) then "Two"
     else
-      if x == (3 : Int) then "Three"
+      if x = (3 : Int) then "Three"
       else
-        if x == (4 : Int) then "Four"
+        if x = (4 : Int) then "Four"
         else
-          if x == (5 : Int) then "Five"
+          if x = (5 : Int) then "Five"
           else
-            if x == (6 : Int) then "Six"
-            else if x == (7 : Int) then "Seven" else if x == (8 : Int) then "Eight" else "Nine"
+            if x = (6 : Int) then "Six"
+            else if x = (7 : Int) then "Seven" else if x = (8 : Int) then "Eight" else "Nine"
+
+attribute [simp, taste_ingr] _by_length'to_word
 
 def by_length := fun (arr : List Int) ↦
   Id.run
@@ -110,12 +112,59 @@ def by_length := fun (arr : List Int) ↦
           
       -/
       let mut sorted_list : List Int := PastaLean.pySlice (PastaLean.pySort arr) none none (some (-(1 : Int)))
-      let mut ans := []
+      let mut ans : List String := []
+      for x in (PastaLean.pyIter sorted_list)do
+        if h_1 : (1 : Int) ≤ x ∧ x ≤ (9 : Int) then 
+          ans := PastaLean.pyAppend ans (_by_length'to_word x)
+      return ans)
+
+attribute [simp, taste_ingr] by_length
+
+private def _by_length'to_word'rn := fun (x : Int) ↦
+  if x == (1 : Int) then "One"
+  else
+    if x == (2 : Int) then "Two"
+    else
+      if x == (3 : Int) then "Three"
+      else
+        if x == (4 : Int) then "Four"
+        else
+          if x == (5 : Int) then "Five"
+          else
+            if x == (6 : Int) then "Six"
+            else if x == (7 : Int) then "Seven" else if x == (8 : Int) then "Eight" else "Nine"
+
+def by_length'rn := fun (arr : List Int) ↦
+  Id.run
+    (do
+      /-
+      
+          Given an array of integers, sort the integers that are between 1 and 9 inclusive,
+          reverse the resulting array, and then replace each digit by its corresponding name from
+          "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine".
+      
+          For example:
+            arr = [2, 1, 1, 4, 5, 8, 2, 3]   
+                  -> sort arr -> [1, 1, 2, 2, 3, 4, 5, 8] 
+                  -> reverse arr -> [8, 5, 4, 3, 2, 2, 1, 1]
+            return ["Eight", "Five", "Four", "Three", "Two", "Two", "One", "One"]
+          
+            If the array is empty, return an empty array:
+            arr = []
+            return []
+          
+            If the array has any strange number ignore it:
+            arr = [1, -1 , 55] 
+                  -> sort arr -> [-1, 1, 55]
+                  -> reverse arr -> [55, 1, -1]
+            return = ['One']
+          
+      -/
+      let mut sorted_list : List Int := PastaLean.pySlice (PastaLean.pySort arr) none none (some (-(1 : Int)))
+      let mut ans : List String := []
       for x in (PastaLean.pyIter sorted_list)do
         if h_1 : decide ((1 : Int) ≤ x) && decide (x ≤ (9 : Int)) then 
-          ans := PastaLean.pyAppend ans (_by_length'to_word x)
-        else
-          let _ := ()
+          ans := PastaLean.pyAppend ans (_by_length'to_word'rn x)
       return ans)
 
 end PastaBench.humaneval.ByLength

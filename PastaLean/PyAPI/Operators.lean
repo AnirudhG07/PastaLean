@@ -56,6 +56,11 @@ instance (priority := high) : PyHAdd (List Rat) (List Int)   (List Rat)   where 
 instance (priority := high) : PyHAdd (List Int) (List Float) (List Float) where hAdd xs ys := xs.map Float.ofInt ++ ys
 instance (priority := high) : PyHAdd (List Float) (List Int) (List Float) where hAdd xs ys := xs ++ ys.map Float.ofInt
 
+/-- Array concatenation, so an array-backed `[base] + [x]*n` DP-init (`f = [1] + [0]*n`) stays an
+`Array` — keeping the loop's `f[i] = v` O(1) instead of the `List` O(n) that turns the DP O(n²). -/
+instance (priority := high) {α : Type} : PyHAdd (Array α) (Array α) (Array α) where
+  hAdd := (· ++ ·)
+
 /-! Mixed numeric `+`. Lean has no heterogeneous `HAdd Nat Int` / `HAdd Rat Int`, so the
 generic `[HAdd α β γ]` instance does not cover these mixed-type sums that arise when one
 operand came from integer division (`Rat`) or a length/count (`Nat`). The result widens to

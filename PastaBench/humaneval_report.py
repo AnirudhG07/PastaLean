@@ -32,7 +32,9 @@ def main() -> None:
                    if (d / "solution.py").exists() and (not sel or d.name in sel))
 
     codes, errs = {}, {}
-    with Session(target="command", mode="run") as s:            # best-effort ON → pyUnsupported shows
+    # `mode="both"` compiles BOTH twins (provable `method` + computable `method'rn`), so a failure in
+    # either is reported — not only the computable one.
+    with Session(target="command", mode="both") as s:            # best-effort ON → pyUnsupported shows
         for n in probs:
             try:
                 r = s.translate_file(HE / n / "solution.py")

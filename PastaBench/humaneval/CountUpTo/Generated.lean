@@ -59,14 +59,38 @@ def count_up_to := fun (n : Int) ↦
           
       -/
       let mut ans : List Int := []
+      let mut isprime : List Bool := PastaLean.pyListRepeat [Bool.true] (n +ₚ (1 : Int))
+      for i in (PastaLean.pyRange n (2 : Int))do
+        if h_1 : PastaLean.pyTruthy isprime⦋i⦌ then 
+          ans := PastaLean.pyAppend ans i
+          for j in (PastaLean.pyRange n (i +ₚ i) i)do
+            isprime := PastaLean.pySetItem isprime j Bool.false
+      return ans)
+
+attribute [simp, taste_ingr] count_up_to
+
+def count_up_to'rn := fun (n : Int) ↦
+  Id.run
+    (do
+      /-
+      Implement a function that takes an non-negative integer and returns an array of the first n
+          integers that are prime numbers and less than n.
+          for example:
+          count_up_to(5) => [2,3]
+          count_up_to(11) => [2,3,5,7]
+          count_up_to(0) => []
+          count_up_to(20) => [2,3,5,7,11,13,17,19]
+          count_up_to(1) => []
+          count_up_to(18) => [2,3,5,7,11,13,17]
+          
+      -/
+      let mut ans : List Int := []
       let mut isprime : Array Bool := PastaLean.pyArrayRepeat #[Bool.true] (n +ₚ (1 : Int))
       for i in (PastaLean.pyRange n (2 : Int))do
         if h_1 : PastaLean.pyTruthy isprime⦋i⦌ then 
           ans := PastaLean.pyAppend ans i
           for j in (PastaLean.pyRange n (i +ₚ i) i)do
             isprime := PastaLean.pySetItem isprime j Bool.false
-        else
-          let _ := ()
       return ans)
 
 end PastaBench.humaneval.CountUpTo

@@ -45,10 +45,38 @@ def sorted_list_sum(lst):
 namespace PastaBench.humaneval.SortedListSum
 
 private def _sorted_list_sum'cmp := fun (s : String) ↦ fun (t : String) ↦
+  if PastaLean.pyLen s ≠ PastaLean.pyLen t then PastaLean.pyLen s -ₚ PastaLean.pyLen t
+  else if s < t then -(1 : Int) else (1 : Int)
+
+attribute [simp, taste_ingr] _sorted_list_sum'cmp
+
+def sorted_list_sum := fun (lst : PyAny) ↦
+  /-
+  Write a function that accepts a list of strings as a parameter,
+      deletes the strings that have odd lengths from it,
+      and returns the resulted list with a sorted order,
+      The list is always a list of strings and never an array of numbers,
+      and it may contain duplicates.
+      The order of the list should be ascending by length of each word, and you
+      should return the list sorted by that rule.
+      If two words have the same length, sort the list alphabetically.
+      The function should return a list of strings in sorted order.
+      You may assume that all words will have the same length.
+      For example:
+      assert list_sort(["aa", "a", "aaa"]) => ["aa"]
+      assert list_sort(["ab", "a", "aaa", "cd"]) => ["ab", "cd"]
+      
+  -/
+  PastaLean.pySortByCmp _sorted_list_sum'cmp false
+    (PastaLean.pyList (PastaLean.pyFilter (fun s ↦ PastaLean.pyLen s %ₚ (2 : Int) == (0 : Int)) lst))
+
+attribute [simp, taste_ingr] sorted_list_sum
+
+private def _sorted_list_sum'cmp'rn := fun (s : String) ↦ fun (t : String) ↦
   if PastaLean.pyLen s != PastaLean.pyLen t then PastaLean.pyLen s -ₚ PastaLean.pyLen t
   else if s < t then -(1 : Int) else (1 : Int)
 
-def sorted_list_sum := fun lst ↦
+def sorted_list_sum'rn := fun (lst : PyAny) ↦
   /-
   Write a function that accepts a list of strings as a parameter,
       deletes the strings that have odd lengths from it,

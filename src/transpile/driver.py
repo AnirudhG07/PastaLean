@@ -491,6 +491,67 @@ def annotate_io_effects(module_json):
         annotate_scope(module_json.get("body", []))
 
 
+def _chain_root(node):
+    """The root `Name` id of an attribute/subscript chain (`node.children[i]` -> "node")."""
+    if not isinstance(node, dict):
+        return None
+    nt = node.get("node_type")
+    if nt == "Name":
+        return node.get("id")
+    if nt in ("Attribute", "Subscript"):
+        return _chain_root(node.get("value"))
+    return None
+
+
+def _chain_has_attr(node):
+    """Whether a chain passes through >=1 `.attr` (so `node.next` counts, `node`/`arr[i]` do not)."""
+    if not isinstance(node, dict):
+        return False
+    nt = node.get("node_type")
+    if nt == "Attribute":
+        return True
+    if nt == "Subscript":
+        return _chain_has_attr(node.get("value"))
+    return False
+
+
+def _module_needs_heap(node, advanced=None, mutated=None):
+    """Best-effort whole-module detection that a program NEEDS reference (`--heap`) semantics: some
+    cursor is BOTH advanced into its own field (`node = node.next` / `node = node.children[i]`) AND has
+    that field mutated (`node.next = ...`, `node.children[i] = ...`, `node.cnt += ...`). Value semantics
+    copies the cursor, so those writes are silently dropped — the trie / linked-list / tree pattern.
+    Conservative: both signals must name the SAME cursor, so `arr[i] = v` or a read-only walk never
+    trips it. Returns True iff the advanced-and-mutated cursor sets intersect."""
+    top = advanced is None
+    if top:
+        advanced, mutated = set(), set()
+    if isinstance(node, dict):
+        nt = node.get("node_type")
+        if nt == "Assign":
+            tgt, val = node.get("target"), node.get("value")
+            tname = tgt.get("id") if isinstance(tgt, dict) and tgt.get("node_type") == "Name" else None
+            if tname is not None and _chain_root(val) == tname and _chain_has_attr(val):
+                advanced.add(tname)          # cursor ADVANCE `node = node.attr...`
+        if nt in ("Assign", "AugAssign"):
+            tgt = node.get("target")
+            # STRUCTURAL mutation `x.field[i] = ...` (container-element write through a cursor's field,
+            # the trie `node.children[idx] = Trie()`). A plain scalar field write (`head.val = v`) is
+            # deliberately excluded: value semantics returns a correct result for the linked-list walk
+            # that does it, so flagging it would needlessly force the heap tier on a working program.
+            if isinstance(tgt, dict) and tgt.get("node_type") == "Subscript" and _chain_has_attr(tgt.get("value")):
+                r = _chain_root(tgt)
+                if r is not None:
+                    mutated.add(r)
+        for value in node.values():
+            _module_needs_heap(value, advanced, mutated)
+    elif isinstance(node, list):
+        for item in node:
+            _module_needs_heap(item, advanced, mutated)
+    if top:
+        return bool(advanced & mutated)
+    return False
+
+
 def _node_has_direct_heap_syntax(node):
     """Whether `node` directly uses the heap (`--heap`): a class instantiation (`_class_ctor`), an
     instance-method call (`_receiver_class`), or a container literal. Does not descend into nested
@@ -2014,9 +2075,14 @@ def translate_to_lean(source_code, target="term", filepath = None, imports_add =
     _NUMERIC_MODE = "approx" if mode == "run" else "exact"
     _BEST_EFFORT = best_effort
     _RUN_SUFFIX, _USER_NAMES = "", []
-    _HEAP_MODE = heap
     json_ir = translate_to_json(source_code, filepath, best_effort=best_effort)
     ast_json = json.loads(json_ir)
+    # Best-effort: if not explicitly on, auto-enable reference (`--heap`) semantics when the program
+    # mutates a recursive structure through a cursor (trie / linked list / tree). Value semantics copies
+    # the cursor and silently drops those writes; heap threads them through the shared structure.
+    if not heap and _module_needs_heap(ast_json):
+        heap = True
+    _HEAP_MODE = heap
     _stamp_class_dispatch(ast_json)
     client = client or _LEAN_BACKEND
 

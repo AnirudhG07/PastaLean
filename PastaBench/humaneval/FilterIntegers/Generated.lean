@@ -44,4 +44,17 @@ def filter_integers := fun (values : List PastaLean.PyAny) ↦
   -/
   PastaLean.pyList (PastaLean.pyFilter (fun x ↦ PastaLean.pyType x == TypeInfer.PyType.int) values)
 
+attribute [simp, taste_ingr] filter_integers
+
+def filter_integers'rn := fun (values : List PastaLean.PyAny) ↦
+  /-
+   Filter given list of any python values only for integers
+      >>> filter_integers(['a', 3.14, 5])
+      [5]
+      >>> filter_integers([1, 2, 3, 'abc', {}, []])
+      [1, 2, 3]
+      
+  -/
+  PastaLean.pyList (PastaLean.pyFilter (fun x ↦ PastaLean.pyType x == TypeInfer.PyType.int) values)
+
 end PastaBench.humaneval.FilterIntegers

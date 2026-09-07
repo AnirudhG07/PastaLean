@@ -58,4 +58,26 @@ def sum_product := fun (numbers : List Int) ↦
       let p'_ret_1 := (s, p)
       return p'_ret_1)
 
+attribute [simp, taste_ingr] sum_product
+
+def sum_product'rn := fun (numbers : List Int) ↦
+  Id.run
+    (do
+      /-
+       For a given list of integers, return a tuple consisting of a sum and a product of all the integers in a list.
+          Empty sum should be equal to 0 and empty product should be equal to 1.
+          >>> sum_product([])
+          (0, 1)
+          >>> sum_product([1, 2, 3, 4])
+          (10, 24)
+          
+      -/
+      let mut s : Int := (0 : Int)
+      let mut p : Int := (1 : Int)
+      for number in (PastaLean.pyIter numbers)do
+        s := s +ₚ number
+        p := p *ₚ number
+      let p'_ret_1 := (s, p)
+      return p'_ret_1)
+
 end PastaBench.humaneval.SumProduct

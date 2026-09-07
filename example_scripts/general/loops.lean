@@ -170,13 +170,10 @@ def loop_leak_conflicting := fun (n : Int) ↦
       -- the loop as `let mut z : PyAny := emptyPyAny`; each branch reassigns, boxing).
       let mut z : PyAny := default
       for i in (PastaLean.pyRange n)do
-        let mut z'v1 : PyAny := default
         if h_1 : i %ₚ (2 : Int) = (0 : Int) then 
-          let mut z'rb0 := i
-          let mut z'v1'rb1 := z'rb0
+          z := i
         else
-          let mut z'rb2 := "odd"
-          let mut z'v1'rb3 := z'rb2
+          z := "odd"
       let p'_ret_1 := PastaLean.pyStr z
       return p'_ret_1)
 
@@ -189,13 +186,10 @@ def loop_leak_conflicting'rn := fun (n : Int) ↦
       -- the loop as `let mut z : PyAny := emptyPyAny`; each branch reassigns, boxing).
       let mut z : PyAny := default
       for i in (PastaLean.pyRange n)do
-        let mut z'v1 : PyAny := default
         if h_1 : i %ₚ (2 : Int) == (0 : Int) then 
-          let mut z'rb0 := i
-          let mut z'v1'rb1 := z'rb0
+          z := i
         else
-          let mut z'rb2 := "odd"
-          let mut z'v1'rb3 := z'rb2
+          z := "odd"
       let p'_ret_1 := PastaLean.pyStr z
       return p'_ret_1)
 

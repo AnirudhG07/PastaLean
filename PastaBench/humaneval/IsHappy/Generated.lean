@@ -58,13 +58,34 @@ def is_happy := fun (s : PyAny) ↦
       -/
       if h_1 : PastaLean.pyLen s < (3 : Int) then 
         return Bool.false
-      else
-        let _ := ()
+      for i in (PastaLean.pyRange (PastaLean.pyLen s -ₚ (2 : Int)))do
+        if h_2 : (s⦋i⦌ = s⦋i +ₚ (1 : Int)⦌ ∨ s⦋i⦌ = s⦋i +ₚ (2 : Int)⦌) ∨ s⦋i +ₚ (1 : Int)⦌ = s⦋i +ₚ (2 : Int)⦌ then 
+          return Bool.false
+      return Bool.true)
+
+attribute [simp, taste_ingr] is_happy
+
+def is_happy'rn := fun (s : PyAny) ↦
+  Id.run
+    (do
+      /-
+      You are given a string s.
+          Your task is to check if the string is happy or not.
+          A string is happy if its length is at least 3 and every 3 consecutive letters are distinct
+          For example:
+          is_happy(a) => False
+          is_happy(aa) => False
+          is_happy(abcd) => True
+          is_happy(aabb) => False
+          is_happy(adb) => True
+          is_happy(xyy) => False
+          
+      -/
+      if h_1 : PastaLean.pyLen s < (3 : Int) then 
+        return Bool.false
       for i in (PastaLean.pyRange (PastaLean.pyLen s -ₚ (2 : Int)))do
         if h_2 : s⦋i⦌ == s⦋i +ₚ (1 : Int)⦌ || s⦋i⦌ == s⦋i +ₚ (2 : Int)⦌ || s⦋i +ₚ (1 : Int)⦌ == s⦋i +ₚ (2 : Int)⦌ then 
           return Bool.false
-        else
-          let _ := ()
       return Bool.true)
 
 end PastaBench.humaneval.IsHappy

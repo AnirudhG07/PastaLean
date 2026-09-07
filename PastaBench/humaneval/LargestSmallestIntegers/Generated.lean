@@ -54,6 +54,26 @@ def largest_smallest_integers := fun (lst : List Int) ↦
   -/
   let neg := PastaLean.pyList (PastaLean.pyFilter (fun x ↦ decide (x < (0 : Int))) lst)
   let pos := PastaLean.pyList (PastaLean.pyFilter (fun x ↦ decide (x > (0 : Int))) lst)
+  (if neg = [] then none else some (PastaLean.pyMax neg), if pos = [] then none else some (PastaLean.pyMin pos))
+
+attribute [simp, taste_ingr] largest_smallest_integers
+
+def largest_smallest_integers'rn := fun (lst : List Int) ↦
+  /-
+  
+      Create a function that returns a tuple (a, b), where 'a' is
+      the largest of negative integers, and 'b' is the smallest
+      of positive integers in a list.
+      If there is no negative or positive integers, return them as None.
+  
+      Examples:
+      largest_smallest_integers([2, 4, 1, 3, 5, 7]) == (None, 1)
+      largest_smallest_integers([]) == (None, None)
+      largest_smallest_integers([0]) == (None, None)
+      
+  -/
+  let neg := PastaLean.pyList (PastaLean.pyFilter (fun x ↦ decide (x < (0 : Int))) lst)
+  let pos := PastaLean.pyList (PastaLean.pyFilter (fun x ↦ decide (x > (0 : Int))) lst)
   (if neg == [] then none else some (PastaLean.pyMax neg), if pos == [] then none else some (PastaLean.pyMin pos))
 
 end PastaBench.humaneval.LargestSmallestIntegers

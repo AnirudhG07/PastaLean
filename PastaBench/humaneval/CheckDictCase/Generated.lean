@@ -62,10 +62,8 @@ def check_dict_case := fun (dict : Std.HashMap String PyAny) ↦
           
       -/
       let mut keys : List String := PastaLean.pyList (PastaLean.pyKeys dict)
-      if h_1 : keys == [] then 
+      if h_1 : keys = [] then 
         return Bool.false
-      else
-        let _ := ()
       let mut lower : Bool := Bool.true
       let mut upper : Bool := Bool.true
       for k in (PastaLean.pyIter keys)do
@@ -73,16 +71,45 @@ def check_dict_case := fun (dict : Std.HashMap String PyAny) ↦
           lower := Bool.false
           upper := Bool.false
           break
-        else
-          let _ := ()
+        if h_3 : ¬PastaLean.pyTruthy (PastaLean.pyIsLower k) = true then 
+          lower := Bool.false
+        if h_4 : ¬PastaLean.pyTruthy (PastaLean.pyIsUpper k) = true then 
+          upper := Bool.false
+      let p'_ret_1 := if PastaLean.pyTruthy lower then lower else upper
+      return p'_ret_1)
+
+attribute [simp, taste_ingr] check_dict_case
+
+def check_dict_case'rn := fun (dict : Std.HashMap String PyAny) ↦
+  Id.run
+    (do
+      /-
+      
+          Given a dictionary, return True if all keys are strings in lower 
+          case or all keys are strings in upper case, else return False.
+          The function should return False is the given dictionary is empty.
+          Examples:
+          check_dict_case({"a":"apple", "b":"banana"}) should return True.
+          check_dict_case({"a":"apple", "A":"banana", "B":"banana"}) should return False.
+          check_dict_case({"a":"apple", 8:"banana", "a":"apple"}) should return False.
+          check_dict_case({"Name":"John", "Age":"36", "City":"Houston"}) should return False.
+          check_dict_case({"STATE":"NC", "ZIP":"12345" }) should return True.
+          
+      -/
+      let mut keys : List String := PastaLean.pyList (PastaLean.pyKeys dict)
+      if h_1 : keys == [] then 
+        return Bool.false
+      let mut lower : Bool := Bool.true
+      let mut upper : Bool := Bool.true
+      for k in (PastaLean.pyIter keys)do
+        if h_2 : PastaLean.pyType k != TypeInfer.PyType.str then 
+          lower := Bool.false
+          upper := Bool.false
+          break
         if h_3 : !PastaLean.pyTruthy (PastaLean.pyIsLower k) then 
           lower := Bool.false
-        else
-          let _ := ()
         if h_4 : !PastaLean.pyTruthy (PastaLean.pyIsUpper k) then 
           upper := Bool.false
-        else
-          let _ := ()
       let p'_ret_1 := if PastaLean.pyTruthy lower then lower else upper
       return p'_ret_1)
 

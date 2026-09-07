@@ -53,14 +53,38 @@ def fib := fun (n : Int) ↦
           21
           
       -/
-      if h_1 : n == (0 : Int) then 
+      if h_1 : n = (0 : Int) then 
         return (0 : Int)
-      else
-        let _ := ()
       if h_2 : n ≤ (2 : Int) then 
         return (1 : Int)
-      else
-        let _ := ()
+      let mut a : Int := (1 : Int)
+      let mut b : Int := (1 : Int)
+      for _ in (PastaLean.pyRange (n +ₚ (1 : Int)) (3 : Int))do
+        let p'_unpack_value_1 := (b, a +ₚ b)
+        let p'_unpack_pair_1 := p'_unpack_value_1
+        a := Prod.fst p'_unpack_pair_1
+        b := Prod.snd p'_unpack_pair_1
+      return b)
+
+attribute [simp, taste_ingr] fib
+
+def fib'rn := fun (n : Int) ↦
+  Id.run
+    (do
+      /-
+      Return n-th Fibonacci number.
+          >>> fib(10)
+          55
+          >>> fib(1)
+          1
+          >>> fib(8)
+          21
+          
+      -/
+      if h_1 : n == (0 : Int) then 
+        return (0 : Int)
+      if h_2 : n ≤ (2 : Int) then 
+        return (1 : Int)
       let mut a : Int := (1 : Int)
       let mut b : Int := (1 : Int)
       for _ in (PastaLean.pyRange (n +ₚ (1 : Int)) (3 : Int))do

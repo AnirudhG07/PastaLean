@@ -59,11 +59,35 @@ def find_max := fun (words : PyAny) ↦
         let mut ans : PyAny := ""
         for word in (PastaLean.pyIter words)do
           let mut ch_cnt : Int := PastaLean.pyLen (PastaLean.pySet word)
+          if h_1 : ch_cnt > mx_ch_cnt ∨ ch_cnt = mx_ch_cnt ∧ word < ans then 
+            mx_ch_cnt := ch_cnt
+            ans := word
+        return (ans : PastaLean.PyAny)))
+
+attribute [simp] find_max
+
+def find_max'rn := fun (words : PyAny) ↦
+  (show PastaLean.PyAny from
+    Id.run
+      (do
+        /-
+        Write a function that accepts a list of strings.
+            The list contains different words. Return the word with maximum number
+            of unique characters. If multiple strings have maximum number of unique
+            characters, return the one which comes first in lexicographical order.
+        
+            find_max(["name", "of", "string"]) == "string"
+            find_max(["name", "enam", "game"]) == "enam"
+            find_max(["aaaaaaa", "bb" ,"cc"]) == ""aaaaaaa"
+            
+        -/
+        let mut mx_ch_cnt : Int := (0 : Int)
+        let mut ans : PyAny := ""
+        for word in (PastaLean.pyIter words)do
+          let mut ch_cnt : Int := PastaLean.pyLen (PastaLean.pySet word)
           if h_1 : decide (ch_cnt > mx_ch_cnt) || ch_cnt == mx_ch_cnt && decide (word < ans) then 
             mx_ch_cnt := ch_cnt
             ans := word
-          else
-            let _ := ()
         return (ans : PastaLean.PyAny)))
 
 end PastaBench.humaneval.FindMax

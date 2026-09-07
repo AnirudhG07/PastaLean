@@ -38,7 +38,28 @@ def triangle_area(a, b, c):
 
 namespace PastaBench.humaneval.TriangleArea71
 
-def triangle_area := fun a ↦ fun b ↦ fun c ↦
+noncomputable def triangle_area := fun a ↦ fun b ↦ fun c ↦
+  (show Real from
+    /-
+    
+        Given the lengths of the three sides of a triangle. Return the area of
+        the triangle rounded to 2 decimal points if the three sides form a valid triangle. 
+        Otherwise return -1
+        Three sides make a valid triangle when the sum of any two sides is greater 
+        than the third side.
+        Example:
+        triangle_area(3, 4, 5) == 6.00
+        triangle_area(1, 2, 10) == -1
+        
+    -/
+    if (a +ₚ b ≤ c ∨ a +ₚ c ≤ b) ∨ b +ₚ c ≤ a then -(1 : Int)
+    else
+      let p := (a +ₚ b +ₚ c) /ₚ (2 : Int)
+      PastaLean.PyRoundDigitsC.pyRoundDigits ((p *ₚ (p -ₚ a) *ₚ (p -ₚ b) *ₚ (p -ₚ c)) ^ₚ (0.5 : Rat)) (2 : Int))
+
+attribute [simp] triangle_area
+
+def triangle_area'rn := fun a ↦ fun b ↦ fun c ↦
   (show Float from
     /-
     

@@ -49,10 +49,27 @@ def add := fun (lst : List Int) ↦
       -/
       let mut s : Int := (0 : Int)
       for i in (PastaLean.pyRange (PastaLean.pyLen lst) (1 : Int) (2 : Int))do
+        if h_1 : lst⦋i⦌ %ₚ (2 : Int) = (0 : Int) then 
+          s := s +ₚ lst⦋i⦌
+      return s)
+
+attribute [simp, taste_ingr] add
+
+def add'rn := fun (lst : List Int) ↦
+  Id.run
+    (do
+      /-
+      Given a non-empty list of integers lst. add the even elements that are at odd indices..
+      
+      
+          Examples:
+              add([4, 2, 6, 7]) ==> 2 
+          
+      -/
+      let mut s : Int := (0 : Int)
+      for i in (PastaLean.pyRange (PastaLean.pyLen lst) (1 : Int) (2 : Int))do
         if h_1 : lst⦋i⦌ %ₚ (2 : Int) == (0 : Int) then 
           s := s +ₚ lst⦋i⦌
-        else
-          let _ := ()
       return s)
 
 end PastaBench.humaneval.Add85

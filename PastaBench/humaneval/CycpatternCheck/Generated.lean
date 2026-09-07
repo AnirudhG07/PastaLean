@@ -55,22 +55,44 @@ def cycpattern_check := fun a ↦ fun (b : String) ↦
       
           
       -/
-      if h_1 : a == b then 
+      if h_1 : a = b then 
         return Bool.true
-      else
-        let _ := ()
-      if h_2 : b == "" then 
+      if h_2 : b = "" then 
         return Bool.true
-      else
-        let _ := ()
       for i in (PastaLean.pyRange (PastaLean.pyLen b) (0 : Int))do
         if h_3 :
             PastaLean.pyContains a
               (PastaLean.pySlice b (some i) none none +ₚ PastaLean.pySlice b none (some i) none) then
           
           return Bool.true
-        else
-          let _ := ()
+      return Bool.false)
+
+attribute [simp, taste_ingr] cycpattern_check
+
+def cycpattern_check'rn := fun a ↦ fun (b : String) ↦
+  Id.run
+    (do
+      /-
+      You are given 2 words. You need to return True if the second word or any of its rotations is a substring in the first word
+          cycpattern_check("abcd","abd") => False
+          cycpattern_check("hello","ell") => True
+          cycpattern_check("whassup","psus") => False
+          cycpattern_check("abab","baa") => True
+          cycpattern_check("efef","eeff") => False
+          cycpattern_check("himenss","simen") => True
+      
+          
+      -/
+      if h_1 : a == b then 
+        return Bool.true
+      if h_2 : b == "" then 
+        return Bool.true
+      for i in (PastaLean.pyRange (PastaLean.pyLen b) (0 : Int))do
+        if h_3 :
+            PastaLean.pyContains a
+              (PastaLean.pySlice b (some i) none none +ₚ PastaLean.pySlice b none (some i) none) then
+          
+          return Bool.true
       return Bool.false)
 
 end PastaBench.humaneval.CycpatternCheck

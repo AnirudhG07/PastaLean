@@ -533,6 +533,17 @@ membership (over `str` elements), not a substring test. -/
 private def rightIsSetExpr (rightJson : Option Json) : PygenM Bool :=
   (rightJson.mapM jsonIsSetExpr).map (·.getD false)
 
+/-- If `j` is a bare reference to an `Option T` slot local (`ans`, from `ans = None; …; ans = t`),
+unwrap it (`ans.get!`) so an ordered `<`/`>`/`≤`/`≥` against a bare `T` type-checks — Lean's
+`instLTOption` gives no `Decidable`, and the comparison is reached only when the guard proved the
+value non-`None`. Non-`Option` operands are returned unchanged. -/
+private def unwrapOptionOperand (j : Json) (code : TSyntax `term) : PygenM (TSyntax `term) := do
+  if j.getObjValAs? String "node_type" == .ok "Name" then
+    if let .ok id := j.getObjValAs? String "id" then
+      if ← isOptionVar id.toName then
+        return ← `(($code).get!)
+  return code
+
 /-- Apply a Python comparison operator to already-lowered terms. `leftJson` only affects
 membership lowering: a string literal on the left of `in`/`not in` means substring containment
 (`pyStrContainsSubstr`) — unless the container is a set — otherwise membership uses `pyContains`,
@@ -582,10 +593,14 @@ def compareApplyTerm (op : String) (leftJson : Json) (leftCode rightCode : TSynt
       if prop && exact && !classCmp then `($leftCode = $rightCode) else `($leftCode == $rightCode)
   | "ne" | "isnot" =>
       if prop && exact && !classCmp then `($leftCode ≠ $rightCode) else `($leftCode != $rightCode)
-  | "lt" => if prop then `($leftCode < $rightCode) else `(decide ($leftCode < $rightCode))
-  | "gt" => if prop then `($leftCode > $rightCode) else `(decide ($leftCode > $rightCode))
-  | "le" => if prop then `($leftCode <= $rightCode) else `(decide ($leftCode <= $rightCode))
-  | "ge" => if prop then `($leftCode >= $rightCode) else `(decide ($leftCode >= $rightCode))
+  | "lt" | "gt" | "le" | "ge" =>
+      let l ← unwrapOptionOperand leftJson leftCode
+      let r ← match rightJson with | some rj => unwrapOptionOperand rj rightCode | none => pure rightCode
+      match op with
+      | "lt" => if prop then `($l < $r) else `(decide ($l < $r))
+      | "gt" => if prop then `($l > $r) else `(decide ($l > $r))
+      | "le" => if prop then `($l <= $r) else `(decide ($l <= $r))
+      | _    => if prop then `($l >= $r) else `(decide ($l >= $r))
   | "in" =>
       if isStringyJson leftJson && !(← rightIsSetExpr rightJson) then
         `($(mkIdent ``PastaLean.pyStrContainsSubstr) $rightCode $leftCode)
@@ -828,6 +843,24 @@ partial def jsonCallsName (name : String) (json : Json) : Bool :=
     | .obj fs => fs.toList.any (fun (_, v) => jsonCallsName name v)
     | _ => false)
 
+/-- The variable name and polarity of a `<name> is None` / `<name> is not None` (or `== None` /
+`!= None`) test: `(name, true)` for an *is-None* test, `(name, false)` for *is-not-None*. `none`
+if the test is not that shape. -/
+private def noneTestVar? (testJson : Json) : Option (String × Bool) := do
+  if testJson.getObjValAs? String "node_type" != .ok "Compare" then none else
+  let op ← (testJson.getObjValAs? String "op").toOption
+  if !(op == "is" || op == "eq" || op == "isnot" || op == "ne") then none else
+  let left ← (testJson.getObjVal? "left").toOption
+  let right ← (testJson.getObjVal? "right").toOption
+  let nameSide ← if isNoneConstantJson left then some right
+                 else if isNoneConstantJson right then some left else none
+  if nameSide.getObjValAs? String "node_type" != .ok "Name" then none else
+  let id ← (nameSide.getObjValAs? String "id").toOption
+  some (id, op == "is" || op == "eq")
+
+private def nameId? (j : Json) : Option String :=
+  if j.getObjValAs? String "node_type" == .ok "Name" then (j.getObjValAs? String "id").toOption else none
+
 @[pygen "IfExp"]
 def ifExpSyntax : (kind : SyntaxNodeKind) → Json →
     PygenM (TSyntax kind)
@@ -848,6 +881,20 @@ def ifExpSyntax : (kind : SyntaxNodeKind) → Json →
     let branchOpt := json.getObjValAs? Bool "_branch_opt" == .ok true
     let lift (code : TSyntax `term) : PygenM (TSyntax `term) :=
       if branchOpt then pure code else `(some $code)
+    -- None-coalescing return `X if v is None else v` (or `v if v is not None else X`) on an `Option T`
+    -- slot: emit `v.getD X`, unwrapping the `Option` to the bare `T` both arms share (the raw
+    -- `if … then X else v` would mismatch `String` against `Option String`).
+    let coalesce? ← (do
+      match noneTestVar? testJson with
+      | some (v, isNone) =>
+        if (← isOptionVar v.toName)
+            && ((isNone && nameId? orelseJson == some v) || (!isNone && nameId? bodyJson == some v)) then
+          let (vNode, dfltNode) := if isNone then (orelseJson, bodyJson) else (bodyJson, orelseJson)
+          let vCode ← getCode vNode `term
+          let dfltCode ← getCode dfltNode `term
+          pure (some (← `(($vCode).getD $dfltCode)))
+        else pure none
+      | none => pure none : PygenM (Option (TSyntax `term)))
     if bodyIsNone && orelseIsNone then
       `(none)
     else if bodyIsNone then
@@ -856,6 +903,8 @@ def ifExpSyntax : (kind : SyntaxNodeKind) → Json →
     else if orelseIsNone then
       let bodyCode ← lift (← getCode bodyJson `term)
       `(if $testCode then $bodyCode else none)
+    else if let some c := coalesce? then
+      pure c
     else
       let bodyCode ← getCode bodyJson `term
       let orelseCode ← getCode orelseJson `term
@@ -865,6 +914,11 @@ def ifExpSyntax : (kind : SyntaxNodeKind) → Json →
       if let some (memoName, _) ← getMemoizeSelf then
         if jsonCallsName memoName bodyJson || jsonCallsName memoName orelseJson then
           return ← `((← if $testCode then (do return $bodyCode) else (do return $orelseCode)))
+      -- A branch carrying an `(← …)` await (a heap read `d[i]` in `d[i] if c else x`) can't sit in an
+      -- `if`-TERM — wrap each branch in `do return …` so its await stays scoped, and await the whole
+      -- `if` (same shape as the memoized case, and lazy so only the taken branch's effect runs).
+      if syntaxHasLift bodyCode || syntaxHasLift orelseCode then
+        return ← `((← if $testCode then (do return $bodyCode) else (do return $orelseCode)))
       `(if $testCode then $bodyCode else $orelseCode)
   | _, _ => throwError s!"Unsupported syntax category for IfExp node"
 

@@ -110,7 +110,7 @@ def run_ty_on(src):
         path = f.name
     try:
         out = subprocess.run(["uv", "run", "ty", "check", path], capture_output=True, text=True,
-                             cwd=str(Path(__file__).resolve().parent.parent)).stdout
+                             cwd=str(Path(__file__).resolve().parent.parent.parent)).stdout
     except Exception:  # noqa: BLE001
         return {}
     # Each reveal produces a block ending in `^^^ \`Type\``; collect them in order.

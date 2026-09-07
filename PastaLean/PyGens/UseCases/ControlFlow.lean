@@ -615,7 +615,8 @@ def hoistEscapingDecls (json : Json) (namesKey typesKey : String) :
     let nmName := nm.toName
     unless (← hasVar nmName) do
       let nmIdent := mkIdent nmName
-      let tyStx? ← match (jsonFieldOption json typesKey).bind (·.getObjVal? nm |>.toOption) with
+      let ann? := (jsonFieldOption json typesKey).bind (·.getObjVal? nm |>.toOption)
+      let tyStx? ← match ann? with
         | some ann => stampedTypeSyntax? (Json.mkObj [("_ty", ann)])
         | none => pure none
       let decl ← match tyStx? with
@@ -624,6 +625,9 @@ def hoistEscapingDecls (json : Json) (namesKey typesKey : String) :
       decls := decls.push decl
       addVar nmName
       setMutVar nmName
+      -- A hoisted `PyAny` slot absorbs a later cross-type assignment by coercion; without this the
+      -- assignment takes the `'rbN` rebind path and binds a name scoped to the inner block.
+      if ann?.any (fun t => t.getObjValAs? String "id" == .ok "PyAny") then setPyAnySlot nmName true
   return decls
 
 @[pygen "While"]

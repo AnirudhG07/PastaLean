@@ -51,8 +51,28 @@ def remove_duplicates := fun (numbers : List Int) ↦
       for number in (PastaLean.pyIter numbers)do
         if h_1 : !(PastaLean.pyContains num_cnt number) then 
           num_cnt := PastaLean.pySetItem num_cnt number (0 : Int)
-        else
-          let _ := ()
+        num_cnt := PastaLean.pySetItem num_cnt number (num_cnt⦋number⦌ +ₚ (1 : Int))
+      let p'_ret_1 :=
+        (List.filter (fun (number : Int) => num_cnt⦋number⦌ = (1 : Int)) (PastaLean.pyIter numbers)).map
+          fun (number : Int) => number
+      return p'_ret_1)
+
+attribute [simp, taste_ingr] remove_duplicates
+
+def remove_duplicates'rn := fun (numbers : List Int) ↦
+  Id.run
+    (do
+      /-
+       From a list of integers, remove all elements that occur more than once.
+          Keep order of elements left the same as in the input.
+          >>> remove_duplicates([1, 2, 3, 2, 4])
+          [1, 3, 4]
+          
+      -/
+      let mut num_cnt : Std.HashMap Int Int := Std.HashMap.ofList []
+      for number in (PastaLean.pyIter numbers)do
+        if h_1 : !(PastaLean.pyContains num_cnt number) then 
+          num_cnt := PastaLean.pySetItem num_cnt number (0 : Int)
         num_cnt := PastaLean.pySetItem num_cnt number (num_cnt⦋number⦌ +ₚ (1 : Int))
       let p'_ret_1 :=
         (List.filter (fun (number : Int) => num_cnt⦋number⦌ == (1 : Int)) (PastaLean.pyIter numbers)).map

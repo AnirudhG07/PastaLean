@@ -85,13 +85,51 @@ def even_odd_palindrome := fun (n : Int) ↦
       let mut odd_cnt : Int := (0 : Int)
       let mut even_cnt : Int := (0 : Int)
       for i in (PastaLean.pyRange (n +ₚ (1 : Int)) (1 : Int))do
+        if h_1 : PastaLean.pyStr i = PastaLean.pySlice (PastaLean.pyStr i) none none (some (-(1 : Int))) then 
+          if h_2 : i %ₚ (2 : Int) = (1 : Int) then 
+            odd_cnt := odd_cnt +ₚ (1 : Int)
+          else
+            even_cnt := even_cnt +ₚ (1 : Int)
+      let p'_ret_1 := (even_cnt, odd_cnt)
+      return p'_ret_1)
+
+attribute [simp, taste_ingr] even_odd_palindrome
+
+def even_odd_palindrome'rn := fun (n : Int) ↦
+  Id.run
+    (do
+      /-
+      
+          Given a positive integer n, return a tuple that has the number of even and odd
+          integer palindromes that fall within the range(1, n), inclusive.
+      
+          Example 1:
+      
+              Input: 3
+              Output: (1, 2)
+              Explanation:
+              Integer palindrome are 1, 2, 3. one of them is even, and two of them are odd.
+      
+          Example 2:
+      
+              Input: 12
+              Output: (4, 6)
+              Explanation:
+              Integer palindrome are 1, 2, 3, 4, 5, 6, 7, 8, 9, 11. four of them are even, and 6 of them are odd.
+      
+          Note:
+              1. 1 <= n <= 10^3
+              2. returned tuple has the number of even and odd integer palindromes respectively.
+          
+      -/
+      let mut odd_cnt : Int := (0 : Int)
+      let mut even_cnt : Int := (0 : Int)
+      for i in (PastaLean.pyRange (n +ₚ (1 : Int)) (1 : Int))do
         if h_1 : PastaLean.pyStr i == PastaLean.pySlice (PastaLean.pyStr i) none none (some (-(1 : Int))) then 
           if h_2 : i %ₚ (2 : Int) == (1 : Int) then 
             odd_cnt := odd_cnt +ₚ (1 : Int)
           else
             even_cnt := even_cnt +ₚ (1 : Int)
-        else
-          let _ := ()
       let p'_ret_1 := (even_cnt, odd_cnt)
       return p'_ret_1)
 

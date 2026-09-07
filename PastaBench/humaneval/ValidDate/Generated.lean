@@ -75,6 +75,53 @@ def valid_date := fun (date : String) ↦
       
   -/
   let days :=
+    ([(31 : Int), (29 : Int), (31 : Int), (30 : Int), (31 : Int), (30 : Int), (31 : Int), (31 : Int), (30 : Int),
+        (31 : Int), (30 : Int), (31 : Int)] :
+      List Int)
+  if PastaLean.pyLen date ≠ (10 : Int) then Bool.false
+  else
+    if date⦋(2 : Int)⦌ ≠ "-" ∨ date⦋(5 : Int)⦌ ≠ "-" then Bool.false
+    else
+      let m := PastaLean.pySlice date none (some (2 : Int)) none
+      let d := PastaLean.pySlice date (some (3 : Int)) (some (5 : Int)) none
+      let y := (PastaLean.pySlice date (some (6 : Int)) none none : String)
+      if
+          (¬PastaLean.pyTruthy (PastaLean.pyIsDecimal m) = true ∨
+              ¬PastaLean.pyTruthy (PastaLean.pyIsDecimal d) = true) ∨
+            ¬PastaLean.pyTruthy (PastaLean.pyIsDecimal y) = true then
+        Bool.false
+      else
+        let p'_unpack_pair_1 := (PastaLean.pyInt m, PastaLean.pyInt d)
+        let m := Prod.fst p'_unpack_pair_1
+        let d := Prod.snd p'_unpack_pair_1
+        if ¬((1 : Int) ≤ m ∧ m ≤ (12 : Int)) then Bool.false
+        else if ¬((1 : Int) ≤ d ∧ d ≤ days⦋m -ₚ (1 : Int)⦌) then Bool.false else Bool.true
+
+attribute [simp, taste_ingr] valid_date
+
+def valid_date'rn := fun (date : String) ↦
+  /-
+  You have to write a function which validates a given date string and
+      returns True if the date is valid otherwise False.
+      The date is valid if all of the following rules are satisfied:
+      1. The date string is not empty.
+      2. The number of days is not less than 1 or higher than 31 days for months 1,3,5,7,8,10,12. And the number of days is not less than 1 or higher than 30 days for months 4,6,9,11. And, the number of days is not less than 1 or higher than 29 for the month 2.
+      3. The months should not be less than 1 or higher than 12.
+      4. The date should be in the format: mm-dd-yyyy
+  
+      for example: 
+      valid_date('03-11-2000') => True
+  
+      valid_date('15-01-2012') => False
+  
+      valid_date('04-0-2040') => False
+  
+      valid_date('06-04-2020') => True
+  
+      valid_date('06/04/2020') => False
+      
+  -/
+  let days :=
     (#[(31 : Int), (29 : Int), (31 : Int), (30 : Int), (31 : Int), (30 : Int), (31 : Int), (31 : Int), (30 : Int),
         (31 : Int), (30 : Int), (31 : Int)] :
       Array Int)

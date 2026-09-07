@@ -53,4 +53,22 @@ def is_palindrome := fun (text : String) ↦
   -/
   text == PastaLean.pySlice text none none (some (-(1 : Int)))
 
+attribute [simp, taste_ingr] is_palindrome
+
+def is_palindrome'rn := fun (text : String) ↦
+  /-
+  
+      Checks if given string is a palindrome
+      >>> is_palindrome('')
+      True
+      >>> is_palindrome('aba')
+      True
+      >>> is_palindrome('aaaaa')
+      True
+      >>> is_palindrome('zbcd')
+      False
+      
+  -/
+  text == PastaLean.pySlice text none none (some (-(1 : Int)))
+
 end PastaBench.humaneval.IsPalindrome

@@ -17,7 +17,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from typeinfer_eval import collect, ann_root                    # noqa: E402
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent.parent
 VENV = ROOT / ".venv" / "bin"
 DEFAULT_BENCH = Path("/tmp/TypeEvalPy/micro-benchmark/python_features")
 

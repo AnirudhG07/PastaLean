@@ -17,7 +17,7 @@ import argparse, json, os, subprocess, sys
 from pathlib import Path
 from multiprocessing import Pool
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 from pastalean.transpile import driver
 from pastalean import paths
 

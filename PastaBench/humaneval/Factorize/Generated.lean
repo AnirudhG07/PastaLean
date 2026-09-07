@@ -49,7 +49,38 @@ def factorize(n: int) -> List[int]:
 
 namespace PastaBench.humaneval.Factorize
 
-def factorize := fun (n : Int) ↦
+noncomputable def factorize := fun (n : Int) ↦
+  Id.run
+    (do
+      let mut n := n
+      /-
+       Return list of prime factors of given integer in the order from smallest to largest.
+          Each of the factors should be listed number of times corresponding to how many times it appeares in factorization.
+          Input number should be equal to the product of all factors
+          >>> factorize(8)
+          [2, 2, 2]
+          >>> factorize(25)
+          [5, 5]
+          >>> factorize(70)
+          [2, 5, 7]
+          
+      -/
+      let _ := ()
+      let mut fact : List Int := []
+      let mut i : Int := (2 : Int)
+      while (i ≤ PastaLean.pyInt (Libraries.math.pyMathSqrtR n +ₚ (1 : Int))) do
+        if h_1 : n %ₚ i = (0 : Int) then 
+          fact := PastaLean.pyAppend fact i
+          n := PastaLean.pyFloorDiv n i
+        else
+          i := i +ₚ (1 : Int)
+      if h_1 : n > (1 : Int) then 
+        fact := PastaLean.pyAppend fact n
+      return fact)
+
+attribute [simp] factorize
+
+def factorize'rn := fun (n : Int) ↦
   Id.run
     (do
       let mut n := n
@@ -76,8 +107,6 @@ def factorize := fun (n : Int) ↦
           i := i +ₚ (1 : Int)
       if h_1 : n > (1 : Int) then 
         fact := PastaLean.pyAppend fact n
-      else
-        let _ := ()
       return fact)
 
 end PastaBench.humaneval.Factorize

@@ -43,4 +43,17 @@ def count_distinct_characters := fun (string : String) ↦
   -/
   PastaLean.pyLen (PastaLean.pySet (PastaLean.pyStringLower string))
 
+attribute [simp, taste_ingr] count_distinct_characters
+
+def count_distinct_characters'rn := fun (string : String) ↦
+  /-
+   Given a string, find out how many distinct characters (regardless of case) does it consist of
+      >>> count_distinct_characters('xyzXYZ')
+      3
+      >>> count_distinct_characters('Jerry')
+      4
+      
+  -/
+  PastaLean.pyLen (PastaLean.pySet (PastaLean.pyStringLower string))
+
 end PastaBench.humaneval.CountDistinctCharacters

@@ -67,10 +67,38 @@ def strange_sort_list := fun (lst : PyAny) ↦
         ans := PastaLean.pyAppend ans sorted_list⦋j⦌
         i := i +ₚ (1 : Int)
         j := j -ₚ (1 : Int)
+      if h_1 : i = j then 
+        ans := PastaLean.pyAppend ans sorted_list⦋i⦌
+      return ans)
+
+attribute [simp, taste_ingr] strange_sort_list
+
+def strange_sort_list'rn := fun (lst : PyAny) ↦
+  Id.run
+    (do
+      /-
+      
+          Given list of integers, return list in strange order.
+          Strange sorting, is when you start with the minimum value,
+          then maximum of the remaining integers, then minimum and so on.
+      
+          Examples:
+          strange_sort_list([1, 2, 3, 4]) == [1, 4, 2, 3]
+          strange_sort_list([5, 5, 5, 5]) == [5, 5, 5, 5]
+          strange_sort_list([]) == []
+          
+      -/
+      let mut sorted_list : List PyAny := PastaLean.pySort lst
+      let mut ans : List PyAny := []
+      let mut i : Int := (0 : Int)
+      let mut j : Int := PastaLean.pyLen sorted_list -ₚ (1 : Int)
+      while (i < j) do
+        ans := PastaLean.pyAppend ans sorted_list⦋i⦌
+        ans := PastaLean.pyAppend ans sorted_list⦋j⦌
+        i := i +ₚ (1 : Int)
+        j := j -ₚ (1 : Int)
       if h_1 : i == j then 
         ans := PastaLean.pyAppend ans sorted_list⦋i⦌
-      else
-        let _ := ()
       return ans)
 
 end PastaBench.humaneval.StrangeSortList
