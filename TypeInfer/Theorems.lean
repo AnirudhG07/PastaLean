@@ -19,6 +19,10 @@ subterm — precisely the engine's reachable types.
 
 namespace TypeInfer.PyType
 
+-- The associativity/soundness inductions and the nested `tuple`/`fn` case analyses fan out over every
+-- constructor pair (or triple), so the whole file needs heartbeat headroom above the 200000 default.
+set_option maxHeartbeats 4000000
+
 /-! ### ⊥ = `unknown` is the identity -/
 
 @[simp] theorem join_unknown_left (a : PyType) : join .unknown a = a := by
@@ -212,7 +216,6 @@ remaining case — the numeric tower, the recursive `list`/`set`/`dict`/`tuple`/
 class-name fallback, and all the `Optional` absorption interactions — is discharged uniformly by `grind`
 from `join`'s equations and the inductive hypothesis. -/
 
--- set_option maxHeartbeats 2000000 in
 private theorem join_assoc_aux : ∀ (n : Nat) (a b c : PyType), sizeOf a + sizeOf b + sizeOf c ≤ n →
     join (join a b) c = join a (join b c) := by
   intro n
@@ -224,8 +227,8 @@ private theorem join_assoc_aux : ∀ (n : Nat) (a b c : PyType), sizeOf a + size
       first
       | (simp only [join, beq, reduceCtorEq, ite_true, ite_false, ite_self]; done)
       | (simp only [join, beq, beq_iff_eq]; split_ifs <;> simp_all only [reduceCtorEq]; done)
-      | (simp only [join, opt.sizeOf_spec, list.sizeOf_spec, set.sizeOf_spec,
-            dict.sizeOf_spec, cls.sizeOf_spec] at *; grind only [join])
+      | (simp_all only [join, opt.sizeOf_spec, list.sizeOf_spec, set.sizeOf_spec,
+            dict.sizeOf_spec, cls.sizeOf_spec] <;> grind only [join])
 
 /-- **Associativity** of the lattice join, on the full lattice: `(a ⊔ b) ⊔ c = a ⊔ (b ⊔ c)`. Together
 with `join_comm` and `join_idem` this makes `PyType`'s `join` a bounded join-semilattice, so the
@@ -404,11 +407,29 @@ private theorem hasType_join_left_aux : ∀ (n : Nat) (v : Val) (a b : PyType),
   | zero => intro v a b hn h; have := sizeOf_pos a; omega
   | succ n ih =>
     intro v a b hn h
-    cases a <;> cases b <;>
-      first
-      | (cases v <;> simp_all [HasType, join, beq]; done)
-      | (simp only [join, opt.sizeOf_spec, list.sizeOf_spec, set.sizeOf_spec, dict.sizeOf_spec,
-            tuple.sizeOf_spec, fn.sizeOf_spec] at * <;> grind [HasType, join])
+    cases a <;> cases b
+    -- scalar/`None`/`unknown`/`any` heads, and heads that admit no value, close by evaluation.
+    all_goals (try (cases v <;> simp_all [HasType, join, beq]; done))
+    -- `cls ⊔ cls` is `if n = m then cls n else any`; the value is `vcls n`, admitted either way.
+    all_goals (try (cases v <;> simp_all only [HasType, join, beq] <;> split <;> simp_all [HasType]; done))
+    -- `list e₁ ⊔ list e₂ = list (e₁ ⊔ e₂)`: widen each element by the IH.
+    case list.list e1 e2 =>
+      cases v <;> simp only [join, HasType] at h ⊢ <;>
+        first
+        | exact h.elim
+        | (intro x hx; exact ih x e1 e2 (by simp only [PyType.list.sizeOf_spec] at hn; omega) (h x hx))
+    -- `opt ⊔ X` and `X ⊔ opt`: split `join`'s Optional combinator; the `opt` branch holds because the
+    -- value is `None`, or by the IH on the smaller join has the combined inner type.
+    all_goals
+      (simp only [join]
+       split
+       · simp [HasType]
+       · simp only [HasType]
+         first
+         | (rcases h with rfl | h
+            · exact Or.inl rfl
+            · exact Or.inr (ih v _ _ (by simp only [PyType.opt.sizeOf_spec] at hn; omega) h))
+         | exact Or.inr (join_comm _ _ ▸ ih v _ _ (by simp only [PyType.opt.sizeOf_spec] at hn; omega) h))
 
 /-- **Semantic soundness of the merge (full lattice):** `HasType v a → HasType v (a ⊔ b)`. An inferred
 type is only ever *widened* by `join`, and widening never excludes a value the program can actually
@@ -421,5 +442,152 @@ theorem hasType_join_left (v : Val) (a b : PyType) (h : HasType v a) : HasType v
 /-- Soundness of the merge on the right, by commutativity. -/
 theorem hasType_join_right (v : Val) (a b : PyType) (h : HasType v b) : HasType v (join a b) := by
   rw [join_comm]; exact hasType_join_left v b a h
+
+
+/-! ## Gradual-typing consistency (`consistent`) and coercions (`reconcile`)
+
+The join lattice above governs how the engine MERGES types; `consistent` governs whether a value of
+one type may FLOW where another is expected, and `reconcile` picks the coercion that makes it fit.
+
+`consistent` is the gradual-typing consistency relation (Siek & Taha): reflexive and symmetric but
+crucially **not transitive** — a boxed (`any`) value flows anywhere, yet that does not make two
+unrelated concrete types interchangeable. Non-transitivity is exactly what separates gradual typing
+from subtyping.
+
+`beq`/`consistent` recurse over the nested `tuple`/`fn` with size-based recursion, so `PyType` has no
+plain structural induction: the diagonal facts (`beq_refl`, `consistent_refl`) go by well-founded
+recursion mirroring the functions themselves, and the symmetric facts drive each function's `.induct`
+principle and close the nested list cases with the `zip` helpers below. -/
+
+/-- On `as.zip as` both components of every pair coincide. -/
+theorem zip_self_eq {a b : PyType} {as : List PyType} (h : (a, b) ∈ as.zip as) : a = b := by
+  induction as with
+  | nil => simp at h
+  | cons x xs ih =>
+      simp only [List.zip_cons_cons, List.mem_cons] at h
+      rcases h with h | h
+      · simp_all
+      · exact ih h
+
+/-- `List.all` of a symmetric `Bool` op is the same over `as.zip bs` and `bs.zip as` — what the
+`tuple`/`fn` cases of `beq`/`consistent` symmetry reduce to once the outer function is unfolded. -/
+theorem all_zip_comm (f : PyType → PyType → Bool) : ∀ (as bs : List PyType),
+    (∀ a b, (a, b) ∈ as.zip bs → f a b = f b a) →
+    (as.zip bs).all (fun p => f p.1 p.2) = (bs.zip as).all (fun p => f p.1 p.2)
+  | [], bs, _ => by cases bs <;> rfl
+  | _ :: _, [], _ => rfl
+  | a :: as', b :: bs', ih => by
+      simp only [List.zip_cons_cons, List.all_cons]
+      rw [ih a b (by simp),
+          all_zip_comm f as' bs' fun x y h => ih x y (by
+            simp only [List.zip_cons_cons, List.mem_cons]; exact Or.inr h)]
+
+
+/-! ### `beq` (structural equality) is reflexive and symmetric
+
+`beq` has no absorption, so both hold on *all* of `PyType`. Reflexivity is a direct recursion; symmetry
+drives `beq.induct` and closes the single `_, _ => false` catch-all by casing the two constructors (the
+mismatch makes both sides `false`). -/
+
+theorem beq_refl : (a : PyType) → beq a a = true
+  | .unknown | .any | .int | .bool | .str | .float | .none => by simp [beq]
+  | .list e | .set e | .opt e => by simp only [beq]; exact beq_refl e
+  | .dict k v => by simp only [beq, beq_refl k, beq_refl v, Bool.and_self]
+  | .cls n => by simp only [beq, beq_self_eq_true]
+  | .tuple es => by
+      simp only [beq, beq_self_eq_true, Bool.true_and, List.all_eq_true]
+      rintro ⟨⟨a, b⟩, hmem⟩ _; obtain rfl := zip_self_eq hmem; exact beq_refl a
+  | .fn as r => by
+      simp only [beq, beq_self_eq_true, Bool.true_and, beq_refl r, Bool.and_true, List.all_eq_true]
+      rintro ⟨⟨a, b⟩, hmem⟩ _; obtain rfl := zip_self_eq hmem; exact beq_refl a
+  termination_by a => sizeOf a
+  decreasing_by
+    all_goals simp_wf
+    all_goals first
+      | omega
+      | (have := List.sizeOf_lt_of_mem (List.of_mem_zip ‹_ ∈ List.zip _ _›).1; omega)
+
+theorem beq_comm (a b : PyType) : beq a b = beq b a := by
+  induction a, b using PyType.beq.induct with
+  | case15 x y => cases x <;> cases y <;> simp_all [beq]
+  | _ =>
+    simp_all only [beq] <;>
+    first
+    | rfl
+    | grind
+    | (simp only [List.all_subtype, List.unattach_attach]
+       rw [all_zip_comm _ _ _ (by assumption)]; grind)
+
+
+/-! ### `consistent` is a gradual-typing consistency relation -/
+
+theorem consistent_any_l (t : PyType) : consistent .any t = true := by cases t <;> simp [consistent]
+theorem consistent_any_r (t : PyType) : consistent t .any = true := by cases t <;> simp [consistent]
+theorem consistent_unknown_r (t : PyType) : consistent t .unknown = true := by cases t <;> simp [consistent]
+
+theorem consistent_refl : (a : PyType) → consistent a a = true
+  | .unknown | .any | .int | .bool | .str | .float | .none => by simp [consistent, beq_refl]
+  | .list e | .set e | .opt e => by simp only [consistent]; exact consistent_refl e
+  | .dict k v => by simp only [consistent, consistent_refl k, consistent_refl v, Bool.and_self]
+  | .cls n => by simp only [consistent, beq_refl]
+  | .tuple es => by
+      simp only [consistent, beq_self_eq_true, Bool.true_and, List.all_eq_true]
+      rintro ⟨⟨a, b⟩, hmem⟩ _; obtain rfl := zip_self_eq hmem; exact consistent_refl a
+  | .fn as r => by
+      simp only [consistent, beq_self_eq_true, Bool.true_and, consistent_refl r, Bool.and_true,
+        List.all_eq_true]
+      rintro ⟨⟨a, b⟩, hmem⟩ _; obtain rfl := zip_self_eq hmem; exact consistent_refl a
+  termination_by a => sizeOf a
+  decreasing_by
+    all_goals simp_wf
+    all_goals first
+      | omega
+      | (have := List.sizeOf_lt_of_mem (List.of_mem_zip ‹_ ∈ List.zip _ _›).1; omega)
+
+/-- The **gradual guarantee**: the dynamic type `unknown` is consistent with every type, so a value
+whose type we could not determine may flow anywhere. -/
+theorem consistent_unknown (a : PyType) : consistent .unknown a = true := by cases a <;> simp [consistent]
+
+theorem consistent_symm (a b : PyType) : consistent a b = consistent b a := by
+  induction a, b using PyType.consistent.induct with
+  | case19 a b => cases a <;> cases b <;> simp_all [consistent, beq] <;> grind
+  | _ =>
+    simp_all [consistent, beq_comm, consistent_any_l, consistent_any_r, consistent_unknown,
+      consistent_unknown_r] <;>
+    first
+    | rfl
+    | (simp only [List.all_subtype, List.unattach_attach]
+       rw [all_zip_comm _ _ _ (by assumption)]; grind)
+    | grind
+
+/-- Consistency is **not transitive** — the property that separates gradual typing from subtyping.
+`int ~ any` and `any ~ str`, yet `int ≁ str`: boxing lets a value flow anywhere, but does not make two
+unrelated concrete types interchangeable. -/
+theorem consistent_not_trans :
+    ¬ (∀ a b c : PyType, consistent a b → consistent b c → consistent a c) := by
+  intro h
+  have hbad : consistent .int .str :=
+    h .int .any .str (by simp [consistent]) (by simp [consistent])
+  simp [consistent, beq] at hbad
+
+
+/-! ### Coercions (`reconcile`) -/
+
+/-- No coercion is inserted for a value that already has the expected type. -/
+theorem reconcile_refl (a : PyType) : reconcile a a = .exact := by simp [reconcile, beq_refl]
+
+/-- Every coercion decision is one of the finite, intended actions — the function is total, so a value
+never gets "stuck" with no way to reach its expected type. -/
+theorem reconcile_total (e a : PyType) :
+    reconcile e a = .exact ∨ reconcile e a = .boolToInt ∨ reconcile e a = .intToFloat
+      ∨ reconcile e a = .unwrapOpt ∨ reconcile e a = .box := by
+  unfold reconcile
+  repeat' split
+  all_goals first
+    | exact .inl rfl
+    | exact .inr (.inl rfl)
+    | exact .inr (.inr (.inl rfl))
+    | exact .inr (.inr (.inr (.inl rfl)))
+    | exact .inr (.inr (.inr (.inr rfl)))
 
 end TypeInfer.PyType
