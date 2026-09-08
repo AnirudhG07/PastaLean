@@ -21,8 +21,6 @@ def find_first := fun (xs : List Int) ↦ fun (k : Int) ↦
       let _ := Libraries.passta.pyPassInvariant !(PastaLean.pyContains (PastaLean.pySlice xs none (some i) none) k)
       if h_1 : xs⦋i⦌ = k then 
         return i
-      else
-        let _ := ()
     let p'_ret_1 := -(1 : Int)
     return p'_ret_1 : Id _)
 
@@ -38,8 +36,6 @@ def find_first'rn := fun (xs : List Int) ↦ fun (k : Int) ↦
         let _ := Libraries.passta.pyPassInvariant !(PastaLean.pyContains (PastaLean.pySlice xs none (some i) none) k)
         if h_1 : xs⦋i⦌ == k then 
           return i
-        else
-          let _ := ()
       let p'_ret_1 := -(1 : Int)
       return p'_ret_1)
 

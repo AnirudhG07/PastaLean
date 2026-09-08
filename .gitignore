@@ -33,3 +33,4 @@ _slides
 .tmp_head_src
 cp_harness/.native/
 PastaBench/_eval_out
+PastaBench/_report_gen/

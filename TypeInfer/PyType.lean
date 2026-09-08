@@ -44,6 +44,7 @@ inductive PyType where
 
 namespace PyType
 
+@[simp, grind]
 def beq : PyType → PyType → Bool
   | .unknown, .unknown | .any, .any | .int, .int | .bool, .bool
   | .str, .str | .float, .float | .none, .none => true
@@ -184,6 +185,7 @@ decreasing_by
 `str`) go to `any`. `bool` joins into `int` because Python's `bool` is a subclass of `int`
 (`True + 1 = 2`), and `None` joins into `Optional`.
 -/
+@[simp, grind]
 def join : PyType → PyType → PyType
   | .unknown, t | t, .unknown => t
   | .any, _ | _, .any => .any

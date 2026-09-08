@@ -6,8 +6,30 @@ import PastaLean.PyAPI.CommonProtocols.Pop
 import PastaLean.PyAPI.CommonProtocols.Sorting
 import PastaLean.PyAPI.CommonProtocols.Reversed
 import PastaLean.PyAPI.CommonProtocols.Mapping
+import PastaLean.PyAPI.CommonProtocols.GetItem
+import PastaLean.PyAPI.CommonProtocols.SetItem
+import PastaLean.PyAPI.CommonProtocols.Truthy
 
 open PastaLean
+
+/-! ## Fundamental-instance resolution smoke test
+
+These `example`s pin the MOST COMMON container operations at their exact types (`List Int` indexed
+by `Int` yielding `Int`, etc.). They exist to fail the PALC build LOUDLY if any future runtime change
+makes a core instance ambiguous or missing — e.g. adding a second `PySetItem (List Int) _ _` instance
+makes the `β` outParam ambiguous and silently breaks `a[i] = v` across ~all of LeetCode. Keep them
+explicitly typed (no literal defaulting) so a resolution regression is caught here, not in an eval. -/
+section CoreInstanceResolution
+example (xs : List Int) (i v : Int) : List Int := pySetItem xs i v
+example (xs : List Int) (i : Int)   : Int      := pyGetItem xs i
+example (xs : List Int)             : Int      := pyLen xs
+example (xs : List Int) (v : Int)   : Bool     := pyContains xs v
+example (xs : List Int)             : Bool     := pyTruthy xs
+example (s : String) (i : Int)      : String   := pyGetItem s i
+example (s : String)                : Int      := pyLen s
+example (m : Std.HashMap Int Int) (k v : Int) : Std.HashMap Int Int := pySetItem m k v
+example (m : Std.HashMap Int Int) (k : Int)   : Int := pyGetItem m k
+end CoreInstanceResolution
 
 private def sortStrings (xs : List String) : List String :=
   xs.mergeSort (fun a b => compare a b != Ordering.gt)

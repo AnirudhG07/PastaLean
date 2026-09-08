@@ -1,6 +1,9 @@
 import Lean
 import Libraries.Mutator
 import Libraries.Behaviour
+-- The pure return-shape halves of each library's behaviour (`math.mathBehaviour?`, …) live here now;
+-- the full `memberBehaviour?` below reuses them and adds the codegen (mutator/keyed-variant) fields.
+import Libraries.TypeBehaviour
 import Libraries.bisect.Mapping
 import Libraries.collections.Mapping
 import Libraries.functools.Mapping
@@ -107,12 +110,8 @@ def bareBehaviour? (name : String) : Option Behaviour :=
 
 /-! ### Views derived from `memberBehaviour?` — one field each, so existing call sites are unchanged. -/
 
-/-- Return type of a qualified library member, for TypeInfer (`.unknown` → `none`, as before). -/
-def libraryMemberReturn? (moduleName member : String) (arg0 : TypeInfer.PyType) :
-    Option TypeInfer.PyType :=
-  match (memberBehaviour? moduleName member).map (·.returns [arg0]) with
-  | some t => if t == .unknown then none else some t
-  | none => none
+-- `libraryMemberReturn?` (type-only) moved to `Libraries/TypeBehaviour.lean`, next to the other
+-- type-inference aggregators the engine imports.
 
 /-- The in-place mutation spec of a library member, for the core codegen. -/
 def libraryMutator? (moduleName member : String) : Option LibraryMutator :=

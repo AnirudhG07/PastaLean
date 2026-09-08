@@ -131,6 +131,25 @@ instance : CoeTail (List PyAny) PyAny where coe := .list
 instance : CoeTail (List Int) PyAny     where coe xs := .list (xs.map .int)
 instance : CoeTail (List String) PyAny  where coe xs := .list (xs.map .str)
 
+-- Element-wise boxing INTO a dynamic list (`List α → List PyAny`, not `→ PyAny`): lets a `List PyAny`
+-- slot accept a concrete list — the Option-A case where a var reassigned at conflicting element types
+-- is typed `List PyAny`, so `l = list(str(x))` (List String) and `l = list(map(int, l))` (List Int)
+-- coerce here. Enumerated by element type for the same reason as the scalar coes above (a generic
+-- `CoeTail (List α) (List PyAny)` has no synthesization order).
+instance : CoeTail (List Int) (List PyAny)    where coe xs := xs.map .int
+instance : CoeTail (List Nat) (List PyAny)    where coe xs := xs.map (.int ·)
+-- Int/Nat element list widening into a rational/float list (numeric tower `int ⊂ ℚ`/`Float`): a
+-- function mixing `list[int]` and `list[float]` returns ascribes the codomain to `List ℚ`/`List Float`,
+-- and the `list[int]` returns coerce here (Tri: `return [1]` into a `List ℚ` codomain).
+instance : CoeTail (List Int) (List Rat)   where coe xs := xs.map (· : Int → Rat)
+instance : CoeTail (List Nat) (List Rat)   where coe xs := xs.map (· : Nat → Rat)
+instance : CoeTail (List Int) (List Float) where coe xs := xs.map Float.ofInt
+instance : CoeTail (List Nat) (List Float) where coe xs := xs.map Float.ofNat
+instance : CoeTail (List String) (List PyAny) where coe xs := xs.map .str
+instance : CoeTail (List Bool) (List PyAny)   where coe xs := xs.map .bool
+instance : CoeTail (List Float) (List PyAny)  where coe xs := xs.map (.float ·.toRat0)
+instance : CoeTail (List Rat) (List PyAny)    where coe xs := xs.map .float
+
 -- Numerals are polymorphic via `OfNat`, not coercion, so a bare `0`/`5` in a boxed position needs
 -- these (codegen usually emits typed literals like `(0 : Int)`, which coerce, but not always).
 instance (n : Nat) : OfNat PyAny n where ofNat := .int n
@@ -202,6 +221,10 @@ def pow (a b : PyAny) : PyAny :=
   match asNum a, asNum b with
   | some (.inl x), some (.inl y) => if y ≥ 0 then .int (x ^ y.toNat) else .float ((toRat (.inl x)) ^ y)
   | some x, some (.inl y) => .float ((toRat x) ^ y)
+  -- FRACTIONAL exponent (`4 ** 0.5`): a Rat base to a Rat power is generally irrational, so compute it
+  -- as a `Float` (like Python) and box the result — `int(4 ** 0.5)` = 2 only if `2.0` comes back
+  -- exact, so this must go through `Float.pow` (correctly rounded), not a stuck `.none`.
+  | some x, some (.inr q) => .float (floatToRat (Float.pow (Rat.toFloat (toRat x)) (Rat.toFloat q)))
   | _, _ => .none
 
 /-- The integer value of a boxed `int`/`bool`, for the integer-only bitwise/shift operators. -/
@@ -351,6 +374,11 @@ instance : PyIterable PyAny PyAny where
     | _ => []
 
 instance : PyPrintable PyAny where pyStringify := PyAny.toStr false
+/-- `"".join(xs)` where `xs`'s elements are boxed (an un-inferred `str`/`list[str]` param filtered to
+`List PyAny`): a boxed `str` joins as itself, anything else stringifies (Python would `TypeError`, but
+the faithful case only ever holds boxed `str`s). -/
+instance : PyStringJoin PyAny where
+  toJoinString | .str s => s | v => PyAny.toStr false v
 /-- A `PyAny` is `None` exactly when it carries the `none` tag. -/
 instance : PyIsNone PyAny where isNoneVal | .none => true | _ => false
 instance : PyTruthy PyAny where

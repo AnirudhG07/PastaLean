@@ -1,6 +1,7 @@
 import PastaLean.Imports
 import PastaLean.Codegen
 import PastaLean.PyGens.Basic
+import PastaLean.PyGens.Core.JsonBasic
 
 open Lean Meta Elab Term Qq Std
 
@@ -152,9 +153,6 @@ def trueTerm : TSyntax `term := mkIdent ``true
 
 def falseTerm : TSyntax `term := mkIdent ``false
 
-/-- Read the `node_type` tag from a JSON AST node when present. -/
-def jsonNodeType? (json : Json) : Option String :=
-  json.getObjValAs? String "node_type" |>.toOption
 
 /--
 Reformat a list of Json to an object with `node_type` the `node_type` of the original list's
@@ -307,19 +305,6 @@ def jsonFieldOption (json : Json) (field : String) : Option Json :=
   | some .null => none
   | other => other
 
-/-- Recursively check whether a JSON subtree contains any node type from `targets`. -/
-partial def jsonContainsNodeType (json : Json) (targets : List String) : Bool :=
-  let currentMatches :=
-    match json.getObjValAs? String "node_type" with
-    | .ok nodeType => targets.contains nodeType
-    | .error _ => false
-  if currentMatches then
-    true
-  else
-    match json with
-    | .arr elems => elems.toList.any (fun elem => jsonContainsNodeType elem targets)
-    | .obj fields => fields.toList.any (fun (_, value) => jsonContainsNodeType value targets)
-    | _ => false
 
 /-- Recursively check whether a JSON subtree is marked as using translated exceptions. -/
 partial def jsonUsesExceptionEffect (json : Json) : Bool :=

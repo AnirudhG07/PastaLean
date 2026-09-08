@@ -35,8 +35,6 @@ def car_fleet := fun (target : Int) ↦ fun (position : List Int) ↦ fun (speed
         if h_1 : t > pre then 
           ans := ans +ₚ (1 : Int)
           pre := t
-        else
-          let _ := ()
       return ans)
 
 attribute [simp, taste_ingr] car_fleet
@@ -53,8 +51,6 @@ def car_fleet'rn := fun (target : Int) ↦ fun (position : List Int) ↦ fun (sp
         if h_1 : t > pre then 
           ans := ans +ₚ (1 : Int)
           pre := t
-        else
-          let _ := ()
       return ans)
 
 -- `heappush` must teach the heap its element type and `heappop` must return it, else `x` is `unknown`,

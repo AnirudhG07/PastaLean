@@ -8,6 +8,50 @@ open Lean Meta Elab Term Qq Std
 
 namespace PastaLean
 
+/-! ## Comprehension lowering strategy + the imperative fallback
+
+A comprehension is a *value*, lowered to a pure `iterable.map (fun x => elt)` / `.flatMap` (below). That
+only works when `elt` is a pure expression. When `elt` **changes state** — a value-and-mutate call
+(`x.pop()`, `heappop`) or a walrus (`y := …`) — a pure `map` is wrong: each would run the side effect at
+map-time, once per element, but the *result* value must still flow out.
+
+The fallback, then, is to **open the comprehension into an explicit loop**:
+`[x.pop() for x in xs]` → `acc = []` `for x in xs: acc.append(x.pop())`, after which the ordinary
+statement lowering handles the `pop`. Because the mutation usually targets *outer* state (`mapper[k]`),
+the loop must live in the enclosing mutable scope — so the opening is done by the pre-pass
+`Desugar.unfoldMutatingComprehension`, NOT here (a term-level `do` block could not mutate that outer
+state). Desugar can only open a comprehension in a **once-evaluated** position (`return […]`, `x = […]`,
+a direct `f(…)` argument); an element that mutates but sits inside an `if`-expression / lambda / nested
+comprehension is per-branch or per-call, so opening it would run the effect at the wrong time.
+
+`imperativeComprehensionElement` is the authoritative test for "cannot be a pure map"; the codegen path
+below rejects any such element that reaches it (i.e. the un-openable residual) with a clear message,
+rather than emitting a `pop()`-as-subexpression error from deep in the call lowering. -/
+partial def imperativeComprehensionElement (j : Json) : Bool :=
+  let hitHere : Bool :=
+    match jsonNodeType? j with
+    | some "NamedExpr" => true
+    | some "Call" =>
+        (j.getObjValAs? Bool "_is_value_mutator" |>.toOption |>.getD false) ||
+        (match (j.getObjVal? "func").toOption with
+         | some f =>
+             (jsonNodeType? f == some "Attribute"
+               && (match f.getObjValAs? String "attr" with
+                   | .ok a => #["pop", "popleft"].contains a
+                   | _ => false)
+               && (match (f.getObjVal? "value").toOption with
+                   | some r => #["Name", "Subscript"].contains (jsonNodeType? r |>.getD "")
+                   | none => false))
+             || (match f.getObjValAs? String "library_member" with
+                 | .ok m => #["heappop", "heapreplace"].contains m
+                 | _ => false)
+         | none => false)
+    | _ => false
+  hitHere || (match j with
+    | .arr xs => xs.any imperativeComprehensionElement
+    | .obj fs => fs.toList.any (fun (_, v) => imperativeComprehensionElement v)
+    | _ => false)
+
 /-- Access position `i` of a comprehension pair: `pyListGetItem` (Python list-index) when the target
 was marked `_list_unpack` (`for a,b in edges`, `edges : list[list[int]]`), else `Prod` projection —
 mirroring `forTargetBinder`, so a comprehension over a list-of-lists doesn't wrongly emit `Prod.fst`. -/
@@ -75,6 +119,17 @@ def listCompTargetLambda (targetJson : Json) (body : TSyntax `term) :
   | _ =>
       throwError s!"Unsupported comprehension target: {targetJson}"
 
+/-- `[x for x in xs if p x]` maps the loop target to itself, so the `map` is the identity and the
+filtered iterable *is* the result. Detects that so the emitted term is `xs.filter p`, not
+`(xs.filter p).map fun x => x`. -/
+def identityComprehensionElement (targetJson eltJson : Json) : Bool :=
+  match jsonNodeType? targetJson, jsonNodeType? eltJson with
+  | some "Name", some "Name" =>
+      match targetJson.getObjValAs? String "id", eltJson.getObjValAs? String "id" with
+      | .ok t, .ok e => t == e
+      | _, _ => false
+  | _, _ => false
+
 /-- Apply a comprehension generator's `pyIter` normalization and `if`-clause filters to an
 already-lowered base iterable term `baseIter`. Factored out so the same logic applies whether
 the iterable is pure or has been awaited from an `IO` action. -/
@@ -124,6 +179,14 @@ comprehension sits inside an `if`/`while` test (where comparisons otherwise lowe
 Without resetting, `if all(a == b for a, b in ps):` builds a `List Prop`. -/
 def lowerComprehensionClauses (eltJson : Json) (generators : List Json) :
     PygenM (TSyntax `term) := withPropCondition false do
+  -- The imperative fallback: a state-changing element can only be lowered by OPENING the comprehension
+  -- into a loop (done by `Desugar.unfoldMutatingComprehension` in a once-evaluated position). If one
+  -- reaches codegen it sat in a position that cannot be opened soundly — reject clearly.
+  if imperativeComprehensionElement eltJson then
+    throwError "comprehension element changes state (a `pop()`/mutating call or `:=` walrus): it is \
+      auto-opened into a loop only in a once-evaluated position (`return […]`, `x = […]`, or a direct \
+      `f(…)` argument). Here it sits inside a conditional / lambda / nested comprehension, where \
+      opening it would run the effect at the wrong time — rewrite it as an explicit loop."
   match generators with
   | [] =>
       let eltCode ← getCode eltJson `term
@@ -135,6 +198,27 @@ def lowerComprehensionClauses (eltJson : Json) (generators : List Json) :
         s!"comprehension node does not have an 'iter' field: {compJson}"
       if rest.isEmpty then
         let eltCode ← getCode eltJson `term
+        -- Inside a memoized `@cache` body, an element with a recursive self-call lowers to
+        -- `(← worker …)`; wrap the element in `do return …` so that `←` scopes to the mapper lambda,
+        -- run the comprehension with `mapM`, and await the whole list — memoizing DP like
+        -- `max([… + dfs(j) for j in …])`.
+        let memoComp ← match ← getMemoizeSelf with
+          | some (memoName, _) => pure (jsonCallsName memoName eltJson)
+          | none => pure false
+        -- A comprehension element that AWAITS (`[trie.search(w) for w in words]` under `--heap`, or a
+        -- memoized self-call) cannot sit in a plain `.map` lambda (`fun w => (← search)` can't lift the
+        -- `←`). Run it with `mapM` over `do return <elt>` and await the whole list, so the effect threads.
+        let effectfulElt := memoComp || ((← getHeapMode) && jsonUsesHeapEffect eltJson)
+        if effectfulElt then
+          let mapper ← listCompTargetLambda targetJson (← `((do return $eltCode)))
+          let baseIter ←
+            match ← heapContainerDeref? iterJson with
+            | some deref => pure deref
+            | none =>
+              if jsonUsesIOEffect iterJson then inlineEffectfulTerm iterJson
+              else getCode iterJson `term
+          let filtered ← comprehensionFilterOver compJson baseIter
+          return ← `((← ($filtered).mapM $mapper))
         let mapper ← listCompTargetLambda targetJson eltCode
         let mapMethod := if jsonUsesMonadicEffect eltJson then mkIdent `mapM else mkIdent `map
         -- `[f(x) for x in input().split()]`: the iterable is IO. Lower it with an inline `←`
@@ -147,6 +231,9 @@ def lowerComprehensionClauses (eltJson : Json) (generators : List Json) :
             if jsonUsesIOEffect iterJson then inlineEffectfulTerm iterJson
             else getCode iterJson `term
         let filtered ← comprehensionFilterOver compJson baseIter
+        -- `[x for x in xs if …]`: the map is the identity, so the filtered iterable is the answer.
+        if mapMethod.getId == `map && identityComprehensionElement targetJson eltJson then
+          return filtered
         -- Emit dot-form `iterable.map (fun x => …)` so the iterable (whose element type is known,
         -- e.g. `List ℤ`) elaborates first and *binds* the lambda's parameter type. With the
         -- prefix form `List.map (fun x => …) iterable`, an operator default-instance (e.g. the

@@ -302,8 +302,9 @@ def trySyntax : (kind : SyntaxNodeKind) → Json →
         let mut hoistDecls : Array (TSyntax `doElem) := #[]
         for nm in assignedNames do
           unless (← hasVar nm.toName) do
-            let tyStx? ← match (jsonFieldOption json "try_assigned_types").bind
-                (·.getObjVal? nm |>.toOption) with
+            let ann? := (jsonFieldOption json "try_assigned_types").bind
+                (·.getObjVal? nm |>.toOption)
+            let tyStx? ← match ann? with
               | some ann => stampedTypeSyntax? (Json.mkObj [("_ty", ann)])
               | none => pure none
             let decl ← match tyStx? with
@@ -312,6 +313,10 @@ def trySyntax : (kind : SyntaxNodeKind) → Json →
             hoistDecls := hoistDecls.push decl
             addVar nm.toName
             setMutVar nm.toName
+            -- See `hoistEscapingDecls`: a `PyAny` slot must absorb the later assignment, not be
+            -- rebound to a fresh `'rbN` name scoped inside the `try`.
+            if ann?.any (fun t => t.getObjValAs? String "id" == .ok "PyAny") then
+              setPyAnySlot nm.toName true
         let bodyAndElse ← tryBranchBodySyntax (bodyElems ++ orelseElems)
         -- Splice body statements straight into `captureIOErrors (do …)` (no nested `do (do …)`).
         let noopElem ← noopDoElemSyntax

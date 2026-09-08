@@ -47,8 +47,6 @@ def count_prefixes := fun (s : String) ↦ fun (p : String) ↦
       for i in (PastaLean.pyRange (PastaLean.pyLen s))do
         if h_1 : PastaLean.pyTruthy (PastaLean.pyStringStartswith s p i) then 
           total := total +ₚ (1 : Int)
-        else
-          let _ := ()
       return total)
 
 attribute [simp, taste_ingr] count_prefixes
@@ -60,8 +58,6 @@ def count_prefixes'rn := fun (s : String) ↦ fun (p : String) ↦
       for i in (PastaLean.pyRange (PastaLean.pyLen s))do
         if h_1 : PastaLean.pyTruthy (PastaLean.pyStringStartswith s p i) then 
           total := total +ₚ (1 : Int)
-        else
-          let _ := ()
       return total)
 
 def main' :=

@@ -307,6 +307,13 @@ def mutatingMethodDoElem (recvJson : Json)
   if let some refCode ← heapContainerRef? recvJson then
     let lVar := mkIdent `__hc_l
     let newVal ← mkNewValue lVar
+    -- A `newVal` with a `(← …)` await (`g[i].append(Node())` → `pyAppend l (← Node.new)`; a heap
+    -- read `dictionary[idx]`) can't sit inside `modifyRefM`'s `fun l => …` — the await cannot lift
+    -- over the lambda binder. Read-then-write instead, so the awaits stay in the enclosing `do`.
+    if syntaxHasLift newVal then
+      return ← `(doElem| do
+        let $lVar ← PastaLean.readRefM $refCode
+        PastaLean.writeRefM $refCode $newVal)
     return ← `(doElem| PastaLean.modifyRefM $refCode (fun $lVar => $newVal))
   let recvTerm ← getCode recvJson `term
   assignBackToReceiver recvJson (← mkNewValue recvTerm)
@@ -522,11 +529,19 @@ def callSyntaxTerm (json : Json) : PygenM (TSyntax `term) := do
             throwError s!"Mutating method '{attr}' cannot be used as an expression under value \
               semantics; call it as a statement on its own line."
           let valCode ← getCode valueJson `term
+          let attrId := mkIdent attr.toName
+          -- Non-heap: dispatch via Lean DOT-NOTATION `recv.attr args` (not `Cls.attr recv args`), which
+          -- resolves `attr` in the receiver's structure namespace and WALKS `extends`, so an inherited
+          -- method (`class B(A); b.func()` where `func` lives in `A`) resolves to `A.func`, and the `'rn`
+          -- twin is picked from the receiver value's type. Heap keeps the qualified `Cls.attr recv` form:
+          -- there the receiver is a `Ref C`, so dot-notation would look `attr` up on `Ref`, not `C`.
           let methodIdent : TSyntax `term := mkIdent (Name.mkStr (← suffixIfUserName cls).toName attr)
           let allJsons := #[valueJson] ++ argsArray
           let allCodes := #[valCode] ++ argsCodes
           let build : Array (TSyntax `term) → PygenM (TSyntax `term) := fun resolved => do
-            let mut t ← `($methodIdent $resolved*)
+            let recv := resolved[0]!
+            let args := resolved.extract 1 resolved.size
+            let mut t ← `($recv.$attrId $args*)
             for (kwName, kwValueJson) in keyWordsMap.toList do
               let kwValueCode ← getCode kwValueJson `term
               t ← `($t ($(mkIdent kwName.toName):ident := $kwValueCode))
@@ -595,6 +610,10 @@ def callSyntaxTerm (json : Json) : PygenM (TSyntax `term) := do
               <|> pythonMethodMap attr with
         | some funcName =>
             funcIdent := mkIdent funcName
+            -- Under `--heap`, a runtime method that CONSUMES a container arg (`sep.join(xs)` →
+            -- `pyStringJoin sep xs`) needs that arg dereferenced when it's held by reference — the
+            -- deref only fires on a heap container arg, leaving scalars/strings untouched.
+            argsCodes ← derefBuiltinArgCodes argsArray argsCodes
         | none =>
             -- A user-defined method `recv.m(args)` -> `C.m recv args` (receiver already pushed).
             -- Prefer the py2lean stamp (`_receiver_class`/`_is_mutator`); fall back to the registry.
@@ -673,7 +692,10 @@ def callSyntaxTerm (json : Json) : PygenM (TSyntax `term) := do
             if argsArray.isEmpty then return ← `((0 : Int))
             unless argsArray.size == 1 || argsArray.size == 2 do
               throwError "int() expects one or two positional arguments."
-            return ← buildIOPureApplicationFromArgs argsArray argsCodes fun resolvedArgs => do
+            -- `int(a > b)` casts a VALUE, so its argument is `Bool`, not `Prop`, even inside an `if`
+            -- test (`if int(cmp):`) — re-lower in value context so a comparison becomes `Bool`.
+            let intArgsCodes ← withPropCondition false (argsArray.mapM (getCode · `term))
+            return ← buildIOPureApplicationFromArgs argsArray intArgsCodes fun resolvedArgs => do
               -- `int(s, base)` parses a string in the given radix; `int(x)` is the plain cast.
               if resolvedArgs.size == 2 then
                 `($(mkIdent ``pyIntBase) $(resolvedArgs[0]!) $(resolvedArgs[1]!))
@@ -1045,6 +1067,10 @@ def callSyntaxDoElem (json : Json) : PygenM (TSyntax `doElem) := do
                 pure (match attr with
                   | "append" => ``PastaLean.pyArrayAppend
                   | "extend" => ``PastaLean.pyArrayExtend
+                  | "reverse" => ``PastaLean.pyArrayReverse
+                  | "insert" => ``PastaLean.pyArrayInsert
+                  | "pop" => ``PastaLean.pyArrayPopRest
+                  | "popleft" => ``PastaLean.pyArrayPopLeftRest
                   | _ => rebuildFn)
               else pure rebuildFn
             let fnIdent := mkIdent rebuildFn
@@ -1363,6 +1389,7 @@ def callSyntax : (kind : SyntaxNodeKind) → Json → PygenM (TSyntax kind)
 def attributeSyntax : (kind : SyntaxNodeKind) → Json →
     PygenM (TSyntax kind)
   | `term, json => do
+    if let some t ← libraryNonFiniteTerm? json then return t
     match ← jsonLibraryMappedName? json with
     | some leanName =>
         pure (mkIdent leanName)
@@ -1372,6 +1399,19 @@ def attributeSyntax : (kind : SyntaxNodeKind) → Json →
         let .ok attr := json.getObjValAs? String "attr" | throwError
           s!"Attribute node does not have an 'attr' field or it is not a string: {json}"
         let attrId := mkIdent attr.toName
+        -- `int.__and__` / `int.__add__` etc. used as a bound operator function (e.g.
+        -- `reduce(int.__and__, xs)`): emit the binary-operator lambda, not a bogus `int.__and__` ident.
+        if valueJson.getObjValAs? String "node_type" == .ok "Name" then
+          if #["int","float","bool","str","bytes"].contains
+              ((valueJson.getObjValAs? String "id").toOption.getD "") then
+            match attr with
+            | "__and__" => return ← `(fun a b => PastaLean.pyBitAnd a b)
+            | "__or__"  => return ← `(fun a b => PastaLean.pyBitOr a b)
+            | "__xor__" => return ← `(fun a b => PastaLean.pyBitXor a b)
+            | "__add__" => return ← `(fun a b => a +ₚ b)
+            | "__sub__" => return ← `(fun a b => a -ₚ b)
+            | "__mul__" => return ← `(fun a b => a *ₚ b)
+            | _ => pure ()
         -- Under `--heap`, dereference a heap-object receiver before projecting the field: `self` in a
         -- method body (`self : Ref C`), or any local/param known to hold a heap object (`p.x`).
         if ← getHeapMode then
@@ -1385,7 +1425,15 @@ def attributeSyntax : (kind : SyntaxNodeKind) → Json →
         let valueCode ← getCode valueJson `term
         -- `_unwrap_opt` (TypeInfer): the receiver is `Option _`, so unwrap before projecting the field
         if json.getObjValAs? Bool "_unwrap_opt" == .ok true then
-          `((($valueCode).getD default).$attrId)
+          -- Under `--heap` the unwrapped value is a `Ref Node` (an `Option (Ref Node)` list element,
+          -- `node.children[i].cnt`), so deref-and-project (`~>`). Match on the `Option` rather than
+          -- `getD default`: a `None` there would deref a bogus DEFAULT ref (address 0 — another cell of
+          -- a different kind) when a short-circuited `and` guard (`child and child.cnt`) still evaluates
+          -- it; `none => pure default` returns the field default without touching the heap.
+          if ← getHeapMode then
+            `((← (($valueCode).elim (pure default) (fun __r => __r ~> $attrId))))
+          else
+            `((($valueCode).getD default).$attrId)
         else
           `($valueCode.$attrId)
   | `ident, json => do

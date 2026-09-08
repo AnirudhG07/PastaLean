@@ -33,7 +33,7 @@ instance : PastaLean.PyTyped TreeNode where pyTypeOf _ := TypeInfer.PyType.cls "
 instance : Coe TreeNode (Option TreeNode) :=
   ⟨some⟩
 
-def TreeNode.new (val : _ := (0 : Int)) (left : Option TreeNode := Option.none)
+def TreeNode.new (val : Int := (0 : Int)) (left : Option TreeNode := Option.none)
     (right : Option TreeNode := Option.none) : TreeNode :=
   ({ val := val, left := left, right := right } : TreeNode)
 
@@ -50,7 +50,7 @@ instance : PastaLean.PyTyped TreeNode'rn where pyTypeOf _ := TypeInfer.PyType.cl
 instance : Coe TreeNode'rn (Option TreeNode'rn) :=
   ⟨some⟩
 
-def TreeNode'rn.new (val : _ := (0 : Int)) (left : Option TreeNode'rn := Option.none)
+def TreeNode'rn.new (val : Int := (0 : Int)) (left : Option TreeNode'rn := Option.none)
     (right : Option TreeNode'rn := Option.none) : TreeNode'rn :=
   ({ val := val, left := left, right := right } : TreeNode'rn)
 
@@ -66,7 +66,7 @@ instance : PastaLean.PyTyped ListNode where pyTypeOf _ := TypeInfer.PyType.cls "
 instance : Coe ListNode (Option ListNode) :=
   ⟨some⟩
 
-def ListNode.new (val : _ := (0 : Int)) (next : Option ListNode := Option.none) : ListNode :=
+def ListNode.new (val : Int := (0 : Int)) (next : Option ListNode := Option.none) : ListNode :=
   ({ val := val, next := next } : ListNode)
 
 structure ListNode'rn where
@@ -81,7 +81,7 @@ instance : PastaLean.PyTyped ListNode'rn where pyTypeOf _ := TypeInfer.PyType.cl
 instance : Coe ListNode'rn (Option ListNode'rn) :=
   ⟨some⟩
 
-def ListNode'rn.new (val : _ := (0 : Int)) (next : Option ListNode'rn := Option.none) : ListNode'rn :=
+def ListNode'rn.new (val : Int := (0 : Int)) (next : Option ListNode'rn := Option.none) : ListNode'rn :=
   ({ val := val, next := next } : ListNode'rn)
 
 -- Field read straight off an `Option` receiver.

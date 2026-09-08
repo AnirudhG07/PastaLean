@@ -491,6 +491,67 @@ def annotate_io_effects(module_json):
         annotate_scope(module_json.get("body", []))
 
 
+def _chain_root(node):
+    """The root `Name` id of an attribute/subscript chain (`node.children[i]` -> "node")."""
+    if not isinstance(node, dict):
+        return None
+    nt = node.get("node_type")
+    if nt == "Name":
+        return node.get("id")
+    if nt in ("Attribute", "Subscript"):
+        return _chain_root(node.get("value"))
+    return None
+
+
+def _chain_has_attr(node):
+    """Whether a chain passes through >=1 `.attr` (so `node.next` counts, `node`/`arr[i]` do not)."""
+    if not isinstance(node, dict):
+        return False
+    nt = node.get("node_type")
+    if nt == "Attribute":
+        return True
+    if nt == "Subscript":
+        return _chain_has_attr(node.get("value"))
+    return False
+
+
+def _module_needs_heap(node, advanced=None, mutated=None):
+    """Best-effort whole-module detection that a program NEEDS reference (`--heap`) semantics: some
+    cursor is BOTH advanced into its own field (`node = node.next` / `node = node.children[i]`) AND has
+    that field mutated (`node.next = ...`, `node.children[i] = ...`, `node.cnt += ...`). Value semantics
+    copies the cursor, so those writes are silently dropped — the trie / linked-list / tree pattern.
+    Conservative: both signals must name the SAME cursor, so `arr[i] = v` or a read-only walk never
+    trips it. Returns True iff the advanced-and-mutated cursor sets intersect."""
+    top = advanced is None
+    if top:
+        advanced, mutated = set(), set()
+    if isinstance(node, dict):
+        nt = node.get("node_type")
+        if nt == "Assign":
+            tgt, val = node.get("target"), node.get("value")
+            tname = tgt.get("id") if isinstance(tgt, dict) and tgt.get("node_type") == "Name" else None
+            if tname is not None and _chain_root(val) == tname and _chain_has_attr(val):
+                advanced.add(tname)          # cursor ADVANCE `node = node.attr...`
+        if nt in ("Assign", "AugAssign"):
+            tgt = node.get("target")
+            # STRUCTURAL mutation `x.field[i] = ...` (container-element write through a cursor's field,
+            # the trie `node.children[idx] = Trie()`). A plain scalar field write (`head.val = v`) is
+            # deliberately excluded: value semantics returns a correct result for the linked-list walk
+            # that does it, so flagging it would needlessly force the heap tier on a working program.
+            if isinstance(tgt, dict) and tgt.get("node_type") == "Subscript" and _chain_has_attr(tgt.get("value")):
+                r = _chain_root(tgt)
+                if r is not None:
+                    mutated.add(r)
+        for value in node.values():
+            _module_needs_heap(value, advanced, mutated)
+    elif isinstance(node, list):
+        for item in node:
+            _module_needs_heap(item, advanced, mutated)
+    if top:
+        return bool(advanced & mutated)
+    return False
+
+
 def _node_has_direct_heap_syntax(node):
     """Whether `node` directly uses the heap (`--heap`): a class instantiation (`_class_ctor`), an
     instance-method call (`_receiver_class`), or a container literal. Does not descend into nested
@@ -1361,13 +1422,163 @@ def _sanitize_hole_identifiers(ast_tree):
             n.arg = safe
 
 
+def _local_module_file(root, dotted):
+    """Resolve a dotted module name to a local file within `root`: a plain `.py`, a package
+    `__init__.py`, or the longest prefix that is a module (the tail being a member). Returns the
+    `Path` or None."""
+    parts = dotted.split(".")
+    p = root.joinpath(*parts)
+    if p.with_suffix(".py").is_file():
+        return p.with_suffix(".py")
+    if (p / "__init__.py").is_file():
+        return p / "__init__.py"
+    for k in range(len(parts) - 1, 0, -1):
+        q = root.joinpath(*parts[:k])
+        if q.with_suffix(".py").is_file():
+            return q.with_suffix(".py")
+        if (q / "__init__.py").is_file():
+            return q / "__init__.py"
+    return None
 
 
-def translate_to_json(source_code, filepath=None, best_effort=False):
+def resolve_local_imports(source_code, module_dir):
+    """Inline a program's LOCAL imports so single-module inference sees the whole reachable program.
+
+    PastaLean translates each file to its own Lean module, but the `TypeInfer` pass runs per-module,
+    so a call to an imported function (`from helper import f; x = f()`) leaves `x` untyped. When the
+    imported module is a LOCAL sibling `.py`/package (submodule, `__init__.py`, alias, dotted call —
+    all present on disk next to the file), we resolve it here: every reachable module's top-level
+    defs are inlined under mangled names and qualified accesses (`mod.f()`, `pkg.sub.f()`, `alias.f()`)
+    are rewritten to them, producing one flat self-contained program. Library/foreign imports (numpy,
+    random, …) are left untouched. Returns the rewritten source, or None when nothing local resolves.
+    """
+    if not module_dir:
+        return None
+    # Fast path: a file with no `import` at all has nothing local to resolve, so skip the parse
+    # entirely (this pass otherwise parses the source a second time on top of translate_to_json).
+    if "import" not in source_code:
+        return None
+    root = Path(module_dir)
+    try:
+        main_tree = ast.parse(source_code)
+    except SyntaxError:
+        return None
+
+    prepended, module_defs, loading = [], {}, set()
+
+    def mangle(dotted, name):
+        return "m_" + dotted.replace(".", "_") + "_" + name
+
+    def resolve_binds(tree, cur_dotted, loader):
+        binds = {}
+        pkg = cur_dotted.rsplit(".", 1)[0] if "." in cur_dotted else ""
+        for node in tree.body:
+            if isinstance(node, ast.Import):
+                for a in node.names:
+                    if _local_module_file(root, a.name):
+                        loader(a.name)
+                        binds[a.asname or a.name.split(".")[0]] = ("mod", a.name if a.asname else a.name.split(".")[0])
+            elif isinstance(node, ast.ImportFrom):
+                mod = node.module or ""
+                if node.level and pkg:
+                    mod = pkg + ("." + mod if mod else "")
+                mod_file = _local_module_file(root, mod) if mod else None
+                members = loader(mod) if mod_file else {}
+                for a in node.names:
+                    tgt = members.get(a.name)
+                    sub = (mod + "." + a.name) if mod else a.name
+                    sub_file = _local_module_file(root, sub)
+                    if tgt:
+                        binds[a.asname or a.name] = ("name", tgt)
+                    # `from pkg import submodule` — only when `pkg.submodule` is a DISTINCT file (not
+                    # the same module reached via the prefix fallback, i.e. `name` is a member/const).
+                    elif sub_file is not None and sub_file != mod_file:
+                        loader(sub)
+                        binds[a.asname or a.name] = ("mod", sub)
+        return binds
+
+    def load_module(dotted):
+        if dotted in module_defs:
+            return module_defs[dotted]
+        if dotted in loading:
+            return {}
+        loading.add(dotted)
+        f = _local_module_file(root, dotted)
+        members = {}
+        module_defs[dotted] = members
+        if f is None:
+            return members
+        try:
+            tree = ast.parse(f.read_text())
+        except SyntaxError:
+            return members
+        binds = resolve_binds(tree, dotted, load_module)
+        for node in tree.body:
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                new = mangle(dotted, node.name)
+                members[node.name] = new
+                node = _rewrite(node, binds)
+                node.name = new
+                prepended.append(node)
+            elif not isinstance(node, (ast.Import, ast.ImportFrom)):
+                prepended.append(_rewrite(node, binds))
+        return members
+
+    class _Rewriter(ast.NodeTransformer):
+        def __init__(self, binds):
+            self.binds = binds
+
+        def _chain(self, node):
+            parts = []
+            while isinstance(node, ast.Attribute):
+                parts.append(node.attr); node = node.value
+            if isinstance(node, ast.Name):
+                parts.append(node.id); return list(reversed(parts))
+            return None
+
+        def visit_Attribute(self, node):
+            self.generic_visit(node)
+            chain = self._chain(node)
+            if not chain:
+                return node
+            head = self.binds.get(chain[0])
+            if head is None or head[0] != "mod":
+                return node
+            modname = head[1]
+            for seg in chain[1:-1]:
+                modname = modname + "." + seg
+            m = load_module(modname).get(chain[-1])
+            return ast.copy_location(ast.Name(id=m, ctx=node.ctx), node) if m else node
+
+        def visit_Name(self, node):
+            b = self.binds.get(node.id)
+            return ast.copy_location(ast.Name(id=b[1], ctx=node.ctx), node) if b and b[0] == "name" else node
+
+    def _rewrite(node, binds):
+        return _Rewriter(binds).visit(node)
+
+    main_binds = resolve_binds(main_tree, "__main__", load_module)
+    if not main_binds:
+        return None
+    kept = [_rewrite(n, main_binds) for n in main_tree.body
+            if not isinstance(n, (ast.Import, ast.ImportFrom))]
+    main_tree.body = prepended + kept
+    try:
+        return ast.unparse(ast.fix_missing_locations(main_tree))
+    except Exception:  # noqa: BLE001
+        return None
+
+
+
+def translate_to_json(source_code, filepath=None, best_effort=False, infer_only=False,
+                      resolve_imports=True):
     """
     Parses Python source code and translates it to a JSON IR.
     If `filepath` is provided, it first runs the annotator code to add type annotations,
     else the source_code argument will be used as-is for translation.
+
+    `infer_only` skips the codegen-only effect passes (exception/IO effects, real-flow, main-guard)
+    for the `inferTypes` task, which reads none of them — a ~30% IR-build speedup for the benchmark.
 
     When `best_effort` is set, unsupported statements (foreign libraries, unhandled syntax) are
     replaced by `pyUnsupported(...)` placeholders instead of aborting; dropped lines are logged
@@ -1376,6 +1587,14 @@ def translate_to_json(source_code, filepath=None, best_effort=False):
     # Type annotation is no longer a Python pre-pass: the Lean `TypeInfer` engine infers and stamps
     # types on the IR (`inferTypes` task), so the source is parsed as-is. `filepath` is kept only to
     # resolve cross-file imports (`module_dir` below).
+    # Inline LOCAL sibling imports so per-module inference sees the whole reachable program
+    # (`from helper import f; x = f()` → `x` typed). Library/foreign imports are left untouched.
+    # `resolve_imports=False` is the repo-level path: keep each file a separate module (imports left
+    # in the IR) so the Lean `inferRepo` task does all cross-file resolution itself.
+    if filepath and resolve_imports:
+        _resolved = resolve_local_imports(source_code, str(Path(filepath).resolve().parent))
+        if _resolved is not None:
+            source_code = _resolved
     logger.debug("Source passed to Python AST parser:\n%s", source_code)
     ast_tree = ast.parse(source_code)
     _sanitize_hole_identifiers(ast_tree)
@@ -1387,6 +1606,7 @@ def translate_to_json(source_code, filepath=None, best_effort=False):
         supported_modules=set(SUPPORTED_LIBRARY_IMPORTS) | set(LIBRARY_IMPORT_ALIASES),
         type_only_modules=TYPE_ONLY_IMPORTS,
         module_dir=module_dir,
+        infer_only=infer_only,
     )
     data = translator.visit(ast_tree)
     # Record which statements best-effort degraded, so callers (`TranslationResult.unsupported`)
@@ -1401,13 +1621,14 @@ def translate_to_json(source_code, filepath=None, best_effort=False):
         for src in translator.unsupported_log:
             logger.warning("  unsupported: %s", src)
     rename_reserved_shadows(data)
-    annotate_library_imports(data)
-    annotate_exception_effects(data)
-    annotate_io_effects(data)
-    annotate_real_flow(data)
-    annotate_main_entrypoint(data)
+    annotate_library_imports(data)          # inference reads library_module/member
+    if not infer_only:
+        annotate_exception_effects(data)    # codegen effects only — the inferTypes task ignores them
+        annotate_io_effects(data)
+        annotate_real_flow(data)
+        annotate_main_entrypoint(data)
     annotate_toplevel_state(data)
-    annotate_if_assigned_names(data)
+    annotate_if_assigned_names(data)        # inference reads if_assigned_names (hoist ascription)
     logger.debug("Generated JSON IR: %s", json.dumps(data))
     return json.dumps(data)
 
@@ -1854,9 +2075,14 @@ def translate_to_lean(source_code, target="term", filepath = None, imports_add =
     _NUMERIC_MODE = "approx" if mode == "run" else "exact"
     _BEST_EFFORT = best_effort
     _RUN_SUFFIX, _USER_NAMES = "", []
-    _HEAP_MODE = heap
     json_ir = translate_to_json(source_code, filepath, best_effort=best_effort)
     ast_json = json.loads(json_ir)
+    # Best-effort: if not explicitly on, auto-enable reference (`--heap`) semantics when the program
+    # mutates a recursive structure through a cursor (trie / linked list / tree). Value semantics copies
+    # the cursor and silently drops those writes; heap threads them through the shared structure.
+    if not heap and _module_needs_heap(ast_json):
+        heap = True
+    _HEAP_MODE = heap
     _stamp_class_dispatch(ast_json)
     client = client or _LEAN_BACKEND
 
@@ -1951,6 +2177,72 @@ def translate_to_lean(source_code, target="term", filepath = None, imports_add =
             mutual_groups = _mutual_recursion_groups(body)
             emitted_funcs = set()
             backend_unsup = 0
+            func_by_name = {
+                s.get("name"): s for s in body
+                if isinstance(s, dict) and s.get("node_type") == "FunctionDef"
+                and isinstance(s.get("name"), str)
+            }
+
+            def emit_function_group(name):
+                """Emit `name`'s function — or its whole mutual group as one `Module` (→ a Lean
+                `mutual … end`) — but first emit any callee functions it references that are not yet
+                emitted. Python binds top-level `def`s lazily, so a function may call one defined
+                later in the file; Lean needs the callee to precede the caller, so callees are pulled
+                forward here (depth-first over the call DAG). Returns an error dict on a hard
+                (non-best-effort) backend failure, else None."""
+                nonlocal backend_unsup
+                if name in emitted_funcs:
+                    return None
+                group = mutual_groups.get(name, frozenset([name]))
+                callees = set()
+                for m in group:
+                    fn = func_by_name.get(m)
+                    if fn is not None:
+                        callees |= _body_calls_known_functions(fn.get("body", []), func_by_name.keys())
+                for c in sorted(callees):
+                    if c not in group and c not in emitted_funcs:
+                        err = emit_function_group(c)
+                        if err is not None:
+                            return err
+                if name in emitted_funcs:
+                    return None
+                stmt = func_by_name[name]
+                if len(group) >= 2:
+                    members = [
+                        s for s in body
+                        if isinstance(s, dict) and s.get("node_type") == "FunctionDef"
+                        and s.get("name") in group
+                    ]
+                    module_node = {"node_type": "Module", "body": members}
+                    codes = send_node(module_node)
+                    if codes is None:
+                        if best_effort:
+                            logger.warning("best-effort: backend could not translate %s; replaced with pyUnsupported placeholder", name)
+                            code_parts.append((False, backend_placeholders(stmt)))
+                            backend_unsup += 1
+                            emitted_funcs.update(group)
+                            return None
+                        detail = last_backend_error["msg"]
+                        return {"result": False, "error": f"backend could not translate {name}" + (f": {detail}" if detail else "")}
+                    for c in codes:
+                        code_parts.append((False, c))
+                    emitted_funcs.update(group)
+                    return None
+                codes = send_node(stmt)
+                if codes is None:
+                    if best_effort:
+                        logger.warning("best-effort: backend could not translate a %s; replaced with pyUnsupported placeholder", stmt.get("node_type"))
+                        code_parts.append((False, backend_placeholders(stmt)))
+                        backend_unsup += 1
+                        emitted_funcs.add(name)
+                        return None
+                    detail = last_backend_error["msg"]
+                    return {"result": False, "error": f"backend could not translate {stmt.get('node_type')}" + (f": {detail}" if detail else "")}
+                for c in codes:
+                    code_parts.append((False, _inject_comments_into_lean(stmt, c)))
+                emitted_funcs.add(name)
+                return None
+
             for stmt in body:
                 # A top-level Python `pass` is a true no-op, so there is no Lean command to emit.
                 if stmt.get("node_type") in {"Pass", "Import", "ImportFrom"}:
@@ -1958,34 +2250,13 @@ def translate_to_lean(source_code, target="term", filepath = None, imports_add =
                 if stmt.get("node_type") in {"Comment", "DocString"}:
                     code_parts.append((True, _direct_comment_code(stmt)))
                     continue
-                # Mutually-recursive functions can't be separate `def`s — send the whole group as a
-                # single `Module` so the backend emits one `mutual … end` block.
-                if stmt.get("node_type") == "FunctionDef":
-                    name = stmt.get("name")
-                    if name in emitted_funcs:
+                if stmt.get("node_type") == "FunctionDef" and stmt.get("name") in func_by_name:
+                    if stmt.get("name") in emitted_funcs:
                         continue
-                    group = mutual_groups.get(name, frozenset([name]))
-                    if len(group) >= 2:
-                        members = [
-                            s for s in body
-                            if isinstance(s, dict) and s.get("node_type") == "FunctionDef"
-                            and s.get("name") in group
-                        ]
-                        module_node = {"node_type": "Module", "body": members}
-                        codes = send_node(module_node)
-                        if codes is None:
-                            if best_effort:
-                                logger.warning("best-effort: backend could not translate %s; replaced with pyUnsupported placeholder", name)
-                                code_parts.append((False, backend_placeholders(stmt)))
-                                backend_unsup += 1
-                                emitted_funcs.update(group)
-                                continue
-                            detail = last_backend_error["msg"]
-                            return {"result": False, "error": f"backend could not translate {name}" + (f": {detail}" if detail else "")}
-                        for c in codes:
-                            code_parts.append((False, c))
-                        emitted_funcs.update(group)
-                        continue
+                    err = emit_function_group(stmt.get("name"))
+                    if err is not None:
+                        return err
+                    continue
                 codes = send_node(stmt)
                 if codes is None:
                     if best_effort:

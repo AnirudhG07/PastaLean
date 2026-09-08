@@ -41,9 +41,13 @@ private def baseTypes : List (String × PyType) :=
 
 /-- Generic containers written `c[...]`, keyed by the name before the bracket. -/
 private def containerOf (name : String) (args : List PyType) : Option PyType :=
+  -- An explicit `List[Any]` element (⊥) has no inference source, exactly like a bare `list` param, so
+  -- it must be the dynamic top `.any`→`PyAny` (a boxed `List PyAny` indexes by a concrete `Int`), not
+  -- the stuck `⊥` that leaves `List ?m`. Same reasoning as the bare-`list` base type above.
+  let unkToAny (e : PyType) : PyType := if e == .unknown then .any else e
   match name, args with
-  | "list", [e] => some (.list e)
-  | "set", [e] | "frozenset", [e] => some (.set e)
+  | "list", [e] => some (.list (unkToAny e))
+  | "set", [e] | "frozenset", [e] => some (.set (unkToAny e))
   | "dict", [k, v] => some (.dict k v)
   -- A `defaultdict`/`Counter` behaves as a dict for inference; only its EMITTED Lean type
   -- differs (`PyDefaultDict`, not `Std.HashMap`), which the codegen annotation reader handles.

@@ -19,6 +19,14 @@ def pyAccumulate {α : Type} [Add α] (xs : List α) (initial : Option α := non
   | [] => []
   | x :: rest => rest.scanl (· + ·) x
 
+/-- `itertools.accumulate(xs, f, initial=…)`: running fold with a CUSTOM binary op, e.g.
+`accumulate(xs, operator.xor)` or `accumulate(xs, mul)`. Same shape as `pyAccumulate` but folding by
+`f` instead of `+`, so it works for any element type (no `Add` needed). -/
+def pyAccumulateBy {α : Type} (f : α → α → α) (xs : List α) (initial : Option α := none) : List α :=
+  match (match initial with | some v => v :: xs | none => xs) with
+  | [] => []
+  | x :: rest => rest.scanl f x
+
 /-- `itertools.chain(*iterables)` / `chain.from_iterable(xss)`: concatenate in order. -/
 def pyChain {α β : Type} [PastaLean.PyIterable α β] (xss : List α) : List β :=
   xss.flatMap PastaLean.pyIter
@@ -89,9 +97,12 @@ def pyTee {α β : Type} [PastaLean.PyIterable α β] (xs : α) (n : Int := 2) :
 def pyRepeat {β : Type} (elem : β) (n : Int) : List β :=
   List.replicate n.toNat elem
 
-/-- `itertools.islice(iterable, stop)`: the first `stop` elements. -/
-def pyIslice {α β : Type} [PastaLean.PyIterable α β] (xs : α) (stop : Int) : List β :=
-  (PastaLean.pyIter xs).take stop.toNat
+/-- `itertools.islice(iterable, stop)` (first `stop` elements) or `islice(iterable, start, stop)`
+(elements `[start, stop)`). The `stop` default sentinel `-1` distinguishes the 2-arg form, where the
+second positional argument is the stop, from the 3-arg form, where it is the start. -/
+def pyIslice {α β : Type} [PastaLean.PyIterable α β] (xs : α) (a : Int) (stop : Int := -1) : List β :=
+  if stop < 0 then (PastaLean.pyIter xs).take a.toNat
+  else ((PastaLean.pyIter xs).drop a.toNat).take (stop - a).toNat
 
 /-- `itertools.dropwhile(pred, xs)`: drop the leading run where `pred` holds, keep the rest. -/
 def pyDropwhile {α β : Type} [PastaLean.PyIterable α β] (pred : β → Bool) (xs : α) : List β :=

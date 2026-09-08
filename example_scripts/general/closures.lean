@@ -100,7 +100,7 @@ def value_capture_loop :=
           PastaLean.pyAppend fs fun () ↦
             let n := n
             n *ₚ n
-      let p'_ret_1 := (PastaLean.pyIter fs).map fun g => g ()
+      let p'_ret_1 := (PastaLean.pyIter fs).map fun (g : Unit → Int) => g ()
       return p'_ret_1)
 
 attribute [simp, taste_ingr] value_capture_loop
@@ -116,7 +116,7 @@ def value_capture_loop'rn :=
           PastaLean.pyAppend fs fun () ↦
             let n := n
             n *ₚ n
-      let p'_ret_1 := (PastaLean.pyIter fs).map fun g => g ()
+      let p'_ret_1 := (PastaLean.pyIter fs).map fun (g : Unit → Int) => g ()
       return p'_ret_1)
 
 private def __curry_add'f'g := fun (c : Int) ↦ fun (b : Int) ↦ fun (a : Int) ↦ a +ₚ b +ₚ c

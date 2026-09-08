@@ -25,15 +25,14 @@ that loop by definition, so this is semantics-preserving.
 -/
 -- `sum(dfs(i) for i in …)`: `dfs` mutates the captured `seen` set; the visited state must persist
 -- across the generator's iterations (a flood-fill / connected-components shape).
-private partial def _count_components'dfs := fun (i : Int) ↦ fun (adj : List (List Int)) ↦ fun (seen : List Int) ↦
+private partial def _count_components'dfs := fun (i : Int) ↦ fun (adj : List (List Int)) ↦
+  fun (seen : PastaLean.PySet Int) ↦
   Id.run
     (do
       let mut seen := seen
       if h_1 : PastaLean.pyContains seen i then 
         let p'_ret_1 := ((0 : Int), seen)
         return p'_ret_1
-      else
-        let _ := ()
       seen := PastaLean.pySetAdd seen i
       for j in (PastaLean.pyIter adj⦋i⦌)do
         let p'_unpack_value_1 := _count_components'dfs j adj seen
@@ -46,7 +45,7 @@ private partial def _count_components'dfs := fun (i : Int) ↦ fun (adj : List (
 def count_components := fun (n : Int) ↦ fun (adj : List (List Int)) ↦
   Id.run
     (do
-      let mut seen : List Int := PastaLean.pySetFromList []
+      let mut seen : PastaLean.PySet Int := PastaLean.pySetFromList []
       let mut p'_cc2 := []
       for i in (PastaLean.pyRange n)do
         let p'_unpack_value_1 := _count_components'dfs i adj seen
@@ -59,15 +58,14 @@ def count_components := fun (n : Int) ↦ fun (adj : List (List Int)) ↦
 
 attribute [simp, taste_ingr] count_components
 
-private partial def _count_components'dfs'rn := fun (i : Int) ↦ fun (adj : List (List Int)) ↦ fun (seen : List Int) ↦
+private partial def _count_components'dfs'rn := fun (i : Int) ↦ fun (adj : List (List Int)) ↦
+  fun (seen : PastaLean.PySet Int) ↦
   Id.run
     (do
       let mut seen := seen
       if h_1 : PastaLean.pyContains seen i then 
         let p'_ret_1 := ((0 : Int), seen)
         return p'_ret_1
-      else
-        let _ := ()
       seen := PastaLean.pySetAdd seen i
       for j in (PastaLean.pyIter adj⦋i⦌)do
         let p'_unpack_value_1 := _count_components'dfs'rn j adj seen
@@ -80,7 +78,7 @@ private partial def _count_components'dfs'rn := fun (i : Int) ↦ fun (adj : Lis
 def count_components'rn := fun (n : Int) ↦ fun (adj : List (List Int)) ↦
   Id.run
     (do
-      let mut seen : List Int := PastaLean.pySetFromList []
+      let mut seen : PastaLean.PySet Int := PastaLean.pySetFromList []
       let mut p'_cc2 := []
       for i in (PastaLean.pyRange n)do
         let p'_unpack_value_1 := _count_components'dfs'rn i adj seen

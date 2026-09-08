@@ -54,10 +54,10 @@ instance : PyAbs Rat where pyAbs x := if x < 0 then -x else x
 
 /-! ### `divmod` -/
 
-/-- Python `divmod(a, b) = (a // b, a % b)` with floor-division semantics (the remainder takes
-the sign of the divisor), so that `b * q + r = a` always holds. -/
+/-- Python `divmod(a, b) = (a // b, a % b)`, flooring quotient (`Int.fdiv`, matching `pyFloorDiv`)
+so the remainder `a - b*q` carries the divisor's sign, like Python. `divmod(-21, 10) = (-3, 9)`. -/
 def pyDivmod (a b : Int) : Int × Int :=
-  let q := if (a % b == 0) || ((a < 0) == (b < 0)) then a / b else a / b - 1
+  let q := Int.fdiv a b
   (q, a - b * q)
 
 /-! ### `round` -/
@@ -77,12 +77,49 @@ def pyRound (x : Float) : Int :=
   else if diff > 0.5 then flI + 1
   else if flI % 2 == 0 then flI else flI + 1  -- exactly .5 → round to even
 
-/-- Python `round(x, ndigits)`: round to `ndigits` decimal places, returning a `Float`. -/
-def pyRoundDigits (x : Float) (ndigits : Int) : Float :=
+/-- Python `round(x, ndigits)`: round to `ndigits` decimal places, staying in the same numeric type.
+Polymorphic so the exact/real twin (`x : ℝ`, e.g. `round(area ** 0.5, 2)` where a root is irrational)
+rounds in `ℝ`, while the run twin rounds in `Float`. -/
+class PyRoundDigitsC (α : Type) where
+  pyRoundDigits : α → Int → α
+
+def pyRoundDigitsFloat (x : Float) (ndigits : Int) : Float :=
   let p : Float := (10.0 : Float) ^ (Float.ofInt ndigits)
   let scaled := x * p
   -- round-half-to-even on the scaled value, then unscale
   (Float.ofInt (pyRound scaled)) / p
+
+/-- Round `x` to the nearest integer, ties to even (Python's `round`). Mathlib's `round` is
+half-*up*, so ties like `round(0.5)`/`round(2.5)` diverge from Python; this reproduces the
+banker's rounding CPython uses for both `round(x)` and `round(x, n)`. -/
+def ratRoundHalfEven (x : ℚ) : ℤ :=
+  let fl := ⌊x⌋
+  let diff := x - (fl : ℚ)
+  if diff < 1/2 then fl
+  else if diff > 1/2 then fl + 1
+  else if fl % 2 == 0 then fl else fl + 1
+
+noncomputable def realRoundHalfEven (x : ℝ) : ℤ :=
+  let fl := ⌊x⌋
+  let diff := x - (fl : ℝ)
+  if diff < 1/2 then fl
+  else if diff > 1/2 then fl + 1
+  else if fl % 2 == 0 then fl else fl + 1
+
+noncomputable def pyRoundDigitsReal (x : ℝ) (ndigits : Int) : ℝ :=
+  let p : ℝ := (10 : ℝ) ^ ndigits
+  ((realRoundHalfEven (x * p) : ℤ) : ℝ) / p
+
+/-- Exact-mode `round(x, n)` on a `ℚ` (`round(sum(t)/len(t), 5)` — `sum/len` is `ℚ`). Computable. -/
+def pyRoundDigitsRat (x : ℚ) (ndigits : Int) : ℚ :=
+  let p : ℚ := (10 : ℚ) ^ ndigits
+  ((ratRoundHalfEven (x * p) : ℤ) : ℚ) / p
+
+instance : PyRoundDigitsC Float := ⟨pyRoundDigitsFloat⟩
+instance : PyRoundDigitsC ℚ := ⟨pyRoundDigitsRat⟩
+noncomputable instance : PyRoundDigitsC ℝ := ⟨pyRoundDigitsReal⟩
+
+export PyRoundDigitsC (pyRoundDigits)
 
 /-- `int.bit_length()`: bits needed to represent `|n|`, and `0` for `0`. `pyBitLength 5 = 3`. -/
 def pyBitLength (n : Int) : Int :=

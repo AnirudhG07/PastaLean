@@ -32,22 +32,24 @@ def total'rn := fun (xs : List Int) ↦
       return s)
 
 def scale := fun (row : List Rat) ↦ fun (k : Rat) ↦
-  Id.run
-    (do
-      let mut out := ([] : List Rat)
-      for v in (PastaLean.pyIter row)do
-        out := PastaLean.pyAppend out (v *ₚ k)
-      return out)
+  (show List Rat from
+    Id.run
+      (do
+        let mut out := ([] : List Rat)
+        for v in (PastaLean.pyIter row)do
+          out := PastaLean.pyAppend out (v *ₚ k)
+        return out))
 
 attribute [simp, taste_ingr] scale
 
 def scale'rn := fun (row : List Float) ↦ fun (k : Float) ↦
-  Id.run
-    (do
-      let mut out := ([] : List Float)
-      for v in (PastaLean.pyIter row)do
-        out := PastaLean.pyAppend out (v *ₚ k)
-      return out)
+  (show List Float from
+    Id.run
+      (do
+        let mut out := ([] : List Float)
+        for v in (PastaLean.pyIter row)do
+          out := PastaLean.pyAppend out (v *ₚ k)
+        return out))
 
 def label := fun (pairs : Std.HashMap String Int) ↦ fun (key : String) ↦ PastaLean.pyGetD pairs key (0 : Int)
 

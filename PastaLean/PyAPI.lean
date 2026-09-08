@@ -1,3 +1,4 @@
+import PastaLean.PyAPI.ExtRat
 import PastaLean.PyAPI.Core
 import PastaLean.PyAPI.Input
 import PastaLean.PyAPI.PyPrint

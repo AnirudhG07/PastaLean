@@ -69,13 +69,22 @@ partial def functionArgTypeSyntax? (annotationJson : Json) : PygenM (Option (TSy
             | other => other
         | _, _ => ""
       match container with
-      -- Sets are list-backed in the runtime, so `set[T]` lowers to `List T`.
+      -- Sets are an insertion-ordered array + hash index (`PyAPI/Sets.lean`): `set[T]` → `PySet T`.
       | "list" | "set" =>
-          match ← functionArgTypeSyntax? sliceJson with
+          -- An explicit `List[Any]`/`Set[Any]` element has no runtime type of its own → `PyAny` (a
+          -- boxed `List PyAny`), matching the bare-`list` param. Without this the whole ascription is
+          -- dropped and the param stays a stuck metavariable.
+          let elemTy? : Option (TSyntax `term) ← match ← functionArgTypeSyntax? sliceJson with
+            | some e => pure (some e)
+            | none =>
+                if [some "Any", some "object"].contains (sliceJson.getObjValAs? String "id").toOption
+                then pure (some (← `($(mkIdent ``PastaLean.PyAny)))) else pure none
+          match elemTy? with
           -- The runnable (`approx`) twin backs an `array_ok`-marked `list` with `Array` for O(1)
           -- append/index (Perceus in-place reuse); the provable twin, sets, and un-marked lists stay
           -- `List`. Marked by the TypeInfer eligibility pass as `_seq: "array"` on this annotation node.
           | some elemTy =>
+              if container == "set" then return some (← `(PastaLean.PySet $elemTy))
               let arrayBacked := container == "list"
                 && (annotationJson.getObjValAs? String "_seq" == .ok "array")
                 && (← getNumericMode) == .approx
@@ -316,7 +325,8 @@ def functionReturnTypeSyntax? (json : Json) : PygenM (Option (TSyntax `term)) :=
   match (jsonFieldOption json "returns").orElse (fun _ => jsonFieldOption json "_ret_ty") with
   | some returnJson =>
       -- In exact mode a `float`-involving return is left UNASCRIBED so Lean infers `ℚ` (a rational
-      -- function) or `ℝ` (a transcendental one); a fixed `ℚ` would clash with an `ℝ` body.
+      -- function) or `ℝ` (a transcendental one); a fixed `ℚ` would clash with an `ℝ` body. (The list
+      -- return-mixing case that DOES need an ascription is handled in `optionalReturnAscription?`.)
       if (← getNumericMode) == .exact && annotationMentionsFloat returnJson then
         pure none
       else
@@ -334,6 +344,17 @@ def optionalReturnAscription? (json : Json) : PygenM (Option (TSyntax `term)) :=
   match (jsonFieldOption json "returns").orElse (fun _ => jsonFieldOption json "_ret_ty") with
   | some r => match TypeInfer.ofAnnotation r with
       | .opt _ => functionReturnTypeSyntax? json
+      -- A `list`/`set` return whose element is `float` pins the codomain (`List ℚ`/`List Float`), so a
+      -- body mixing `return [1]` (List Int) and `return ans` (List ℚ) unifies — the int list coerces
+      -- (`CoeTail (List Int) (List Rat)`) instead of the first int return fixing `List ℤ` (Tri). But NOT
+      -- for a transcendental (`ℝ`) body — its list is `List ℝ`, and a fixed `List ℚ` would clash (eg1).
+      | .list .float | .set .float =>
+          -- Ascribe the list[float] annotation DIRECTLY (`functionArgTypeSyntax?`, bypassing the
+          -- exact-mode float-unascribe in `functionReturnTypeSyntax?`) → `List ℚ`/`List Float`. NOT for
+          -- a transcendental (`ℝ`) body — its list is `List ℝ`, and a fixed `List ℚ` would clash.
+          let body := (json.getObjValAs? (Array Json) "body").toOption.getD #[]
+          if (← bodyCallsNoncomputable body) || (← bodyNeedsNoncomputable body) then pure none
+          else functionArgTypeSyntax? r
       | _ => pure none
   | none => pure none
 
@@ -603,7 +624,12 @@ def functionValueSyntax (argInfos : Array (TSyntax `ident × Option (TSyntax `te
     -- `return <float>` all coerce rather than the first int return fixing the type to `ℤ`.
     let boxTy := mkIdent ``PastaLean.PyAny
     let floatTy? : Option (TSyntax `term) ←
-      if retFloat then pure (some (if (← getNumericMode) == .exact then mkIdent ``Rat else mkIdent ``Float))
+      if retFloat then
+        if (← getNumericMode) == .exact then
+          -- A real-valued body (`round(x ** 0.5, 2)` — an irrational root) is `ℝ` in the exact twin,
+          -- not `ℚ`; ascribing `ℚ` over an `ℝ` result would clash.
+          pure (some (if (← bodyNeedsNoncomputable bodyElems) then mkIdent ``Real else mkIdent ``Rat))
+        else pure (some (mkIdent ``Float))
       else pure none
     -- `show T from body`, not `(body : T)`: a pure body that begins with a comment/statement `let`
     -- (`let __PastaLean_comment := (); …`) re-parses wrong under a trailing `: T` ascription
@@ -961,9 +987,29 @@ ternary `IfExp`, a short-circuit `BoolOp`, a `Lambda`, or a comprehension? There
 out of a conditional would change *when* it runs), so such a function can't be memoized as-is. -/
 partial def selfCallUnderExpr (name : String) (json : Json) : Bool :=
   match jsonNodeType? json with
-  | some "IfExp" | some "BoolOp" | some "Lambda"
-  | some "ListComp" | some "SetComp" | some "DictComp" | some "GeneratorExp" =>
+  -- `IfExp` and single-generator `ListComp`/`GeneratorExp` are memoizable: the codegen lowers their
+  -- self-calls to awaited monadic forms (`(← if …)`, `(← xs.mapM …)`), keeping evaluation lazy/scoped.
+  -- `Lambda`/`SetComp`/`DictComp` have no such lowering yet, so a self-call under them still forces
+  -- the unmemoized fallback.
+  | some "Lambda"
+  | some "SetComp" | some "DictComp" =>
       containsCallTo name json
+  -- `a or b`/`a and b`: the FIRST operand is always evaluated, so a self-call there is memoizable
+  -- (boolOpValueTerm's monadic `do let bopGuard := …` form binds it); a LATER, short-circuited operand
+  -- is conditional, so a self-call there still forces the fallback. (`max([… dfs …] or [0])`.)
+  | some "BoolOp" =>
+      match (json.getObjValAs? (Array Json) "values").toOption.getD #[] |>.toList with
+      | first :: rest => selfCallUnderExpr name first || rest.any (containsCallTo name)
+      | [] => false
+  -- Only `[… self-call … for x in iter]` — one generator, the recursion in the element, a clean
+  -- iterable/filter — lowers via `mapM`. Anything else (multi-generator `flatMap`, a self-call in the
+  -- `iter`/`ifs`) has no monadic lowering, so it must force the unmemoized fallback.
+  | some "ListComp" | some "GeneratorExp" =>
+      let gens := (json.getObjValAs? (Array Json) "generators").toOption.getD #[]
+      let elt := (json.getObjVal? "elt").toOption.getD Json.null
+      if gens.size == 1 && !(gens.any (containsCallTo name)) then
+        selfCallUnderExpr name elt
+      else containsCallTo name json
   | _ => match json with
     | .arr xs => xs.any (selfCallUnderExpr name)
     | .obj fs => fs.toList.any (fun (_, v) => selfCallUnderExpr name v)
@@ -1023,13 +1069,16 @@ def memoizedRunCommand? (json : Json) (nameIdent : TSyntax `ident) (baseName : S
       setMutVar argIdent.getId
       paramPrelude := paramPrelude.push (← `(doElem| let mut $argIdent:ident := $argIdent))
   let bodyDoElems ← withMemoizeSelf (some (baseName, worker.getId)) (monadicFunctionBodySyntax bodyElems)
+  -- Ascribe the inner do to `StateM … retTy` so mixed int/float returns coerce up (else the first
+  -- `return` pins the block's type). `int(i<=n)` [ℤ] with `…/maxPts` [float] in a float DP.
+  let stateTy ← `(StateM (Std.HashMap $keyTy $retTy) $retTy)
   let cacheDo ← `(do
     match (← get)[$keyExpr]? with
     | some v => return v
     | none =>
-        let v ← (do
+        let v ← ((do
           $[$paramPrelude:doElem]*
-          $[$bodyDoElems:doElem]*)
+          $[$bodyDoElems:doElem]*) : $stateTy)
         modify (·.insert $keyExpr v)
         return v)
   let mut workerVal : TSyntax `term := cacheDo

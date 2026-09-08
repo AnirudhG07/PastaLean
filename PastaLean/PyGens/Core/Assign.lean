@@ -323,14 +323,29 @@ partial def nestedSubscriptSetDoElem? (target : Json) (value : TSyntax `term) :
           if let some refCode ← heapContainerRef? containerJson then
             let indexTerm ← getCode sliceJson `term
             let lVar := mkIdent `__hc_l
-            return some (← `(doElem| PastaLean.modifyRefM $refCode
-              (fun $lVar => $(mkIdent ``PastaLean.pySetItem) $lVar $indexTerm $value)))
+            let newVal ← `($(mkIdent ``PastaLean.pySetItem) $lVar $indexTerm $value)
+            -- `a[i] = Node()` sets an awaited value (`pySetItem l i (← Node.new)`); the await can't sit
+            -- in `modifyRefM`'s `fun l => …` lambda, so read-then-write to keep it in the enclosing `do`.
+            if syntaxHasLift newVal then
+              return some (← `(doElem| do
+                let $lVar ← PastaLean.readRefM $refCode
+                PastaLean.writeRefM $refCode $newVal))
+            return some (← `(doElem| PastaLean.modifyRefM $refCode (fun $lVar => $newVal)))
   let some (root, slices) := subscriptChain? target | return none
   -- `d[i, j] = v` on a dict is a single tuple-KEY write; otherwise each level is a plain index.
   let idxTerms ← slices.mapM fun s => do return (← dictTupleKeyTerm? s).getD (← getCode s `term)
   match jsonNodeType? root with
   | some "Name" =>
       let rootIdent ← getCode root `ident
+      -- Nested `g[i][j] = …` lowers to `pyModifyItem g i (fun row => …)`. Hoist the value into a prior
+      -- `let` so a value that reads `g` (`f[i][j] = f[i-1][j] or …`) doesn't keep a second reference to
+      -- `g` alive inside the modify closure — that would force an O(n) row copy instead of in-place.
+      if idxTerms.size ≥ 2 then
+        let vIdent := mkIdent (← freshName `__setval)
+        let bindV ← `(doElem| let $vIdent:ident := $value)
+        let rhs ← buildSubscriptSetRhs rootIdent idxTerms.toList vIdent
+        let assign ← `(doElem| $rootIdent:ident := $rhs)
+        return some ⟨mkNullNode #[bindV.raw, assign.raw]⟩
       let rhs ← buildSubscriptSetRhs rootIdent idxTerms.toList value
       return some (← `(doElem| $rootIdent:ident := $rhs))
   | some "Attribute" =>
@@ -643,6 +658,9 @@ def assignSyntax : (kind : SyntaxNodeKind) → Json →
                   `((← $valueStx))
                 else
                   pure valueStx
+            -- `node = node.children[idx]`: TypeInfer marked the `Option[Node]` value `_narrow` (the
+            -- cursor var is a bare node, and the value is guarded non-`None`). Unwrap it (`.get!`).
+            let rhs ← if value.getObjValAs? Bool "_narrow" == .ok true then `(($rhs).get!) else pure rhs
             -- Ascribe to the value's inferred type when the inference pass stamped one (a `c[i] = v`
             -- into a float container: put an `Int` value into the container's `ℚ`/`Float` element).
             let rhs ← match ← stampedTypeSyntax? value with
@@ -778,6 +796,12 @@ def assignSyntax : (kind : SyntaxNodeKind) → Json →
                 setSortedVar nameIdent.getId (← jsonIsSortedListExpr value)
                 setDictVar nameIdent.getId (← jsonIsDictExpr value)
                 setLibObjVar nameIdent.getId (← jsonLibObjectModule? value)
+                -- An `Option T` slot (`ans = None` then `ans = t`): remember it so an ordered `<`/`>`
+                -- comparison or the `X if ans is None else ans` return unwraps the `Option` (never
+                -- unmarked — a plain reassign keeps the slot, coercing the value to `some`).
+                if (jsonFieldOption target "_ty").any (fun t => match TypeInfer.ofAnnotation t with
+                    | .opt _ => true | _ => false) then
+                  setOptionVar nameIdent.getId
                 pure bound
     | _, _ => throwError s!"Unsupported syntax category for Assign node"
 

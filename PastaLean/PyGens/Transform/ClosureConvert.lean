@@ -106,14 +106,19 @@ partial def comprehensionBoundNames (json : Json) : Array String :=
   | .obj fs => fs.toList.foldl (fun acc (_, v) => appendUnique acc (comprehensionBoundNames v)) here
   | _ => here
 
-/-- The declared parameter names of a `FunctionDef`, in order. -/
+/-- The declared parameter names of a `FunctionDef`, in Python declaration order. Covers EVERY binding
+form — positional-only, positional, `*args`, keyword-only and `**kwargs` — since each binds a name the
+body may shadow. Missing any of them (e.g. a `*args`/`**kwargs`/keyword-only name the enclosing function
+also binds) would leave that name out of `innerBound`, so `free = names(inner) \ innerBound` would
+misclassify it as free and spuriously capture it as an extra parameter shadowing the real one. -/
 def functionParamNames (fnJson : Json) : Array String := Id.run do
   let .ok args := fnJson.getObjVal? "args" | return #[]
-  let .ok argsArray := args.getObjValAs? (Array Json) "args" | return #[]
-  return argsArray.foldl (fun acc arg =>
-    match arg.getObjValAs? String "arg" with
-    | .ok name => acc.push name
-    | _ => acc) #[]
+  let name? (arg : Json) : Option String := (arg.getObjValAs? String "arg").toOption
+  let list (field : String) : Array String :=
+    ((args.getObjValAs? (Array Json) field).toOption.getD #[]).filterMap name?
+  let single (field : String) : Array String :=
+    match (args.getObjVal? field).toOption.bind name? with | some n => #[n] | none => #[]
+  return list "posonlyargs" ++ list "args" ++ single "vararg" ++ list "kwonlyargs" ++ single "kwarg"
 
 /-- Each parameter of a `FunctionDef` with the type we can give it: its explicit annotation, else
 the `_ty` the inference pass stamped. `none` where neither exists. -/

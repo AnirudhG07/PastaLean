@@ -419,9 +419,7 @@ def main' :=
               cross_x r2x r2y r2z (m2 *ₚ v2x) (m2 *ₚ v2y) (m2 *ₚ v2z)
           let _ ←
             PastaLean.ProofMode.pyPrintProof
-                [pyPrintArg "S", pyPrintArg step, pyPrintArg t, pyPrintArg energy, pyPrintArg px, pyPrintArg lx]
-        else
-          let _ := ()) :
+                [pyPrintArg "S", pyPrintArg step, pyPrintArg t, pyPrintArg energy, pyPrintArg px, pyPrintArg lx]) :
     PastaLean.ProofMode.PyProofM _)
 
 attribute [simp] main'
@@ -482,9 +480,8 @@ def main''rn :=
             cross_x'rn r1x r1y r1z (m1 *ₚ v1x) (m1 *ₚ v1y) (m1 *ₚ v1z) +ₚ
               cross_x'rn r2x r2y r2z (m2 *ₚ v2x) (m2 *ₚ v2y) (m2 *ₚ v2z)
           let _ ←
-            pyPrintIO [pyPrintArg "S", pyPrintArg step, pyPrintArg t, pyPrintArg energy, pyPrintArg px, pyPrintArg lx]
-        else
-          let _ := ()) :
+            pyPrintIO
+                [pyPrintArg "S", pyPrintArg step, pyPrintArg t, pyPrintArg energy, pyPrintArg px, pyPrintArg lx]) :
     IO _)
 
 def main : IO Unit := do

@@ -197,8 +197,8 @@ private def emitted (t : PyType) : Option String :=
 #guard emitted (.dict .str .int) == some "Std.HashMap String Int"
 #guard emitted (.tuple [.int, .str]) == some "Int × String"
 #guard emitted .float == some "Rat"
--- Sets are list-backed in the runtime.
-#guard emitted (.set .int) == some "List Int"
+-- Sets are an insertion-ordered array + hash index in the runtime (`PyAPI/Sets.lean`).
+#guard emitted (.set .int) == some "PastaLean.PySet Int"
 -- Nothing to emit for an unknown slot; the binder stays untyped (P3 will box it).
 #guard emitted .unknown == none
 -- `any` is the KNOWN-dynamic top type → the runtime `PyAny`, so a `list[any]` materialises as a total

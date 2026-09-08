@@ -22,8 +22,6 @@ def running_max := fun (xs : List Int) ↦
       let _ := Libraries.passta.pyPassInvariant (decide (m ≥ xs⦋(0 : Int)⦌))
       if h_1 : x > m then 
         m := x
-      else
-        let _ := ()
     return m : Id _)
 
 @[spec]
@@ -53,8 +51,6 @@ def running_max'rn := fun (xs : List Int) ↦
         let _ := Libraries.passta.pyPassInvariant (decide (m ≥ xs⦋(0 : Int)⦌))
         if h_1 : x > m then 
           m := x
-        else
-          let _ := ()
       return m)
 
 end PastaLean.User.Root

@@ -17,15 +17,6 @@ def pythonCollectionsMemberMap? (member : String) : Option Lean.Name :=
   | "defaultdict" => some ``Libraries.collections.pyDefaultDictList
   | _ => none
 
-/-- Return-type behaviour of `collections` constructors: `Counter(xs)` is a `dict[elem, int]`;
-`deque(xs)` a list of `xs`'s element; `OrderedDict(d)` passes its dict through. (`defaultdict` reads
-its factory ARGUMENT's name, not a type, so it stays in the engine's `builtinReturn`.) -/
-def collectionsBehaviour? (member : String) : Option Behaviour :=
-  open Behaviour in
-  match member with
-  | "Counter"     => some (counterOf 0)
-  | "OrderedDict" => some (argType 0)
-  | "deque"       => some (listOf 0)
-  | _ => none
+-- `collectionsBehaviour?` (type-inference return shapes) moved to `Libraries/TypeBehaviour.lean`.
 
 end Libraries.collections

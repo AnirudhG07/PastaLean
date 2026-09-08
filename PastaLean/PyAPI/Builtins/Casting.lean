@@ -176,18 +176,22 @@ instance : PyFloatCast String where
 
 In the default (exact) numeric mode `float(x)` lowers to `pyRat`, producing an exact rational.
 Notably a decimal string parses *exactly* (`float("0.1") = 1/10`), and `int`/`bool`/`Rat` inputs
-coerce losslessly. `inf`/`nan` have no `ℚ` value, so the string parser degrades them to `0`; a
-*literal* `float('inf')` lowers to `pyRatNonFinite` instead, leaving this path reachable only for a
-runtime-computed string. -/
+coerce losslessly. A non-finite string (`float("inf")`) routes through `pyRatNonFinite`, so a
+runtime-computed string gives the SAME result as the *literal* `float('inf')`. -/
 
-/-- Exact-mode stand-in for a non-finite float literal, which `ℚ` cannot represent. `inf` becomes a
+/-- Exact-mode stand-in for a non-finite float, which `ℚ` cannot represent. `inf`/`-inf` become a
 sentinel far outside any competitive value range (so the `ans = -inf; ans = max(ans, …)` /
-`best = inf; best = min(best, …)` initializer idiom behaves), `nan` becomes `0`. A top-level
-`inf = float('inf')` is a single shared `ℚ` def used by both twins, so this must be a usable value,
-not `-1`. It is NOT a true infinity — returning it verbatim (e.g. from empty input) still mismatches. -/
+`best = inf; best = min(best, …)` initializer idiom behaves). `nan` has NO honest `ℚ` value — `0`
+would be silently wrong (real `nan` propagates through arithmetic and compares `False` against
+everything, itself included), so it **panics loudly** instead; use `--approx` (Float) mode for genuine
+NaN semantics. The `inf` sentinel is NOT a true infinity — returning it verbatim still mismatches. -/
 def pyRatNonFinite (literal : String) : Rat :=
   let s := literal.toLower
-  if s.endsWith "nan" then 0
+  if s.endsWith "nan" then
+    -- `nan` has NO exact-`ℚ` value, and `0` is silently wrong (real `nan` propagates through
+    -- arithmetic and compares `False` against everything, including itself — `0` does neither). Fail
+    -- loudly rather than lie; use `--approx` (Float) mode for genuine NaN semantics.
+    panic! "float('nan') is unrepresentable in exact (ℚ) mode — run with --approx for real NaN"
   else
     let big : Rat := (10 : Rat) ^ (30 : Nat)
     if s.startsWith "-" then -big else big
@@ -196,7 +200,8 @@ def pyRatNonFinite (literal : String) : Rat :=
 function is annotated `-> int`). Python compares `-inf` against ints happily; Lean needs one type. -/
 def pyIntNonFinite (literal : String) : Int :=
   let s := literal.toLower
-  if s.endsWith "nan" then 0
+  if s.endsWith "nan" then
+    panic! "float('nan') is unrepresentable in exact (ℤ) mode — run with --approx for real NaN"
   else
     let big : Int := (10 : Int) ^ (30 : Nat)
     if s.startsWith "-" then -big else big
@@ -241,7 +246,12 @@ private def tenPowNatRat : Nat → Rat
 parts, optional `e`/`E` exponent). `inf`/`nan` are not representable in `ℚ` and degrade to `0`. -/
 private def parseRatString (s : String) : Rat :=
   let t := s.trimAscii.toString
-  if t == "inf" || t == "+inf" || t == "Infinity" || t == "-inf" || t == "-Infinity" || t == "nan" then 0
+  let tl := t.toLower
+  -- A runtime-computed non-finite string (`float(x)` with `x == "inf"`) must give the SAME result as
+  -- the literal `float('inf')`, which lowers to `pyRatNonFinite`. Routing through it keeps them
+  -- consistent (and makes `nan` fail loudly there rather than silently becoming `0`).
+  if tl == "inf" || tl == "+inf" || tl == "infinity" || tl == "-inf" || tl == "-infinity"
+     || tl == "+infinity" || tl == "nan" || tl == "-nan" then pyRatNonFinite t
   else
     let (neg, body) :=
       if t.startsWith "-" then (true, (t.drop 1).toString)

@@ -81,44 +81,36 @@ def while_in_for'rn := fun n ↦
           j := j -ₚ (1 : Int)
       return count)
 
-def breakable_loop := fun n ↦
+def breakable_loop := fun (n : Int) ↦
   Id.run
     (do
       let mut total : Int := (0 : Int)
       for i in (PastaLean.pyRange n)do
         if h_1 : i = (5 : Int) then 
           break
-        else
-          let _ := ()
         total := total +ₚ i
       let mut j : Int := (0 : Int)
       while (j < n) do
         if h_1 : j ≤ (3 : Int) then 
           continue
-        else
-          let _ := ()
         total := total +ₚ j
         j := j +ₚ (1 : Int)
       return total)
 
 attribute [simp, taste_ingr] breakable_loop
 
-def breakable_loop'rn := fun n ↦
+def breakable_loop'rn := fun (n : Int) ↦
   Id.run
     (do
       let mut total : Int := (0 : Int)
       for i in (PastaLean.pyRange n)do
         if h_1 : i == (5 : Int) then 
           break
-        else
-          let _ := ()
         total := total +ₚ i
       let mut j : Int := (0 : Int)
       while (j < n) do
         if h_1 : j ≤ (3 : Int) then 
           continue
-        else
-          let _ := ()
         total := total +ₚ j
         j := j +ₚ (1 : Int)
       return total)
@@ -179,9 +171,9 @@ def loop_leak_conflicting := fun (n : Int) ↦
       let mut z : PyAny := default
       for i in (PastaLean.pyRange n)do
         if h_1 : i %ₚ (2 : Int) = (0 : Int) then 
-          let mut z'rb0 := i
+          z := i
         else
-          let mut z'rb1 := "odd"
+          z := "odd"
       let p'_ret_1 := PastaLean.pyStr z
       return p'_ret_1)
 
@@ -195,9 +187,9 @@ def loop_leak_conflicting'rn := fun (n : Int) ↦
       let mut z : PyAny := default
       for i in (PastaLean.pyRange n)do
         if h_1 : i %ₚ (2 : Int) == (0 : Int) then 
-          let mut z'rb0 := i
+          z := i
         else
-          let mut z'rb1 := "odd"
+          z := "odd"
       let p'_ret_1 := PastaLean.pyStr z
       return p'_ret_1)
 

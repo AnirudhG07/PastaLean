@@ -146,3 +146,10 @@ one (and the closed form), so a divergence between the twins is caught here. -/
   (pyLen flat == 3) && (flat⦋(2:Int)⦌ == PyAny.bool true)
     && (m⦋(1:Int)⦌⦋(1:Int)⦌ == PyAny.int 9) && (pyLen m⦋(1:Int)⦌ == 2)
     && (pyContains m⦋(0:Int)⦌ (PyAny.int 1))
+
+/-! Python slicing clamps out-of-range bounds instead of failing, counts negative bounds from the
+end, and reverses on a negative step. -/
+
+#guard pyListSliceStep [1, 2, 3, 4, 5] (some (-2)) none (some 1) == [4, 5]    -- xs[-2:]
+#guard pyListSliceStep [1, 2, 3, 4, 5] (some 2) (some 100) none == [3, 4, 5]  -- xs[2:100]
+#guard pyListSliceStep [1, 2, 3] none none (some (-1)) == [3, 2, 1]           -- xs[::-1]

@@ -29,8 +29,6 @@ private def _pick'first_one := fun (pairs : List (List Int)) ↦ fun (graph : St
       for u in (PastaLean.pyIter (PastaLean.pyKeys graph))do
         if h_1 : graph⦋u⦌ = (1 : Int) then 
           return u
-        else
-          let _ := ()
       let p'_ret_1 := pairs⦋(0 : Int)⦌⦋(0 : Int)⦌
       return p'_ret_1)
 
@@ -55,8 +53,6 @@ private def _pick'first_one'rn := fun (pairs : List (List Int)) ↦ fun (graph :
       for u in (PastaLean.pyIter (PastaLean.pyKeys graph))do
         if h_1 : graph⦋u⦌ == (1 : Int) then 
           return u
-        else
-          let _ := ()
       let p'_ret_1 := pairs⦋(0 : Int)⦌⦋(0 : Int)⦌
       return p'_ret_1)
 

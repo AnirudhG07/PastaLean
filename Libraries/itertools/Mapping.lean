@@ -24,20 +24,6 @@ def pythonItertoolsMemberMap? (member : String) : Option Lean.Name :=
   | "islice"        => some ``Libraries.itertools.pyIslice
   | _ => none
 
-/-- The full behaviour of each `itertools` member: return shape for inference (`chain` → list of the
-common element type; `product` → list of Cartesian-product tuples; `accumulate` → running fold;
-`pairwise` → consecutive `(elem, elem)` pairs), and the unbounded-iterator shape for the desugarer
-(`count`/`cycle`/`repeat`, the last only in its 1-argument form — the desugaring checks arity). -/
-def itertoolsBehaviour? (member : String) : Option Behaviour :=
-  open Behaviour in
-  match member with
-  | "chain"      => some listOfJoined
-  | "product"    => some listOfTuples
-  | "accumulate" => some (listOf 0)
-  | "pairwise"   => some adjacentPairs
-  | "count"      => some { infiniteIter := some .counter }
-  | "cycle"      => some { infiniteIter := some .cyclic }
-  | "repeat"     => some { infiniteIter := some .constant }
-  | _ => none
+-- `itertoolsBehaviour?` (type-inference return shapes) moved to `Libraries/TypeBehaviour.lean`.
 
 end Libraries.itertools

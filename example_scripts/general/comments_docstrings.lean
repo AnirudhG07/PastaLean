@@ -18,25 +18,25 @@ namespace PastaLean.User.Root
 module doc
 second line
 -/
-def f := fun x ↦
+def f := fun (x : Int) ↦
   -- function comment
   /-
   function doc
   -/
   -- before assign
-  let y := x +ₚ (1 : Int)
+  let y := (x +ₚ (1 : Int) : Int)
   -- before return
   y
 
 attribute [simp, taste_ingr] f
 
-def f'rn := fun x ↦
+def f'rn := fun (x : Int) ↦
   -- function comment
   /-
   function doc
   -/
   -- before assign
-  let y := x +ₚ (1 : Int)
+  let y := (x +ₚ (1 : Int) : Int)
   -- before return
   y
 

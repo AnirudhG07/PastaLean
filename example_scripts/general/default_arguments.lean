@@ -45,10 +45,10 @@ instance : PastaLean.PyTyped Counter where pyTypeOf _ := TypeInfer.PyType.cls "C
 instance : Coe Counter (Option Counter) :=
   ⟨some⟩
 
-def Counter.new (start : _ := (0 : Int)) (step : _ := (1 : Int)) : Counter :=
+def Counter.new (start : Int := (0 : Int)) (step : Int := (1 : Int)) : Counter :=
   ({ value := start, step := step } : Counter)
 
-def Counter.bumped (self : Counter) («by» : _ := (1 : Int)) :=
+def Counter.bumped (self : Counter) («by» : Int := (1 : Int)) :=
   self.value +ₚ «by» *ₚ self.step
 
 attribute [simp, taste_ingr] Counter.bumped
@@ -65,10 +65,10 @@ instance : PastaLean.PyTyped Counter'rn where pyTypeOf _ := TypeInfer.PyType.cls
 instance : Coe Counter'rn (Option Counter'rn) :=
   ⟨some⟩
 
-def Counter'rn.new (start : _ := (0 : Int)) (step : _ := (1 : Int)) : Counter'rn :=
+def Counter'rn.new (start : Int := (0 : Int)) (step : Int := (1 : Int)) : Counter'rn :=
   ({ value := start, step := step } : Counter'rn)
 
-def Counter'rn.bumped (self : Counter'rn) («by» : _ := (1 : Int)) :=
+def Counter'rn.bumped (self : Counter'rn) («by» : Int := (1 : Int)) :=
   self.value +ₚ «by» *ₚ self.step
 
 structure TreeNode where
@@ -84,7 +84,7 @@ instance : PastaLean.PyTyped TreeNode where pyTypeOf _ := TypeInfer.PyType.cls "
 instance : Coe TreeNode (Option TreeNode) :=
   ⟨some⟩
 
-def TreeNode.new (val : _ := (0 : Int)) (left : Option TreeNode := Option.none)
+def TreeNode.new (val : Int := (0 : Int)) (left : Option TreeNode := Option.none)
     (right : Option TreeNode := Option.none) : TreeNode :=
   ({ val := val, left := left, right := right } : TreeNode)
 
@@ -101,7 +101,7 @@ instance : PastaLean.PyTyped TreeNode'rn where pyTypeOf _ := TypeInfer.PyType.cl
 instance : Coe TreeNode'rn (Option TreeNode'rn) :=
   ⟨some⟩
 
-def TreeNode'rn.new (val : _ := (0 : Int)) (left : Option TreeNode'rn := Option.none)
+def TreeNode'rn.new (val : Int := (0 : Int)) (left : Option TreeNode'rn := Option.none)
     (right : Option TreeNode'rn := Option.none) : TreeNode'rn :=
   ({ val := val, left := left, right := right } : TreeNode'rn)
 
@@ -118,10 +118,10 @@ def main : IO Unit := do
           let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg (greet "x")]
           let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg (greet "x" "yo" (1 : Int))]
           let mut c := Counter.new
-          let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg (Counter.bumped c)]
-          let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg (Counter.bumped c (5 : Int))]
+          let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg (c.bumped)]
+          let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg (c.bumped (5 : Int))]
           let mut c2 := Counter.new (10 : Int) (2 : Int)
-          let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg (Counter.bumped c2 (3 : Int))]
+          let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg (c2.bumped (3 : Int))]
           let mut leaf := TreeNode.new (2 : Int)
           let _ ← PastaLean.ProofMode.pyPrintProof [pyPrintArg leaf.val]
           let mut root := TreeNode.new (1 : Int) leaf
@@ -144,10 +144,10 @@ def main'rn : IO Unit := do
   let _ ← pyPrintIO [pyPrintArg (greet'rn "x")]
   let _ ← pyPrintIO [pyPrintArg (greet'rn "x" "yo" (1 : Int))]
   let mut c := Counter'rn.new
-  let _ ← pyPrintIO [pyPrintArg (Counter'rn.bumped c)]
-  let _ ← pyPrintIO [pyPrintArg (Counter'rn.bumped c (5 : Int))]
+  let _ ← pyPrintIO [pyPrintArg (c.bumped)]
+  let _ ← pyPrintIO [pyPrintArg (c.bumped (5 : Int))]
   let mut c2 := Counter'rn.new (10 : Int) (2 : Int)
-  let _ ← pyPrintIO [pyPrintArg (Counter'rn.bumped c2 (3 : Int))]
+  let _ ← pyPrintIO [pyPrintArg (c2.bumped (3 : Int))]
   let mut leaf := TreeNode'rn.new (2 : Int)
   let _ ← pyPrintIO [pyPrintArg leaf.val]
   let mut root := TreeNode'rn.new (1 : Int) leaf

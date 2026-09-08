@@ -110,6 +110,38 @@ def normalize(text):
     return "\n".join(line.rstrip() for line in text.strip().splitlines()).strip()
 
 
+# A convert failure that traces to a Python library PastaLean does not model (concurrency, regex,
+# datetime, interactive judge APIs) is not a codegen shortcoming — it is out of scope. Detected from
+# the source so it is reported as `skipped: <reason>` instead of polluting the `convert_fail` bucket.
+# Patterns match USAGE (a call / method), never a bare import — the LeetCode preamble imports many
+# modules (`import datetime`, `import re`) that a given solution never uses.
+_OUT_OF_SCOPE = [
+    (re.compile(r"\bThread\s*\(|\.acquire\s*\(\s*\)|\.release\s*\(\s*\)|threading\."),
+     "threading / concurrency"),
+    (re.compile(r"\bre\.(sub|match|search|findall|finditer|compile|split|fullmatch)\s*\("),
+     "re (regular expressions)"),
+    (re.compile(r"datetime\.date\s*\(|datetime\.datetime\s*\(|\.strftime\s*\(|\.weekday\s*\(|\.isoweekday\s*\("),
+     "datetime"),
+    (re.compile(r"\b(PriorityQueue|LifoQueue)\s*\(|Queue\s*\(\s*\)\.(put|get)\b"),
+     "queue (Queue / PriorityQueue)"),
+    # Interactive LeetCode judge objects expose opaque methods on a handler param (no source to model).
+    (re.compile(r"\.haveSameCategory\s*\(|\.guess\s*\(|\.knows\s*\(|\.compareSub\s*\(|\.query\s*\("),
+     "interactive judge API"),
+]
+
+
+def out_of_scope_reason(source):
+    """If `source` uses a library/feature PastaLean deliberately does not model, the reason string;
+    else None. Used to reclassify a convert failure as `skipped` rather than `convert_fail`. Matches
+    against non-import lines only, so an unused preamble `import` never trips it."""
+    body = "\n".join(ln for ln in source.splitlines()
+                     if not re.match(r"\s*(import |from \S+ import )", ln))
+    for rx, reason in _OUT_OF_SCOPE:
+        if rx.search(body):
+            return reason
+    return None
+
+
 def summarize_error(status, log_text):
     """A reason string from a failing stage's output. Keeps the FULL first Lean diagnostic — the
     error message AND its continuation lines (the offending type / instance / expression), which is
@@ -232,6 +264,17 @@ def extract_function(completion_src, method_name):
             return None
     target.args.args = [a for a in target.args.args if a.arg != "self"]
     target.decorator_list = []
+    # The class is flattened to top-level defs, so a `Solution().m(...)` self-call (a common
+    # LeetCode recursion idiom) becomes a plain `m(...)` call.
+    class _DropSolutionSelf(ast.NodeTransformer):
+        def visit_Call(self, node):  # noqa: N802
+            self.generic_visit(node)
+            f = node.func
+            if isinstance(f, ast.Attribute) and isinstance(f.value, ast.Call) \
+                    and isinstance(f.value.func, ast.Name) and f.value.func.id == "Solution":
+                node.func = ast.Name(id=f.attr, ctx=ast.Load())
+            return node
+    target = ast.fix_missing_locations(_DropSolutionSelf().visit(target))
     try:
         return ast.unparse(target)
     except Exception:  # noqa: BLE001
@@ -338,6 +381,159 @@ def param_names(fn_src):
     tree = ast.parse(fn_src)
     fn = next(n for n in tree.body if isinstance(n, ast.FunctionDef))
     return [a.arg for a in fn.args.args]
+
+
+#: A generous preamble for LiveCodeBench `execution` snippets, whose ground-truth `code` uses
+#: `List`/`Optional`/`Counter`/`inf` etc. freely without importing them (the benchmark runs them in a
+#: namespace that already has these bound). Mirrors the LeetCode prompt preamble.
+LCB_PREAMBLE = (
+    "from typing import *\n"
+    "from collections import *\n"
+    "from math import *\n"
+    "from functools import *\n"
+    "from itertools import *\n"
+    "import heapq\n"
+    "from heapq import *\n"
+    "import bisect\n"
+    "from bisect import *\n"
+    "inf = float('inf')\n"
+)
+
+
+def _gen_random_like(v, rng, depth=0):
+    """A fresh random value with the SAME shape as `v` (its type, and for containers the element
+    shape of its first element). Used to synthesize extra test inputs for a problem that ships only
+    one, so we can differential-test the Lean twin against the reference Python on many inputs."""
+    import string
+    if depth > 4:
+        return v
+    if isinstance(v, bool):
+        return rng.choice([True, False])
+    if isinstance(v, int):
+        hi = max(10, abs(v) * 2 + 5)
+        return rng.randint(-hi, hi)
+    if isinstance(v, float):
+        return round(rng.uniform(-abs(v) * 2 - 10, abs(v) * 2 + 10), 4)
+    if isinstance(v, str):
+        chars = sorted(set(v)) or list(string.ascii_lowercase)
+        return "".join(rng.choice(chars) for _ in range(rng.randint(0, max(1, len(v) + 2))))
+    if isinstance(v, list):
+        elem = v[0] if v else 0
+        n = rng.randint(0, max(1, len(v) + 3))
+        return [_gen_random_like(elem, rng, depth + 1) for _ in range(n)]
+    if isinstance(v, tuple):
+        return tuple(_gen_random_like(x, rng, depth + 1) for x in v)
+    if isinstance(v, dict):
+        items = list(v.items())
+        if not items:
+            return {}
+        k0, val0 = items[0]
+        n = rng.randint(1, max(1, len(items) + 2))
+        return {_gen_random_like(k0, rng, depth + 1): _gen_random_like(val0, rng, depth + 1)
+                for _ in range(n)}
+    return v
+
+
+#: Worker that generates differential tests IN A CHILD PROCESS with a hard memory cap, so a reference
+#: that blows up on an out-of-domain random input (e.g. `2**bignum`) is killed with MemoryError instead
+#: of OOM-killing the whole fetch. Prints JSON `[[input_str, output_repr], ...]` on stdout.
+_LCB_WORKER = r'''
+import sys, json, random, copy, signal, ast, resource
+data = json.load(open(sys.argv[1]))
+mem = data["mem_mb"] * 1024 * 1024
+try:
+    resource.setrlimit(resource.RLIMIT_AS, (mem, mem))
+except Exception:
+    pass
+
+def gen(v, rng, depth=0):
+    import string
+    if depth > 4: return v
+    if isinstance(v, bool): return rng.choice([True, False])
+    if isinstance(v, int):
+        hi = min(200, max(10, abs(v) * 2 + 5))
+        return rng.randint(-hi, hi)
+    if isinstance(v, float): return round(rng.uniform(-abs(v) * 2 - 10, abs(v) * 2 + 10), 4)
+    if isinstance(v, str):
+        chars = sorted(set(v)) or list(string.ascii_lowercase)
+        return "".join(rng.choice(chars) for _ in range(rng.randint(0, min(60, max(1, len(v) + 2)))))
+    if isinstance(v, list):
+        elem = v[0] if v else 0
+        n = rng.randint(0, min(60, max(1, len(v) + 3)))
+        return [gen(elem, rng, depth + 1) for _ in range(n)]
+    if isinstance(v, tuple): return tuple(gen(x, rng, depth + 1) for x in v)
+    if isinstance(v, dict):
+        items = list(v.items())
+        if not items: return {}
+        k0, val0 = items[0]
+        n = rng.randint(1, min(30, max(1, len(items) + 2)))
+        return {gen(k0, rng, depth + 1): gen(val0, rng, depth + 1) for _ in range(n)}
+    return v
+
+class _TO(Exception): pass
+signal.signal(signal.SIGALRM, lambda *_: (_ for _ in ()).throw(_TO()))
+out, seen = [], set()
+try:
+    ns = {}
+    exec(data["code"], ns)
+    fn = ns[data["method"]]
+    params = data["params"]; rng = random.Random(0)
+    for _ in range(data["k"] * 3):
+        if len(out) >= data["k"]: break
+        args = [gen(a, rng) for a in data["base_args"]]
+        key = repr(args)
+        if len(key) > 3000 or key in seen: continue
+        seen.add(key)
+        signal.setitimer(signal.ITIMER_REAL, 1.0)
+        try:
+            res = fn(*copy.deepcopy(args))
+        except BaseException:
+            continue
+        finally:
+            signal.setitimer(signal.ITIMER_REAL, 0)
+        try:
+            r = repr(res)
+            if len(r) > 3000: continue
+            ast.literal_eval(r); ast.literal_eval(key)
+            inp = ", ".join("%s = %r" % (params[i], args[i]) for i in range(len(params)))
+        except Exception:
+            continue
+        out.append([inp, r])
+except BaseException:
+    pass
+print(json.dumps(out))
+'''
+
+
+def expand_lcb_tests(code_src, method, params, base_args, k=24, mem_mb=768, timeout=25):
+    """Return `[(input_str, output_repr), ...]` — extra differential tests generated by running the
+    ground-truth `code` on random inputs shaped like `base_args`, in a memory-capped subprocess so a
+    runaway reference can't take down the fetch. On any failure returns []."""
+    import subprocess, tempfile, json as _json
+    try:
+        with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as fh:
+            _json.dump({"code": code_src, "method": method, "params": params,
+                        "base_args": base_args, "k": k, "mem_mb": mem_mb}, fh)
+            path = fh.name
+        proc = subprocess.run([sys.executable, "-c", _LCB_WORKER, path],
+                              capture_output=True, text=True, timeout=timeout)
+        os.unlink(path)
+        rows = _json.loads(proc.stdout or "[]")
+        return [(r[0], r[1]) for r in rows if isinstance(r, list) and len(r) == 2]
+    except Exception:
+        return []
+
+
+def lcb_args_only(input_str):
+    """LiveCodeBench `input` is a full call `fn(a = [1,2], b = 3)`; `parse_test_input` wants the
+    ARGUMENTS ONLY (`a = [1,2], b = 3`). Strip the outer `fn( … )` via the AST so nested parens and
+    commas inside literals are preserved."""
+    call = ast.parse(input_str.strip(), mode="eval").body
+    if not isinstance(call, ast.Call):
+        raise ValueError("LiveCodeBench input is not a function call")
+    parts = [ast.unparse(a) for a in call.args] + \
+            [f"{k.arg} = {ast.unparse(k.value)}" for k in call.keywords]
+    return ", ".join(parts)
 
 
 def parse_test_input(input_str, order):
@@ -487,6 +683,15 @@ def _signature_arg_types(converted_lean, fn_name, arity):
     if m is None:
         return None
     s, i, n = converted_lean, m.end(), len(converted_lean)
+    # A non-contract `mode="run"` twin is an ALIAS `def NAME'rn := NAME`; follow it to the real
+    # `def NAME := fun (a : T) ↦ …` whose binder chain actually carries the parameter types (the alias
+    # itself has none, so we'd otherwise fall back to `List PyAny`-style data inference and mismatch).
+    eol = s.find("\n", i)
+    alias = re.fullmatch(r"\s*([A-Za-z_][A-Za-z0-9_'.]*)\s*", s[i:eol if eol != -1 else n])
+    if alias is not None:
+        m2 = re.search(r"\bdef\s+" + re.escape(alias.group(1)) + r"\s*:=", s)
+        if m2 is not None:
+            i = m2.end()
     types, guard = [], 0
     while len(types) < arity and guard < 100000:
         guard += 1
@@ -574,6 +779,9 @@ def build_test_harness(converted_lean, fn_name, cases, data_path):
     body = "\n".join([
         "import Lean.Data.Json",
         converted_lean.rstrip(), "",
+        # The converted code defines the twin inside `namespace PastaLean.User.Root`; open it so the
+        # harness `main` can call `<fn>'rn` unqualified (else `unknown identifier <fn>'rn`).
+        "open PastaLean.User.Root", "",
         # Float results are compared with a tolerance, not exact `==`: Lean's Float parse/division can
         # differ from CPython's by ~1 ULP, so bit-equality is the wrong test for a floating-point
         # answer. Non-float types fall back to `BEq` (exact). Lists/tuples lift the comparison.
@@ -586,6 +794,15 @@ def build_test_harness(converted_lean, fn_name, cases, data_path):
         "private instance {α β} [_PyTestEq α] [_PyTestEq β] : _PyTestEq (α × β) := "
         "⟨fun a b => _PyTestEq.teq a.1 b.1 && _PyTestEq.teq a.2 b.2⟩",
         "private def _pyTestEq {α} [_PyTestEq α] (a b : α) : Bool := _PyTestEq.teq a b", "",
+        # A twin carrying a stray `print` (→ `IO α`) or a spurious `try/except` (→ `PyExcept α`,
+        # i.e. `ExceptT PyException IO α`) is EFFECTFUL, not a bare value; run it and compare the
+        # result it returns. `_RunTwin` reduces pure / IO / PyExcept twins to `IO (Option α)` (a raised
+        # exception → `none`). The pure fallback is lowest priority so the effectful instances win.
+        "private class _RunTwin (τ : Type) (α : outParam Type) where run : τ → IO (Option α)",
+        "private instance {α} : _RunTwin (IO α) α := ⟨fun m => do let r ← m; pure (some r)⟩",
+        "private instance {α} : _RunTwin (ExceptT PastaLean.PyException IO α) α := "
+        "⟨fun m => do match ← ExceptT.run m with | .ok a => pure (some a) | .error _ => pure none⟩",
+        "private instance (priority := 50) {α} : _RunTwin α α := ⟨fun a => pure (some a)⟩", "",
         # Decode the expected JSON at the SAME type as the value the twin computed: `_pat`'s type
         # (`α`) is unified with `_got` at the call site, so no return-type annotation is needed.
         "private def _decodeLike {α : Type} [Lean.FromJson α] (_pat : α) "
@@ -606,18 +823,22 @@ def build_test_harness(converted_lean, fn_name, cases, data_path):
         "  let mut _p := 0",
         "  let mut _t := 0",
         f"  for {pat} in _cases do",
-        f"    let _got := {call}",
-        "    match _decodeLike _got ejson with",
+        f"    let _got? ← _RunTwin.run ({call})",
+        "    match _got? with",
+        # Twin raised (effectful path): count as attempted-and-failed, not silently dropped.
+        '    | none => _t := _t + 1; IO.println s!"FAIL {idx}: twin raised"',
+        "    | some _got =>",
+        "      match _decodeLike _got ejson with",
         # Expected value undecodable at the result type → out-of-spec case, drop (don't count).
-        "    | none => pure ()",
-        "    | some e =>",
-        "      _t := _t + 1",
+        "      | none => pure ()",
+        "      | some e =>",
+        "        _t := _t + 1",
         # `repr` prints what Lean computed so a failure is debuggable without a rerun.
-        "      if _pyTestEq _got e then _p := _p + 1",
-        '      else IO.println s!"FAIL {idx}: got {repr _got}"',
+        "        if _pyTestEq _got e then _p := _p + 1",
+        '        else IO.println s!"FAIL {idx}: got {repr _got}"',
         # Flush a running count each case so a native run that times out still reports partials
         # (how many passed / attempted before it hung) instead of a bare 0/N.
-        '      _out.putStr s!"PROG {_t} {_p}\\n"; _out.flush',
+        '        _out.putStr s!"PROG {_t} {_p}\\n"; _out.flush',
         '  IO.println s!"PASSED {_p}/{_t}"', ""])
     return body, runnable, data_json
 
@@ -1051,10 +1272,92 @@ class CPastaEval:
         stream = self._stream("newfacade/LeetCodeDataset", "train")
         return self._fetch_loop(stream, self._save_leetcode_problem, num, excluded, 100)
 
+    def fetch_livecodebench(self, num):
+        """`livecodebench/execution-v2` (the latest LiveCodeBench execution/groundtruth set — its
+        cumulative problem window is the v6 release): ground-truth `code` + a `fn(args)` call +
+        expected `output`. Model: function. Rows sharing the same `code` (one function, many inputs)
+        are grouped into one problem with many tests, so each function is transpiled once. Converted
+        files are NOT persisted beyond the dataset dir (same as any other source)."""
+        excluded = self.load_excluded()
+        print("[*] Streaming livecodebench/execution-v2 (test split)...")
+        stream = self._stream("livecodebench/execution-v2", "test")
+        groups = {}   # code -> {"function_name", "id", "difficulty", "contest_date", "tests": [...]}
+        for item in stream:
+            code = (item.get("code") or "").strip()
+            fn = item.get("function_name") or ""
+            if not code or not fn:
+                continue
+            g = groups.setdefault(code, {"function_name": fn, "id": item.get("id") or "",
+                                         "difficulty": item.get("difficulty"),
+                                         "contest_date": str(item.get("contest_date") or ""),
+                                         "tests": []})
+            g["tests"].append((item.get("input") or "", str(item.get("output")) if item.get("output") is not None else ""))
+        kept = 0
+        for code, g in groups.items():
+            if num and num > 0 and kept >= num:
+                break
+            if self._save_livecodebench_problem(code, g, excluded):
+                kept += 1
+        print(f"[*] LiveCodeBench: {kept} problem(s) from {len(groups)} unique function(s).")
+        return kept
+
+    def _save_livecodebench_problem(self, code, g, excluded):
+        method = g["function_name"]
+        # Disambiguate same-named functions with different bodies by a short content hash.
+        import hashlib
+        task_id = f"{method}_{hashlib.sha1(code.encode()).hexdigest()[:6]}"
+        if self.problem_names and task_id not in self.problem_names and method not in self.problem_names:
+            return False
+        prob_name = sanitize_problem_name(task_id)
+        if prob_name in excluded:
+            return False
+        try:
+            params = param_names(code)
+        except (SyntaxError, StopIteration):
+            return False
+        cases = []
+        for (inp, out) in g["tests"]:
+            try:
+                cases.append({"input": lcb_args_only(inp), "output": out})
+            except (SyntaxError, ValueError):
+                continue
+        if not cases:
+            return False
+
+        # A LiveCodeBench execution row ships only ONE input/output, which is weak evidence of
+        # correctness. Since we have the ground-truth `code`, synthesize many more inputs of the same
+        # shape and take the reference's own outputs as expected — a differential test.
+        if not self.problem_names:  # skip the costly expansion when targeting specific problems
+            try:
+                base_args = parse_test_input(cases[0]["input"], params)
+            except (SyntaxError, ValueError):
+                base_args = None
+            if base_args is not None:
+                for (inp, out_repr) in expand_lcb_tests(LCB_PREAMBLE + "\n" + code, method, params, base_args):
+                    cases.append({"input": inp, "output": out_repr})
+
+        prob_dir = self.dataset / prob_name
+        prob_dir.mkdir(parents=True, exist_ok=True)
+        (prob_dir / KIND_FILE).write_text(KIND_FUNCTION)
+        (prob_dir / "problem.txt").write_text(f"LiveCodeBench execution: {method}")
+        (prob_dir / "meta.json").write_text(json.dumps(
+            {"task_id": task_id, "method": method, "params": params,
+             "difficulty": g.get("difficulty"), "contest_date": g.get("contest_date"),
+             "source": "livecodebench", "lcb_id": g["id"]}, indent=2))
+        sols_dir = prob_dir / "solutions"
+        sols_dir.mkdir(exist_ok=True)
+        (sols_dir / "sol_0.py").write_text(LCB_PREAMBLE + "\n\n" + code + "\n")
+        tests_dir = prob_dir / "tests"
+        tests_dir.mkdir(exist_ok=True)
+        (tests_dir / "tests.json").write_text(json.dumps(cases, indent=2))
+        print(f"[+] {task_id}: fn `{method}({', '.join(params)})`, {len(cases)} test(s)")
+        return True
+
     #: Source adapters. Each writes the normalized layout and tags every problem with its `kind`.
     SOURCES = {
-        "codecontests": fetch_codecontests,   # stdio model
-        "leetcode": fetch_leetcode,           # function model
+        "codecontests": fetch_codecontests,     # stdio model
+        "leetcode": fetch_leetcode,             # function model
+        "livecodebench": fetch_livecodebench,   # function model (execution scenario, ground-truth code)
     }
 
     def _save_codecontests_problem(self, item, excluded):
@@ -1193,6 +1496,13 @@ class CPastaEval:
             error_text = result.error or "empty output"
 
         if result is None or not result.ok or not (result.lean_code or "").strip():
+            # An out-of-scope library (concurrency, regex, datetime, interactive judge) is reported as
+            # `skipped`, not `convert_fail` — it is not a codegen shortcoming we could fix.
+            reason = out_of_scope_reason(source)
+            if reason is not None:
+                status_path.write_text("skipped")
+                log_path.write_text(error_text)
+                return "skipped", reason
             status_path.write_text("convert_fail")
             log_path.write_text(error_text)
             return "convert_fail", summarize_error("convert_fail", error_text)
@@ -1211,9 +1521,17 @@ class CPastaEval:
         return "ok", None
 
     def convert(self):
-        """Translate + compile-check every selected problem. Writes `convert_summary.json`."""
+        """Translate + compile-check every selected problem. Writes `convert_summary.json`.
+
+        Two independent parallelisms, both automatic: the TRANSLATE is batched through
+        `Session.translate_files`, which shards across worker backends INSIDE PastaLean; the
+        compile-check (a separate concern) fans out over a thread pool. `sol_0` unchanged serially."""
         self._prepare_tmp()
-        problems, totals, histogram = {}, {"ok": 0, "convert_fail": 0, "compile_fail": 0}, {}
+        problems, totals, histogram = {}, {"ok": 0, "convert_fail": 0, "compile_fail": 0, "skipped": 0}, {}
+
+        # Phase 1 — gather work-units and materialise the (uniquely-named, so a batch can coexist)
+        # `__main__`-wrapped sources. `unit = (prob, sol_name, name, lean_dir, source, src_path)`.
+        units = []
         for prob_dir in self.problems():
             sols_dir = prob_dir / "solutions"
             if not sols_dir.is_dir():
@@ -1221,25 +1539,75 @@ class CPastaEval:
             lean_dir = prob_dir / "lean"
             lean_dir.mkdir(exist_ok=True)
             wrap = self.kind_of(prob_dir) != KIND_FUNCTION
-
-            prob_results = {}
             for sol_path in sorted(sols_dir.glob("sol_*.py")):
-                status, error = self.convert_solution(sol_path, lean_dir, wrap)
-                prob_results[sol_path.name] = {"status": status}
-                if error is not None:
-                    prob_results[sol_path.name]["error"] = error
-                    histogram[error] = histogram.get(error, 0) + 1
-                totals[status] += 1
-                print(f"[{status:>12}] {prob_dir.name}/{sol_path.name}"
-                      + (f"  -- {error}" if error else ""))
-            problems[prob_dir.name] = prob_results
+                source = sol_path.read_text()
+                if wrap:
+                    src_path = self.tmp_dir / f"{prob_dir.name}__{sol_path.stem}_wrapped.py"
+                    src_path.write_text(wrap_for_main(source))
+                else:
+                    src_path = sol_path
+                units.append((prob_dir.name, sol_path.name, sol_path.stem, lean_dir, source, src_path))
+
+        # Phase 2 — batch-translate (PastaLean parallelises internally over its own backend pool).
+        by_src = {str(Path(u[5]).resolve()): u for u in units}
+        translated = {}
+        for r in self.session.translate_files([u[5] for u in units]):
+            key = str(Path(r.source_path).resolve()) if r.source_path else None
+            translated[key] = r
+
+        # Phase 3 — write `.lean` for the ones that translated; record skipped / convert_fail for the
+        # rest; collect the ones that still need compiling.
+        status_of, to_compile = {}, []
+        for key, u in by_src.items():
+            prob, sol_name, name, lean_dir, source, _src = u
+            r = translated.get(key)
+            status_path, log_path = lean_dir / f"{name}.status", lean_dir / f"{name}.log"
+            if r is None or not r.ok or not (r.lean_code or "").strip():
+                error_text = (r.error if r else None) or "empty output"
+                reason = out_of_scope_reason(source)
+                if reason is not None:
+                    status_path.write_text("skipped"); log_path.write_text(error_text)
+                    status_of[(prob, sol_name)] = ("skipped", reason)
+                else:
+                    status_path.write_text("convert_fail"); log_path.write_text(error_text)
+                    status_of[(prob, sol_name)] = ("convert_fail", summarize_error("convert_fail", error_text))
+            else:
+                lean_path = lean_dir / f"{name}.lean"
+                lean_path.write_text(r.lean_code)
+                to_compile.append((u, lean_path))
+
+        # Phase 4 — compile-check the emitted Lean, fanned out over a thread pool (each `lake env lean`
+        # is its own subprocess). This is the test-side parallelism, independent of the translate pool.
+        def _cc(item):
+            u, lean_path = item
+            return item, self.compile_check(lean_path)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max(4, self.workers)) as ex:
+            for (u, lean_path), (ok, err) in ex.map(_cc, to_compile):
+                prob, sol_name, name, lean_dir = u[0], u[1], u[2], u[3]
+                status_path, log_path = lean_dir / f"{name}.status", lean_dir / f"{name}.log"
+                if not ok:
+                    status_path.write_text("compile_fail"); log_path.write_text(err)
+                    status_of[(prob, sol_name)] = ("compile_fail", summarize_error("compile_fail", err))
+                else:
+                    status_path.write_text("ok"); log_path.unlink(missing_ok=True)
+                    status_of[(prob, sol_name)] = ("ok", None)
+
+        # Phase 5 — aggregate + report, in original problem/solution order.
+        for prob, sol_name, *_ in units:
+            status, error = status_of[(prob, sol_name)]
+            problems.setdefault(prob, {})[sol_name] = {"status": status}
+            if error is not None:
+                problems[prob][sol_name]["error"] = error
+                histogram[error] = histogram.get(error, 0) + 1
+            totals[status] += 1
+            print(f"[{status:>12}] {prob}/{sol_name}" + (f"  -- {error}" if error else ""))
 
         top_errors = dict(sorted(histogram.items(), key=lambda kv: kv[1], reverse=True))
         summary = {"totals": totals, "errors_by_frequency": top_errors, "problems": problems}
         (self.dataset / "convert_summary.json").write_text(json.dumps(summary, indent=2))
 
         print(f"\n[*] Conversion: {totals['ok']} ok, {totals['compile_fail']} compile_fail, "
-              f"{totals['convert_fail']} convert_fail")
+              f"{totals['convert_fail']} convert_fail, {totals['skipped']} skipped (out-of-scope libs)")
         if top_errors:
             print("[*] Most common failures:")
             for reason, count in list(top_errors.items())[:10]:
@@ -1574,6 +1942,9 @@ class CPastaEval:
         def restore_idle():
             # Leave valid placeholders so a plain `lake build` (which builds cpharness_run) still works.
             shutil.rmtree(ns_dir, ignore_errors=True)
+            # Per-harness C codegen (`.lake/build/ir/CpHarness`) is 8+ GB at corpus scale and fills the
+            # disk mid-run; regenerated on the next build, so drop it after the invocations ran.
+            shutil.rmtree(Path(REPO_ROOT) / ".lake" / "build" / "ir" / "CpHarness", ignore_errors=True)
             ns_dir.mkdir(parents=True, exist_ok=True)
             (native_dir / "CpHarness.lean").write_text("-- Idle placeholder (eval driver regenerates).\n")
             (native_dir / "CpHarnessMain.lean").write_text(

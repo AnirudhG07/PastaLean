@@ -52,8 +52,11 @@ theorem starts_one_ends_spec :
       ⌜n = (1 : Int) ∧ result = (1 : Int) ∨ n > (1 : Int) ∧ result = (18 : Int) *ₚ (10 : Int) ^ₚ (n -ₚ (2 : Int))⌝⦄ :=
   by
   mvcgen [starts_one_ends, PastaLean.pyRange_forIn, PastaLean.pyRange_forIn_start]
-  taste?
-  all_goals sorry
+  all_goals (first
+    | (left; exact ⟨by omega, rfl⟩)
+    | (right; exact ⟨by omega, rfl⟩)
+    | omega
+    | simp_all)
 
 theorem starts_one_ends_correct :
     ∀ (n : Int),

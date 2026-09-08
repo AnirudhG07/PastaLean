@@ -143,3 +143,6 @@ open PastaLean
 #guard pyIndex "ababab" "ab" (2 : Int) == 2
 #guard pyIndex "abcabc" "bc" (2 : Int) == 4
 #guard pyIndex ([1, 2, 3, 2] : List Int) (2 : Int) (2 : Int) == 3
+
+-- `s[-1]` counts from the end, as in Python.
+#guard pyStringGetItemStr "pasta" (-1) == "a"

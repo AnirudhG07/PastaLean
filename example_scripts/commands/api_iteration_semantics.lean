@@ -21,14 +21,14 @@ namespace PastaLean.User.Root
 def topo_order_count := fun (n : Int) ↦ fun (edges : List (List Int)) ↦
   Id.run
     (do
-      let mut g : List (List Int) := (PastaLean.pyRange n).map fun _ => []
+      let mut g : List (List Int) := (PastaLean.pyRange n).map fun (_ : Int) => []
       let mut indeg : List Int := PastaLean.pyListRepeat [(0 : Int)] n
       for p'_pair_1 in (PastaLean.pyIter edges)do
         let a := PastaLean.pyListGetItem p'_pair_1 (0 : Int)
         let b := PastaLean.pyListGetItem p'_pair_1 (1 : Int)
         g := PastaLean.pySetItem g b (PastaLean.pyAppend g⦋b⦌ a)
         indeg := PastaLean.pySetItem indeg a (indeg⦋a⦌ +ₚ (1 : Int))
-      let mut q : List Int := (List.filter (fun i => indeg⦋i⦌ = (0 : Int)) (PastaLean.pyRange n)).map fun i => i
+      let mut q : List Int := List.filter (fun (i : Int) => indeg⦋i⦌ = (0 : Int)) (PastaLean.pyRange n)
       let mut seen : Int := (0 : Int)
       let mut p'_fi'_1 : Int := -1
       while (p'_fi'_1 +ₚ (1 : Int)) < PastaLean.pyLen q do
@@ -39,8 +39,6 @@ def topo_order_count := fun (n : Int) ↦ fun (edges : List (List Int)) ↦
           indeg := PastaLean.pySetItem indeg j (indeg⦋j⦌ -ₚ (1 : Int))
           if h_1 : indeg⦋j⦌ = (0 : Int) then 
             q := PastaLean.pyAppend q j
-          else
-            let _ := ()
       return seen)
 
 attribute [simp, taste_ingr] topo_order_count
@@ -48,15 +46,14 @@ attribute [simp, taste_ingr] topo_order_count
 def topo_order_count'rn := fun (n : Int) ↦ fun (edges : List (List Int)) ↦
   Id.run
     (do
-      let mut g : List (List Int) := (PastaLean.pyRange n).map fun _ => []
+      let mut g : List (List Int) := (PastaLean.pyRange n).map fun (_ : Int) => []
       let mut indeg : Array Int := PastaLean.pyArrayRepeat #[(0 : Int)] n
       for p'_pair_1 in (PastaLean.pyIter edges)do
         let a := PastaLean.pyListGetItem p'_pair_1 (0 : Int)
         let b := PastaLean.pyListGetItem p'_pair_1 (1 : Int)
         g := PastaLean.pySetItem g b (PastaLean.pyAppend g⦋b⦌ a)
         indeg := PastaLean.pySetItem indeg a (indeg⦋a⦌ +ₚ (1 : Int))
-      let mut q : Array Int :=
-        ((List.filter (fun i => indeg⦋i⦌ == (0 : Int)) (PastaLean.pyRange n)).map fun i => i) |>.toArray
+      let mut q : Array Int := List.filter (fun (i : Int) => indeg⦋i⦌ == (0 : Int)) (PastaLean.pyRange n) |>.toArray
       let mut seen : Int := (0 : Int)
       let mut p'_fi'_1 : Int := -1
       while (p'_fi'_1 +ₚ (1 : Int)) < PastaLean.pyLen q do
@@ -67,19 +64,17 @@ def topo_order_count'rn := fun (n : Int) ↦ fun (edges : List (List Int)) ↦
           indeg := PastaLean.pySetItem indeg j (indeg⦋j⦌ -ₚ (1 : Int))
           if h_1 : indeg⦋j⦌ == (0 : Int) then 
             q := PastaLean.pyArrayAppend q j
-          else
-            let _ := ()
       return seen)
 
 def count_vowels := fun (s : String) ↦
-  let vowels := (PastaLean.pySet "aeiou" : List String)
-  PastaLean.pySum ((PastaLean.pyIter s).map fun c => PastaLean.pyContains vowels c)
+  let vowels := (PastaLean.pySet "aeiou" : PastaLean.PySet String)
+  PastaLean.pySum ((PastaLean.pyIter s).map fun (c : String) => PastaLean.pyContains vowels c)
 
 attribute [simp, taste_ingr] count_vowels
 
 def count_vowels'rn := fun (s : String) ↦
-  let vowels := (PastaLean.pySet "aeiou" : List String)
-  PastaLean.pySum ((PastaLean.pyIter s).map fun c => PastaLean.pyContains vowels c)
+  let vowels := (PastaLean.pySet "aeiou" : PastaLean.PySet String)
+  PastaLean.pySum ((PastaLean.pyIter s).map fun (c : String) => PastaLean.pyContains vowels c)
 
 def feb_days := fun (y : Int) ↦
   -- `y % 100` is a truthy int inside the nested `and` — the condition must truthiness-test it.
@@ -112,13 +107,9 @@ def greedy_flips := fun (nums : List Int) ↦
           if h_2 : i +ₚ (2 : Int) ≥ PastaLean.pyLen nums then 
             let p'_ret_1 := -(1 : Int)
             return p'_ret_1
-          else
-            let _ := ()
           nums := PastaLean.pySetItem nums (i +ₚ (1 : Int)) (PastaLean.pyBitXor nums⦋i +ₚ (1 : Int)⦌ (1 : Int))
           nums := PastaLean.pySetItem nums (i +ₚ (2 : Int)) (PastaLean.pyBitXor nums⦋i +ₚ (2 : Int)⦌ (1 : Int))
           ops := ops +ₚ (1 : Int)
-        else
-          let _ := ()
       return ops)
 
 attribute [simp, taste_ingr] greedy_flips
@@ -140,13 +131,9 @@ def greedy_flips'rn := fun (nums : List Int) ↦
           if h_2 : i +ₚ (2 : Int) ≥ PastaLean.pyLen nums then 
             let p'_ret_1 := -(1 : Int)
             return p'_ret_1
-          else
-            let _ := ()
           nums := PastaLean.pySetItem nums (i +ₚ (1 : Int)) (PastaLean.pyBitXor nums⦋i +ₚ (1 : Int)⦌ (1 : Int))
           nums := PastaLean.pySetItem nums (i +ₚ (2 : Int)) (PastaLean.pyBitXor nums⦋i +ₚ (2 : Int)⦌ (1 : Int))
           ops := ops +ₚ (1 : Int)
-        else
-          let _ := ()
       return ops)
 
 def flip_invert := fun (image : List (List Int)) ↦

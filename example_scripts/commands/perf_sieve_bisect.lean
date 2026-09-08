@@ -26,8 +26,6 @@ def count_primes := fun (n : Int) ↦
           ans := ans +ₚ (1 : Int)
           for j in (PastaLean.pyRange n (i +ₚ i) i)do
             sieve := PastaLean.pySetItem sieve j Bool.false
-        else
-          let _ := ()
       return ans)
 
 attribute [simp, taste_ingr] count_primes
@@ -42,8 +40,6 @@ def count_primes'rn := fun (n : Int) ↦
           ans := ans +ₚ (1 : Int)
           for j in (PastaLean.pyRange n (i +ₚ i) i)do
             sieve := PastaLean.pySetItem sieve j Bool.false
-        else
-          let _ := ()
       return ans)
 
 def isqrt_via_bisect := fun (num : Int) ↦

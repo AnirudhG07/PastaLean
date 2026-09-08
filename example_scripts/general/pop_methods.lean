@@ -30,9 +30,9 @@ attribute [simp, taste_ingr] list_pop_last
 def list_pop_last'rn :=
   Id.run
     (do
-      let mut xs : List Int := [(10 : Int), (20 : Int), (30 : Int), (40 : Int)]
-      let mut last := PastaLean.pyPopValue xs
-      xs := PastaLean.pyPopRest xs
+      let mut xs : Array Int := #[(10 : Int), (20 : Int), (30 : Int), (40 : Int)]
+      let mut last := PastaLean.pyArrayPopValue xs
+      xs := PastaLean.pyArrayPopRest xs
       return last)
 
 def list_pop_index :=
@@ -48,16 +48,16 @@ attribute [simp, taste_ingr] list_pop_index
 def list_pop_index'rn :=
   Id.run
     (do
-      let mut ys : List Int := [(10 : Int), (20 : Int), (30 : Int), (40 : Int)]
-      let mut first := PastaLean.pyPopValue ys (0 : Int)
-      ys := PastaLean.pyPopRest ys (0 : Int)
+      let mut ys : Array Int := #[(10 : Int), (20 : Int), (30 : Int), (40 : Int)]
+      let mut first := PastaLean.pyArrayPopValue ys (0 : Int)
+      ys := PastaLean.pyArrayPopRest ys (0 : Int)
       return first)
 
 -- Sets are modelled as deduplicated lists; `set.pop()` removes an arbitrary element.
 def set_pop :=
   Id.run
     (do
-      let mut seen : List Int := PastaLean.pySet [(1 : Int), (2 : Int), (3 : Int)]
+      let mut seen : PastaLean.PySet Int := PastaLean.pySet [(1 : Int), (2 : Int), (3 : Int)]
       seen := PastaLean.pySetDiscard seen (2 : Int)
       let mut x := PastaLean.pyPopValue seen
       seen := PastaLean.pyPopRest seen
@@ -68,7 +68,7 @@ attribute [simp, taste_ingr] set_pop
 def set_pop'rn :=
   Id.run
     (do
-      let mut seen : List Int := PastaLean.pySet [(1 : Int), (2 : Int), (3 : Int)]
+      let mut seen : PastaLean.PySet Int := PastaLean.pySet [(1 : Int), (2 : Int), (3 : Int)]
       seen := PastaLean.pySetDiscard seen (2 : Int)
       let mut x := PastaLean.pyPopValue seen
       seen := PastaLean.pyPopRest seen

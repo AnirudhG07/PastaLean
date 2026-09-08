@@ -1,7 +1,9 @@
 import TypeInfer.PyType
 import TypeInfer.Annotation
 import TypeInfer.Value
-import Libraries.Registry
+-- The type engine consumes only the Mathlib-free type-behaviour view (return shapes + teaches);
+-- the codegen `Registry` (runtime names → Mathlib) is deliberately NOT imported here.
+import Libraries.TypeBehaviour
 import Libraries.Behaviour
 
 /-!
@@ -46,6 +48,25 @@ private def isNonFiniteFloatCall (name : String) (args : List Json) : Bool :=
       | _ => false
   | none => false
 
+/-- A negative integer literal (`-1`), whether folded into a `Constant` or an unary-minus node.
+    Used to detect `a ** -k`, which yields a `float` even for an `int` base (`2 ** -1 = 0.5`). -/
+private def isNegativeIntLiteral (e : Json) : Bool :=
+  match nodeType? e with
+  | some "Constant" =>
+      match e.getObjVal? "value" with
+      | .ok (.num ⟨m, 0⟩) => m < 0
+      | _ => false
+  | some "UnaryOp" =>
+      (e.getObjValAs? String "op").toOption == some "usub" &&
+      match field e "operand" with
+      | some o =>
+          nodeType? o == some "Constant" &&
+          match o.getObjVal? "value" with
+          | .ok (.num ⟨m, 0⟩) => m > 0
+          | _ => false
+      | none => false
+  | _ => false
+
 /-- A subscript index that is a non-negative integer literal, for static tuple projection. -/
 def literalIndex? (slice : Json) : Option Nat :=
   if nodeType? slice == some "Constant" then
@@ -70,7 +91,10 @@ def arith : PyType → PyType → PyType
 private def constReturnBuiltins : List (String × PyType) :=
   [ ("len", .int), ("ord", .int), ("int", .int), ("str", .str), ("input", .str),
     ("bool", .bool), ("float", .float), ("chr", .str), ("hash", .int),
-    ("bin", .str), ("hex", .str), ("oct", .str) ]
+    ("bin", .str), ("hex", .str), ("oct", .str),
+    -- Predicates and identity/representation builtins whose result type is fixed (independent of args).
+    ("any", .bool), ("all", .bool), ("isinstance", .bool), ("issubclass", .bool),
+    ("callable", .bool), ("id", .int), ("repr", .str), ("ascii", .str), ("format", .str) ]
 
 mutual
 
@@ -78,15 +102,33 @@ mutual
 types. Total: `unknown` when unsure. -/
 partial def typeOfExpr (sigs : Sigs) (env : Env) (e : Json) : PyType :=
   match nodeType? e with
-  | some "Name" => ((e.getObjValAs? String "id").toOption.bind (env.get? ·)).getD .unknown
+  | some "Name" =>
+      match (e.getObjValAs? String "id").toOption with
+      | some id =>
+          match env.get? id with
+          | some t => t
+          -- A bare reference to a user function is a callable returning that function's inferred type,
+          -- so passing it (`f(g)`) lets a higher-order body's `g()` resolve to `g`'s return.
+          | none => match sigs.get? id with
+                    | some rt => .fn [] rt
+                    | none => .unknown
+      | none => .unknown
   | some "Constant" => ofValue e
   | some "List" => .list (PyType.joinAll ((eltsOf e).map (typeOfExpr sigs env)))
   | some "Set" => .set (PyType.joinAll ((eltsOf e).map (typeOfExpr sigs env)))
   | some "Tuple" => .tuple ((eltsOf e).map (typeOfExpr sigs env))
   | some "Dict" =>
       let entries := ((e.getObjValAs? (Array Json) "entries").toOption.getD #[]).toList
-      let part (k : String) := entries.map fun en => (field en k).elim .unknown (typeOfExpr sigs env)
-      .dict (PyType.joinAll (part "key")) (PyType.joinAll (part "value"))
+      -- Each entry is a `k: v` pair, or a `**d` spread (contributing `d`'s own key/value types), so
+      -- `merged = {**d1, **d2}` types as the join of `d1`/`d2` rather than dropping out.
+      let contrib := entries.map fun en =>
+        match field en "spread" with
+        | some sp => match typeOfExpr sigs env sp with
+                     | .dict sk sv => (sk, sv)
+                     | _ => (.unknown, .unknown)
+        | none => ((field en "key").elim .unknown (typeOfExpr sigs env),
+                   (field en "value").elim .unknown (typeOfExpr sigs env))
+      .dict (PyType.joinAll (contrib.map (·.1))) (PyType.joinAll (contrib.map (·.2)))
   | some "Range" => .list .int
   | some "BinOp" =>
       match field e "left", field e "right" with
@@ -99,11 +141,33 @@ partial def typeOfExpr (sigs : Sigs) (env : Env) (e : Json) : PyType :=
               match lt, rt with
               | .list _, _ => lt
               | _, .list _ => rt
+              -- string repeat `s * n` / `n * s` (`"ab" * 3`)
+              | .str, _ | _, .str => .str
               | _, _ => arith lt rt
-          -- Python's `/` is always true division, so `int / int` is a `float` — but a boxed operand
-          -- keeps the result boxed (`PyAny / 2` dispatches on the tag → `PyAny`), else a `_ret_float`
-          -- stamp would ascribe `ℚ` onto a body that is actually `PyAny`.
-          | some "div" => match lt, rt with | .any, _ | _, .any => .any | _, _ => .float
+          -- `s % args` is %-formatting → str; `n % m` is modulo (arithmetic).
+          | some "mod" => match lt with | .str => .str | _ => arith lt rt
+          -- Python's `/` is true division, so a NUMERIC left operand gives a `float` (`int / int`,
+          -- `float / n`). But `/` is overloaded — `pathlib.Path / "sub"` is a `Path`, not a float — so
+          -- only commit `float` when the left is actually numeric; otherwise leave it unknown. A boxed
+          -- operand stays boxed (`PyAny / 2` dispatches on the tag → `PyAny`).
+          | some "div" => match lt, rt with
+              | .any, _ | _, .any => .any
+              | _, _ => match lt with | .int | .float | .bool => .float | _ => .unknown
+          -- `a ** -k` is a `float` even for an `int` base (`2 ** -1 = 0.5`); a FRACTIONAL exponent
+          -- (`x ** 0.5`, a root) is always a `float` regardless of base (pow requires a numeric base,
+          -- so this is sound even when the base type is still `unknown`); else keep the base's type.
+          | some "pow" =>
+              if rt == .float then .float
+              else if isNegativeIntLiteral r && lt == .int then .float
+              else arith lt rt
+          -- `+` concatenation: with one KNOWN str/list operand and the other still `unknown`, a
+          -- well-typed program forces the unknown to that type (`str + x` errors unless `x` is a str),
+          -- so `v + "\n"` is `str` — which lets a `list[str]` built by `lines.append(v + "\n")` type.
+          | some "add" =>
+              match lt, rt with
+              | .str, .unknown | .unknown, .str => .str
+              | .list a, .unknown | .unknown, .list a => .list a
+              | _, _ => arith lt rt
           | _ => arith lt rt
       | _, _ => .unknown
   | some "UnaryOp" =>
@@ -140,8 +204,20 @@ partial def typeOfExpr (sigs : Sigs) (env : Env) (e : Json) : PyType :=
   | some "Attribute" =>
       match field e "value", (e.getObjValAs? String "attr").toOption with
       | some recv, some attr =>
-          match (typeOfExpr sigs env recv).classNameOf? with
-          | some c => (sigs.get? s!"{c}.{attr}").getD .unknown
+          -- A class NAME as receiver (`MyClass.class_var`) isn't in `env`; fall back to `sigs` where a
+          -- class is `.cls Name`, so class-variable / static access resolves like an instance access.
+          let recvT := match typeOfExpr sigs env recv with
+            | .unknown =>
+                if nodeType? recv == some "Name" then
+                  ((recv.getObjValAs? String "id").toOption.bind (sigs.get? ·)).getD .unknown
+                else .unknown
+            | t => t
+          match recvT.classNameOf? with
+          -- A METHOD reference `obj.method` (not a call) is a function value → `callable`; the `#fn`
+          -- key holds its signature. A data field falls through to its declared type.
+          | some c => match sigs.get? s!"{c}.{attr}#fn" with
+                      | some fnT => fnT
+                      | none => (sigs.get? s!"{c}.{attr}").getD .unknown
           | none => .unknown
       | _, _ => .unknown
   -- Comprehensions: bind each generator target from its iterable's element type, then type the
@@ -150,8 +226,23 @@ partial def typeOfExpr (sigs : Sigs) (env : Env) (e : Json) : PyType :=
   | some "ListComp" | some "SetComp" | some "GeneratorExp" | some "DictComp" =>
       let gens := (e.getObjValAs? (Array Json) "generators").toOption.getD #[]
       let env' := gens.foldl (fun env gen =>
-        match (field gen "target").bind (fun t => (t.getObjValAs? String "id").toOption), field gen "iter" with
-        | some name, some iter => env.insert name (typeOfExpr sigs env iter).elemType
+        match field gen "target", field gen "iter" with
+        | some target, some iter =>
+            let elemT := (typeOfExpr sigs env iter).elemType
+            match nodeType? target with
+            | some "Name" => match (target.getObjValAs? String "id").toOption with
+                | some name => env.insert name elemT | none => env
+            -- A tuple target (`for k, v in d.items()`) distributes the element type: a tuple element
+            -- binds position-wise (`k : str, v : int`), any other iterable element goes to each name.
+            | some "Tuple" | some "List" =>
+                let elts := (target.getObjValAs? (Array Json) "elts").toOption.getD #[]
+                (Array.range elts.size).foldl (fun env i =>
+                  match (elts[i]!.getObjValAs? String "id").toOption with
+                  | some nm =>
+                      let t := match elemT with | .tuple ts => ts[i]?.getD .unknown | _ => elemT.elemType
+                      env.insert nm t
+                  | none => env) env
+            | _ => env
         | _, _ => env) env
       match nodeType? e with
       | some "DictComp" =>
@@ -197,10 +288,19 @@ partial def typeOfCall (sigs : Sigs) (env : Env) (e : Json) : PyType :=
       match nodeType? func with
       | some "Name" =>
           match (func.getObjValAs? String "id").toOption with
+          -- `super()` inside a method: the enclosing class's base is seeded as `super#cls`, so
+          -- `super().m()` reads the base's `m` (recv typed to the base class here).
+          | some "super" => (env.get? "super#cls").getD .unknown
           -- A builtin's return type wins; otherwise a user function's inferred return type.
           | some name =>
               match builtinReturn sigs env name args with
-              | .unknown => (sigs.get? name).getD .unknown
+              | .unknown =>
+                  match (sigs.get? name).getD .unknown with
+                  -- A call to a function-VALUED variable (`b = some_func; b()`) uses the `.fn` return.
+                  | .unknown => match env.get? name with
+                                | some (.fn _ ret) => ret
+                                | _ => .unknown
+                  | t => t
               | t => t
           | none => .unknown
       | some "Attribute" =>
@@ -216,7 +316,7 @@ partial def typeOfCall (sigs : Sigs) (env : Env) (e : Json) : PyType :=
                 -- A module-qualified collections constructor (`collections.Counter()`) declares its
                 -- return in `collectionsBehaviour?`; `defaultdict` reads its factory arg's identifier
                 -- (so it stays in `builtinReturn`); anything else is a method call.
-                match Libraries.memberBehaviour? "collections" attr with
+                match Libraries.memberTypeBehaviour? "collections" attr with
                 | some b => b.returns (args.map (typeOfExpr sigs env))
                 | none => if attr == "defaultdict" then builtinReturn sigs env attr args
                           else methodReturn sigs env attr (field func "value") args
@@ -228,7 +328,13 @@ partial def typeOfCall (sigs : Sigs) (env : Env) (e : Json) : PyType :=
               | some t => t
               | none => fallback
           | _, _ => fallback
-      | _ => .unknown
+      -- Calling any OTHER expression (`d["b"]()`, `a[0]()`, `(x if c else y)()`): if it evaluates to
+      -- a function, the call yields that function's return type. Sound — a heterogeneous container's
+      -- element joins to `.any`, whose `.fn` return is `.any` (→ no concrete claim).
+      | _ =>
+          match typeOfExpr sigs env func with
+          | .fn _ ret => ret
+          | _ => .unknown
   | none => .unknown
 
 /-- Return type of a builtin `name(args)`; `unknown` for non-builtins. -/
@@ -248,11 +354,40 @@ partial def builtinReturn (sigs : Sigs) (env : Env) (name : String) (args : List
         | some "set" => .set .unknown
         | some "dict" => .dict .unknown .unknown
         | some "int" | some "float" => .int
-        | _ => .unknown
+        -- A callable factory that is not a bare type name (`defaultdict(lambda: [0]*m)`): its RETURN
+        -- type is the value type (`list[int]` here), so the empty defaultdict's value is pinned.
+        | _ => match args.head?.map (typeOfExpr sigs env) with
+               | some (.fn _ r) => r
+               | _ => .unknown
       .dict .unknown vt
+    -- `map(f, xs)` yields a list of `f`'s RESULTS, so its element is `f`'s return type — read from a
+    -- named callback (`int`→int cast, or a user fn's inferred return). Lets `list(map(int, l))` type
+    -- as `list[int]`, so a mut var reassigned str-list→int-list joins to `List PyAny` (Option A boxing).
+    else if name == "map" then
+      match args.head?.bind (·.getObjValAs? String "id" |>.toOption) with
+      | some f => .list ((constReturnBuiltins.lookup f).getD ((sigs.get? f).getD .unknown))
+      | none => .list .unknown
+    -- `product`/`combinations`/`permutations` back each result COMBINATION with a Lean `List` (no
+    -- variadic tuple type), so their element is `list[E]`, not a `Prod` — the for-target unpack must
+    -- index, not `Prod.fst`. Element `E` = join of the inputs' element types (product) / the single
+    -- iterable's element type (combinations/permutations).
+    else if name == "product" then
+      .list (.list (PyType.joinAll (args.map (fun a => (typeOfExpr sigs env a).elemType))))
+    else if name == "combinations" || name == "permutations" then
+      .list (.list (args.head?.elim .unknown (fun a => (typeOfExpr sigs env a).elemType)))
+    -- `reduce(f, iterable[, init])` folds `f` over the iterable; its result is `f`'s return type (a
+    -- binary `f : (T,T)->T` over `T` elements yields `T`). Read `f`'s return from a named callback,
+    -- falling back to the iterable's element type.
+    else if name == "reduce" then
+      let elemTy := args[1]?.elim .unknown (fun a => (typeOfExpr sigs env a).elemType)
+      match args.head?.bind (·.getObjValAs? String "id" |>.toOption) with
+      | some f =>
+          let r := (constReturnBuiltins.lookup f).getD ((sigs.get? f).getD .unknown)
+          if r == .unknown then elemTy else r
+      | none => elemTy
     -- Every other arg-dependent builtin / star-imported member declares its return SHAPE in
     -- `Libraries.bareBehaviour?`, so this engine no longer hardcodes any member's name (§27).
-    else match Libraries.bareBehaviour? name with
+    else match Libraries.bareTypeBehaviour? name with
       | some b => b.returns (args.map (typeOfExpr sigs env))
       | none => .unknown
 
@@ -260,8 +395,23 @@ partial def builtinReturn (sigs : Sigs) (env : Env) (name : String) (args : List
 effective argument 0 (so `d.get(k, default)` reads the receiver and the default from the arg types).
 The engine names no method. -/
 partial def methodReturn (sigs : Sigs) (env : Env) (attr : String) (recv : Option Json) (args : List Json) : PyType :=
-  let recvT := recv.elim .unknown (typeOfExpr sigs env)
-  ((Libraries.methodBehaviour? attr).map (·.returns (recvT :: args.map (typeOfExpr sigs env)))).getD .unknown
+  let recvT0 := recv.elim .unknown (typeOfExpr sigs env)
+  -- A class NAME used as a receiver (`MyClass.func()` — a static/class method, or the class object)
+  -- isn't in `env` (class names aren't bound as values), so `typeOfExpr` returns unknown. Fall back to
+  -- `sigs`, where a class is registered as `.cls Name`, and resolve the method on it.
+  let recvName? := recv.bind (fun r =>
+    if nodeType? r == some "Name" then (r.getObjValAs? String "id").toOption else none)
+  let recvT := if recvT0 == .unknown then
+      (recvName?.bind (sigs.get? ·)).getD .unknown
+    else recvT0
+  -- A user method call `obj.attr(...)` on a class instance resolves to `Class.attr`'s inferred return.
+  let userMethod : PyType := match recvT with
+    | .cls c => (sigs.get? s!"{c}.{attr}").getD .unknown
+    | .opt (.cls c) => (sigs.get? s!"{c}.{attr}").getD .unknown
+    | _ => .unknown
+  match userMethod with
+  | .unknown => ((Libraries.methodBehaviour? attr).map (·.returns (recvT :: args.map (typeOfExpr sigs env)))).getD .unknown
+  | t => t
 
 end
 

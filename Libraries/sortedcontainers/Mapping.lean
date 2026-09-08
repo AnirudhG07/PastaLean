@@ -12,12 +12,7 @@ def pythonSortedcontainersMemberMap? (member : String) : Option Lean.Name :=
   | "SortedList" => some ``Libraries.sortedcontainers.pySortedList
   | _ => none
 
-/-- `SortedList(xs)` yields a list of `xs`'s element type (it IS a sorted `List`). -/
-def sortedcontainersBehaviour? (member : String) : Option Behaviour :=
-  open Behaviour in
-  match member with
-  | "SortedList" => some (listOf 0)
-  | _ => none
+-- `sortedcontainersBehaviour?` (type-inference return shapes) moved to `Libraries/TypeBehaviour.lean`.
 
 /-- A `SortedList` instance method → its runtime function. Codegen consults this ONLY when the
 receiver is a known `SortedList` (via its `sortedVars` flag): `add`/`remove`/`discard` collide with

@@ -22,8 +22,6 @@ def count_positives := fun (xs : List Int) ↦
       let _ := Libraries.passta.pyPassInvariant (decide (cnt ≥ (0 : Int)))
       if h_1 : x > (0 : Int) then 
         cnt := cnt +ₚ (1 : Int)
-      else
-        let _ := ()
     return cnt : Id _)
 
 @[spec]
@@ -51,8 +49,6 @@ def count_positives'rn := fun (xs : List Int) ↦
         let _ := Libraries.passta.pyPassInvariant (decide (cnt ≥ (0 : Int)))
         if h_1 : x > (0 : Int) then 
           cnt := cnt +ₚ (1 : Int)
-        else
-          let _ := ()
       return cnt)
 
 end PastaLean.User.Root

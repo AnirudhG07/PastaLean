@@ -55,7 +55,7 @@ attribute [simp, taste_ingr] nested_lmbda
 
 def nested_lmbda'rn := fun () ↦ fun x ↦ x *ₚ x
 
-private def _lmbda_with_function_call'add_one := fun x ↦ x +ₚ (1 : Int)
+private def _lmbda_with_function_call'add_one := fun (x : Int) ↦ x +ₚ (1 : Int)
 
 attribute [simp, taste_ingr] _lmbda_with_function_call'add_one
 
@@ -63,7 +63,7 @@ def lmbda_with_function_call := fun x ↦ _lmbda_with_function_call'add_one x
 
 attribute [simp, taste_ingr] lmbda_with_function_call
 
-private def _lmbda_with_function_call'add_one'rn := fun x ↦ x +ₚ (1 : Int)
+private def _lmbda_with_function_call'add_one'rn := fun (x : Int) ↦ x +ₚ (1 : Int)
 
 def lmbda_with_function_call'rn := fun x ↦ _lmbda_with_function_call'add_one'rn x
 
@@ -112,11 +112,11 @@ def lmbda_with_side_effects'rn :=
       return p'_ret_1)
 
 def lmbda_with_generator_expression := fun () ↦
-  (PastaLean.pyIter ((PastaLean.pyRange (5 : Int)).map fun i => i)).map fun x => x *ₚ x
+  (PastaLean.pyIter (PastaLean.pyRange (5 : Int))).map fun (x : Int) => x *ₚ x
 
 attribute [simp, taste_ingr] lmbda_with_generator_expression
 
 def lmbda_with_generator_expression'rn := fun () ↦
-  (PastaLean.pyIter ((PastaLean.pyRange (5 : Int)).map fun i => i)).map fun x => x *ₚ x
+  (PastaLean.pyIter (PastaLean.pyRange (5 : Int))).map fun (x : Int) => x *ₚ x
 
 end PastaLean.User.Root

@@ -71,7 +71,13 @@ def classFieldPyType (className : String) (noneParams : List String) (fieldJson 
   | some (.null) | none =>
       if initFromNoneParam then .opt (.cls className)
       else match (fieldJson.getObjVal? "init").toOption with
-        | some initJson => TypeInfer.ofValue initJson
+        -- A DIRECT `self.x = None` is `Option ClassName`, and `self.children = [None]*k` / `[None,None]`
+        -- is `List (Option ClassName)` — the recursive-node pattern with NO annotation (a `__slots__`
+        -- trie). A bare `None` would otherwise mis-infer to `Unit` / `List Unit` from the literal.
+        | some initJson =>
+            if isNoneConstJson initJson then .opt (.cls className)
+            else if isListOfNoneJson initJson then .list (.opt (.cls className))
+            else TypeInfer.ofValue initJson
         | none => .int
   | some annJson =>
       -- An explicit container-of-`object`/`Any` (`list[object]`, `set[Any]`, `dict[str, object]`)
@@ -416,7 +422,8 @@ def heapReturnTypeSyntax? (json : Json) : PygenM (Option (TSyntax `term)) := do
 
 /-- `C.new` under `--heap`: build the object value (a record for a straight-line `__init__`, else a
 threaded value) and `alloc` it, so the constructor returns `HeapM Val (Ref C)`. -/
-def classInitConstructorHeap (className : String) (initJson : Json) : PygenM (TSyntax `command) := do
+def classInitConstructorHeap (className : String) (initJson : Json)
+    (classFields : Array Json) (noneParams : List String) : PygenM (TSyntax `command) := do
   let mkIdentC := mkIdent (Name.mkStr className.toName "new")
   let classTy : TSyntax `term := mkIdent className.toName
   let heapVal := mkIdent `Val
@@ -441,10 +448,31 @@ def classInitConstructorHeap (className : String) (initJson : Json) : PygenM (TS
   match initFieldAssignments? bodyElems with
   | some pairs =>
       withFreshVariables do
-        let fields ← pairs.mapM fun (attr, valJson, isReal) => do
+        let fields2 ← pairs.mapM fun (attr, valJson, isReal) => do
           let v ← if isReal then withRealContext true (getCode valJson `term) else getCode valJson `term
+          -- A CONTAINER field's heap type is `Ref (container)`, so its `__init__` value must become a
+          -- `Ref` with its element type pinned (so a `[None]*k`/`[None,None]` init's bare `none`
+          -- resolves to `Option (Ref Node)` rather than a stuck metavariable). A LITERAL (`[None,None]`)
+          -- was already `(← allocM …)`-wrapped by `allocIfHeap`, so only ASCRIBE the full `Ref` type;
+          -- a raw container (`[x]*n`, a comprehension) is wrapped once. Object/scalar/`Option` fields
+          -- keep their init (a `C()` call already yields a `Ref`).
+          let v ← match classFields.find? (·.getObjValAs? String "name" == .ok attr) with
+            | some fj =>
+                let fieldTy := classFieldPyType className noneParams fj
+                let inner? ← match fieldTy with
+                  | .list e | .set e => pure (some (← `(List $(← heapElemTypeSyntax e))))
+                  | .dict k vv => pure (some (← `(Std.HashMap $(← heapTypeSyntax k) $(← heapElemTypeSyntax vv))))
+                  | _ => pure none
+                match inner? with
+                | some inner =>
+                    if jsonNodeType? valJson == some "List" || jsonNodeType? valJson == some "Dict"
+                        || jsonNodeType? valJson == some "Set" then
+                      `(($v : PastaLean.Ref $inner))
+                    else `((← PastaLean.allocM ($v : $inner)))
+                | none => pure v
+            | none => pure v
           `(Lean.Parser.Term.structInstField| $(mkIdent attr.toName):ident := $v)
-        let recordBody : TSyntax `term ← `(({ $fields:structInstField,* } : $classTy))
+        let recordBody : TSyntax `term ← `(({ $fields2:structInstField,* } : $classTy))
         -- A `do` block (even a one-statement one) lets container-field initializers `(← alloc …)`
         -- lift out of the record; the ascription pins `alloc`'s universe `V` to `Val` even when the
         -- `def` has no explicit arrow type (untyped constructor args).
@@ -579,33 +607,33 @@ def classStructCommand (json : Json) : PygenM (TSyntax `command) := do
   let noneParams :=
     (methods.find? (·.getObjValAs? String "name" == .ok "__init__")).elim [] noneDefaultParamNames
   let fieldBinders ← fields.mapM (classStructFieldSyntax name noneParams)
-  let baseId? : Option (TSyntax `ident) ←
-    match bases[0]? with
-    | some baseJson =>
-        match baseJson.getObjValAs? String "id" with
-        -- Suffix the base like the class's own name, so a `'rn` twin extends `Base'rn`, not `Base`.
-        | .ok bid => do
-            let bname ← withRunSuffix bid
-            pure (some (mkIdent bname.toName))
-        | _ => throwError s!"Class base is not a simple Name: {baseJson}"
-    | none => pure none
+  -- All bases (multiple inheritance → `structure C extends B1, B2`). Lean resolves an inherited
+  -- method / conflicting field by MRO order (first base wins), matching Python. Each base is suffixed
+  -- like the class's own name, so a `'rn` twin extends `Base'rn`, not `Base`.
+  let baseIds : Array (TSyntax ``Lean.Parser.Command.structParent) ← bases.mapM (fun baseJson => do
+    match baseJson.getObjValAs? String "id" with
+    | .ok bid => do
+        let bname ← withRunSuffix bid
+        let t : TSyntax `term ← `($(mkIdent bname.toName))
+        pure ⟨mkNode ``Lean.Parser.Command.structParent #[mkNullNode, t.raw]⟩
+    | _ => throwError s!"Class base is not a simple Name: {baseJson}")
   let docStx? : Option (TSyntax ``Lean.Parser.Command.docComment) :=
     match (json.getObjValAs? String "docstring").toOption with
     | some text =>
         let body := (text.trimAscii).toString.replace "-/" "- /"
         some ⟨mkNode ``Lean.Parser.Command.docComment #[mkAtom "/--", mkAtom (body ++ " -/")]⟩
     | none => none
-  match docStx?, baseId? with
-  | some doc, some baseId =>
-      `(command| $doc:docComment structure $nameId:ident extends $baseId:ident where
+  match docStx?, baseIds.isEmpty with
+  | some doc, false =>
+      `(command| $doc:docComment structure $nameId:ident extends $baseIds,* where
           $[$fieldBinders]* deriving $derivs,*)
-  | some doc, none =>
+  | some doc, true =>
       `(command| $doc:docComment structure $nameId:ident where
           $[$fieldBinders]* deriving $derivs,*)
-  | none, some baseId =>
-      `(command| structure $nameId:ident extends $baseId:ident where
+  | none, false =>
+      `(command| structure $nameId:ident extends $baseIds,* where
           $[$fieldBinders]* deriving $derivs,*)
-  | none, none =>
+  | none, true =>
       `(command| structure $nameId:ident where
           $[$fieldBinders]* deriving $derivs,*)
 
@@ -670,7 +698,7 @@ def classDefSyntax : (kind : SyntaxNodeKind) → Json → PygenM (TSyntax kind)
           s!"Class method is missing a 'name': {m}"
         if mName == "__init__" then
           hasInit := true
-          members := members.push (← if heap then classInitConstructorHeap name m
+          members := members.push (← if heap then classInitConstructorHeap name m fields (noneDefaultParamNames m)
                                      else classInitConstructor name m hasRealField)
         else if heap then
           -- Under `--heap`, every method (including dunders/`__str__`) is a plain heap method over

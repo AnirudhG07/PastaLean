@@ -75,6 +75,18 @@ def passSyntax : (kind : SyntaxNodeKind) → Json →
         `(doElem| let _ := ())
     | _, _ => throwError s!"Unsupported syntax category for Pass node"
 
+/-- `global x` is a codegen no-op: a read-only or in-place-mutated module global already resolves to
+its top-level Lean def, so the declaration adds nothing (a *rebinding* global is refused upstream in
+the visitor). Lowered like `Pass`. -/
+@[pygen "Global"]
+def globalSyntax : (kind : SyntaxNodeKind) → Json →
+    PygenM (TSyntax kind)
+    | `command, _ => do
+        return ⟨mkNullNode #[]⟩
+    | `doElem, _ => do
+        `(doElem| let _ := ())
+    | _, _ => throwError s!"Unsupported syntax category for Global node"
+
 @[pygen "Continue"]
 def continueSyntax : (kind : SyntaxNodeKind) → Json →
     PygenM (TSyntax kind)
@@ -603,7 +615,8 @@ def hoistEscapingDecls (json : Json) (namesKey typesKey : String) :
     let nmName := nm.toName
     unless (← hasVar nmName) do
       let nmIdent := mkIdent nmName
-      let tyStx? ← match (jsonFieldOption json typesKey).bind (·.getObjVal? nm |>.toOption) with
+      let ann? := (jsonFieldOption json typesKey).bind (·.getObjVal? nm |>.toOption)
+      let tyStx? ← match ann? with
         | some ann => stampedTypeSyntax? (Json.mkObj [("_ty", ann)])
         | none => pure none
       let decl ← match tyStx? with
@@ -612,6 +625,9 @@ def hoistEscapingDecls (json : Json) (namesKey typesKey : String) :
       decls := decls.push decl
       addVar nmName
       setMutVar nmName
+      -- A hoisted `PyAny` slot absorbs a later cross-type assignment by coercion; without this the
+      -- assignment takes the `'rbN` rebind path and binds a name scoped to the inner block.
+      if ann?.any (fun t => t.getObjValAs? String "id" == .ok "PyAny") then setPyAnySlot nmName true
   return decls
 
 @[pygen "While"]
@@ -845,11 +861,10 @@ def ifSyntax : (kind : SyntaxNodeKind) → Json →
           pure arr
         let ifStx ←
           if orelseStxArray.isEmpty then
-            let noop ← noopDoElemSyntax
+            -- No `else`: omit it entirely rather than a `let _ := ()` placeholder, which is an invalid
+            -- do-sequence terminator (`if h : c then body` in `do` has an implicit `else pure ()`).
             `(doElem| if $hName : $testStx then
                 $[$bodyStxArray:doElem]*
-              else
-                $noop:doElem
             )
           else
             `(doElem| if $hName : $testStx then

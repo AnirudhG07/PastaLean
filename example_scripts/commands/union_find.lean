@@ -40,8 +40,6 @@ partial def DSU.find := fun (self : DSU) ↦ fun (x : Int) ↦
         let _popval'rb1 := DSU.find self self.parent⦋x⦌ |>.1
         self := DSU.find self self.parent⦋x⦌ |>.2
         self := { self with parent := PastaLean.pySetItem self.parent x _popval'rb1 }
-      else
-        let _ := ()
       let p'_ret_1 := (self.parent⦋x⦌, self)
       return p'_ret_1)
 
@@ -55,20 +53,14 @@ def DSU.union := fun (self : DSU) ↦ fun (a : Int) ↦ fun (b : Int) ↦
       self := DSU.find self b |>.2
       if h_1 : ra = rb then 
         return (Bool.false, self)
-      else
-        let _ := ()
       if h_2 : self.rank⦋ra⦌ < self.rank⦋rb⦌ then 
         let p'_unpack_value_1 := (rb, ra)
         let p'_unpack_pair_1 := p'_unpack_value_1
         ra := Prod.fst p'_unpack_pair_1
         rb := Prod.snd p'_unpack_pair_1
-      else
-        let _ := ()
       self := { self with parent := PastaLean.pySetItem self.parent rb ra }
       if h_3 : self.rank⦋ra⦌ = self.rank⦋rb⦌ then 
         self := { self with rank := PastaLean.pySetItem self.rank ra (self.rank⦋ra⦌ +ₚ (1 : Int)) }
-      else
-        let _ := ()
       return (Bool.true, self))
 
 attribute [simp, taste_ingr] DSU.union
@@ -96,8 +88,6 @@ partial def DSU'rn.find := fun (self : DSU'rn) ↦ fun (x : Int) ↦
         let _popval'rb1 := DSU'rn.find self self.parent⦋x⦌ |>.1
         self := DSU'rn.find self self.parent⦋x⦌ |>.2
         self := { self with parent := PastaLean.pySetItem self.parent x _popval'rb1 }
-      else
-        let _ := ()
       let p'_ret_1 := (self.parent⦋x⦌, self)
       return p'_ret_1)
 
@@ -111,20 +101,14 @@ def DSU'rn.union := fun (self : DSU'rn) ↦ fun (a : Int) ↦ fun (b : Int) ↦
       self := DSU'rn.find self b |>.2
       if h_1 : ra == rb then 
         return (Bool.false, self)
-      else
-        let _ := ()
       if h_2 : self.rank⦋ra⦌ < self.rank⦋rb⦌ then 
         let p'_unpack_value_1 := (rb, ra)
         let p'_unpack_pair_1 := p'_unpack_value_1
         ra := Prod.fst p'_unpack_pair_1
         rb := Prod.snd p'_unpack_pair_1
-      else
-        let _ := ()
       self := { self with parent := PastaLean.pySetItem self.parent rb ra }
       if h_3 : self.rank⦋ra⦌ == self.rank⦋rb⦌ then 
         self := { self with rank := PastaLean.pySetItem self.rank ra (self.rank⦋ra⦌ +ₚ (1 : Int)) }
-      else
-        let _ := ()
       return (Bool.true, self))
 
 def count_components := fun (n : Int) ↦ fun (edges : List (List Int)) ↦
@@ -137,8 +121,6 @@ def count_components := fun (n : Int) ↦ fun (edges : List (List Int)) ↦
         dsu := DSU.union dsu e⦋(0 : Int)⦌ e⦋(1 : Int)⦌ |>.2
         if h_1 : PastaLean.pyTruthy p'_popv_2 then 
           count := count -ₚ (1 : Int)
-        else
-          let _ := ()
       return count)
 
 attribute [simp, taste_ingr] count_components
@@ -153,8 +135,6 @@ def count_components'rn := fun (n : Int) ↦ fun (edges : List (List Int)) ↦
         dsu := DSU'rn.union dsu e⦋(0 : Int)⦌ e⦋(1 : Int)⦌ |>.2
         if h_1 : PastaLean.pyTruthy p'_popv_2 then 
           count := count -ₚ (1 : Int)
-        else
-          let _ := ()
       return count)
 
 def count_merges := fun (n : Int) ↦ fun (edges : List (List Int)) ↦
@@ -194,12 +174,8 @@ def count_gated := fun (n : Int) ↦ fun (edges : List (List Int)) ↦ fun (gate
         if h_1 : gate⦋i⦌ = (1 : Int) then 
           p'_sc'1 := DSU.union dsu e⦋(0 : Int)⦌ e⦋(1 : Int)⦌ |>.1
           dsu := DSU.union dsu e⦋(0 : Int)⦌ e⦋(1 : Int)⦌ |>.2
-        else
-          let _ := ()
         if h_2 : PastaLean.pyTruthy p'_sc'1 then 
           merges := merges +ₚ (1 : Int)
-        else
-          let _ := ()
       return merges)
 
 attribute [simp, taste_ingr] count_gated
@@ -217,12 +193,8 @@ def count_gated'rn := fun (n : Int) ↦ fun (edges : List (List Int)) ↦ fun (g
         if h_1 : gate⦋i⦌ == (1 : Int) then 
           p'_sc'1 := DSU'rn.union dsu e⦋(0 : Int)⦌ e⦋(1 : Int)⦌ |>.1
           dsu := DSU'rn.union dsu e⦋(0 : Int)⦌ e⦋(1 : Int)⦌ |>.2
-        else
-          let _ := ()
         if h_2 : PastaLean.pyTruthy p'_sc'1 then 
           merges := merges +ₚ (1 : Int)
-        else
-          let _ := ()
       return merges)
 
 def main' :=

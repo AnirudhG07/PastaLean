@@ -24,26 +24,24 @@ def classify'rn := fun (n : Int) ↦ (show PastaLean.PyAny from if n > (0 : Int)
 
 -- A parameter/local rebound to a different type mid-function, with operations on each type.
 def reassigned :=
-  (show PastaLean.PyAny from
-    let x := (1 : Int)
-    let x := x +ₚ (5 : Int)
-    let x := "hi"
-    let x := x +ₚ "world"
-    let y := (3 : Int)
-    let y := x
-    x +ₚ y)
+  let x := (1 : Int)
+  let x := (x +ₚ (5 : Int) : Int)
+  let x'v1 := ("hi" : String)
+  let x'v1 := (x'v1 +ₚ "world" : String)
+  let y := (3 : Int)
+  let y'v2 := (x'v1 : String)
+  x'v1 +ₚ y'v2
 
-attribute [simp] reassigned
+attribute [simp, taste_ingr] reassigned
 
 def reassigned'rn :=
-  (show PastaLean.PyAny from
-    let x := (1 : Int)
-    let x := x +ₚ (5 : Int)
-    let x := "hi"
-    let x := x +ₚ "world"
-    let y := (3 : Int)
-    let y := x
-    x +ₚ y)
+  let x := (1 : Int)
+  let x := (x +ₚ (5 : Int) : Int)
+  let x'v1 := ("hi" : String)
+  let x'v1 := (x'v1 +ₚ "world" : String)
+  let y := (3 : Int)
+  let y'v2 := (x'v1 : String)
+  x'v1 +ₚ y'v2
 
 -- One `add` used at both int and str (the flagship polymorphic case).
 def add := fun (a : PyAny) ↦ fun (b : PyAny) ↦ (show PastaLean.PyAny from a +ₚ b)
@@ -53,7 +51,7 @@ attribute [simp] add
 def add'rn := fun (a : PyAny) ↦ fun (b : PyAny) ↦ (show PastaLean.PyAny from a +ₚ b)
 
 @[taste_ingr]
-theorem add_thm : ∀ a, ∀ b, a +ₚ b +ₚ b = a +ₚ (b +ₚ b) := by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; omega
+theorem add_thm : ∀ (a : PyAny), ∀ (b : PyAny), a +ₚ b +ₚ b = a +ₚ (b +ₚ b) := by intros; simp_all (config := { zetaDelta := true }) [taste_ingr]; sorry
 
 -- A try/except whose branches return different types (int vs str) → the whole function is PyAny,
 -- so the `PyExcept _` codomain in Exceptions.lean infers `PyAny` on its own.
@@ -61,8 +59,6 @@ def describe : Int → PastaLean.ProofMode.PyProofM PastaLean.PyAny := fun (x : 
   try
     if h_1 : x < (0 : Int) then 
       throw (PastaLean.PyException.Raise "ValueError" "")
-    else
-      let _ := ()
     return (x : PastaLean.PyAny)
   catch caught =>
     if (caught).OfKind == "ValueError" then 
@@ -76,8 +72,6 @@ def describe'rn : Int → PastaLean.PyExcept PastaLean.PyAny := fun (x : Int) �
   try
     if h_1 : x < (0 : Int) then 
       throw (PastaLean.PyException.Raise "ValueError" "")
-    else
-      let _ := ()
     return (x : PastaLean.PyAny)
   catch caught =>
     if (caught).OfKind == "ValueError" then 
