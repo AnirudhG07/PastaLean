@@ -211,7 +211,16 @@ def applyStmt (sigs : Sigs) (env : Env) (s : Json) : Env :=
           let augCombine (a b : PyType) : PyType :=
             if (s.getObjValAs? String "op").toOption == some "div" then
               (match a, b with | .any, _ | _, .any => .any | _, _ => .float)
-            else arith a b
+            -- `s |= t` / `&=` / `-=` / `^=` are SET operations, not arithmetic: the result is a set whose
+            -- element type joins both sides (`s = set(); s |= set(range(n))` makes `s : set[int]`).
+            else match a, b with
+              | .set ea, .set eb => .set (ea.join eb)
+              | .unknown, .set eb => .set eb
+              | .set ea, _ => .set ea
+              -- `xs += ys` / `xs += [v]` is list concatenation: widen the element type by joining both
+              -- sides (`nums : list[int]; nums += [float('inf')]` makes `nums : list[float]`).
+              | .list ea, .list eb => .list (ea.join eb)
+              | _, _ => arith a b
           match nameId? target with
           | some name => learn env name (augCombine (env.get? name |>.getD .unknown) (typeOfExpr sigs env value))
           -- `counts[k] += 1` teaches both sides of `counts` (a `Counter()` starts fully unknown).

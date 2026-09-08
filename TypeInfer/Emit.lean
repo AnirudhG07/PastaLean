@@ -34,10 +34,10 @@ partial def toTypeSyntax? [Monad m] [MonadQuotation m]
   | .list e => do
       let some elem ← toTypeSyntax? floatTy e | return none
       return some (← `(List $elem))
-  -- Sets are list-backed in the runtime (`PyAPI/Sets.lean`).
+  -- Sets are an insertion-ordered list + hash index (`PyAPI/Sets.lean`): O(1) membership.
   | .set e => do
       let some elem ← toTypeSyntax? floatTy e | return none
-      return some (← `(List $elem))
+      return some (← `(PastaLean.PySet $elem))
   | .opt e => do
       let some inner ← toTypeSyntax? floatTy e | return none
       return some (← `(Option $inner))

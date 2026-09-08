@@ -159,8 +159,13 @@ partial def ssaStmts (sigs : Sigs) (n0 : Nat) (tbl0 : Std.HashMap String (String
         let s := match getField s "target" with | some c => s.setObjVal! "target" (ssaRewriteUses ren c) | none => s
         let body := (s.getObjValAs? (Array Json) "body").toOption.getD #[]
         let (body', _, n') := ssaStmts sigs n tbl body
-        n := n'
-        out := out.push (s.setObjVal! "body" (Json.arr body'))
+        -- The loop `else` (`for/else`, `while/else`) runs after the loop, so SSA it with the same
+        -- (pre/post-loop) table — otherwise its statements keep the un-renamed pre-loop names and a
+        -- subscript-assign there (`s[-1]='z'`) reads a stale-typed `s`, wrongly widening the element.
+        let orelse := (s.getObjValAs? (Array Json) "orelse").toOption.getD #[]
+        let (orelse', _, n'') := ssaStmts sigs n' tbl orelse
+        n := n''
+        out := out.push ((s.setObjVal! "body" (Json.arr body')).setObjVal! "orelse" (Json.arr orelse'))
     | _ =>
         out := out.push (ssaRewriteUses ren s)
   return (out, tbl, n)

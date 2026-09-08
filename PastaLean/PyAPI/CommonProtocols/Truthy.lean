@@ -26,7 +26,12 @@ instance : PyTruthy Float where truthy x := x != 0.0
 instance : PyTruthy Char where truthy _ := true
 instance : PyTruthy String where truthy s := !s.isEmpty
 instance {α : Type} : PyTruthy (List α) where truthy xs := !xs.isEmpty
-instance {α : Type} : PyTruthy (Option α) where truthy o := o.isSome
+-- `bool(x)` on a nullable recurses into the payload: `None` is falsy, `some v` is `bool(v)` (so
+-- `some 0`, `some ""`, `some []` are falsy, matching Python — `if x:` where `x` may be `None` or `0`).
+-- Falls back to `isSome` only when the payload has no `PyTruthy` (nothing to recurse into).
+instance {α : Type} [PyTruthy α] : PyTruthy (Option α) where
+  truthy | none => false | some v => PyTruthy.truthy v
+instance (priority := 50) {α : Type} : PyTruthy (Option α) where truthy o := o.isSome
 instance {κ ν : Type} [BEq κ] [Hashable κ] : PyTruthy (Std.HashMap κ ν) where
   truthy m := !m.isEmpty
 

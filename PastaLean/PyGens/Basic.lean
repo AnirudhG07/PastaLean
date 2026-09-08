@@ -601,16 +601,12 @@ def compareApplyTerm (op : String) (leftJson : Json) (leftCode rightCode : TSynt
       | "gt" => if prop then `($l > $r) else `(decide ($l > $r))
       | "le" => if prop then `($l <= $r) else `(decide ($l <= $r))
       | _    => if prop then `($l >= $r) else `(decide ($l >= $r))
-  | "in" =>
-      if isStringyJson leftJson && !(← rightIsSetExpr rightJson) then
-        `($(mkIdent ``PastaLean.pyStrContainsSubstr) $rightCode $leftCode)
-      else
-        `($(mkIdent ``pyContains) $rightCode $leftCode)
-  | "notin" =>
-      if isStringyJson leftJson && !(← rightIsSetExpr rightJson) then
-        `(! ($(mkIdent ``PastaLean.pyStrContainsSubstr) $rightCode $leftCode))
-      else
-        `(! ($(mkIdent ``pyContains) $rightCode $leftCode))
+  -- `x in c` is `pyContains c x` for EVERY container: the `PyContains` instance resolves by the
+  -- container's type — `String` does substring (`"AB" in s`, `c in "AEIOU"`), `List`/`PySet`/`HashMap`
+  -- do membership. This is type-driven, so it needs no fragile "is the container a set?" guess (which
+  -- mis-fired for `"0" in set(s)` when the set-var registry didn't reach across statements).
+  | "in" => `($(mkIdent ``pyContains) $rightCode $leftCode)
+  | "notin" => `(! ($(mkIdent ``pyContains) $rightCode $leftCode))
   | _ => throwError s!"Unsupported comparison operator: {op}"
 
 @[pygen "BinOp"]

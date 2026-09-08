@@ -69,7 +69,7 @@ partial def functionArgTypeSyntax? (annotationJson : Json) : PygenM (Option (TSy
             | other => other
         | _, _ => ""
       match container with
-      -- Sets are list-backed in the runtime, so `set[T]` lowers to `List T`.
+      -- Sets are an insertion-ordered array + hash index (`PyAPI/Sets.lean`): `set[T]` → `PySet T`.
       | "list" | "set" =>
           -- An explicit `List[Any]`/`Set[Any]` element has no runtime type of its own → `PyAny` (a
           -- boxed `List PyAny`), matching the bare-`list` param. Without this the whole ascription is
@@ -84,6 +84,7 @@ partial def functionArgTypeSyntax? (annotationJson : Json) : PygenM (Option (TSy
           -- append/index (Perceus in-place reuse); the provable twin, sets, and un-marked lists stay
           -- `List`. Marked by the TypeInfer eligibility pass as `_seq: "array"` on this annotation node.
           | some elemTy =>
+              if container == "set" then return some (← `(PastaLean.PySet $elemTy))
               let arrayBacked := container == "list"
                 && (annotationJson.getObjValAs? String "_seq" == .ok "array")
                 && (← getNumericMode) == .approx

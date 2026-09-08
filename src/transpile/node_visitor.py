@@ -570,6 +570,17 @@ class ASTToJsonLeanVisitorBase:
         func_json = self.visit(node.func)
         args_json = [self.visit(arg) for arg in node.args]
         keywords_json = {kw.arg: self.visit(kw.value) for kw in node.keywords}
+        # LeetCode idiom: a solution method extracted as a bare top-level function still calls itself
+        # (or a sibling) through `Solution().method(...)`, but there is no `Solution` class here. Unwrap
+        # `Solution().method(args)` to a direct `method(args)` call.
+        if (
+            func_json.get("node_type") == "Attribute"
+            and (recv := func_json.get("value", {})).get("node_type") == "Call"
+            and recv.get("func", {}).get("node_type") == "Name"
+            and recv.get("func", {}).get("id") == "Solution"
+            and not recv.get("args")
+        ):
+            func_json = {"node_type": "Name", "id": func_json["attr"]}
         if func_json.get("node_type") == "Name" and func_json.get("id") == "range":
             return {
                 "node_type": "Range",

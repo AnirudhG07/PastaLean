@@ -794,6 +794,15 @@ def build_test_harness(converted_lean, fn_name, cases, data_path):
         "private instance {α β} [_PyTestEq α] [_PyTestEq β] : _PyTestEq (α × β) := "
         "⟨fun a b => _PyTestEq.teq a.1 b.1 && _PyTestEq.teq a.2 b.2⟩",
         "private def _pyTestEq {α} [_PyTestEq α] (a b : α) : Bool := _PyTestEq.teq a b", "",
+        # A twin carrying a stray `print` (→ `IO α`) or a spurious `try/except` (→ `PyExcept α`,
+        # i.e. `ExceptT PyException IO α`) is EFFECTFUL, not a bare value; run it and compare the
+        # result it returns. `_RunTwin` reduces pure / IO / PyExcept twins to `IO (Option α)` (a raised
+        # exception → `none`). The pure fallback is lowest priority so the effectful instances win.
+        "private class _RunTwin (τ : Type) (α : outParam Type) where run : τ → IO (Option α)",
+        "private instance {α} : _RunTwin (IO α) α := ⟨fun m => do let r ← m; pure (some r)⟩",
+        "private instance {α} : _RunTwin (ExceptT PastaLean.PyException IO α) α := "
+        "⟨fun m => do match ← ExceptT.run m with | .ok a => pure (some a) | .error _ => pure none⟩",
+        "private instance (priority := 50) {α} : _RunTwin α α := ⟨fun a => pure (some a)⟩", "",
         # Decode the expected JSON at the SAME type as the value the twin computed: `_pat`'s type
         # (`α`) is unified with `_got` at the call site, so no return-type annotation is needed.
         "private def _decodeLike {α : Type} [Lean.FromJson α] (_pat : α) "
@@ -814,18 +823,22 @@ def build_test_harness(converted_lean, fn_name, cases, data_path):
         "  let mut _p := 0",
         "  let mut _t := 0",
         f"  for {pat} in _cases do",
-        f"    let _got := {call}",
-        "    match _decodeLike _got ejson with",
+        f"    let _got? ← _RunTwin.run ({call})",
+        "    match _got? with",
+        # Twin raised (effectful path): count as attempted-and-failed, not silently dropped.
+        '    | none => _t := _t + 1; IO.println s!"FAIL {idx}: twin raised"',
+        "    | some _got =>",
+        "      match _decodeLike _got ejson with",
         # Expected value undecodable at the result type → out-of-spec case, drop (don't count).
-        "    | none => pure ()",
-        "    | some e =>",
-        "      _t := _t + 1",
+        "      | none => pure ()",
+        "      | some e =>",
+        "        _t := _t + 1",
         # `repr` prints what Lean computed so a failure is debuggable without a rerun.
-        "      if _pyTestEq _got e then _p := _p + 1",
-        '      else IO.println s!"FAIL {idx}: got {repr _got}"',
+        "        if _pyTestEq _got e then _p := _p + 1",
+        '        else IO.println s!"FAIL {idx}: got {repr _got}"',
         # Flush a running count each case so a native run that times out still reports partials
         # (how many passed / attempted before it hung) instead of a bare 0/N.
-        '      _out.putStr s!"PROG {_t} {_p}\\n"; _out.flush',
+        '        _out.putStr s!"PROG {_t} {_p}\\n"; _out.flush',
         '  IO.println s!"PASSED {_p}/{_t}"', ""])
     return body, runnable, data_json
 

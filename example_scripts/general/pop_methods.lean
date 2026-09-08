@@ -57,7 +57,7 @@ def list_pop_index'rn :=
 def set_pop :=
   Id.run
     (do
-      let mut seen : List Int := PastaLean.pySet [(1 : Int), (2 : Int), (3 : Int)]
+      let mut seen : PastaLean.PySet Int := PastaLean.pySet [(1 : Int), (2 : Int), (3 : Int)]
       seen := PastaLean.pySetDiscard seen (2 : Int)
       let mut x := PastaLean.pyPopValue seen
       seen := PastaLean.pyPopRest seen
@@ -68,7 +68,7 @@ attribute [simp, taste_ingr] set_pop
 def set_pop'rn :=
   Id.run
     (do
-      let mut seen : List Int := PastaLean.pySet [(1 : Int), (2 : Int), (3 : Int)]
+      let mut seen : PastaLean.PySet Int := PastaLean.pySet [(1 : Int), (2 : Int), (3 : Int)]
       seen := PastaLean.pySetDiscard seen (2 : Int)
       let mut x := PastaLean.pyPopValue seen
       seen := PastaLean.pyPopRest seen

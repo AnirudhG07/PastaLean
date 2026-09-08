@@ -43,6 +43,30 @@ def _target_assigned_names(target):
     return names
 
 
+# In-place container methods the value-semantics runtime lowers to a receiver rebind, so a bare
+# `name.method(...)` statement mutates `name` for the purpose of top-level state threading.
+_MUTATING_METHODS = {
+    "add", "append", "appendleft", "extend", "extendleft", "insert", "update",
+    "remove", "discard", "pop", "popleft", "popitem", "sort", "reverse", "clear",
+    "setdefault", "difference_update", "intersection_update", "symmetric_difference_update",
+}
+
+
+def _method_mutation_receiver(value):
+    """The Name id a bare `name.method(...)` in-place mutation targets, or None."""
+    if not isinstance(value, dict) or value.get("node_type") != "Call":
+        return None
+    func = value.get("func")
+    if not isinstance(func, dict) or func.get("node_type") != "Attribute":
+        return None
+    if func.get("attr") not in _MUTATING_METHODS:
+        return None
+    recv = func.get("value")
+    if isinstance(recv, dict) and recv.get("node_type") == "Name":
+        return recv.get("id")
+    return None
+
+
 def _block_mutated_names(body):
     """Compute the set of plain names assigned anywhere within a statement list.
 
@@ -62,6 +86,13 @@ def _block_mutated_names(body):
             mutated.update(_target_assigned_names(stmt.get("target")))
         elif node_type == "AugAssign":
             mutated.update(_target_assigned_names(stmt.get("target")))
+        elif node_type == "Expr":
+            # A bare `xs.add(v)` / `xs.append(v)` in-place mutation: the value-semantics runtime
+            # rebinds the receiver (`xs := pySetAdd xs v`), so the receiver name IS mutated and must be
+            # threaded, even though it is not the target of an assignment.
+            name = _method_mutation_receiver(stmt.get("value"))
+            if name is not None:
+                mutated.add(name)
         elif node_type == "For":
             # The loop variable is local to the loop, not a re-exported global,
             # but names mutated inside the body are.

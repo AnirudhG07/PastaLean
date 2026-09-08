@@ -40,7 +40,7 @@ partial def runAwareTypeSyntax? (t : TypeInfer.PyType) : PygenM (Option (TSyntax
   | .cls c => return some (mkIdent (← suffixIfUserName c).toName)
   | .opt e => match ← runAwareTypeSyntax? e with | some s => return some (← `(Option $s)) | none => return none
   | .list e => match ← runAwareTypeSyntax? e with | some s => return some (← `(List $s)) | none => return none
-  | .set e => match ← runAwareTypeSyntax? e with | some s => return some (← `(List $s)) | none => return none
+  | .set e => match ← runAwareTypeSyntax? e with | some s => return some (← `(PastaLean.PySet $s)) | none => return none
   | other => pyTypeSyntax? other
 
 /-- Emit a type from an annotation, honouring the `_seq: "array"` marker the eligibility pass stamps

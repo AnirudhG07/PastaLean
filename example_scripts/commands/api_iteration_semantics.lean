@@ -67,13 +67,13 @@ def topo_order_count'rn := fun (n : Int) ↦ fun (edges : List (List Int)) ↦
       return seen)
 
 def count_vowels := fun (s : String) ↦
-  let vowels := (PastaLean.pySet "aeiou" : List String)
+  let vowels := (PastaLean.pySet "aeiou" : PastaLean.PySet String)
   PastaLean.pySum ((PastaLean.pyIter s).map fun (c : String) => PastaLean.pyContains vowels c)
 
 attribute [simp, taste_ingr] count_vowels
 
 def count_vowels'rn := fun (s : String) ↦
-  let vowels := (PastaLean.pySet "aeiou" : List String)
+  let vowels := (PastaLean.pySet "aeiou" : PastaLean.PySet String)
   PastaLean.pySum ((PastaLean.pyIter s).map fun (c : String) => PastaLean.pyContains vowels c)
 
 def feb_days := fun (y : Int) ↦

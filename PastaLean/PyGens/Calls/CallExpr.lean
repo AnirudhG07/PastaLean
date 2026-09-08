@@ -1399,6 +1399,19 @@ def attributeSyntax : (kind : SyntaxNodeKind) → Json →
         let .ok attr := json.getObjValAs? String "attr" | throwError
           s!"Attribute node does not have an 'attr' field or it is not a string: {json}"
         let attrId := mkIdent attr.toName
+        -- `int.__and__` / `int.__add__` etc. used as a bound operator function (e.g.
+        -- `reduce(int.__and__, xs)`): emit the binary-operator lambda, not a bogus `int.__and__` ident.
+        if valueJson.getObjValAs? String "node_type" == .ok "Name" then
+          if #["int","float","bool","str","bytes"].contains
+              ((valueJson.getObjValAs? String "id").toOption.getD "") then
+            match attr with
+            | "__and__" => return ← `(fun a b => PastaLean.pyBitAnd a b)
+            | "__or__"  => return ← `(fun a b => PastaLean.pyBitOr a b)
+            | "__xor__" => return ← `(fun a b => PastaLean.pyBitXor a b)
+            | "__add__" => return ← `(fun a b => a +ₚ b)
+            | "__sub__" => return ← `(fun a b => a -ₚ b)
+            | "__mul__" => return ← `(fun a b => a *ₚ b)
+            | _ => pure ()
         -- Under `--heap`, dereference a heap-object receiver before projecting the field: `self` in a
         -- method body (`self : Ref C`), or any local/param known to hold a heap object (`p.x`).
         if ← getHeapMode then

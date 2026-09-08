@@ -55,15 +55,29 @@ arbitrary element, and "the last" is an acceptable arbitrary choice for the list
 private def pyPopIndex (len : Nat) (idx : Int) : Int :=
   if idx < 0 then (len : Int) + idx else idx
 
+/-- Index-based `pop` over any ordered container (`List`, `Array`-via-`toList`, `PySet`), returning the
+container's own type. Split from the *value* read so `pyPopRest` needs no `Inhabited`. -/
+class PyPopRestSeq (σ : Type) where popRestAt : σ → Int → σ
+/-- The element `pop(idx)` returns; needs `Inhabited` for the out-of-range fallback. -/
+class PyPopValSeq (σ : Type) (α : outParam Type) where popValAt : σ → Int → α
+
+instance : PyPopRestSeq (List α) where
+  popRestAt xs idx :=
+    let i := pyPopIndex xs.length idx
+    if 0 ≤ i ∧ i < xs.length then xs.eraseIdx i.toNat else xs
+
+instance [Inhabited α] : PyPopValSeq (List α) α where
+  popValAt xs idx :=
+    let i := pyPopIndex xs.length idx
+    if 0 ≤ i ∧ i < xs.length then xs[i.toNat]! else default
+
 /-- The element `pop(idx)` returns (defaulting to the last). Out-of-range yields `default`. -/
-def pyPopValue [Inhabited α] (xs : List α) (idx : Int := -1) : α :=
-  let i := pyPopIndex xs.length idx
-  if 0 ≤ i ∧ i < xs.length then xs[i.toNat]! else default
+def pyPopValue {σ α : Type} [PyPopValSeq σ α] (xs : σ) (idx : Int := -1) : α :=
+  PyPopValSeq.popValAt xs idx
 
 /-- The container after `pop(idx)` removes its element (defaulting to the last). -/
-def pyPopRest (xs : List α) (idx : Int := -1) : List α :=
-  let i := pyPopIndex xs.length idx
-  if 0 ≤ i ∧ i < xs.length then xs.eraseIdx i.toNat else xs
+def pyPopRest {σ : Type} [PyPopRestSeq σ] (xs : σ) (idx : Int := -1) : σ :=
+  PyPopRestSeq.popRestAt xs idx
 
 /-- Instance for popping from a HashMap. -/
 instance [BEq α] [Hashable α] : PyPop (Std.HashMap α β) α β where
