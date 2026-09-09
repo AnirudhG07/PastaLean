@@ -1,5 +1,9 @@
 import TypeInfer.PyType
 import PastaLean.Imports
+-- `join_assoc` (and `sizeOf_pos`) live in their own file: the associativity proof case-splits over all
+-- constructor triples and is by far the slowest in the development, so it is isolated and can be rebuilt
+-- on demand without holding up the rest of this file.
+import TypeInfer.JoinAssoc
 
 /-!
 # Correctness theorems for the TypeInfer lattice
@@ -20,8 +24,10 @@ subterm — precisely the engine's reachable types.
 namespace TypeInfer.PyType
 
 -- The associativity/soundness inductions and the nested `tuple`/`fn` case analyses fan out over every
--- constructor pair (or triple), so the whole file needs heartbeat headroom above the 200000 default.
+-- constructor pair (or triple), so the whole file needs heartbeat headroom above the 200000 default,
+-- and the deeply nested `join`/`opt` `match`es in associativity need more than the 512 recursion depth.
 set_option maxHeartbeats 4000000
+set_option maxRecDepth 20000
 
 /-! ### ⊥ = `unknown` is the identity -/
 
@@ -131,77 +137,10 @@ decreasing_by
     | omega
     | (have hm := ‹_ ∈ _›; have := List.sizeOf_lt_of_mem hm; omega)
 
-/-! ### Commutativity: `join a b = join b a` (order-independence)
+/-! ### Commutativity: `join a b = join b a`
 
-The headline law for the fixpoint: the inferred type does not depend on the order in which the engine
-visits assignments. Proved for EVERY constructor pair, including the nested `list`/`dict`/`tuple`/`fn`
-cases (via `zip_map_swap`), by strong induction on `sizeOf`. -/
-
-/-- Class-name equality is symmetric (needed for the `cls`/`cls` fallback of `join`). -/
-theorem beq_comm_cls (n m : String) : (n == m) = (m == n) := by
-  rw [Bool.eq_iff_iff, beq_iff_eq, beq_iff_eq]; exact eq_comm
-
-theorem sizeOf_pos (a : PyType) : 0 < sizeOf a := by cases a <;> simp
-
-/-- A zip-map is unchanged by swapping the two lists, when the operation commutes at every index. The
-key lemma for the `tuple`/`fn` commutativity cases. -/
-theorem zip_map_swap {α} (as bs : List PyType) (f : PyType → PyType → α) (hlen : as.length = bs.length)
-    (hf : ∀ i (h1 : i < as.length) (h2 : i < bs.length), f as[i] bs[i] = f bs[i] as[i]) :
-    (as.zip bs).attach.map (fun x : {p // p ∈ as.zip bs} => f x.1.1 x.1.2)
-    = (bs.zip as).attach.map (fun x : {p // p ∈ bs.zip as} => f x.1.1 x.1.2) := by
-  apply List.ext_getElem
-  · simp [hlen]
-  · grind only [= List.length_map, = List.getElem_map, = List.length_attach, = List.getElem_attach,
-    = List.length_zip, = List.getElem_zip]
-
-private theorem join_comm_aux : ∀ (n : Nat) (a b : PyType), sizeOf a + sizeOf b ≤ n →
-    join a b = join b a := by
-  intro n
-  induction n with
-  | zero => intro a b h; have := sizeOf_pos a; omega
-  | succ n ih =>
-    intro a b hn
-    cases a <;> cases b <;>
-      try (first
-            | rfl
-            | (simp [join, beq]; done)
-            | (rw [join, join]; rw [ih _ _ (by
-                simp only [PyType.list.sizeOf_spec, PyType.set.sizeOf_spec, PyType.opt.sizeOf_spec]
-                  at hn; omega)]))
-    case cls.cls n m =>
-      grind only [join, beq]
-    case dict.dict k1 v1 k2 v2 =>
-      simp only [join]
-      rw [ih k1 k2 (by simp only [PyType.dict.sizeOf_spec] at hn; omega),
-          ih v1 v2 (by simp only [PyType.dict.sizeOf_spec] at hn; omega)]
-    case tuple.tuple as bs =>
-      simp only [join]
-      by_cases hl : as.length = bs.length
-      · rw [if_pos (by simpa using hl), if_pos (by simpa using hl.symm)]; congr 1
-        apply zip_map_swap as bs _ hl
-        intro i h1 h2
-        refine ih as[i] bs[i] ?_
-        have := List.sizeOf_lt_of_mem (List.getElem_mem (l := as) h1)
-        have := List.sizeOf_lt_of_mem (List.getElem_mem (l := bs) h2)
-        simp only [PyType.tuple.sizeOf_spec] at hn; omega
-      · rw [if_neg (by simpa using hl), if_neg (by simpa using fun h => hl h.symm)]
-    case fn.fn as r1 bs r2 =>
-      simp only [join]
-      by_cases hl : as.length = bs.length
-      · rw [if_pos (by simpa using hl), if_pos (by simpa using hl.symm)]
-        rw [ih r1 r2 (by simp only [PyType.fn.sizeOf_spec] at hn; omega)]; congr 1
-        apply zip_map_swap as bs _ hl
-        intro i h1 h2
-        refine ih as[i] bs[i] ?_
-        have := List.sizeOf_lt_of_mem (List.getElem_mem (l := as) h1)
-        have := List.sizeOf_lt_of_mem (List.getElem_mem (l := bs) h2)
-        simp only [PyType.fn.sizeOf_spec] at hn; omega
-      · rw [if_neg (by simpa using hl), if_neg (by simpa using fun h => hl h.symm)]
-
-/-- **Commutativity** of the lattice join: `a ⊔ b = b ⊔ a`. The inference fixpoint is therefore
-independent of the order in which assignments are visited. -/
-theorem join_comm (a b : PyType) : join a b = join b a :=
-  join_comm_aux (sizeOf a + sizeOf b) a b (Nat.le_refl _)
+Proved in `TypeInfer.JoinAssoc` (imported above), alongside associativity — both are order-independence
+laws over the same nested `list`/`dict`/`tuple`/`fn` case split. -/
 
 /-! ### Associativity: `(a ⊔ b) ⊔ c = a ⊔ (b ⊔ c)`
 
@@ -211,30 +150,10 @@ order). It holds on the FULL lattice, and the `Optional`/`None` **absorption** (
 that collapse `join (join none int) str = opt any` but `join none (join int str) = any`, and the two
 groupings would disagree (the join comment records the absorption was added for precisely this reason).
 
-Proved by strong induction on `sizeOf`. Scalar and incompatible-type triples fall to `simp`; every
-remaining case — the numeric tower, the recursive `list`/`set`/`dict`/`tuple`/`fn` congruences, the
-class-name fallback, and all the `Optional` absorption interactions — is discharged uniformly by `grind`
-from `join`'s equations and the inductive hypothesis. -/
-
-private theorem join_assoc_aux : ∀ (n : Nat) (a b c : PyType), sizeOf a + sizeOf b + sizeOf c ≤ n →
-    join (join a b) c = join a (join b c) := by
-  intro n
-  induction n with
-  | zero => intro a b c h; have := sizeOf_pos a; omega
-  | succ n ih =>
-    intro a b c hn
-    cases a <;> cases b <;> cases c <;>
-      first
-      | (simp only [join, beq, reduceCtorEq, ite_true, ite_false, ite_self]; done)
-      | (simp only [join, beq, beq_iff_eq]; split_ifs <;> simp_all only [reduceCtorEq]; done)
-      | (simp_all only [join, opt.sizeOf_spec, list.sizeOf_spec, set.sizeOf_spec,
-            dict.sizeOf_spec, cls.sizeOf_spec] <;> grind only [join])
-
-/-- **Associativity** of the lattice join, on the full lattice: `(a ⊔ b) ⊔ c = a ⊔ (b ⊔ c)`. Together
-with `join_comm` and `join_idem` this makes `PyType`'s `join` a bounded join-semilattice, so the
-inference fixpoint's result is fully order- AND grouping-independent. -/
-theorem join_assoc (a b c : PyType) : join (join a b) c = join a (join b c) :=
-  join_assoc_aux (sizeOf a + sizeOf b + sizeOf c) a b c (Nat.le_refl _)
+`join_assoc` itself is proved in `TypeInfer.JoinAssoc` (imported above) — it case-splits over all
+constructor triples and is the slowest proof here, so it is isolated so this file can be checked without
+paying that cost. Together with `join_comm` and `join_idem` it makes `PyType`'s `join` a bounded
+join-semilattice, so the inference fixpoint's result is fully order- AND grouping-independent. -/
 
 /-! ### The precision order and `join` as least upper bound
 
