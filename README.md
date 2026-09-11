@@ -24,6 +24,7 @@ This work was presented at [Summer School: LeanLang for Programming 2026](https:
     - [HTTP API](#http-api)
     - [Python API](#python-api)
 - [Testing](#testing)
+- [Reproducing the paper results](#reproducing-the-paper-results)
 
 ## Features
 
@@ -506,6 +507,36 @@ If you want to run a specific test case, you can do so with:
 ```bash
 lake exe palc <case_file.py>
 ```
+
+## Reproducing the paper results
+
+Every table and figure in the paper can be regenerated from this repo. [`REPRODUCE.md`](./REPRODUCE.md) has the full guide: one command per experiment, each naming the paper artifact it produces and the file it writes.
+
+After the setup in [Install](#install), build the Lean targets the harnesses need:
+
+```bash
+lake build py2lean      # transpiler backend
+lake build typeinfer    # standalone Mathlib-free inference binary
+lake build PastaBench   # verification library (proving experiment)
+```
+
+Then the main experiments:
+
+```bash
+# Code generation and execution (HumanEval / LeetCode / LiveCodeBench)
+python3 PastaBench/pastaeval.py humaneval --run
+python3 PastaBench/pastaeval.py cp --source leetcode --num max
+
+# Type inference (TypeEvalPy micro + autogen, and the production checkers)
+python3 PastaBench/pastaeval.py typeinfer
+bash PastaBench/typeinfer_bench/run_autogen.sh
+uv run python PastaBench/typeinfer_bench/bench_checkers.py
+
+# Repository-level type inference (TypyBench, vs pyrefly/pyre)
+python3 PastaBench/typybench_bench/score.py <dataset_dir> --tool pastalean
+```
+
+See [`REPRODUCE.md`](./REPRODUCE.md) for dataset setup, exact flags, the LLM baseline, and the contracts/proofs.
 
 ## Acknowledgements
 
