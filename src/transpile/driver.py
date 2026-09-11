@@ -2077,11 +2077,9 @@ def translate_to_lean(source_code, target="term", filepath = None, imports_add =
     _RUN_SUFFIX, _USER_NAMES = "", []
     json_ir = translate_to_json(source_code, filepath, best_effort=best_effort)
     ast_json = json.loads(json_ir)
-    # Best-effort: if not explicitly on, auto-enable reference (`--heap`) semantics when the program
-    # mutates a recursive structure through a cursor (trie / linked list / tree). Value semantics copies
-    # the cursor and silently drops those writes; heap threads them through the shared structure.
-    if not heap and _module_needs_heap(ast_json):
-        heap = True
+    # Reference (`--heap`) semantics are opt-in only. `_module_needs_heap` is kept as a discovery tool
+    # (a caller/harness can pass `heap=True` for the trie/linked-list problems it flags), but it never
+    # flips the mode on its own: auto-enabling surprised value-semantics programs.
     _HEAP_MODE = heap
     _stamp_class_dispatch(ast_json)
     client = client or _LEAN_BACKEND
