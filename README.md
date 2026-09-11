@@ -401,6 +401,7 @@ pastalean translate prog.py
 pastalean translate prog.py              # Python -> Lean on stdout, then compile-check it
 pastalean run       prog.py < input.txt  # translate, compile, execute
 pastalean json      prog.py              # dump the intermediate JSON IR
+pastalean typeinfer prog.py              # infer Python types (no Lean compile)
 pastalean batch     example_scripts/commands -o out/ --check   # many files, one warm backend
 pastalean serve                          # web playground + HTTP API
 pastalean libraries                      # Python libs with a Lean shim
@@ -409,6 +410,29 @@ pastalean libraries                      # Python libs with a Lean shim
 `translate` and `run` also accept the LLM source rewrites `-r/--redesign` (restructure for
 provability) and `-c/--contracts` (insert Requires/Ensures/Invariant). Both write the transformed
 program to a sibling `.py` so you can read what the model produced.
+
+`typeinfer` runs the standalone TypeInfer engine (a compiled Lean binary, no Mathlib boot) over a
+file and infers types for parameters, returns, local variables, and class fields — inference only,
+no code generation. By default it prints the source back with PEP 484 annotations injected (bare
+`Any` included, with `from typing import Any` added); `--format` switches the output shape:
+
+```bash
+pastalean typeinfer prog.py                    # annotated Python on stdout (default)
+pastalean typeinfer prog.py --no-any           # ...but skip bare `Any` (list[Any] etc. kept)
+pastalean typeinfer prog.py --format json      # machine-readable type map
+pastalean typeinfer prog.py --format list      # human-readable listing grouped by scope
+pastalean typeinfer prog.py -r                 # + a summary: counts per dimension and time taken
+```
+
+Give it a **directory** and it infers the whole repository in one Lean fixpoint — resolving imports
+so types flow across files — and writes an annotated copy (default `<dir>_typed`, or `-o <dir>`):
+
+```bash
+pastalean typeinfer myrepo/ -o myrepo_typed -r
+```
+
+Inference is parallel inside the engine: a batch or a repo fans out across the machine's cores in a
+single process (no per-file backend boot).
 
 ### HTTP API
 

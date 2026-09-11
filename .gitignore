@@ -34,3 +34,4 @@ _slides
 cp_harness/.native/
 PastaBench/_eval_out
 PastaBench/_report_gen/
+PastaBench/llm_bench
