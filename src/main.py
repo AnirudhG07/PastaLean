@@ -260,54 +260,9 @@ def cmd_serve(args) -> int:
 
 
 def cmd_typeinfer(args) -> int:
-    import time
+    from .typeinfer.cli import run
 
-    from . import typeinfer as ti
-    from .backend.typeinfer import TypeInferUnavailable
-
-    include_any = not args.no_any
-    path = Path(args.file)
-    t0 = time.perf_counter()
-    try:
-        if path.is_dir():
-            return _typeinfer_repo(args, path, ti, include_any, t0)
-        source = path.read_text(encoding="utf-8")
-        result = ti.infer_source(source, args.file)
-    except TypeInferUnavailable as err:
-        print(f"error: {err}", file=sys.stderr)
-        return 1
-    elapsed = time.perf_counter() - t0
-
-    if args.format == "json":
-        _emit(json.dumps(ti.to_json_obj(result, args.file), indent=2 if args.indent else None),
-              args.output)
-    elif args.format == "list":
-        _emit(ti.to_report(result, args.file), args.output)
-    else:  # annotated (default)
-        _emit(ti.annotate_source(source, result, include_any=include_any), args.output)
-
-    if args.report:
-        counts = ti.count_annotations(result, include_any=include_any)
-        print(ti.format_stats_report(args.file, counts, elapsed), file=sys.stderr)
-    return 0
-
-
-def _typeinfer_repo(args, repo: Path, ti, include_any: bool, t0: float) -> int:
-    """Directory input: cross-file inference over the whole repo, writing an annotated copy."""
-    import time
-
-    if args.format != "annotated":
-        print("error: directory input supports only --format annotated (writes an annotated copy).",
-              file=sys.stderr)
-        return 1
-    out_dir = Path(args.output) if args.output else repo.with_name(repo.name + "_typed")
-    n_files, n_total, counts = ti.annotate_repo(repo, out_dir, include_any=include_any)
-    elapsed = time.perf_counter() - t0
-    print(f"annotated {n_files}/{n_total} files -> {out_dir}", file=sys.stderr)
-    if args.report:
-        print(ti.format_stats_report(str(repo), counts, elapsed, files=(n_files, n_total)),
-              file=sys.stderr)
-    return 0
+    return run(args)
 
 
 def cmd_libraries(args) -> int:
@@ -407,29 +362,8 @@ def build_parser() -> argparse.ArgumentParser:
                     "source with PEP 484 annotations injected. Give a DIRECTORY to cross-file-infer "
                     "the whole repo (one Lean fixpoint, imports resolved) and write an annotated copy.",
     )
-    p_typeinfer.add_argument("file", help="Python source file, or a directory (repo mode).")
-    p_typeinfer.add_argument(
-        "-o", "--output",
-        help="For a file: write here instead of stdout ('-' for stdout). For a directory: the output "
-             "directory for the annotated copy (default: '<dir>_typed').",
-    )
-    p_typeinfer.add_argument(
-        "--format", default="annotated", choices=["annotated", "json", "list"],
-        help="'annotated' (default): the source with inferred type annotations added. 'json': a "
-             "machine-readable type map. 'list': a human-readable listing grouped by scope. "
-             "Directory input supports only 'annotated'.",
-    )
-    p_typeinfer.add_argument(
-        "--no-any", action="store_true",
-        help="Omit bare `Any` annotations (they are added by default, with `from typing import Any`). "
-             "Parametrised types like `list[Any]` are always kept.",
-    )
-    p_typeinfer.add_argument(
-        "-r", "--report", action="store_true",
-        help="Print a summary to stderr: annotation counts per dimension and the time taken.",
-    )
-    p_typeinfer.add_argument("--indent", action=argparse.BooleanOptionalAction, default=True,
-                             help="Pretty-print --format json. Default: on.")
+    from .typeinfer.cli import add_arguments as _typeinfer_args
+    _typeinfer_args(p_typeinfer)
     p_typeinfer.set_defaults(func=cmd_typeinfer)
 
     p_libs = sub.add_parser("libraries", help="List Python libraries with a Lean shim.")
