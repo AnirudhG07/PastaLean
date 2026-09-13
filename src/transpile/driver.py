@@ -82,9 +82,9 @@ COMMENT_PLACEHOLDER_RE = re.compile(
 )
 
 class ASTToJsonLeanVisitor(ASTToJsonLeanVisitorBase):
-    """Concrete visitor that implements the translation logic for a specific subset of Python syntax."""
-    pass  # For now, we only have BinOp, Constant, and Expr. We can add more visit methods as needed.
-        
+    """Concrete visitor; all translation logic lives in the base class."""
+    pass
+
 def configure_logging(verbose: bool) -> None:
     """Configure CLI logging, keeping normal runs quiet unless verbose is enabled."""
     level = logging.DEBUG if verbose else logging.WARNING

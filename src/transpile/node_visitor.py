@@ -418,8 +418,6 @@ class ASTToJsonLeanVisitorBase:
             visitor = self._visit_auto_serialized_node
         if visitor is None:
             visitor = self.generic_visit
-        # print(f"Visiting node type: {type(node).__name__} with visitor method: {visitor.__name__}", file=sys.stderr)  # Debugging output
-        
         return visitor(node)
 
     def generic_visit(self, node):

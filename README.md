@@ -16,6 +16,7 @@ This work was presented at [Summer School: LeanLang for Programming 2026](https:
 
 - [Features](#features)
 - [How it works?](#how-it-works)
+- [Type Inference (TypeInfer)](#type-inference-typeinfer)
 - [Libraries](#libraries)
     - [How to add your own library](#how-to-add-your-own-library)
 - [Install](#install)
@@ -309,6 +310,24 @@ Recursive self-calls in the body are lowered to `(← fib'memo'rn …)`, so the 
 
 any many more... like many many many more small annoying features...
 
+## Type Inference (TypeInfer)
+
+Python is dynamically typed, but Lean needs types. `TypeInfer` is PastaLean's type-inference engine: it runs over the Python AST before code generation and assigns every parameter, return, variable and field a type from a single `PyType` lattice, so untyped Python can be lowered to well-typed Lean. It also runs over a whole repository, flowing types across files and imports.
+
+It is built as its own Mathlib-free Lean binary, so you can use it on its own — as a fast static type annotator for Python, independent of the transpiler:
+
+```bash
+lake build typeinfer
+
+pastalean typeinfer script.py                 # print the source with inferred annotations
+pastalean typeinfer script.py -o out.py       # write annotated source to a file
+pastalean typeinfer script.py --format stub   # emit a .pyi stub instead
+pastalean typeinfer script.py --coverage      # per-dimension type-coverage report
+pastalean typeinfer my_project/               # repo mode: annotate a whole project
+```
+
+**On benchmarks.** On the file-level TypeEvalPy benchmark, TypeInfer is the top-scoring static tool on the micro set and leads on return and parameter facts on the autogen set. On the repository-level TypyBench benchmark (50 real projects with their annotations stripped) it leads every accuracy metric against the other inference-capable tools (pyrefly, pyre, pytype), while being the fastest at repository scale and using the least memory. See [Reproducing the paper results](#reproducing-the-paper-results).
+
 ## Verifying with contracts (and how postcondition proving can fail)
 
 You annotate a Python function with `Requires`/`Ensures` (plus `Invariant`/`Decreases`/`Assert`), and
@@ -532,8 +551,9 @@ python3 PastaBench/pastaeval.py typeinfer
 bash PastaBench/typeinfer_bench/run_autogen.sh
 uv run python PastaBench/typeinfer_bench/bench_checkers.py
 
-# Repository-level type inference (TypyBench, vs pyrefly/pyre)
+# Repository-level type inference (TypyBench, vs pyrefly/pyre/pytype)
 python3 PastaBench/typybench_bench/score.py <dataset_dir> --tool pastalean
+#   swap --tool for pyrefly | pyre | pytype to score the baselines
 ```
 
 See [`REPRODUCE.md`](./REPRODUCE.md) for dataset setup, exact flags, the LLM baseline, and the contracts/proofs.
