@@ -123,8 +123,8 @@ for the model provider.
 
 ## 5. Verification: contracts and proofs (Appendix `app:contracts`)
 
-The over-50 HumanEval and over-50 LeetCode fully proved problems live in the
-`PastaBench` Lean library. The generated code is produced from the contract-carrying
+The HumanEval problems we wrote contracts for and worked proofs through this path live
+in the `PastaBench` Lean library. The generated code is produced from the contract-carrying
 Python, and the hand proofs are checked by the Lean build; any proof that drifts
 fails the build.
 
