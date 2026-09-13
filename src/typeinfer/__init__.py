@@ -22,7 +22,7 @@ from .annotate import annotate_repo, annotate_source
 from .collect import collect_types
 from .coverage import Slot, coverage, format_coverage_report, iter_slots
 from .diagnostics import Diagnostic, diagnostics, to_github, to_sarif
-from .engine import infer_file, infer_repo_dir, infer_source
+from .engine import infer_file, infer_repo_dir, infer_source, infer_sources
 from .records import FieldInfo, FuncInfo, InferResult, VarInfo, MODULE_SCOPE
 from .render import render_pytype
 from .report import count_annotations, format_stats_report, to_json_obj, to_report
@@ -32,7 +32,7 @@ __all__ = [
     "MODULE_SCOPE",
     "FuncInfo", "VarInfo", "FieldInfo", "InferResult",
     "render_pytype", "collect_types",
-    "infer_source", "infer_file", "infer_repo_dir",
+    "infer_source", "infer_file", "infer_sources", "infer_repo_dir",
     "annotate_source", "annotate_repo",
     "count_annotations", "format_stats_report", "to_json_obj", "to_report",
     "coverage", "format_coverage_report", "iter_slots", "Slot",

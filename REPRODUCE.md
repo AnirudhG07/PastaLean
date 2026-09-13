@@ -91,14 +91,22 @@ Harness: `PastaBench/typybench_bench/`. Datasets are laid out as
 # Generate PastaLean predictions for the whole dataset
 python3 PastaBench/typybench_bench/run_predictions.py <dataset_dir> ./predictions
 
-# Score PastaLean, and the two in-place inference baselines, in Lean (TypeSim / Exact / Coverage)
+# Score each tool in Lean (TypeSim / Exact / Coverage) and the summed time.
+# By default score.py runs the fifty projects one at a time, each using the whole
+# machine (full throttle), and reports the SUM of the per-project times (the Time
+# column of Table `tab:typybench`) alongside the slot-weighted totals.
 python3 PastaBench/typybench_bench/score.py <dataset_dir> --tool pastalean
 python3 PastaBench/typybench_bench/score.py <dataset_dir> --tool pyrefly
 python3 PastaBench/typybench_bench/score.py <dataset_dir> --tool pyre
+
+# Memory (Mem column): peak PSS on the largest project, measured the same way for all three.
+python3 PastaBench/typybench_bench/measure_mem.py --repo vllm --tool pastalean <dataset_dir>
 ```
 
-`score.py` prints the per-repository table and the slot-weighted totals reported in
-the paper; `--workers` and `--repo NAME` restrict the run.
+`score.py` prints the per-project table (with a per-project Time column), the summed
+prediction time, and the slot-weighted totals reported in the paper. `--parallel-repos N`
+scores N projects at once (default 1; this is a project count, NOT a thread count, so the
+default gives each project the whole machine); `--repo NAME` restricts the run to one project.
 
 ## 4. LLM baseline: prompting a model to write Lean directly (Table `tab:llm`)
 

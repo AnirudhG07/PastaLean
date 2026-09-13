@@ -257,6 +257,45 @@ def test_engine_smoke() -> int:
     return 0
 
 
+def test_server() -> None:
+    """The persistent server: one process answers many tasks (reuse), separate servers are isolated,
+    and a closed server transparently respawns. Skipped if the binary is not built."""
+    from ...backend.typeinfer import TypeInferServer, TypeInferUnavailable
+    from ..engine import infer_sources
+    tiny = {"node_type": "Module", "body": [
+        {"node_type": "Assign", "targets": [{"node_type": "Name", "id": "x"}],
+         "value": {"node_type": "Constant", "value": 1}}]}
+    try:
+        srv = TypeInferServer()
+        srv.infer_ast(tiny)
+    except TypeInferUnavailable as err:
+        print(f"  (skipped server test: {err})")
+        return
+
+    # Reuse: three tasks share one process (pid stable, process stays alive).
+    pid = srv._proc.pid
+    for _ in range(3):
+        srv.infer_ast(tiny)
+    check("server.reuse_pid", srv._proc.pid == pid, "server respawned mid-unit")
+    check("server.alive", srv._proc.poll() is None, "server died mid-unit")
+
+    # Isolation: an independent server is a different process.
+    with TypeInferServer() as other:
+        other.infer_ast(tiny)
+        check("server.isolated", other._proc.pid != pid, "two units shared a process")
+
+    # Respawn: after close, the next task starts a fresh process.
+    srv.close()
+    check("server.closed", srv._proc is None, "close did not clear the process")
+    srv.infer_ast(tiny)
+    check("server.respawn", srv._proc is not None and srv._proc.pid != pid, "did not respawn")
+    srv.close()
+
+    # infer_sources reuses one server across N files and returns N results.
+    res = infer_sources([("def f(a):\n    return a\n", f"m{i}.py") for i in range(3)])
+    eq("server.infer_sources_n", len(res), 3)
+
+
 def main() -> int:
     test_render()
     test_collect()
@@ -267,6 +306,7 @@ def main() -> int:
     test_annotate()
     test_config()
     test_engine_smoke()
+    test_server()
 
     if FAILURES:
         print(f"FAILED ({len(FAILURES)}):")

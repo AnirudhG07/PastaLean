@@ -145,12 +145,13 @@ def annotate_source(source: str, result: InferResult, *, include_any: bool = Tru
     return _ast.unparse(tree)
 
 
-def annotate_repo(repo: Path, out_dir: Path, *, include_any: bool = True) -> tuple[int, int, dict[str, int]]:
+def annotate_repo(repo: Path, out_dir: Path, *, include_any: bool = True,
+                  jobs: int | None = None) -> tuple[int, int, dict[str, int]]:
     """Copy `repo` to `out_dir` and overwrite each `.py` with its inferred-type-annotated version.
     Returns (files_annotated, total_repo_files, aggregate annotation counts)."""
     import shutil
 
-    inferred = infer_repo_dir(repo)
+    inferred = infer_repo_dir(repo, jobs=jobs)
     if out_dir.resolve() != repo.resolve():
         if out_dir.exists():
             shutil.rmtree(out_dir)

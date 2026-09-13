@@ -1629,7 +1629,8 @@ def translate_to_json(source_code, filepath=None, best_effort=False, infer_only=
         annotate_main_entrypoint(data)
     annotate_toplevel_state(data)
     annotate_if_assigned_names(data)        # inference reads if_assigned_names (hoist ascription)
-    logger.debug("Generated JSON IR: %s", json.dumps(data))
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug("Generated JSON IR: %s", json.dumps(data))
     return json.dumps(data)
 
 # Process-wide default backend, started lazily on first use. Callers that want an explicit

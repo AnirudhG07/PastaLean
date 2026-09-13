@@ -65,6 +65,8 @@ def add_arguments(p: argparse.ArgumentParser) -> None:
     )
     p.add_argument("--indent", action=argparse.BooleanOptionalAction, default=True,
                    help="Pretty-print --format json. Default: on.")
+    p.add_argument("-j", "--jobs", type=int, default=None, metavar="N",
+                   help="Repo mode: parallelism for IR generation and inference. Default: all cores.")
 
 
 def _emit(code: str, output: str | None) -> None:
@@ -171,9 +173,10 @@ def _run_repo(args, repo: Path, fmt: str, output: str | None, include_any: bool,
     from .coverage import DIMENSIONS, coverage, format_coverage_report
     from .engine import infer_repo_dir
 
+    jobs = getattr(args, "jobs", None)
     if args.coverage or args.check:
         agg = {d: {"typed": 0, "total": 0} for d in DIMENSIONS}
-        for _dotted, (src, result) in infer_repo_dir(repo).items():
+        for _dotted, (src, result) in infer_repo_dir(repo, jobs=jobs).items():
             c = coverage(src.read_text(encoding="utf-8"), result)
             for d in DIMENSIONS:
                 agg[d]["typed"] += c["dimensions"][d]["typed"]
@@ -190,7 +193,7 @@ def _run_repo(args, repo: Path, fmt: str, output: str | None, include_any: bool,
               file=sys.stderr)
         return 1
     out_dir = Path(output) if output else repo.with_name(repo.name + "_typed")
-    n_files, n_total, counts = annotate_repo(repo, out_dir, include_any=include_any)
+    n_files, n_total, counts = annotate_repo(repo, out_dir, include_any=include_any, jobs=jobs)
     elapsed = time.perf_counter() - t0
     print(f"annotated {n_files}/{n_total} files -> {out_dir}", file=sys.stderr)
     if args.report:
